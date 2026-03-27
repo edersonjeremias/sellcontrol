@@ -4,6 +4,7 @@ import {
   getVendas, salvarVendas, enviarVenda, estornarVenda,
   finalizarLive, formatMoney,
 } from '../services/vendasService'
+import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import TabelaRow      from '../components/vendas/TabelaRow'
 import ModalEdicao    from '../components/vendas/ModalEdicao'
@@ -147,6 +148,38 @@ export default function VendasPage() {
     }
     init()
   }, [])
+
+  // ── Realtime: atualiza a tela quando ManyChat preenche um cliente ──
+  useEffect(() => {
+    if (!pronto) return
+    const channel = supabase
+      .channel('vendas-live')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'vendas' },
+        (payload) => {
+          const row = payload.new
+          setLinhas(prev => {
+            const idx = prev.findIndex(l => l.id === row.id)
+            if (idx === -1) return prev  // linha não está na tela atual
+            const next = [...prev]
+            next[idx] = {
+              ...next[idx],
+              cliente_nome: row.cliente_nome || '',
+              status:       row.status       || '',
+              isSent:       (row.status || '').toUpperCase() === 'ENVIADO',
+            }
+            return calcSacolas(next)
+          })
+          // Toast apenas quando ManyChat preenche (cliente_nome foi preenchido)
+          if (row.cliente_nome) {
+            showToast(`🛍️ @${row.cliente_nome} reservou a peça ${row.codigo}!`, 'info')
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [pronto])
 
   // ── Autosave a cada 60s ──
   useEffect(() => {
