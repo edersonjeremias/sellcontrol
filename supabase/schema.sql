@@ -1,13 +1,16 @@
--- ============================================================
--- SELLCONTROL - SCHEMA COMPLETO
--- Execute no: Supabase > SQL Editor > New Query
--- ============================================================
+-- ================================================================
+-- VMKIDS SAAS — SCHEMA COMPLETO
+-- Como executar:
+--   1. Acesse seu projeto no Supabase
+--   2. Vá em SQL Editor → New Query
+--   3. Cole todo este conteúdo e clique em Run
+-- ================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ============================================================
+-- ----------------------------------------------------------------
 -- TENANTS (empresas que assinam o SaaS)
--- ============================================================
+-- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tenants (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   nome       TEXT NOT NULL,
@@ -16,21 +19,21 @@ CREATE TABLE IF NOT EXISTS tenants (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- PERFIS DE USUÁRIO (complementa o auth.users do Supabase)
--- ============================================================
+-- ----------------------------------------------------------------
+-- PERFIS DE USUÁRIO (complementa auth.users do Supabase)
+-- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users_perfil (
   id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-  role       TEXT NOT NULL DEFAULT 'usuario', -- 'master' | 'admin' | 'usuario'
+  role       TEXT NOT NULL DEFAULT 'usuario',  -- 'master' | 'admin' | 'usuario'
   nome       TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
+-- ----------------------------------------------------------------
 -- CLIENTES
--- instagram = identificador principal usado nas vendas
--- ============================================================
+-- instagram = identificador principal usado nas vendas da live
+-- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clientes (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -43,22 +46,22 @@ CREATE TABLE IF NOT EXISTS clientes (
   UNIQUE(tenant_id, instagram)
 );
 
--- ============================================================
--- INADIMPLÊNCIAS
--- ============================================================
+-- ----------------------------------------------------------------
+-- INADIMPLÊNCIAS (gera bloqueio automático)
+-- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS inadimplencias (
   id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   cliente_id      UUID NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
   data_referencia DATE NOT NULL,
   valor           NUMERIC(10,2) NOT NULL DEFAULT 0,
-  status          TEXT NOT NULL DEFAULT 'pendente', -- 'pendente' | 'pago'
+  status          TEXT NOT NULL DEFAULT 'pendente',  -- 'pendente' | 'pago'
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
+-- ----------------------------------------------------------------
 -- LISTAS DE AUTOCOMPLETE
--- ============================================================
+-- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS listas_produtos (
   id        UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -87,9 +90,9 @@ CREATE TABLE IF NOT EXISTS listas_marcas (
   UNIQUE(tenant_id, nome)
 );
 
--- ============================================================
+-- ----------------------------------------------------------------
 -- LIVES
--- ============================================================
+-- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS lives (
   id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id  UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
@@ -98,14 +101,16 @@ CREATE TABLE IF NOT EXISTS lives (
   UNIQUE(tenant_id, nome)
 );
 
--- ============================================================
--- VENDAS (tabela única — sem banco temporário/definitivo)
--- status: '' = pendente | 'ENVIADO' = confirmado
--- tipo_envio: 'individual' | 'lote'
--- ============================================================
+-- ----------------------------------------------------------------
+-- VENDAS
+-- Tabela única — sem banco temporário/definitivo separado.
+-- status: ''  = pendente (ainda na tela da live)
+--         'ENVIADO' = confirmado
+-- ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS vendas (
   id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   tenant_id     UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+
   produto       TEXT NOT NULL DEFAULT '',
   modelo        TEXT NOT NULL DEFAULT '',
   cor           TEXT NOT NULL DEFAULT '',
@@ -113,48 +118,49 @@ CREATE TABLE IF NOT EXISTS vendas (
   tamanho       TEXT NOT NULL DEFAULT '',
   preco         NUMERIC(10,2),
   codigo        TEXT NOT NULL DEFAULT '',
+
   cliente_nome  TEXT NOT NULL DEFAULT '',
   cliente_id    UUID REFERENCES clientes(id) ON DELETE SET NULL,
+
   data_live     DATE,
   live_nome     TEXT NOT NULL DEFAULT '',
   sacolinha     INTEGER,
-  status        TEXT NOT NULL DEFAULT '',
-  tipo_envio    TEXT NOT NULL DEFAULT '',
+
+  status        TEXT NOT NULL DEFAULT '',      -- '' | 'ENVIADO'
+  tipo_envio    TEXT NOT NULL DEFAULT '',      -- 'individual' | 'lote'
+
   fila1         TEXT NOT NULL DEFAULT '',
   fila2         TEXT NOT NULL DEFAULT '',
   fila3         TEXT NOT NULL DEFAULT '',
+
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- ============================================================
--- TRIGGER: atualiza updated_at automaticamente
--- ============================================================
+-- ----------------------------------------------------------------
+-- ÍNDICES
+-- ----------------------------------------------------------------
+CREATE INDEX IF NOT EXISTS idx_vendas_tenant_data   ON vendas(tenant_id, data_live);
+CREATE INDEX IF NOT EXISTS idx_vendas_tenant_live   ON vendas(tenant_id, live_nome);
+CREATE INDEX IF NOT EXISTS idx_vendas_status        ON vendas(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_clientes_instagram   ON clientes(tenant_id, instagram);
+CREATE INDEX IF NOT EXISTS idx_inadimp_cliente      ON inadimplencias(cliente_id, status);
+
+-- ----------------------------------------------------------------
+-- TRIGGER: updated_at automático
+-- ----------------------------------------------------------------
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_vendas_updated_at ON vendas;
 CREATE TRIGGER trg_vendas_updated_at
   BEFORE UPDATE ON vendas
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- ============================================================
--- ÍNDICES
--- ============================================================
-CREATE INDEX IF NOT EXISTS idx_vendas_tenant_data    ON vendas(tenant_id, data_live);
-CREATE INDEX IF NOT EXISTS idx_vendas_tenant_live    ON vendas(tenant_id, live_nome);
-CREATE INDEX IF NOT EXISTS idx_vendas_status         ON vendas(tenant_id, status);
-CREATE INDEX IF NOT EXISTS idx_clientes_instagram    ON clientes(tenant_id, instagram);
-CREATE INDEX IF NOT EXISTS idx_inad_cliente_status   ON inadimplencias(cliente_id, status);
-
--- ============================================================
--- ROW LEVEL SECURITY (RLS)
--- ============================================================
+-- ----------------------------------------------------------------
+-- ROW LEVEL SECURITY
+-- ----------------------------------------------------------------
 ALTER TABLE tenants         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users_perfil    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clientes        ENABLE ROW LEVEL SECURITY;
@@ -166,7 +172,7 @@ ALTER TABLE listas_marcas   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lives           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vendas          ENABLE ROW LEVEL SECURITY;
 
--- Funções auxiliares
+-- Funções auxiliares de segurança
 CREATE OR REPLACE FUNCTION get_tenant_id()
 RETURNS UUID AS $$
   SELECT tenant_id FROM users_perfil WHERE id = auth.uid();
@@ -177,36 +183,35 @@ RETURNS TEXT AS $$
   SELECT role FROM users_perfil WHERE id = auth.uid();
 $$ LANGUAGE SQL STABLE SECURITY DEFINER;
 
--- Políticas SELECT
-CREATE POLICY "sel_clientes"   ON clientes        FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_vendas"     ON vendas          FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_inad"       ON inadimplencias  FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_produtos"   ON listas_produtos FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_modelos"    ON listas_modelos  FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_cores"      ON listas_cores    FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_marcas"     ON listas_marcas   FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_lives"      ON lives           FOR SELECT USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
-CREATE POLICY "sel_perfil"     ON users_perfil    FOR SELECT USING (id = auth.uid() OR get_user_role() = 'master');
-CREATE POLICY "sel_tenants"    ON tenants         FOR SELECT USING (get_user_role() = 'master');
+-- Políticas de leitura (SELECT)
+CREATE POLICY "rls_clientes"   ON clientes   USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_vendas"     ON vendas      USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_inadimp"    ON inadimplencias USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_produtos"   ON listas_produtos USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_modelos"    ON listas_modelos  USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_cores"      ON listas_cores    USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_marcas"     ON listas_marcas   USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_lives"      ON lives       USING (tenant_id = get_tenant_id() OR get_user_role() = 'master');
+CREATE POLICY "rls_perfil"     ON users_perfil USING (id = auth.uid() OR get_user_role() = 'master');
+CREATE POLICY "rls_tenants"    ON tenants     USING (get_user_role() = 'master');
 
--- Políticas INSERT
-CREATE POLICY "ins_clientes"   ON clientes        FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
-CREATE POLICY "ins_vendas"     ON vendas          FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
-CREATE POLICY "ins_inad"       ON inadimplencias  FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
+-- Políticas de escrita (INSERT / UPDATE / DELETE)
+CREATE POLICY "ins_clientes"   ON clientes   FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
+CREATE POLICY "ins_vendas"     ON vendas      FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
+CREATE POLICY "ins_inadimp"    ON inadimplencias FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
 CREATE POLICY "ins_produtos"   ON listas_produtos FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
 CREATE POLICY "ins_modelos"    ON listas_modelos  FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
 CREATE POLICY "ins_cores"      ON listas_cores    FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
 CREATE POLICY "ins_marcas"     ON listas_marcas   FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
-CREATE POLICY "ins_lives"      ON lives           FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
+CREATE POLICY "ins_lives"      ON lives       FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
 
--- Políticas UPDATE
-CREATE POLICY "upd_vendas"     ON vendas          FOR UPDATE USING (tenant_id = get_tenant_id());
-CREATE POLICY "upd_clientes"   ON clientes        FOR UPDATE USING (tenant_id = get_tenant_id());
+CREATE POLICY "upd_vendas"     ON vendas   FOR UPDATE USING (tenant_id = get_tenant_id());
+CREATE POLICY "upd_clientes"   ON clientes FOR UPDATE USING (tenant_id = get_tenant_id());
+CREATE POLICY "del_vendas"     ON vendas   FOR DELETE USING (tenant_id = get_tenant_id());
 
--- Políticas DELETE
-CREATE POLICY "del_vendas"     ON vendas          FOR DELETE USING (tenant_id = get_tenant_id());
-
--- ============================================================
--- FIM DO SCHEMA
--- Próximo passo: INSERT INTO tenants (nome) VALUES ('Sua Empresa') RETURNING id;
--- ============================================================
+-- ================================================================
+-- DADOS INICIAIS
+-- Execute este bloco separadamente após o schema acima.
+-- Ele cria seu tenant e retorna o UUID — copie para o .env
+-- ================================================================
+-- INSERT INTO tenants (nome, plano) VALUES ('VM Kids', 'basico') RETURNING id;

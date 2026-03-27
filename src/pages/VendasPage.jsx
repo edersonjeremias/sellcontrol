@@ -478,20 +478,40 @@ export default function VendasPage() {
 
       {/* MODAIS */}
       {modalFilaIdx !== null && (
-        <ModalFila linha={linhas[modalFilaIdx]} idx={modalFilaIdx} listas={listas}
-          onSalvar={salvarFila} onTrocarCliente={trocarClienteFila}
-          onFechar={() => setModalFilaIdx(null)} />
+        <ModalFila
+          linha={linhas[modalFilaIdx]}
+          clientes={listas.clientes}
+          onSalvar={(res) => {
+            if (res.trocarCliente) {
+              trocarClienteFila(modalFilaIdx, res.trocarCliente)
+              salvarFila(modalFilaIdx,
+                res.numFila === 1 ? '' : res.fila1,
+                res.numFila === 2 ? '' : res.fila2,
+                res.numFila === 3 ? '' : res.fila3)
+            } else {
+              salvarFila(modalFilaIdx, res.fila1, res.fila2, res.fila3)
+            }
+          }}
+          onFechar={() => setModalFilaIdx(null)}
+        />
       )}
       {modalEdicaoIdx !== null && (
-        <ModalEdicao linha={linhas[modalEdicaoIdx]} idx={modalEdicaoIdx}
-          listas={listas} globalDB={globalDB}
-          onConfirmar={confirmarEdicao} onFechar={() => setModalEdicaoIdx(null)}
-          setAlerta={setAlerta} setConfirmacao={setConfirmacao} />
+        <ModalEdicao
+          linha={linhas[modalEdicaoIdx]}
+          listas={listas}
+          onConfirmar={(campos) => confirmarEdicao(modalEdicaoIdx, campos)}
+          onFechar={() => setModalEdicaoIdx(null)}
+        />
       )}
       {showModalCadastro && (
         <ModalCadastro
-          onSalvar={async (tipo, val, wpp) => { await salvarNovoCadastro(tipo, val, wpp); setListas(await getListas()) }}
-          onFechar={() => setShowModalCadastro(false)} showToast={showToast} />
+          onSalvar={async (tipo, val, wpp) => {
+            await salvarNovoCadastro(tipo, val, wpp)
+            setListas(await getListas())
+            showToast('Cadastro realizado!', 'success')
+          }}
+          onFechar={() => setShowModalCadastro(false)}
+        />
       )}
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
       {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} />}
