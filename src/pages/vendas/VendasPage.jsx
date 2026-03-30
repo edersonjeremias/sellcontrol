@@ -3,16 +3,16 @@ import {
   getDadosIniciais, getListas, salvarNovoCadastro,
   getVendas, salvarVendas, enviarVenda, estornarVenda,
   finalizarLive, formatMoney,
-} from '../services/vendasService'
-import { supabase } from '../lib/supabase'
-import { useApp } from '../context/AppContext'
-import TabelaRow      from '../components/vendas/TabelaRow'
-import ModalEdicao    from '../components/vendas/ModalEdicao'
-import ModalFila      from '../components/vendas/ModalFila'
-import ModalCadastro  from '../components/vendas/ModalCadastro'
-import AutocompleteInput  from '../components/ui/AutocompleteInput'
-import ModalAlerta        from '../components/ui/ModalAlerta'
-import ModalConfirmacao   from '../components/ui/ModalConfirmacao'
+} from '../../services/vendasService'
+import { supabase } from '../../lib/supabase'
+import { useApp } from '../../context/AppContext'
+import TabelaRow      from '../../components/vendas/TabelaRow'
+import ModalEdicao    from '../../components/vendas/ModalEdicao'
+import ModalFila      from '../../components/vendas/ModalFila'
+import ModalCadastro  from '../../components/vendas/ModalCadastro'
+import AutocompleteInput  from '../../components/ui/AutocompleteInput'
+import ModalAlerta        from '../../components/ui/ModalAlerta'
+import ModalConfirmacao   from '../../components/ui/ModalConfirmacao'
 
 // ─── HELPERS PUROS ────────────────────────────────────────
 let _keyCounter = 0

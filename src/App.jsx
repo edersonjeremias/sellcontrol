@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider } from './context/AppContext'
-import VendasPage from './pages/VendasPage'
+import VendasPage from './pages/vendas/VendasPage'
 
 export default function App() {
   return (
