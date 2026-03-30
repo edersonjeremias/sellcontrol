@@ -218,11 +218,11 @@ export async function estornarVenda(id) {
 export async function finalizarLive(linhas, dataLive, liveNome) {
   const tenantId = TENANT_ID()
   await salvarVendas(linhas, dataLive, liveNome)
-  const { error, count } = await supabase.from('vendas')
+  const { data, error } = await supabase.from('vendas')
     .update({ status: 'ENVIADO', tipo_envio: 'lote', data_live: dataLive, live_nome: liveNome })
     .eq('tenant_id', tenantId).eq('status', '').neq('cliente_nome', '')
     .eq('live_nome', liveNome || '')
-    .select('id', { count: 'exact', head: true })
+    .select('id')
   if (error) throw error
-  return { ok: true, movidos: count || 0 }
+  return { ok: true, movidos: (data || []).length }
 }

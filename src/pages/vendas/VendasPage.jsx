@@ -400,8 +400,11 @@ export default function VendasPage() {
           const res = await finalizarLive(linhasRef.current, dataLive, liveNome)
           showToast(`✅ ${res.movidos} vendas confirmadas!`, 'success')
           setHasUnsaved(false); await buscar()
-        } catch { setAlerta({ titulo: 'Erro', mensagem: 'Erro ao finalizar a live. Tente novamente.' }) }
-        finally { setBusy(false) }
+        } catch (err) {
+          console.error('Erro ao finalizar live:', err)
+          const msg = err?.message || String(err) || 'Tente novamente.'
+          setAlerta({ titulo: 'Erro', mensagem: `Erro ao finalizar a live. ${msg}` })
+        } finally { setBusy(false) }
       },
       onNao: () => setConfirmacao(null),
     })
