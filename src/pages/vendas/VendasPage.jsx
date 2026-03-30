@@ -1,124 +1,275 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useApp } from '../../context/AppContext'
-import { useToast, ToastContainer } from '../../components/ui/Toast'
-import TopLoader from '../../components/ui/TopLoader'
-import LinhaVenda from '../../components/vendas/LinhaVenda'
-import ModalEdicao from '../../components/vendas/ModalEdicao'
-import ModalFila from '../../components/vendas/ModalFila'
-import ModalCadastro from '../../components/vendas/ModalCadastro'
-import { ModalAlerta, ModalConfirmacao } from '../../components/vendas/Modais'
-import AutocompleteInput from '../../components/vendas/AutocompleteInput'
 import {
-  getVendas, salvarVendas, enviarVendaIndividual,
-  estornarVenda, finalizarLive, salvarNovoCadastro,
-} from '../../services/vendasService'
+  getDadosIniciais, getListas, salvarNovoCadastro,
+  getVendas, salvarVendas, enviarVenda, estornarVenda,
+  finalizarLive, formatMoney,
+} from '../services/vendasService'
+import { supabase } from '../lib/supabase'
+import { useApp } from '../context/AppContext'
+import TabelaRow      from '../components/vendas/TabelaRow'
+import ModalEdicao    from '../components/vendas/ModalEdicao'
+import ModalFila      from '../components/vendas/ModalFila'
+import ModalCadastro  from '../components/vendas/ModalCadastro'
+import AutocompleteInput  from '../components/ui/AutocompleteInput'
+import ModalAlerta        from '../components/ui/ModalAlerta'
+import ModalConfirmacao   from '../components/ui/ModalConfirmacao'
 
-// ── Utilitário: calcula sacolinha por cliente ─────────────────
-function calcularSacolas(linhas) {
-  const idsEmUso     = new Set()
-  const clienteParaSacola = {}
+// ─── HELPERS PUROS ────────────────────────────────────────
+let _keyCounter = 0
+function novaLinha() {
+  return {
+    _key: `new-${++_keyCounter}`,
+    id: null, produto: '', modelo: '', cor: '', marca: '',
+    tamanho: '', preco: '', codigo: '', cliente_nome: '',
+    data_live: '', live_nome: '', sacolinha: null,
+    status: '', fila1: '', fila2: '', fila3: '',
+    isNew: true, deleted: false, isSent: false, liberado: false,
+  }
+}
 
+function mapRow(row) {
+  return {
+    _key:         row.id,
+    id:           row.id,
+    produto:      row.produto      || '',
+    modelo:       row.modelo       || '',
+    cor:          row.cor          || '',
+    marca:        row.marca        || '',
+    tamanho:      row.tamanho      || '',
+    preco:        formatMoney(row.preco),
+    codigo:       row.codigo       || '',
+    cliente_nome: row.cliente_nome || '',
+    data_live:    row.data_live    || '',
+    live_nome:    row.live_nome    || '',
+    sacolinha:    row.sacolinha,
+    status:       row.status       || '',
+    fila1:        row.fila1        || '',
+    fila2:        row.fila2        || '',
+    fila3:        row.fila3        || '',
+    isNew: false, deleted: false,
+    isSent: (row.status || '').toUpperCase() === 'ENVIADO',
+    liberado: false,
+  }
+}
+
+function calcSacolas(linhas) {
+  const usados = new Set()
+  const mapa   = {}
   linhas.forEach(l => {
-    if (l.isDeleted) return
+    if (l.deleted || l.isSent || !l.cliente_nome?.trim()) return
     const c = l.cliente_nome.trim().toLowerCase()
-    const s = l.sacolinha
-    if (c && s && !isNaN(s)) {
-      idsEmUso.add(Number(s))
-      if (!clienteParaSacola[c]) clienteParaSacola[c] = Number(s)
+    if (l.sacolinha && !isNaN(l.sacolinha)) {
+      usados.add(Number(l.sacolinha))
+      if (!mapa[c]) mapa[c] = Number(l.sacolinha)
     }
   })
-
   return linhas.map(l => {
-    if (l.isDeleted) return l
+    if (l.deleted || l.isSent) return l
+    if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
     const c = l.cliente_nome.trim().toLowerCase()
-    if (!c) return { ...l, sacolinha: null }
-    if (clienteParaSacola[c]) return { ...l, sacolinha: clienteParaSacola[c] }
-    let n = 1
-    while (idsEmUso.has(n)) n++
-    idsEmUso.add(n)
-    clienteParaSacola[c] = n
+    if (mapa[c]) return { ...l, sacolinha: mapa[c] }
+    let n = 1; while (usados.has(n)) n++
+    usados.add(n); mapa[c] = n
     return { ...l, sacolinha: n }
   })
 }
 
-// ── Linha em branco ───────────────────────────────────────────
-function novaLinha() {
-  return {
-    id: null, produto: '', modelo: '', cor: '', marca: '', tamanho: '',
-    preco: '', codigo: '', cliente_nome: '', sacolinha: null,
-    status: '', fila1: '', fila2: '', fila3: '',
-    isNew: true, isDeleted: false, isSent: false, liberado: false,
-  }
+function ordenarLinhas(linhas) {
+  return [...linhas].sort((a, b) => {
+    const aPreenchido = a.cliente_nome?.trim() ? 0 : 1
+    const bPreenchido = b.cliente_nome?.trim() ? 0 : 1
+    return aPreenchido - bPreenchido
+  })
 }
 
+function passaFiltro(l, filtro) {
+  if (!filtro.trim()) return true
+  const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+  const txt = [l.produto, l.modelo, l.cor, l.marca, l.tamanho, l.codigo, l.cliente_nome]
+    .join(' ').toLowerCase()
+  return termos.every(t => txt.includes(t))
+}
+
+// ─── COMPONENT ────────────────────────────────────────────
 export default function VendasPage() {
-  const { tenantId, lives, bloqueados, listas, carregarDados, recarregarListas } = useApp()
-  const { toasts, addToast } = useToast()
+  const { showToast } = useApp()
 
-  const [linhas,          setLinhas]          = useState([])
-  const [busy,            setBusy]            = useState(false)
-  const [busyMsg,         setBusyMsg]         = useState('')
-  const [dataInput,       setDataInput]       = useState('')
-  const [liveNome,        setLiveNome]        = useState('')
-  const [filtroRapido,    setFiltroRapido]    = useState('')
-  const [hasChanges,      setHasChanges]      = useState(false)
-  const [tabelaVisivel,   setTabelaVisivel]   = useState(false)
-  const [tabelaMsg,       setTabelaMsg]       = useState('Iniciando sistema...')
+  // ── State ──
+  const [linhas,      setLinhas]      = useState([])
+  const [listas,      setListas]      = useState({ produtos: [], modelos: [], cores: [], marcas: [], clientes: [] })
+  const [globalDB,    setGlobalDB]    = useState({ lives: [], bloqueados: {} })
+  const [dataLive,    setDataLive]    = useState('')
+  const [liveNome,    setLiveNome]    = useState('')
+  const [busy,        setBusyState]   = useState(false)
+  const [busyMsg,     setBusyMsg]     = useState('')
+  const [hasUnsaved,  setHasUnsaved]  = useState(false)
+  const [filtro,      setFiltro]      = useState('')
+  const [tabelaMsg,   setTabelaMsg]   = useState('Iniciando sistema...')
+  const [pronto,      setPronto]      = useState(false)
+  const [scrollTop,   setScrollTop]   = useState(false)
+  const [flash,       setFlash]       = useState(false)
+  const novoProdutoFocus = useRef(false)
 
-  // Modais
-  const [modalEdicao,   setModalEdicao]   = useState(null)   // índice da linha
-  const [modalFila,     setModalFila]     = useState(null)   // índice da linha
-  const [modalCadastro, setModalCadastro] = useState(false)
-  const [alerta,        setAlerta]        = useState(null)   // { titulo, mensagem }
-  const [confirmacao,   setConfirmacao]   = useState(null)   // { titulo, mensagem, onSim, onNao }
+  // ── Modal state ──
+  const [modalEdicaoIdx,    setModalEdicaoIdx]    = useState(null)
+  const [modalFilaIdx,      setModalFilaIdx]      = useState(null)
+  const [showModalCadastro, setShowModalCadastro] = useState(false)
+  const [alerta,            setAlerta]            = useState(null)
+  const [confirmacao,       setConfirmacao]       = useState(null)
 
-  const scrollRef = useRef(null)
+  // ── Refs ──
+  const scrollRef   = useRef(null)
+  const linhasRef   = useRef(linhas)
+  const globalDBRef = useRef(globalDB)
+  useEffect(() => { linhasRef.current = linhas },     [linhas])
+  useEffect(() => { globalDBRef.current = globalDB }, [globalDB])
 
-  // ── Inicialização ─────────────────────────────────────────
+  // ── setBusy helper ──
+  const setBusy = useCallback((v, msg = '') => { setBusyState(v); setBusyMsg(msg) }, [])
+
+  // ── Total vendido ──
+  const totalInfo = useMemo(() => {
+    let total = 0, qtd = 0
+    linhas.forEach(l => {
+      if (l.deleted || !l.cliente_nome?.trim() || !passaFiltro(l, filtro)) return
+      qtd++
+      const n = parseFloat((l.preco || '').replace(/\./g, '').replace(',', '.'))
+      if (!isNaN(n)) total += n
+    })
+    return { total, qtd }
+  }, [linhas, filtro])
+
+  // ── INIT ──
   useEffect(() => {
-    setBusy(true); setBusyMsg('Iniciando...')
-    carregarDados()
-      .then(() => { setBusy(false); setTabelaMsg('Use Buscar para carregar as vendas.') })
-      .catch(() => { setBusy(false); addToast('Erro ao iniciar', 'error') })
+    async function init() {
+      setBusy(true, 'Iniciando...')
+      try {
+        const [db, lst] = await Promise.all([getDadosIniciais(), getListas()])
+        setGlobalDB(db)
+        setListas(lst)
+        setPronto(true)
+        setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
+      } catch {
+        showToast('Erro ao iniciar o sistema.', 'error')
+        setTabelaMsg('Erro ao carregar. Verifique suas credenciais no .env e recarregue.')
+      } finally {
+        setBusy(false)
+      }
+    }
+    init()
   }, [])
 
-  // Autosave a cada 60 segundos
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (hasChanges && !busy && linhas.length > 0) salvar(true)
-    }, 60_000)
-    return () => clearInterval(timer)
-  }, [hasChanges, busy, linhas])
+    if (!novoProdutoFocus.current) return
+    novoProdutoFocus.current = false
+    setTimeout(() => {
+      const input = document.querySelector('#tabela tbody tr:first-child td:nth-child(2) .cell-input')
+      input?.focus()
+    }, 120)
+  }, [linhas])
 
-  // ── Helpers de estado ─────────────────────────────────────
-  function atualizarLinha(idx, campos) {
+  // ── Autosave a cada 60s ──
+  useEffect(() => {
+    const id = setInterval(async () => {
+      if (!hasUnsaved || busy) return
+      try {
+        await salvarVendas(linhasRef.current, { data_live: dataLive, live_nome: liveNome })
+        setHasUnsaved(false)
+        showToast('✅ Salvo automaticamente', 'info')
+      } catch {}
+    }, 60000)
+    return () => clearInterval(id)
+  }, [hasUnsaved, busy, dataLive, liveNome])
+
+  // ── AÇÕES PRINCIPAIS ──
+  const atualizarDados = useCallback(async () => {
+    if (busy) return
+    setBusy(true, 'Sincronizando...')
+    try {
+      const [db, lst] = await Promise.all([getDadosIniciais(), getListas()])
+      setGlobalDB(db); setListas(lst)
+      showToast('Sincronização concluída!', 'success')
+    } catch { showToast('Erro ao sincronizar.', 'error') }
+    finally { setBusy(false) }
+  }, [busy])
+
+  const buscar = useCallback(async () => {
+    if (busy) return
+    setBusy(true, 'Buscando dados...')
+    setTabelaMsg('Buscando registros...')
+    try {
+      const rows = await getVendas(dataLive || null, liveNome.trim() || null)
+      const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
+      setLinhas(novas)
+      setHasUnsaved(false)
+      if (!novas.length) setTabelaMsg('Nenhum registro pendente encontrado.')
+    } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
+    finally { setBusy(false) }
+  }, [busy, dataLive, liveNome])
+
+  const novo = useCallback(() => {
+    if (busy) return
+    const primeira = linhasRef.current.find(l => !l.deleted)
+    if (primeira) {
+      const vazia = !primeira.produto && !primeira.modelo && !primeira.cor &&
+        !primeira.marca && !primeira.preco && !primeira.cliente_nome
+      if (vazia) { scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); return }
+    }
+    const nl = novaLinha()
+    novoProdutoFocus.current = true
+    setLinhas(prev => [nl, ...prev])
+    setPronto(true)
+    setHasUnsaved(true)
+    setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
+  }, [busy])
+
+  useEffect(() => {
+    if (!pronto) return
+    const channel = supabase
+      .channel('vendas-live')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'vendas' },
+        (payload) => {
+          const novoCliente = payload.new?.cliente_nome?.trim()
+          const antigoCliente = payload.old?.cliente_nome?.trim()
+          if (novoCliente && !antigoCliente) {
+            setFlash(true)
+            setTimeout(() => setFlash(false), 400)
+            buscar()
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [pronto, buscar])
+
+  // ── UPDATE DE CAMPO ──
+  const handleFieldChange = useCallback((idx, field, value) => {
     setLinhas(prev => {
-      const next = [...prev]
-      next[idx] = { ...next[idx], ...campos }
-      return next
+      const n = [...prev]
+      const l = { ...n[idx], [field]: value }
+      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
+      if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
+      n[idx] = l
+      return n
     })
-    setHasChanges(true)
-  }
+    setHasUnsaved(true)
+  }, [])
 
-  function recalcular(linhasBase) {
-    const calculadas = calcularSacolas(linhasBase)
-    setLinhas(calculadas)
-    return calculadas
-  }
+  // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
+  const handleClienteBlur = useCallback((idx) => {
+    const l = linhasRef.current[idx]
+    if (!l || l.liberado) return
+    const nome = (l.cliente_nome || '').trim().toLowerCase()
+    if (!nome || !globalDBRef.current.bloqueados[nome]) return
 
-  // ── Bloqueio de cliente ───────────────────────────────────
-  function verificarBloqueio(clienteNome, liberado, onLiberar, onCancelar) {
-    if (liberado) return false
-    const key  = clienteNome.trim().toLowerCase()
-    const info = bloqueados[key]
-    if (!key || !info) return false
-
-    let msg = `O cliente <b style="color:var(--red)">${clienteNome}</b> está BLOQUEADO.<br><br>`
-    if (info.manual)
-      msg += `<b>Bloqueio Manual:</b> ${info.msgManual || 'Sem motivo especificado.'}<br><br>`
-    if (info.dividas?.length > 0) {
+    const info = globalDBRef.current.bloqueados[nome]
+    let msg = `O cliente <b style="color:#f28b82">${l.cliente_nome}</b> está BLOQUEADO.<br><br>`
+    if (info.manual) msg += `<b>Bloqueio Manual:</b> ${info.msgManual || 'Sem motivo especificado.'}<br><br>`
+    if (info.dividas?.length) {
       msg += `<b>Pendências Financeiras:</b><br>`
-      info.dividas.forEach(d => { msg += `- Live ${d.data} — R$ ${d.valor}<br>` })
+      info.dividas.forEach(d => { msg += `- Live <b>${d.data}</b> — R$ <b>${d.valor}</b><br>` })
       msg += '<br>'
     }
     msg += 'Deseja liberar a venda mesmo assim?'
@@ -126,394 +277,216 @@ export default function VendasPage() {
     setConfirmacao({
       titulo: '🚫 Cliente Bloqueado',
       mensagem: msg,
-      onSim: () => { setConfirmacao(null); onLiberar?.() },
-      onNao: () => { setConfirmacao(null); onCancelar?.() },
+      onSim: () => {
+        setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],liberado:true,sacolinha:null}; return calcSacolas(n) })
+        setConfirmacao(null)
+      },
+      onNao: () => {
+        setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],cliente_nome:'',sacolinha:null,liberado:false}; return calcSacolas(n) })
+        setConfirmacao(null)
+      },
     })
-    return true
-  }
+  }, [])
 
-  // ── Total vendido ─────────────────────────────────────────
-  const totalVendido = useMemo(() => {
-    let total = 0; let qtd = 0
-    linhas.forEach(l => {
-      if (l.isDeleted || l.status === 'ENVIADO' && false) return
-      if (!l.cliente_nome.trim()) return
-      qtd++
-      if (l.preco) {
-        const n = parseFloat(l.preco.replace(/\./g, '').replace(',', '.'))
-        if (!isNaN(n)) total += n
-      }
+  // ── FILA ──
+  const salvarFila = useCallback((idx, f1, f2, f3) => {
+    setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],fila1:f1,fila2:f2,fila3:f3}; return n })
+    setHasUnsaved(true); setModalFilaIdx(null)
+  }, [])
+
+  const trocarClienteFila = useCallback((idx, novoCliente) => {
+    setLinhas(prev => {
+      const n=[...prev]; n[idx]={...n[idx],cliente_nome:novoCliente,liberado:false,sacolinha:null}
+      return calcSacolas(n)
     })
-    return { total, qtd }
-  }, [linhas])
+    setHasUnsaved(true); showToast('Cliente alterado!', 'success')
+  }, [])
 
-  // ── Filtro rápido ─────────────────────────────────────────
-  const linhasFiltradas = useMemo(() => {
-    if (!filtroRapido.trim()) return linhas
-    const termos = filtroRapido.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
-    return linhas.map(l => {
-      if (l.isDeleted) return { ...l, _oculto: false }
-      const texto = [l.produto, l.modelo, l.cor, l.marca, l.tamanho, l.codigo, l.cliente_nome]
-        .join(' ').toLowerCase()
-      return { ...l, _oculto: !termos.every(t => texto.includes(t)) }
-    })
-  }, [linhas, filtroRapido])
-
-  // ── Buscar ────────────────────────────────────────────────
-  async function buscar() {
-    if (busy) return
-    setBusy(true); setBusyMsg('Buscando dados...')
-    setTabelaVisivel(false); setTabelaMsg('Buscando registros...')
-    try {
-      const dados = await getVendas(tenantId, dataInput || null, liveNome || null)
-      if (dados.length === 0) {
-        setTabelaMsg('Nenhum registro encontrado. Use + Novo para começar.')
-      } else {
-        setTabelaVisivel(true)
-      }
-      setLinhas(dados)
-      setHasChanges(false)
-    } catch (e) {
-      setTabelaMsg('Erro ao buscar dados.')
-      addToast('Erro ao buscar dados', 'error')
-    } finally { setBusy(false) }
-  }
-
-  // ── Novo ──────────────────────────────────────────────────
-  function novo() {
-    if (busy) return
-    // Não cria se a primeira linha já estiver vazia
-    const primeira = linhas.find(l => !l.isDeleted)
-    if (primeira) {
-      const vazia = !primeira.produto && !primeira.modelo && !primeira.cliente_nome && !primeira.codigo
-      if (vazia) { scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); return }
-    }
-    setLinhas(prev => [novaLinha(), ...prev])
-    setTabelaVisivel(true)
-    setHasChanges(true)
-    setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
-  }
-
-  // ── Salvar (autosave ou manual) ───────────────────────────
-  async function salvar(silencioso = false) {
-    if (busy || linhas.length === 0) return
-    if (!silencioso) { setBusy(true); setBusyMsg('Salvando...') }
-    try {
-      const { novosIds } = await salvarVendas(tenantId, linhas, dataInput || null, liveNome || null)
-      // Atualiza IDs das linhas novas
-      if (novosIds.length > 0) {
-        setLinhas(prev => {
-          const next = [...prev]
-          let ni = 0
-          next.forEach((l, i) => { if (!l.id && !l.isDeleted && ni < novosIds.length) { next[i] = { ...l, id: novosIds[ni++].id, isNew: false } } })
-          return next
-        })
-      }
-      setHasChanges(false)
-      if (silencioso) addToast('✅ Salvo na tela', 'info')
-      else addToast('Salvo com sucesso!', 'success')
-    } catch (e) {
-      addToast('Erro ao salvar: ' + e.message, 'error')
-    } finally { if (!silencioso) setBusy(false) }
-  }
-
-  // ── Enviar linha individual ───────────────────────────────
-  async function enviarLinha(idx) {
-    const l = linhas[idx]
-    if (l.isSent) { addToast('Esta venda já foi enviada!', 'info'); return }
-    if (!dataInput || !liveNome.trim()) {
-      setAlerta({ titulo: 'Faltam Dados', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> antes de enviar.' })
-      return
+  // ── ENVIAR / ESTORNAR ──
+  const handleEnviar = useCallback(async (idx) => {
+    const l = linhasRef.current[idx]
+    if (l.isSent) { showToast('Esta venda já foi enviada!', 'info'); return }
+    if (!dataLive || !liveNome.trim()) {
+      setAlerta({ titulo: 'Faltam Dados', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> no topo.' }); return
     }
     if (!l.cliente_nome.trim()) {
-      setAlerta({ titulo: 'Cliente Vazio', mensagem: 'Esta linha precisa de um <b>Cliente</b>.' })
-      return
+      setAlerta({ titulo: 'Cliente Vazio', mensagem: 'Esta linha precisa de um <b>Cliente</b>.' }); return
     }
-    if (!l.preco || l.preco === '0' || l.preco === '0,00') {
-      setAlerta({ titulo: 'Preço Ausente', mensagem: 'Preencha o <b>Preço</b> antes de enviar.' })
-      return
+    const p = (l.preco || '').replace(/\./g,'').replace(',','.')
+    if (!p || parseFloat(p) === 0) {
+      setAlerta({ titulo: 'Preço Ausente', mensagem: 'O <b>Preço</b> precisa ser preenchido.' }); return
     }
-    setBusy(true); setBusyMsg('Enviando...')
+    setBusy(true, 'Enviando...')
     try {
-      const res = await enviarVendaIndividual(tenantId, l, dataInput, liveNome)
-      setLinhas(prev => {
-        const next = [...prev]
-        next[idx] = { ...next[idx], status: 'ENVIADO', isSent: true, ...(res.newId ? { id: res.newId } : {}) }
-        return next
-      })
-      setHasChanges(true)
-      addToast('✅ Venda enviada!', 'success')
-    } catch (e) { addToast('Erro ao enviar: ' + e.message, 'error') }
+      const res = await enviarVenda(l, dataLive, liveNome)
+      setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],isSent:true,status:'ENVIADO',id:res.id||n[idx].id}; return n })
+      showToast('✅ Venda enviada com sucesso!'); setHasUnsaved(true)
+    } catch { showToast('Erro ao enviar venda.', 'error') }
     finally { setBusy(false) }
-  }
+  }, [dataLive, liveNome, busy])
 
-  // ── Estornar linha ────────────────────────────────────────
-  function estornarLinha(idx) {
+  const handleEstornar = useCallback((idx) => {
     setConfirmacao({
       titulo: '↩️ Estornar Venda',
-      mensagem: 'Deseja ESTORNAR esta venda?<br><br>Ela voltará para edição.',
+      mensagem: 'Deseja ESTORNAR esta venda?<br><br>Ela voltará a ficar editável.',
       onSim: async () => {
-        setConfirmacao(null)
-        setBusy(true); setBusyMsg('Estornando...')
+        setConfirmacao(null); setBusy(true, 'Estornando...')
         try {
-          await estornarVenda(linhas[idx].id)
-          setLinhas(prev => {
-            const next = [...prev]
-            next[idx] = { ...next[idx], status: '', isSent: false }
-            return next
-          })
-          addToast('Venda estornada!', 'success')
-        } catch (e) { addToast('Erro ao estornar', 'error') }
+          await estornarVenda(linhasRef.current[idx].id)
+          setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],isSent:false,status:''}; return n })
+          showToast('Venda estornada!', 'success'); setHasUnsaved(true)
+        } catch { showToast('Erro ao estornar.', 'error') }
         finally { setBusy(false) }
       },
       onNao: () => setConfirmacao(null),
     })
-  }
+  }, [])
 
-  // ── Excluir linha ─────────────────────────────────────────
-  function excluirLinha(idx) {
+  // ── COPIAR / EXCLUIR ──
+  const handleCopiar = useCallback((idx) => {
+    const o = linhasRef.current[idx]
+    const copia = { ...novaLinha(), produto:o.produto, modelo:o.modelo, cor:o.cor, marca:o.marca, tamanho:o.tamanho, preco:o.preco, codigo:o.codigo }
+    setLinhas(prev => [copia, ...prev])
+    setHasUnsaved(true)
+    setTimeout(() => scrollRef.current?.scrollTo({ top:0, behavior:'smooth' }), 50)
+  }, [])
+
+  const handleExcluir = useCallback((idx) => {
     setConfirmacao({
       titulo: '🗑️ Excluir Linha',
       mensagem: 'Deseja realmente EXCLUIR esta linha?',
       onSim: () => {
-        setConfirmacao(null)
         setLinhas(prev => {
-          const next = [...prev]
-          next[idx] = { ...next[idx], isDeleted: true }
-          return recalcular(next)
+          const n=[...prev]; n[idx]={...n[idx],deleted:true,cliente_nome:'',sacolinha:null}
+          setConfirmacao(null); return calcSacolas(n)
         })
-        setHasChanges(true)
+        setHasUnsaved(true)
       },
       onNao: () => setConfirmacao(null),
     })
-  }
+  }, [])
 
-  // ── Copiar linha ──────────────────────────────────────────
-  function copiarLinha(idx) {
-    const orig = linhas[idx]
-    const copia = {
-      ...novaLinha(),
-      produto: orig.produto, modelo: orig.modelo, cor: orig.cor,
-      marca: orig.marca, tamanho: orig.tamanho, preco: orig.preco,
-      codigo: orig.codigo,
-    }
-    setLinhas(prev => [copia, ...prev])
-    setHasChanges(true)
-  }
-
-  // ── Cliente change (com verificação de bloqueio) ──────────
-  function handleClienteChange(idx, val) {
-    const bloqueado = verificarBloqueio(
-      val, linhas[idx].liberado,
-      () => {
-        setLinhas(prev => {
-          const next = [...prev]
-          next[idx] = { ...next[idx], cliente_nome: val, liberado: true }
-          return recalcular(next)
-        })
-        setHasChanges(true)
-      },
-      () => {
-        setLinhas(prev => {
-          const next = [...prev]
-          next[idx] = { ...next[idx], cliente_nome: '' }
-          return recalcular(next)
-        })
-      }
-    )
-    if (!bloqueado) {
-      setLinhas(prev => {
-        const next = [...prev]
-        next[idx] = { ...next[idx], cliente_nome: val, liberado: false }
-        return recalcular(next)
-      })
-      setHasChanges(true)
-    }
-  }
-
-  // ── Modal de Edição ───────────────────────────────────────
-  function confirmarEdicao(campos) {
-    const idx = modalEdicao
+  // ── MODAL EDIÇÃO ──
+  const confirmarEdicao = useCallback((idx, campos) => {
     setLinhas(prev => {
-      const next = [...prev]
-      const ant = next[idx].cliente_nome
-      next[idx] = {
-        ...next[idx],
-        produto: campos.produto, modelo: campos.modelo, cor: campos.cor,
-        marca: campos.marca, tamanho: campos.tamanho, preco: campos.preco,
-        codigo: campos.codigo, cliente_nome: campos.cliente_nome,
-        liberado: campos.liberado,
-        sacolinha: campos.cliente_nome !== ant ? null : next[idx].sacolinha,
-      }
-      return recalcular(next)
+      const n=[...prev]; const clienteMudou = n[idx].cliente_nome !== campos.cliente_nome
+      n[idx] = { ...n[idx], ...campos, liberado: clienteMudou ? false : campos.liberado }
+      if (clienteMudou) n[idx].sacolinha = null
+      return calcSacolas(n)
     })
-    setHasChanges(true)
-    setModalEdicao(null)
-  }
+    setHasUnsaved(true); setModalEdicaoIdx(null)
+  }, [])
 
-  // ── Modal de Fila ─────────────────────────────────────────
-  function salvarFila(res) {
-    const idx = modalFila
-    if (res.trocarCliente) {
-      // Trocar cliente principal pelo da fila
-      const novasFila = { fila1: res.fila1, fila2: res.fila2, fila3: res.fila3, [`fila${res.numFila}`]: '' }
-      handleClienteChange(idx, res.trocarCliente)
-      setLinhas(prev => {
-        const next = [...prev]
-        next[idx] = { ...next[idx], ...novasFila }
-        return next
-      })
-    } else {
-      setLinhas(prev => {
-        const next = [...prev]
-        next[idx] = { ...next[idx], fila1: res.fila1, fila2: res.fila2, fila3: res.fila3 }
-        return next
-      })
+  // ── FINALIZAR LIVE ──
+  const iniciarFinalizacao = useCallback(() => {
+    if (busy) return
+    if (!dataLive || !liveNome.trim()) {
+      setAlerta({ titulo: 'Dados Faltando', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> antes de salvar.' }); return
     }
-    setHasChanges(true)
-    setModalFila(null)
-  }
-
-  // ── Modal de Cadastro ─────────────────────────────────────
-  async function salvarCadastro(tipo, valor, celular) {
-    try {
-      await salvarNovoCadastro(tenantId, tipo, valor, celular)
-      await recarregarListas()
-      setModalCadastro(false)
-      addToast('Cadastro realizado!', 'success')
-    } catch (e) { addToast(e.message, 'error') }
-  }
-
-  // ── Finalizar Live ────────────────────────────────────────
-  function iniciarFinalizacao() {
-    if (!dataInput || !liveNome.trim()) {
-      setAlerta({ titulo: 'Dados Faltando', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> antes de salvar.' })
-      return
-    }
-    const semPreco = linhas.some(l =>
-      !l.isDeleted && !l.isSent && l.cliente_nome.trim() &&
-      (!l.preco || l.preco === '0' || l.preco === '0,00')
-    )
+    const semPreco = linhasRef.current.some(l => {
+      if (l.deleted || l.isSent || !l.cliente_nome?.trim()) return false
+      const p = (l.preco||'').replace(/\./g,'').replace(',','.')
+      return !p || parseFloat(p) === 0
+    })
     if (semPreco) {
-      setAlerta({ titulo: 'Preço Ausente', mensagem: 'Existem itens com cliente mas <b>sem Preço</b>. Corrija antes de salvar.' })
-      return
+      setAlerta({ titulo: 'Preço Ausente', mensagem: 'Há itens com cliente mas <b>sem preço</b>. Corrija antes de salvar.' }); return
     }
     setConfirmacao({
       titulo: 'Finalizar a Live?',
-      mensagem: 'Todos os itens com cliente serão confirmados no banco definitivo.<br><br>Deseja continuar?',
+      mensagem: 'Todos os itens com cliente serão confirmados no banco.<br><br>Deseja continuar?',
       onSim: async () => {
-        setConfirmacao(null)
-        setBusy(true); setBusyMsg('Transferindo para o Banco Definitivo...')
+        setConfirmacao(null); setBusy(true, 'Finalizando live...')
         try {
-          const res = await finalizarLive(tenantId, linhas, dataInput, liveNome)
-          addToast(`Sucesso! ${res.movidos} vendas confirmadas.`, 'success')
-          await buscar()
-        } catch (e) { addToast('Erro ao finalizar: ' + e.message, 'error') }
+          const res = await finalizarLive(linhasRef.current, dataLive, liveNome)
+          showToast(`✅ ${res.movidos} vendas confirmadas!`, 'success')
+          setHasUnsaved(false); await buscar()
+        } catch { setAlerta({ titulo: 'Erro', mensagem: 'Erro ao finalizar a live. Tente novamente.' }) }
         finally { setBusy(false) }
       },
       onNao: () => setConfirmacao(null),
     })
-  }
+  }, [busy, dataLive, liveNome, buscar])
 
-  // ── Sincronizar ───────────────────────────────────────────
-  async function sincronizar() {
-    if (busy) return
-    setBusy(true); setBusyMsg('Sincronizando...')
-    try {
-      await carregarDados()
-      addToast('Sincronização concluída!', 'success')
-    } catch (e) { addToast('Erro ao sincronizar', 'error') }
-    finally { setBusy(false) }
-  }
+  // ── RENDER ──
+  const visivel = linhas.filter(l => !l.deleted && passaFiltro(l, filtro))
+  const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
 
-  // ── Scroll to top ─────────────────────────────────────────
-  const [showScrollTop, setShowScrollTop] = useState(false)
-
-  // ── Render ────────────────────────────────────────────────
   return (
-    <>
-      <TopLoader visible={busy} message={busyMsg} />
-      <ToastContainer toasts={toasts} />
+    <div style={{ height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-      {/* Scroll to top */}
-      <button id="btnScrollTop" className={showScrollTop ? 'show' : ''}
-        onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}>
+      {/* TOP LOADER */}
+      {busy && (
+        <>
+          <div id="topLoader" style={{ display:'block' }}><div className="topLoader-bar" /></div>
+          {busyMsg && <div className="topLoader-text">{busyMsg}</div>}
+        </>
+      )}
+
+      {/* SCROLL TOP */}
+      <button id="btnScrollTop" className={scrollTop ? 'show' : ''}
+        onClick={() => scrollRef.current?.scrollTo({ top:0, behavior:'smooth' })} title="Topo">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-          strokeLinecap="round" strokeLinejoin="round" style={{ width: 24, height: 24 }}>
-          <polyline points="18 15 12 9 6 15" />
+          strokeLinecap="round" strokeLinejoin="round" style={{ width:24, height:24 }}>
+          <polyline points="18 15 12 9 6 15"/>
         </svg>
       </button>
 
-      {/* ── TOOLBAR ─────────────────────────────────────── */}
+      {/* TOOLBAR */}
       <div className="no-print">
         <div className="toolbar">
           <div className="field">
             <label>Data</label>
-            <input type="date" value={dataInput} onChange={e => setDataInput(e.target.value)}
+            <input type="date" value={dataLive} onChange={e => setDataLive(e.target.value)}
               onClick={e => { try { e.target.showPicker() } catch {} }} />
           </div>
-
           <div className="field">
             <label>Live</label>
-            <AutocompleteInput
-              value={liveNome} list={lives}
-              onChange={setLiveNome} onSelect={setLiveNome}
-              placeholder="Buscar Live..."
-              className=""
-              style={{ height: 44, padding: '0 14px', border: '1px solid var(--border-light)', borderRadius: 8, background: 'var(--input-bg)', color: 'var(--text-header)', fontSize: 15 }}
-            />
+            <AutocompleteInput value={liveNome} onChange={setLiveNome}
+              list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
           </div>
-
           <div className="total-container">
-            <label className="field" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--muted)' }}>Total Vendido</label>
+            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>
             <div className="total-valor">
-              {totalVendido.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-              {' '}<span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>
-                ({totalVendido.qtd} unid.)
-              </span>
+              {totalFmt}{' '}
+              <span style={{ fontSize:13, color:'var(--muted)', fontWeight:600 }}>({totalInfo.qtd} unid.)</span>
             </div>
           </div>
-
           <div className="actions">
-            <button className="btn-acao btn-ghost" onClick={sincronizar} disabled={busy}
-              style={{ minWidth: 44, padding: '0 10px' }} title="Sincronizar">
+            <button className="btn-acao btn-ghost" onClick={atualizarDados} disabled={busy}
+              style={{ minWidth:44, padding:'0 10px' }} title="Sincronizar dados">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
               </svg>
             </button>
-            <button className="btn-acao btn-ghost" onClick={() => setModalCadastro(true)} disabled={busy}>+ Cadastro</button>
-            <button className="btn-acao btn-ghost" onClick={novo}     disabled={busy}>+ Novo</button>
-            <button className="btn-acao btn-green" onClick={buscar}   disabled={busy}>Buscar</button>
+            <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
+            <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
+            <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
             <div className="save-group">
               <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
             </div>
           </div>
         </div>
-
         <div className="filter-header-bar">
-          <input type="text" value={filtroRapido}
-            onChange={e => setFiltroRapido(e.target.value)}
+          <input type="text" value={filtro} onChange={e => setFiltro(e.target.value)}
             placeholder="Filtro Rápido: Digite para buscar (Ex: camiseta, verde, zara)" />
         </div>
       </div>
 
-      {/* ── TABELA ──────────────────────────────────────── */}
-      <div id="tabela-container">
-        <div className="table-responsive" id="scrollArea" ref={scrollRef}
-          onScroll={e => setShowScrollTop(e.target.scrollTop > 150)}>
-
-          {!tabelaVisivel && <div id="tabela-msg">{tabelaMsg}</div>}
-
-          {tabelaVisivel && (
-            <table>
+      {/* TABELA */}
+      <div id="tabela-container" style={flash ? { backgroundColor: 'rgba(255, 249, 196, 0.45)', transition: 'background-color 0.25s ease' } : undefined}>
+        <div className="table-responsive" ref={scrollRef}
+          onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
+          {!pronto || visivel.length === 0 ? (
+            <div id="tabela-msg">{tabelaMsg}</div>
+          ) : null}
+          {pronto && visivel.length > 0 && (
+            <table id="tabela">
               <thead>
                 <tr>
                   <th className="col-sacola">Sacola</th>
-                  <th>Produto</th>
-                  <th>Modelo</th>
-                  <th className="col-cor">Cor</th>
-                  <th>Marca</th>
+                  <th>Produto</th><th>Modelo</th>
+                  <th className="col-cor">Cor</th><th>Marca</th>
                   <th className="col-tam">Tam.</th>
                   <th className="col-preco">Preço</th>
                   <th className="col-cod">Cód.</th>
@@ -522,80 +495,68 @@ export default function VendasPage() {
                 </tr>
               </thead>
               <tbody>
-                {linhasFiltradas.map((l, idx) => l._oculto ? null : (
-                  <LinhaVenda
-                    key={l.id || `new-${idx}`}
-                    linha={l}
-                    listas={listas}
-                    onUpdate={(campo, val) => {
-                      atualizarLinha(idx, { [campo]: val })
-                      if (campo === 'cliente_nome') {
-                        setLinhas(prev => recalcular(prev))
-                      }
-                    }}
-                    onAbrirModal={() => setModalEdicao(idx)}
-                    onAbrirFila={() => setModalFila(idx)}
-                    onEnviar={() => enviarLinha(idx)}
-                    onEstornar={() => estornarLinha(idx)}
-                    onCopiar={() => copiarLinha(idx)}
-                    onExcluir={() => excluirLinha(idx)}
-                    onClienteChange={val => handleClienteChange(idx, val)}
-                    onNovaLinha={novo}
-                  />
-                ))}
+                {linhas.map((l, idx) => {
+                  if (l.deleted || !passaFiltro(l, filtro)) return null
+                  return (
+                    <TabelaRow key={l._key || l.id || idx}
+                      linha={l} idx={idx} listas={listas}
+                      onFieldChange={handleFieldChange}
+                      onClienteBlur={handleClienteBlur}
+                      onNovoFromRow={novo}
+                      onAbrirModal={setModalEdicaoIdx}
+                      onAbrirFila={setModalFilaIdx}
+                      onEnviar={handleEnviar}
+                      onEstornar={handleEstornar}
+                      onCopiar={handleCopiar}
+                      onExcluir={handleExcluir}
+                    />
+                  )
+                })}
               </tbody>
             </table>
           )}
         </div>
       </div>
 
-      {/* ── MODAIS ──────────────────────────────────────── */}
-      {modalEdicao !== null && (
-        <ModalEdicao
-          linha={linhas[modalEdicao]}
-          listas={listas}
-          onConfirmar={confirmarEdicao}
-          onFechar={() => setModalEdicao(null)}
-          onBloqueio={(val, lib) => {
-            if (lib) return false
-            const key = val.trim().toLowerCase()
-            return !!bloqueados[key]
-          }}
-        />
-      )}
-
-      {modalFila !== null && (
+      {/* MODAIS */}
+      {modalFilaIdx !== null && (
         <ModalFila
-          linha={linhas[modalFila]}
+          linha={linhas[modalFilaIdx]}
           clientes={listas.clientes}
-          onSalvar={salvarFila}
-          onFechar={() => setModalFila(null)}
+          onSalvar={(res) => {
+            if (res.trocarCliente) {
+              trocarClienteFila(modalFilaIdx, res.trocarCliente)
+              salvarFila(modalFilaIdx,
+                res.numFila === 1 ? '' : res.fila1,
+                res.numFila === 2 ? '' : res.fila2,
+                res.numFila === 3 ? '' : res.fila3)
+            } else {
+              salvarFila(modalFilaIdx, res.fila1, res.fila2, res.fila3)
+            }
+          }}
+          onFechar={() => setModalFilaIdx(null)}
         />
       )}
-
-      {modalCadastro && (
+      {modalEdicaoIdx !== null && (
+        <ModalEdicao
+          linha={linhas[modalEdicaoIdx]}
+          listas={listas}
+          onConfirmar={(campos) => confirmarEdicao(modalEdicaoIdx, campos)}
+          onFechar={() => setModalEdicaoIdx(null)}
+        />
+      )}
+      {showModalCadastro && (
         <ModalCadastro
-          onSalvar={salvarCadastro}
-          onFechar={() => setModalCadastro(false)}
+          onSalvar={async (tipo, val, wpp) => {
+            await salvarNovoCadastro(tipo, val, wpp)
+            setListas(await getListas())
+            showToast('Cadastro realizado!', 'success')
+          }}
+          onFechar={() => setShowModalCadastro(false)}
         />
       )}
-
-      {alerta && (
-        <ModalAlerta
-          titulo={alerta.titulo}
-          mensagem={alerta.mensagem}
-          onFechar={() => setAlerta(null)}
-        />
-      )}
-
-      {confirmacao && (
-        <ModalConfirmacao
-          titulo={confirmacao.titulo}
-          mensagem={confirmacao.mensagem}
-          onSim={confirmacao.onSim}
-          onNao={confirmacao.onNao}
-        />
-      )}
-    </>
+      {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
+      {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} />}
+    </div>
   )
 }
