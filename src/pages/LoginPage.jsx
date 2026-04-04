@@ -1,21 +1,30 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
   const { profile, loading, signIn } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState('')
 
   useEffect(() => {
     if (!loading && profile) {
       navigate('/dashboard', { replace: true })
     }
   }, [loading, profile, navigate])
+
+  useEffect(() => {
+    if (searchParams.get('reset') === 'success') {
+      setSuccess('✅ Senha resetada com sucesso! Você pode fazer login agora.')
+      setError('')
+    }
+  }, [searchParams])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -65,14 +74,20 @@ export default function LoginPage() {
           />
 
           {error && <div className="login-error">{error}</div>}
+          {success && <div style={{ color: 'var(--green)', padding: '10px 12px', borderRadius: '10px', background: 'rgba(74, 222, 128, 0.12)', fontWeight: 600 }}>{success}</div>}
 
           <button type="submit" className="btn-acao btn-blue" disabled={submitting}>
             {submitting ? 'Entrando...' : 'Acessar'}
           </button>
         </form>
 
-        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)' }}>
-          Não tem conta? <Link to="/signup" style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: 600 }}>Cadastre-se aqui</Link>
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: 'var(--muted)', textAlign: 'center' }}>
+          <div>
+            <Link to="/forgot-password" style={{ color: 'var(--blue)', textDecoration: 'none' }}>Esqueceu a senha?</Link>
+          </div>
+          <div>
+            Não tem conta? <Link to="/signup" style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: 600 }}>Cadastre-se aqui</Link>
+          </div>
         </div>
       </div>
     </div>
