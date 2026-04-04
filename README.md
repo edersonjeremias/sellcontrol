@@ -23,21 +23,24 @@ INSERT INTO tenants (nome) VALUES ('Sua Empresa') RETURNING id;
 ```
 ⚠️ **Copie o UUID retornado** — você precisará dele nos próximos passos.
 
-### 2.3 Criar um usuário administrador
+> **NOVO!** A partir de agora, você pode se registrar diretamente na aplicação. Pule para a seção **3. Variáveis de ambiente**, faça login localmente via `/signup` (auto-registro), e ignore os passos 2.3 e 2.4 abaixo.
+
+### 2.3 [Opcional] Criar usuário manualmente no Supabase
+Se preferir criar usuários sem usar o `/signup` da aplicação:
+
 1. Vá em **Authentication** → **Users** → **Add user**
-2. Preencha:
-   - **Email**: seu@email.com
-   - **Password**: uma senha forte
+2. Preencha email e senha
 3. Clique **Create user**
 
-### 2.4 Criar o perfil do usuário no banco
-No **SQL Editor**, execute (substitua os valores):
+### 2.4 [Opcional] Criar perfil manual no banco
+Se criou usuário no passo 2.3, execute no **SQL Editor**:
 ```sql
 INSERT INTO users_perfil (id, tenant_id, role, nome)
 SELECT id, 'SEU-TENANT-UUID-AQUI', 'master', 'Seu Nome'
 FROM auth.users
 WHERE email = 'seu@email.com';
 ```
+> Se usou `/signup`, isso é criado **automaticamente**. Não é necessário executar este comando.
 
 ### 2.5 Criar as páginas iniciais (opcional)
 Para que o menu já mostre "Dashboard" e "Vendas", execute:
@@ -91,14 +94,19 @@ npm run dev
 
 Acesse: **http://localhost:5173**
 
-### Fluxo de login:
-1. Você será redirecionado para `/login`
-2. Entre com o email e senha criados no passo 2.3
-3. Será redirecionado para `/dashboard` (menu global)
-4. O menu mostrará links para as páginas que você tem acesso
+### Fluxo de login e cadastro:
+1. **Novo usuário?** Clique em **"Cadastre-se aqui"** para auto-registrar
+   - Preencha nome, email, senha
+   - Será criado automaticamente como **master** (acesso total)
+   - Redirecionará para login — entre com as credenciais
+
+2. **Usuário existente?** Digite email e senha diretamente
+   - Será redirecionado para `/dashboard` (menu global)
+   - O menu mostrará links para as páginas que você tem acesso
 
 ### Rotas principais:
-- `/login` — Tela de login
+- `/` — Tela de login (**raiz da aplicação**)
+- `/signup` — Auto-registro de novos usuários
 - `/dashboard` — Painel com informativos (comunicação interna)
 - `/vendas` — Tela de gestão de vendas
 - `/admin` — Configuração de usuários e páginas (**apenas master/admin**)
@@ -133,6 +141,14 @@ Isso gerará a pasta `dist/` pronta para deploy.
 Clique em **Deploy** — o Vercel fará build automaticamente.
 
 > ⚠️ **Importante**: Não commit o arquivo `.env` no Git. Configure as variáveis diretamente no painel do Vercel.
+
+### 6.4 Primeiro acesso em produção
+1. Acesse a URL gerada pelo Vercel (ex: `app.vercel.app`)
+2. Será aberta a página de login (raiz `/`)
+3. Clique em **"Cadastre-se aqui"** para auto-registrar como usuário master
+4. Preencha nome, email, senha — e pronto! Você tem acesso total
+
+> 🎯 Agora qualquer pessoa pode acessar seu app, clicar em "Cadastre-se" e ganhar acesso de master. Depois você pode mudar o role de um usuário para `user` ou `admin` no painel do Supabase se quiser controlar melhor o acesso.
 
 ---
 
