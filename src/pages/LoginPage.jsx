@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
@@ -70,6 +70,10 @@ export default function LoginPage() {
             {submitting ? 'Entrando...' : 'Acessar'}
           </button>
         </form>
+
+        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)' }}>
+          Não tem conta? <Link to="/signup" style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: 600 }}>Cadastre-se aqui</Link>
+        </div>
       </div>
     </div>
   )
