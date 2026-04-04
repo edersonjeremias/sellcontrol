@@ -6,6 +6,7 @@ import {
 } from '../../services/vendasService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 import TabelaRow      from '../../components/vendas/TabelaRow'
 import ModalEdicao    from '../../components/vendas/ModalEdicao'
 import ModalFila      from '../../components/vendas/ModalFila'
@@ -93,6 +94,8 @@ function passaFiltro(l, filtro) {
 // ─── COMPONENT ────────────────────────────────────────────
 export default function VendasPage() {
   const { showToast } = useApp()
+  const { profile } = useAuth()
+  const tenantId = profile?.tenant_id
 
   // ── State ──
   const [linhas,      setLinhas]      = useState([])
@@ -142,9 +145,10 @@ export default function VendasPage() {
   // ── INIT ──
   useEffect(() => {
     async function init() {
+      if (!tenantId) return
       setBusy(true, 'Iniciando...')
       try {
-        const [db, lst] = await Promise.all([getDadosIniciais(), getListas()])
+        const [db, lst] = await Promise.all([getDadosIniciais(tenantId), getListas(tenantId)])
         setGlobalDB(db)
         setListas(lst)
         setPronto(true)
@@ -157,7 +161,7 @@ export default function VendasPage() {
       }
     }
     init()
-  }, [])
+  }, [tenantId])
 
   useEffect(() => {
     if (!novoProdutoFocus.current) return
@@ -171,9 +175,9 @@ export default function VendasPage() {
   // ── Autosave a cada 60s ──
   useEffect(() => {
     const id = setInterval(async () => {
-      if (!hasUnsaved || busy) return
+      if (!hasUnsaved || busy || !tenantId) return
       try {
-        await salvarVendas(linhasRef.current, { data_live: dataLive, live_nome: liveNome })
+        await salvarVendas(tenantId, linhasRef.current, { data_live: dataLive, live_nome: liveNome })
         setHasUnsaved(false)
         showToast('✅ Salvo automaticamente', 'info')
       } catch {}
@@ -183,22 +187,22 @@ export default function VendasPage() {
 
   // ── AÇÕES PRINCIPAIS ──
   const atualizarDados = useCallback(async () => {
-    if (busy) return
+    if (busy || !tenantId) return
     setBusy(true, 'Sincronizando...')
     try {
-      const [db, lst] = await Promise.all([getDadosIniciais(), getListas()])
+      const [db, lst] = await Promise.all([getDadosIniciais(tenantId), getListas(tenantId)])
       setGlobalDB(db); setListas(lst)
       showToast('Sincronização concluída!', 'success')
     } catch { showToast('Erro ao sincronizar.', 'error') }
     finally { setBusy(false) }
-  }, [busy])
+  }, [busy, tenantId])
 
   const buscar = useCallback(async () => {
     if (busy) return
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      const rows = await getVendas(dataLive || null, liveNome.trim() || null)
+      const rows = await getVendas(tenantId, dataLive || null, liveNome.trim() || null)
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
       setHasUnsaved(false)
@@ -318,7 +322,7 @@ export default function VendasPage() {
     }
     setBusy(true, 'Enviando...')
     try {
-      const res = await enviarVenda(l, dataLive, liveNome)
+      const res = await enviarVenda(tenantId, l, dataLive, liveNome)
       setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],isSent:true,status:'ENVIADO',id:res.id||n[idx].id}; return n })
       showToast('✅ Venda enviada com sucesso!'); setHasUnsaved(true)
     } catch { showToast('Erro ao enviar venda.', 'error') }
@@ -397,7 +401,7 @@ export default function VendasPage() {
       onSim: async () => {
         setConfirmacao(null); setBusy(true, 'Finalizando live...')
         try {
-          const res = await finalizarLive(linhasRef.current, dataLive, liveNome)
+          const res = await finalizarLive(tenantId, linhasRef.current, dataLive, liveNome)
           showToast(`✅ ${res.movidos} vendas confirmadas!`, 'success')
           setHasUnsaved(false); await buscar()
         } catch (err) {
@@ -551,8 +555,8 @@ export default function VendasPage() {
       {showModalCadastro && (
         <ModalCadastro
           onSalvar={async (tipo, val, wpp) => {
-            await salvarNovoCadastro(tipo, val, wpp)
-            setListas(await getListas())
+            await salvarNovoCadastro(tenantId, tipo, val, wpp)
+            setListas(await getListas(tenantId))
             showToast('Cadastro realizado!', 'success')
           }}
           onFechar={() => setShowModalCadastro(false)}

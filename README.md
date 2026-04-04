@@ -15,6 +15,14 @@ npm install
 INSERT INTO tenants (nome) VALUES ('Sua Empresa') RETURNING id;
 ```
 - Copie o UUID retornado
+- Crie um usuário no painel de **Authentication > Users** com email e senha
+- No SQL Editor, crie o perfil do usuário com o tenant:
+```sql
+INSERT INTO users_perfil (id, tenant_id, role, nome)
+SELECT id, 'seu-tenant-uuid', 'master', 'Administrador'
+FROM auth.users
+WHERE email = 'seu@email.com';
+```
 
 ## 3. Configurar credenciais
 - Copie o arquivo `.env.example` para `.env`
@@ -30,6 +38,12 @@ VITE_TENANT_ID=uuid_do_tenant_criado
 npm run dev
 ```
 Acesse: http://localhost:5173
+
+Pontos importantes:
+- A página de login está em `/login`
+- O painel principal é `/dashboard`
+- A tela de vendas é `/vendas`
+- A área de configuração master é `/admin`
 
 ## 5. Build para produção
 ```

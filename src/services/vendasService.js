@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase'
 
-// tenantId lido do .env — sem precisar passar como parâmetro em todo lugar
-const TENANT_ID = () => import.meta.env.VITE_TENANT_ID
+// tenantId enviado pelo app, com fallback para .env para compatibilidade
+const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
 // ── Utilitários de formatação ──────────────────────────────────
 export function formatMoney(val) {
@@ -20,15 +20,15 @@ export function parseMoney(str) {
 }
 
 // ── getDadosIniciais ───────────────────────────────────────────
-export async function getDadosIniciais() {
-  const tenantId = TENANT_ID()
+export async function getDadosIniciais(tenantId = null) {
+  const tid = TENANT_ID(tenantId)
   const [livesRes, bloqRes, inadRes] = await Promise.all([
-    supabase.from('lives').select('nome').eq('tenant_id', tenantId).order('nome'),
+    supabase.from('lives').select('nome').eq('tenant_id', tid).order('nome'),
     supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
-      .eq('tenant_id', tenantId).eq('bloqueado', true),
+      .eq('tenant_id', tid).eq('bloqueado', true),
     supabase.from('inadimplencias')
       .select('valor, data_referencia, clientes(instagram)')
-      .eq('tenant_id', tenantId).eq('status', 'pendente'),
+      .eq('tenant_id', tid).eq('status', 'pendente'),
   ])
 
   const lives = livesRes.data?.map(l => l.nome) || []
@@ -55,14 +55,14 @@ export async function getDadosIniciais() {
 }
 
 // ── getListas (alias: getListasAutocomplete) ───────────────────
-export async function getListas() {
-  const tenantId = TENANT_ID()
+export async function getListas(tenantId = null) {
+  const tid = TENANT_ID(tenantId)
   const [prod, mod, cor, marc, cli] = await Promise.all([
-    supabase.from('listas_produtos').select('nome').eq('tenant_id', tenantId).order('nome'),
-    supabase.from('listas_modelos') .select('nome').eq('tenant_id', tenantId).order('nome'),
-    supabase.from('listas_cores')   .select('nome').eq('tenant_id', tenantId).order('nome'),
-    supabase.from('listas_marcas')  .select('nome').eq('tenant_id', tenantId).order('nome'),
-    supabase.from('clientes')       .select('instagram').eq('tenant_id', tenantId).order('instagram'),
+    supabase.from('listas_produtos').select('nome').eq('tenant_id', tid).order('nome'),
+    supabase.from('listas_modelos') .select('nome').eq('tenant_id', tid).order('nome'),
+    supabase.from('listas_cores')   .select('nome').eq('tenant_id', tid).order('nome'),
+    supabase.from('listas_marcas')  .select('nome').eq('tenant_id', tid).order('nome'),
+    supabase.from('clientes')       .select('instagram').eq('tenant_id', tid).order('instagram'),
   ])
   return {
     produtos: prod.data?.map(r => r.nome)     || [],
@@ -75,15 +75,15 @@ export async function getListas() {
 export { getListas as getListasAutocomplete }
 
 // ── salvarNovoCadastro ─────────────────────────────────────────
-export async function salvarNovoCadastro(tipo, valor, celular) {
-  const tenantId = TENANT_ID()
+export async function salvarNovoCadastro(tenantId = null, tipo, valor, celular) {
+  const tid = TENANT_ID(tenantId)
   const nome = valor.trim()
   if (!nome) throw new Error('Valor em branco.')
 
   if (tipo === 'cliente') {
     if (!celular?.trim()) throw new Error('Preencha o WhatsApp.')
     const { error } = await supabase.from('clientes').insert({
-      tenant_id: tenantId, instagram: nome, whatsapp: celular.trim(),
+      tenant_id: tid, instagram: nome, whatsapp: celular.trim(),
     })
     if (error) {
       if (error.code === '23505') throw new Error('Cliente já cadastrado.')
@@ -94,7 +94,7 @@ export async function salvarNovoCadastro(tipo, valor, celular) {
 
   const tabela = { produto:'listas_produtos', modelo:'listas_modelos', cor:'listas_cores', marca:'listas_marcas' }[tipo]
   if (!tabela) throw new Error('Tipo inválido.')
-  const { error } = await supabase.from(tabela).insert({ tenant_id: tenantId, nome })
+  const { error } = await supabase.from(tabela).insert({ tenant_id: tid, nome })
   if (error) {
     if (error.code === '23505') throw new Error(`${tipo} já cadastrado.`)
     throw error
@@ -103,11 +103,11 @@ export async function salvarNovoCadastro(tipo, valor, celular) {
 }
 
 // ── getVendas ──────────────────────────────────────────────────
-export async function getVendas(dataLive, liveNome) {
-  const tenantId = TENANT_ID()
+export async function getVendas(tenantId = null, dataLive, liveNome) {
+  const tid = TENANT_ID(tenantId)
   let query = supabase
     .from('vendas').select('*')
-    .eq('tenant_id', tenantId)
+    .eq('tenant_id', tid)
     .order('created_at', { ascending: true })
 
   if (dataLive)         query = query.eq('data_live', dataLive)
@@ -141,21 +141,24 @@ export async function getVendas(dataLive, liveNome) {
 // ── salvarVendas ───────────────────────────────────────────────
 // Aceita: salvarVendas(linhas, dataLive, liveNome)
 //     ou: salvarVendas(linhas, { data_live, live_nome })
-export async function salvarVendas(linhas, dataLiveOrOpts, liveNomeArg) {
-  const tenantId = TENANT_ID()
+export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, liveNomeArg) {
+  const tid = TENANT_ID(tenantId)
   const dataLive = (typeof dataLiveOrOpts === 'object' && dataLiveOrOpts)
     ? dataLiveOrOpts.data_live : dataLiveOrOpts
   const liveNome = (typeof dataLiveOrOpts === 'object' && dataLiveOrOpts)
     ? dataLiveOrOpts.live_nome : liveNomeArg
 
-  const toUpsert = []; const toDelete = []
+  const toInsert = []
+  const toUpdate = []
+  const toDelete = []
+
   linhas.forEach(l => {
     if (l.deleted || l.isDeleted) { if (l.id) toDelete.push(l.id); return }
     if (l.isSent) return
     if (!l.produto && !l.codigo && !l.preco && !l.cliente_nome) return
-    toUpsert.push({
-      ...(l.id ? { id: l.id } : {}),
-      tenant_id: tenantId,
+
+    const row = {
+      tenant_id: tid,
       produto: l.produto || '', modelo: l.modelo || '', cor: l.cor || '',
       marca: l.marca || '', tamanho: l.tamanho || '',
       preco: parseMoney(l.preco), codigo: l.codigo || '',
@@ -163,15 +166,28 @@ export async function salvarVendas(linhas, dataLiveOrOpts, liveNomeArg) {
       data_live: dataLive || null, live_nome: liveNome || '',
       sacolinha: l.sacolinha ?? null, status: l.status || '',
       fila1: l.fila1 || '', fila2: l.fila2 || '', fila3: l.fila3 || '',
-    })
+    }
+
+    if (l.id) {
+      row.id = l.id
+      toUpdate.push(row)
+    } else {
+      toInsert.push(row)
+    }
   })
 
   let novosIds = []
-  if (toUpsert.length > 0) {
+  if (toInsert.length > 0) {
     const { data, error } = await supabase.from('vendas')
-      .upsert(toUpsert, { onConflict: 'id' }).select('id')
+      .insert(toInsert).select('id')
     if (error) throw error
     novosIds = data || []
+  }
+  if (toUpdate.length > 0) {
+    const { data, error } = await supabase.from('vendas')
+      .upsert(toUpdate, { onConflict: 'id' }).select('id')
+    if (error) throw error
+    novosIds = novosIds.concat(data || [])
   }
   if (toDelete.length > 0) {
     const { error } = await supabase.from('vendas').delete().in('id', toDelete)
@@ -181,8 +197,8 @@ export async function salvarVendas(linhas, dataLiveOrOpts, liveNomeArg) {
 }
 
 // ── enviarVenda (alias: enviarVendaIndividual) ─────────────────
-export async function enviarVenda(linha, dataLive, liveNome) {
-  const tenantId = TENANT_ID()
+export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
+  const tid = TENANT_ID(tenantId)
   if (linha.id) {
     const { error } = await supabase.from('vendas')
       .update({ status: 'ENVIADO', tipo_envio: 'individual', data_live: dataLive, live_nome: liveNome })
@@ -191,7 +207,7 @@ export async function enviarVenda(linha, dataLive, liveNome) {
     return { ok: true, id: linha.id }
   }
   const { data, error } = await supabase.from('vendas').insert({
-    tenant_id: tenantId,
+    tenant_id: tid,
     produto: linha.produto || '', modelo: linha.modelo || '', cor: linha.cor || '',
     marca: linha.marca || '', tamanho: linha.tamanho || '',
     preco: parseMoney(linha.preco), codigo: linha.codigo || '',
@@ -215,12 +231,12 @@ export async function estornarVenda(id) {
 }
 
 // ── finalizarLive ──────────────────────────────────────────────
-export async function finalizarLive(linhas, dataLive, liveNome) {
-  const tenantId = TENANT_ID()
-  await salvarVendas(linhas, dataLive, liveNome)
+export async function finalizarLive(tenantId = null, linhas, dataLive, liveNome) {
+  const tid = TENANT_ID(tenantId)
+  await salvarVendas(tenantId, linhas, dataLive, liveNome)
   const { data, error } = await supabase.from('vendas')
     .update({ status: 'ENVIADO', tipo_envio: 'lote', data_live: dataLive, live_nome: liveNome })
-    .eq('tenant_id', tenantId).eq('status', '').neq('cliente_nome', '')
+    .eq('tenant_id', tid).eq('status', '').neq('cliente_nome', '')
     .eq('live_nome', liveNome || '')
     .select('id')
   if (error) throw error
