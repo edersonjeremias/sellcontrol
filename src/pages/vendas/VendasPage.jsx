@@ -7,6 +7,7 @@ import {
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import AppShell from '../../components/ui/AppShell'
 import TabelaRow      from '../../components/vendas/TabelaRow'
 import ModalEdicao    from '../../components/vendas/ModalEdicao'
 import ModalFila      from '../../components/vendas/ModalFila'
@@ -112,6 +113,8 @@ export default function VendasPage() {
   const [scrollTop,   setScrollTop]   = useState(false)
   const [flash,       setFlash]       = useState(false)
   const novoProdutoFocus = useRef(false)
+  const busyRef = useRef(false)
+  const lastRealtimeKeyRef = useRef('')
 
   // ── Modal state ──
   const [modalEdicaoIdx,    setModalEdicaoIdx]    = useState(null)
@@ -124,11 +127,33 @@ export default function VendasPage() {
   const scrollRef   = useRef(null)
   const linhasRef   = useRef(linhas)
   const globalDBRef = useRef(globalDB)
+  const busyTimerRef = useRef(null)
   useEffect(() => { linhasRef.current = linhas },     [linhas])
   useEffect(() => { globalDBRef.current = globalDB }, [globalDB])
+  useEffect(() => { busyRef.current = busy }, [busy])
 
   // ── setBusy helper ──
-  const setBusy = useCallback((v, msg = '') => { setBusyState(v); setBusyMsg(msg) }, [])
+  const setBusy = useCallback((v, msg = '') => {
+    if (busyTimerRef.current) {
+      clearTimeout(busyTimerRef.current)
+      busyTimerRef.current = null
+    }
+
+    setBusyState(v)
+    setBusyMsg(msg)
+
+    if (v) {
+      busyTimerRef.current = setTimeout(() => {
+        setBusyState(false)
+        setBusyMsg('')
+        busyTimerRef.current = null
+      }, 15000)
+    }
+  }, [])
+
+  useEffect(() => () => {
+    if (busyTimerRef.current) clearTimeout(busyTimerRef.current)
+  }, [])
 
   // ── Total vendido ──
   const totalInfo = useMemo(() => {
@@ -187,7 +212,7 @@ export default function VendasPage() {
 
   // ── AÇÕES PRINCIPAIS ──
   const atualizarDados = useCallback(async () => {
-    if (busy || !tenantId) return
+    if (busyRef.current || !tenantId) return
     setBusy(true, 'Sincronizando...')
     try {
       const [db, lst] = await Promise.all([getDadosIniciais(tenantId), getListas(tenantId)])
@@ -195,21 +220,21 @@ export default function VendasPage() {
       showToast('Sincronização concluída!', 'success')
     } catch { showToast('Erro ao sincronizar.', 'error') }
     finally { setBusy(false) }
-  }, [busy, tenantId])
+  }, [tenantId])
 
   const buscar = useCallback(async () => {
-    if (busy) return
+    if (busyRef.current || !tenantId) return
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      const rows = await getVendas(tenantId, dataLive || null, liveNome.trim() || null)
+      const rows = await getVendas(tenantId, dataLive || null, liveNome.trim() || null, { somentePendentes: true })
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
       setHasUnsaved(false)
       if (!novas.length) setTabelaMsg('Nenhum registro pendente encontrado.')
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
     finally { setBusy(false) }
-  }, [busy, dataLive, liveNome])
+  }, [tenantId, dataLive, liveNome])
 
   const novo = useCallback(() => {
     if (busy) return
@@ -228,25 +253,50 @@ export default function VendasPage() {
   }, [busy])
 
   useEffect(() => {
-    if (!pronto) return
+    if (!pronto || !tenantId) return
     const channel = supabase
-      .channel('vendas-live')
+      .channel(`vendas-live-${tenantId}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'vendas' },
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'vendas',
+          filter: `tenant_id=eq.${tenantId}`,
+        },
         (payload) => {
           const novoCliente = payload.new?.cliente_nome?.trim()
           const antigoCliente = payload.old?.cliente_nome?.trim()
+          const realtimeKey = `${payload.new?.id || ''}:${payload.new?.updated_at || ''}:${novoCliente || ''}`
+          if (realtimeKey && realtimeKey === lastRealtimeKeyRef.current) return
+          lastRealtimeKeyRef.current = realtimeKey
+
           if (novoCliente && !antigoCliente) {
+            setLinhas(prev => {
+              const idx = prev.findIndex(l => l.id === payload.new?.id)
+              if (idx < 0) return prev
+
+              const next = [...prev]
+              next[idx] = {
+                ...next[idx],
+                cliente_nome: payload.new?.cliente_nome || next[idx].cliente_nome,
+                status: payload.new?.status || next[idx].status,
+                fila1: payload.new?.fila1 || next[idx].fila1,
+                fila2: payload.new?.fila2 || next[idx].fila2,
+                fila3: payload.new?.fila3 || next[idx].fila3,
+                sacolinha: payload.new?.sacolinha ?? next[idx].sacolinha,
+                isSent: (payload.new?.status || next[idx].status || '').toUpperCase() === 'ENVIADO',
+              }
+              return ordenarLinhas(calcSacolas(next))
+            })
             setFlash(true)
             setTimeout(() => setFlash(false), 400)
-            buscar()
           }
         }
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [pronto, buscar])
+  }, [pronto, tenantId])
 
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((idx, field, value) => {
@@ -419,6 +469,7 @@ export default function VendasPage() {
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
 
   return (
+    <AppShell title="Vendas" hideTitle flush>
     <div style={{ height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
       {/* TOP LOADER */}
@@ -565,5 +616,6 @@ export default function VendasPage() {
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
       {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} />}
     </div>
+    </AppShell>
   )
 }

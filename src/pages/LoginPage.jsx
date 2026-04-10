@@ -3,7 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
-  const { profile, loading, signIn } = useAuth()
+  const { profile, loading, signIn, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
@@ -38,9 +39,25 @@ export default function LoginPage() {
       await signIn(email.trim(), password)
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      setError(err.message || 'Erro ao efetuar login')
+      const message = err.message || 'Erro ao efetuar login'
+      if (message.toLowerCase().includes('email not confirmed') || message.toLowerCase().includes('not confirmed')) {
+        setError('Email não confirmado. Verifique sua caixa de entrada ou desative confirmação de email no Supabase Auth.')
+      } else {
+        setError(message)
+      }
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleGoogleLogin = async () => {
+    setError('')
+    setGoogleLoading(true)
+    try {
+      await signInWithGoogle()
+    } catch (err) {
+      setError(err.message || 'Erro ao entrar com Google')
+      setGoogleLoading(false)
     }
   }
 
@@ -79,6 +96,10 @@ export default function LoginPage() {
           <button type="submit" className="btn-acao btn-blue" disabled={submitting}>
             {submitting ? 'Entrando...' : 'Acessar'}
           </button>
+
+          <button type="button" className="btn-acao btn-ghost" disabled={googleLoading} onClick={handleGoogleLogin}>
+            {googleLoading ? 'Redirecionando...' : 'Entrar com Google'}
+          </button>
         </form>
 
         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px', color: 'var(--muted)', textAlign: 'center' }}>
@@ -86,7 +107,7 @@ export default function LoginPage() {
             <Link to="/forgot-password" style={{ color: 'var(--blue)', textDecoration: 'none' }}>Esqueceu a senha?</Link>
           </div>
           <div>
-            Não tem conta? <Link to="/signup" style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: 600 }}>Cadastre-se aqui</Link>
+            Cadastro de novos acessos somente pelo usuário master.
           </div>
         </div>
       </div>

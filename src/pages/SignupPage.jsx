@@ -75,9 +75,9 @@ export default function SignupPage() {
     } catch (err) {
       console.error(err)
       if (err.message.includes('already registered')) {
-        setError('Este email já está cadastrado')
+        setError('Este email já está cadastrado. Tente fazer login ou use recuperação de senha.')
       } else if (err.message.includes('already')) {
-        setError('Usuário já existe. Tente fazer login.')
+        setError('Usuário já existe. Tente fazer login ou use recuperação de senha.')
       } else {
         setError(err.message || 'Erro ao cadastrar')
       }

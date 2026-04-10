@@ -20,17 +20,20 @@ export default function ForgotPasswordPage() {
 
     setLoading(true)
     try {
-      const { error: resendError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      })
-
+      const redirectTo = `${window.location.origin}/reset-password`
+      const { error: resendError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
       if (resendError) throw resendError
 
       setMessage('✅ Email enviado! Verifique sua caixa de entrada (ou spam) para resetar a senha.')
       setEmail('')
     } catch (err) {
       console.error(err)
-      setError(err.message || 'Erro ao enviar email de recuperação')
+      const message = err.message || 'Erro ao enviar email de recuperação'
+      if (message.toLowerCase().includes('invalid email') || message.toLowerCase().includes('not found')) {
+        setError('Email não encontrado. Verifique seu email ou cadastre-se primeiro.')
+      } else {
+        setError(message)
+      }
     } finally {
       setLoading(false)
     }
@@ -64,7 +67,7 @@ export default function ForgotPasswordPage() {
         </form>
 
         <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)' }}>
-          Lembrou? <Link to="/" style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: 600 }}>Voltar para login</Link>
+          Lembrou? <Link to="/login" style={{ color: 'var(--blue)', textDecoration: 'none', fontWeight: 600 }}>Voltar para login</Link>
         </div>
       </div>
     </div>

@@ -64,6 +64,13 @@ export default function DashboardPage() {
     return true
   })
 
+  const formatItemDate = (item) => {
+    const raw = item?.data_insercao || item?.created_at || item?.data_conclusao
+    if (!raw) return '-'
+    const d = new Date(raw)
+    return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('pt-BR')
+  }
+
   return (
     <AppShell title="Dashboard">
       <section className="dashboard-panel">
@@ -128,7 +135,7 @@ export default function DashboardPage() {
                 <div key={item.id} className="informativo-card">
                   <div className="informativo-header">
                     <strong>{item.destinatario || 'TODOS'}</strong>
-                    <span>{new Date(item.data_insercao).toLocaleString('pt-BR')}</span>
+                    <span>{formatItemDate(item)}</span>
                   </div>
                   <div className="informativo-message" dangerouslySetInnerHTML={{ __html: item.mensagem }} />
                   <div className="informativo-footer">

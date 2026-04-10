@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
-export default function AppShell({ title, children }) {
+export default function AppShell({ title, children, hideTitle = false, flush = false }) {
   const { profile, menuItems, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -29,6 +29,14 @@ export default function AppShell({ title, children }) {
               {item.label}
             </Link>
           ))}
+          {profile?.role === 'master' && (
+            <Link
+              to="/master/empresas"
+              className={location.pathname === '/master/empresas' ? 'app-nav-link active' : 'app-nav-link'}
+            >
+              Empresas
+            </Link>
+          )}
         </nav>
 
         <div className="app-userbar">
@@ -40,10 +48,12 @@ export default function AppShell({ title, children }) {
         </div>
       </header>
 
-      <main className="app-main">
-        <div className="app-page-header">
-          <h1>{title}</h1>
-        </div>
+      <main className={`app-main${flush ? ' app-main-flush' : ''}`}>
+        {!hideTitle && (
+          <div className="app-page-header">
+            <h1>{title}</h1>
+          </div>
+        )}
         {children}
       </main>
     </div>

@@ -103,19 +103,34 @@ export async function salvarNovoCadastro(tenantId = null, tipo, valor, celular) 
 }
 
 // ── getVendas ──────────────────────────────────────────────────
-export async function getVendas(tenantId = null, dataLive, liveNome) {
+export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) {
   const tid = TENANT_ID(tenantId)
+  const somentePendentes = opts?.somentePendentes ?? false
   let query = supabase
     .from('vendas').select('*')
     .eq('tenant_id', tid)
     .order('created_at', { ascending: true })
 
-  if (dataLive)         query = query.eq('data_live', dataLive)
-  if (liveNome?.trim()) query = query.eq('live_nome', liveNome.trim())
+  if (somentePendentes) {
+    // Evita filtros OR complexos no PostgREST e filtra em memória com regras claras.
+    // Regra de pendente: sem cliente, sem live, sem data e sem status ENVIADO.
+  } else {
+    if (dataLive)         query = query.eq('data_live', dataLive)
+    if (liveNome?.trim()) query = query.eq('live_nome', liveNome.trim())
+  }
 
   const { data, error } = await query
   if (error) throw error
-  return (data || []).map(row => ({
+  let rows = data || []
+  if (somentePendentes) {
+    rows = rows.filter((row) => {
+      // Regra de negocio: vendido apenas apos finalizacao (status ENVIADO).
+      const status = String(row.status || '').trim().toUpperCase()
+      return status !== 'ENVIADO'
+    })
+  }
+
+  return rows.map(row => ({
     _key: row.id, id: row.id,
     produto:      row.produto      || '',
     modelo:       row.modelo       || '',

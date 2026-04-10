@@ -8,6 +8,7 @@ const AuthContext = createContext(null)
 const DEFAULT_PAGES = [
   { slug: 'dashboard', label: 'Dashboard', category: 'Principal', icon: 'dashboard', order_index: 10 },
   { slug: 'vendas', label: 'Vendas', category: 'Operações', icon: 'sell', order_index: 20 },
+  { slug: 'producao', label: 'Produção', category: 'Operações', icon: 'factory', order_index: 30 },
 ]
 
 export function AuthProvider({ children }) {
@@ -20,14 +21,14 @@ export function AuthProvider({ children }) {
     if (!user) {
       setProfile(null)
       setMenuItems(DEFAULT_PAGES)
-      return
+      return null
     }
     const { data, error } = await getUserProfile(user.id)
     if (error || !data) {
       console.error('Perfil não encontrado', error)
       setProfile(null)
       setMenuItems(DEFAULT_PAGES)
-      return
+      return null
     }
     setProfile(data)
     const pagesRes = await getPagesForUser(data.id, data.tenant_id, data.role)
@@ -35,8 +36,18 @@ export function AuthProvider({ children }) {
       console.error('Erro ao carregar menu', pagesRes.error)
       setMenuItems(DEFAULT_PAGES)
     } else {
-      setMenuItems(pagesRes.data && pagesRes.data.length > 0 ? pagesRes.data : DEFAULT_PAGES)
+      const fetched = pagesRes.data || []
+      if (data.role === 'master') {
+        const bySlug = new Map(DEFAULT_PAGES.map((item) => [item.slug, item]))
+        fetched.forEach((item) => bySlug.set(item.slug, item))
+        const merged = Array.from(bySlug.values())
+          .sort((a, b) => (a.order_index || 999) - (b.order_index || 999))
+        setMenuItems(merged)
+      } else {
+        setMenuItems(fetched.length > 0 ? fetched : DEFAULT_PAGES)
+      }
     }
+    return data
   }, [])
 
   useEffect(() => {
@@ -67,10 +78,23 @@ export function AuthProvider({ children }) {
   const signIn = useCallback(async (email, password) => {
     const result = await supabase.auth.signInWithPassword({ email, password })
     if (result.error) throw result.error
-    await loadProfile(result.data.session?.user)
+    const profileData = await loadProfile(result.data.session?.user)
     setSession(result.data.session)
+    if (!profileData) {
+      throw new Error('Login feito, mas o perfil não existe em users_perfil. Crie o perfil manualmente no Supabase ou use outro email.')
+    }
     return result
   }, [loadProfile])
+
+  const signInWithGoogle = useCallback(async () => {
+    const redirectTo = `${window.location.origin}/dashboard`
+    const result = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo },
+    })
+    if (result.error) throw result.error
+    return result
+  }, [])
 
   const signOut = useCallback(async () => {
     const result = await supabase.auth.signOut()
@@ -86,8 +110,9 @@ export function AuthProvider({ children }) {
     profile,
     menuItems,
     signIn,
+    signInWithGoogle,
     signOut,
-  }), [loading, session, profile, menuItems, signIn, signOut])
+  }), [loading, session, profile, menuItems, signIn, signInWithGoogle, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
