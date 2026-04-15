@@ -12,9 +12,12 @@ export default function ModalCadastro({ onSalvar, onFechar }) {
     if (!valor.trim()) return
     if (isCliente && !celular.trim()) return
     setSalvando(true)
-    await onSalvar?.(tipo, valor, celular)
-    setSalvando(false)
-    setValor(''); setCelular('')
+    try {
+      await onSalvar?.(tipo, valor, celular)
+      setValor(''); setCelular('')
+    } finally {
+      setSalvando(false)
+    }
   }
 
   return (

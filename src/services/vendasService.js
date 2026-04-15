@@ -28,7 +28,8 @@ export async function getDadosIniciais(tenantId = null) {
       .eq('tenant_id', tid).eq('bloqueado', true),
     supabase.from('inadimplencias')
       .select('valor, data_referencia, clientes(instagram)')
-      .eq('tenant_id', tid).eq('status', 'pendente'),
+      .eq('tenant_id', tid).eq('status', 'pendente')
+      .then(r => r, () => ({ data: [] })),  // ignora se tabela não existir
   ])
 
   const lives = livesRes.data?.map(l => l.nome) || []

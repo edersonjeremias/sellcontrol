@@ -209,7 +209,7 @@ export default function VendasPage() {
   // ── Autosave a cada 60s ──
   useEffect(() => {
     const id = setInterval(async () => {
-      if (!hasUnsaved || busy || !tenantId) return
+      if (!hasUnsaved || busy || !tenantId || !dataLive || !liveNome.trim()) return
       try {
         await salvarVendas(tenantId, linhasRef.current, { data_live: dataLive, live_nome: liveNome })
         setHasUnsaved(false)
@@ -441,18 +441,6 @@ export default function VendasPage() {
   }, [])
 
   // ── FINALIZAR LIVE ──
-  const salvarRascunho = useCallback(async () => {
-    if (busy) return
-    setBusy(true, 'Salvando...')
-    try {
-      await salvarVendas(tenantId, linhasRef.current, { data_live: dataLive, live_nome: liveNome })
-      setHasUnsaved(false)
-      showToast('✅ Salvo com sucesso!', 'success')
-    } catch (err) {
-      showToast('Erro ao salvar: ' + (err?.message || 'Tente novamente.'), 'error')
-    } finally { setBusy(false) }
-  }, [busy, tenantId, dataLive, liveNome])
-
   const iniciarFinalizacao = useCallback(() => {
     if (busy) return
     if (!dataLive || !liveNome.trim()) {
@@ -662,8 +650,7 @@ export default function VendasPage() {
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
               <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
               <div className="save-group">
-                <button className="btn-acao btn-ghost" onClick={salvarRascunho} disabled={busy} title="Salva os dados sem finalizar a live">Salvar</button>
-                <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy} title="Requer Data e Live preenchidos — marca tudo como ENVIADO">Finalizar</button>
+                <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
               </div>
             </div>
           </div>
@@ -799,9 +786,14 @@ export default function VendasPage() {
       {showModalCadastro && (
         <ModalCadastro
           onSalvar={async (tipo, val, wpp) => {
-            await salvarNovoCadastro(tenantId, tipo, val, wpp)
-            setListas(await getListas(tenantId))
-            showToast('Cadastro realizado!', 'success')
+            try {
+              await salvarNovoCadastro(tenantId, tipo, val, wpp)
+              setListas(await getListas(tenantId))
+              showToast('Cadastro realizado!', 'success')
+            } catch (err) {
+              showToast(err?.message || 'Erro ao cadastrar. Verifique o banco.', 'error')
+              throw err
+            }
           }}
           onFechar={() => setShowModalCadastro(false)}
         />
