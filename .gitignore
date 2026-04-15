@@ -8,3 +8,7 @@ dist
 supabase/.temp/
 .vercel
 .env*.local
+
+# Arquivos de migração (dados pessoais — não subir para o Git)
+scripts/dados/*.csv
+scripts/dados/*.xlsx
