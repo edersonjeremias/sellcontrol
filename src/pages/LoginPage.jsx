@@ -39,11 +39,15 @@ export default function LoginPage() {
       await signIn(email.trim(), password)
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      const message = err.message || 'Erro ao efetuar login'
-      if (message.toLowerCase().includes('email not confirmed') || message.toLowerCase().includes('not confirmed')) {
-        setError('Email não confirmado. Verifique sua caixa de entrada ou desative confirmação de email no Supabase Auth.')
+      const message = (err.message || 'Erro ao efetuar login').toLowerCase()
+      if (message.includes('email not confirmed') || message.includes('not confirmed')) {
+        setError('Email não confirmado. Verifique sua caixa de entrada e clique no link enviado pelo sistema.')
+      } else if (message.includes('invalid login credentials') || message.includes('invalid credentials')) {
+        setError('Email ou senha incorretos. Se você entrou pelo Google antes, use o botão "Entrar com Google" abaixo.')
+      } else if (message.includes('perfil não existe')) {
+        setError('Usuário sem perfil no sistema. Entre pelo Google ou contate o administrador.')
       } else {
-        setError(message)
+        setError(err.message || 'Erro ao efetuar login')
       }
     } finally {
       setSubmitting(false)
@@ -65,8 +69,8 @@ export default function LoginPage() {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-header">
-          <h2>Login SaaS</h2>
-          <p>Entre com seu email e senha para acessar o sistema.</p>
+          <h2>SellControl</h2>
+          <p>Entre com sua conta para acessar o sistema.</p>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>

@@ -67,10 +67,14 @@ export default function SignupPage() {
 
       if (profileError) throw profileError
 
-      setSuccess('✅ Cadastro realizado! Redirecionando para login...')
-      setTimeout(() => {
-        navigate('/')
-      }, 2000)
+      // Se o Supabase exige confirmação de email, o user.identities pode estar vazio
+      const precisaConfirmar = !authData.user.confirmed_at && !authData.user.email_confirmed_at
+      if (precisaConfirmar) {
+        setSuccess('✅ Cadastro realizado! Verifique seu email e clique no link de confirmação antes de fazer login.')
+      } else {
+        setSuccess('✅ Cadastro realizado! Redirecionando para login...')
+        setTimeout(() => navigate('/'), 2000)
+      }
 
     } catch (err) {
       console.error(err)

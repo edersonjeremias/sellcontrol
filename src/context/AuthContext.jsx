@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { getUserProfile, getPagesForUser } from '../services/authService'
+import { getUserProfile, getPagesForUser, createGoogleUserProfile } from '../services/authService'
 
 const AuthContext = createContext(null)
 
@@ -25,6 +25,19 @@ export function AuthProvider({ children }) {
     }
     const { data, error } = await getUserProfile(user.id)
     if (error || !data) {
+      // Auto-cria perfil para quem entra pela primeira vez via Google OAuth
+      const isGoogle =
+        user.app_metadata?.provider === 'google' ||
+        (user.identities || []).some((i) => i.provider === 'google')
+      const tenantId = import.meta.env.VITE_TENANT_ID
+      if (isGoogle && tenantId) {
+        const created = await createGoogleUserProfile(user, tenantId)
+        if (created) {
+          setProfile(created)
+          setMenuItems(DEFAULT_PAGES)
+          return created
+        }
+      }
       console.error('Perfil não encontrado', error)
       setProfile(null)
       setMenuItems(DEFAULT_PAGES)
