@@ -112,9 +112,7 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
     .eq('tenant_id', tid)
     .order('created_at', { ascending: true })
 
-  // Quando há filtro de data: inclui registros da data OU sem data (rascunhos salvos sem data definida)
-  // Quando há filtro de live: filtra normalmente
-  if (dataLive)         query = query.or(`data_live.eq.${dataLive},data_live.is.null`)
+  if (dataLive)         query = query.eq('data_live', dataLive)
   if (liveNome?.trim()) query = query.eq('live_nome', liveNome.trim())
 
   const { data, error } = await query
