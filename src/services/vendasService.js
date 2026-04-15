@@ -20,16 +20,22 @@ export function parseMoney(str) {
 }
 
 // ── getDadosIniciais ───────────────────────────────────────────
+function safeQuery(promise) {
+  return Promise.race([
+    promise,
+    new Promise(resolve => setTimeout(() => resolve({ data: [] }), 6000)),
+  ]).catch(() => ({ data: [] }))
+}
+
 export async function getDadosIniciais(tenantId = null) {
   const tid = TENANT_ID(tenantId)
   const [livesRes, bloqRes, inadRes] = await Promise.all([
-    supabase.from('lives').select('nome').eq('tenant_id', tid).order('nome'),
-    supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
-      .eq('tenant_id', tid).eq('bloqueado', true),
-    supabase.from('inadimplencias')
+    safeQuery(supabase.from('lives').select('nome').eq('tenant_id', tid).order('nome')),
+    safeQuery(supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
+      .eq('tenant_id', tid).eq('bloqueado', true)),
+    safeQuery(supabase.from('inadimplencias')
       .select('valor, data_referencia, clientes(instagram)')
-      .eq('tenant_id', tid).eq('status', 'pendente')
-      .then(r => r, () => ({ data: [] })),  // ignora se tabela não existir
+      .eq('tenant_id', tid).eq('status', 'pendente')),
   ])
 
   const lives = livesRes.data?.map(l => l.nome) || []

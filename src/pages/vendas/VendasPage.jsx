@@ -164,7 +164,7 @@ export default function VendasPage() {
         setBusyState(false)
         setBusyMsg('')
         busyTimerRef.current = null
-      }, 15000)
+      }, 8000)
     }
   }, [])
 
