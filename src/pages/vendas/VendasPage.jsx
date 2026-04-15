@@ -3,6 +3,7 @@ import {
   getDadosIniciais, getListas, salvarNovoCadastro,
   getVendas, salvarVendas, enviarVenda, estornarVenda,
   finalizarLive, formatMoney,
+  getVendasEnviadas, updateVendaEnviada,
 } from '../../services/vendasService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -122,6 +123,14 @@ export default function VendasPage() {
   const [showModalCadastro, setShowModalCadastro] = useState(false)
   const [alerta,            setAlerta]            = useState(null)
   const [confirmacao,       setConfirmacao]       = useState(null)
+
+  // ── Modo Histórico ──
+  const [modo,          setModo]          = useState('live')
+  const [filtrosHist,   setFiltrosHist]   = useState({ dataInicio: '', dataFim: '', clienteNome: '' })
+  const [linhasHist,    setLinhasHist]    = useState([])
+  const [modalHistIdx,  setModalHistIdx]  = useState(null)
+  const linhasHistRef = useRef(linhasHist)
+  useEffect(() => { linhasHistRef.current = linhasHist }, [linhasHist])
 
   // ── Refs ──
   const scrollRef   = useRef(null)
@@ -464,6 +473,67 @@ export default function VendasPage() {
     })
   }, [busy, dataLive, liveNome, buscar])
 
+  // ── HISTÓRICO: handlers ──────────────────────────────────────
+  const buscarHistorico = useCallback(async () => {
+    if (busyRef.current || !tenantId) return
+    setBusy(true, 'Buscando histórico...')
+    try {
+      const rows = await getVendasEnviadas(tenantId, filtrosHist)
+      setLinhasHist(rows)
+      if (!rows.length) showToast('Nenhum registro encontrado para os filtros informados.', 'info')
+      else showToast(`${rows.length} registro(s) encontrado(s).`, 'success')
+    } catch { showToast('Erro ao buscar histórico.', 'error') }
+    finally { setBusy(false) }
+  }, [tenantId, filtrosHist])
+
+  const confirmarEdicaoHist = useCallback(async (idx, campos) => {
+    setModalHistIdx(null)
+    const linha = { ...linhasHistRef.current[idx], ...campos }
+    setBusy(true, 'Salvando...')
+    try {
+      await updateVendaEnviada(tenantId, linha)
+      setLinhasHist(prev => { const n = [...prev]; n[idx] = linha; return n })
+      showToast('Registro atualizado!', 'success')
+    } catch { showToast('Erro ao salvar alterações.', 'error') }
+    finally { setBusy(false) }
+  }, [tenantId])
+
+  const estornarHist = useCallback((idx) => {
+    setConfirmacao({
+      titulo: '↩️ Estornar Venda',
+      mensagem: 'Deseja ESTORNAR esta venda?<br><br>Ela voltará para pendente e sumirá do histórico.',
+      onSim: async () => {
+        setConfirmacao(null); setBusy(true, 'Estornando...')
+        try {
+          await estornarVenda(linhasHistRef.current[idx].id)
+          setLinhasHist(prev => prev.filter((_, i) => i !== idx))
+          showToast('Venda estornada!', 'success')
+        } catch { showToast('Erro ao estornar.', 'error') }
+        finally { setBusy(false) }
+      },
+      onNao: () => setConfirmacao(null),
+    })
+  }, [])
+
+  const excluirHist = useCallback((idx) => {
+    setConfirmacao({
+      titulo: '🗑️ Excluir Registro',
+      mensagem: 'Deseja EXCLUIR este registro permanentemente?<br><br>Esta ação não pode ser desfeita.',
+      onSim: async () => {
+        setConfirmacao(null); setBusy(true, 'Excluindo...')
+        try {
+          const { error } = await supabase.from('vendas').delete()
+            .eq('id', linhasHistRef.current[idx].id)
+          if (error) throw error
+          setLinhasHist(prev => prev.filter((_, i) => i !== idx))
+          showToast('Registro excluído.', 'success')
+        } catch { showToast('Erro ao excluir.', 'error') }
+        finally { setBusy(false) }
+      },
+      onNao: () => setConfirmacao(null),
+    })
+  }, [])
+
   // ── RENDER ──
   const visivel = linhas.filter(l => !l.deleted && passaFiltro(l, filtro))
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
@@ -489,92 +559,199 @@ export default function VendasPage() {
         </svg>
       </button>
 
-      {/* TOOLBAR */}
-      <div className="no-print">
-        <div className="toolbar">
-          <div className="field">
-            <label>Data</label>
-            <input type="date" value={dataLive} onChange={e => setDataLive(e.target.value)}
-              onClick={e => { try { e.target.showPicker() } catch {} }} />
+      {/* TOOLBAR — MODO HISTÓRICO */}
+      {modo === 'historico' && (
+        <div className="no-print">
+          <div style={{ padding: '6px 14px 0', maxWidth: 1200, margin: '0 auto' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--purple)' }}>
+              📋 Modo Histórico — registros enviados
+            </span>
           </div>
-          <div className="field">
-            <label>Live</label>
-            <AutocompleteInput value={liveNome} onChange={setLiveNome}
-              list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
-          </div>
-          <div className="total-container">
-            <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>
-            <div className="total-valor">
-              {totalFmt}{' '}
-              <span style={{ fontSize:13, color:'var(--muted)', fontWeight:600 }}>({totalInfo.qtd} unid.)</span>
+          <div className="toolbar">
+            <div className="field">
+              <label>Data De</label>
+              <input type="date" value={filtrosHist.dataInicio}
+                onChange={e => setFiltrosHist(p => ({ ...p, dataInicio: e.target.value }))}
+                onClick={e => { try { e.target.showPicker() } catch {} }} />
+            </div>
+            <div className="field">
+              <label>Data Até</label>
+              <input type="date" value={filtrosHist.dataFim}
+                onChange={e => setFiltrosHist(p => ({ ...p, dataFim: e.target.value }))}
+                onClick={e => { try { e.target.showPicker() } catch {} }} />
+            </div>
+            <div className="field" style={{ flex: 2 }}>
+              <label>Cliente</label>
+              <input type="text" placeholder="Nome do cliente..."
+                value={filtrosHist.clienteNome}
+                onChange={e => setFiltrosHist(p => ({ ...p, clienteNome: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && buscarHistorico()} />
+            </div>
+            <div className="total-container">
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Encontrados</label>
+              <div className="total-valor" style={{ fontSize: 18 }}>
+                <span style={{ color: 'var(--purple)' }}>{linhasHist.filter(l => passaFiltro(l, filtro)).length}</span>
+                <span style={{ fontSize:13, color:'var(--muted)', fontWeight:600, marginLeft:4 }}>itens</span>
+              </div>
+            </div>
+            <div className="actions">
+              <button className="btn-acao btn-ghost" onClick={() => { setModo('live'); setLinhasHist([]) }} disabled={busy}>
+                ← Voltar
+              </button>
+              <button className="btn-acao btn-green" onClick={buscarHistorico} disabled={busy}>
+                Buscar Enviados
+              </button>
             </div>
           </div>
-          <div className="actions">
-            <button className="btn-acao btn-ghost" onClick={atualizarDados} disabled={busy}
-              style={{ minWidth:44, padding:'0 10px' }} title="Sincronizar dados">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-            </button>
-            <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
-            <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
-            <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
-            <div className="save-group">
-              <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
-            </div>
+          <div className="filter-header-bar">
+            <input type="text" value={filtro} onChange={e => setFiltro(e.target.value)}
+              placeholder="Filtro Rápido: produto, cor, marca, tamanho..." />
           </div>
         </div>
-        <div className="filter-header-bar">
-          <input type="text" value={filtro} onChange={e => setFiltro(e.target.value)}
-            placeholder="Filtro Rápido: Digite para buscar (Ex: camiseta, verde, zara)" />
-        </div>
-      </div>
+      )}
 
-      {/* TABELA */}
-      <div id="tabela-container" style={flash ? { backgroundColor: 'rgba(255, 249, 196, 0.45)', transition: 'background-color 0.25s ease' } : undefined}>
-        <div className="table-responsive" ref={scrollRef}
-          onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
-          {!pronto || visivel.length === 0 ? (
-            <div id="tabela-msg">{tabelaMsg}</div>
-          ) : null}
-          {pronto && visivel.length > 0 && (
-            <table id="tabela">
-              <thead>
-                <tr>
-                  <th className="col-sacola">Sacola</th>
-                  <th>Produto</th><th>Modelo</th>
-                  <th className="col-cor">Cor</th><th>Marca</th>
-                  <th className="col-tam">Tam.</th>
-                  <th className="col-preco">Preço</th>
-                  <th className="col-cod">Cód.</th>
-                  <th className="col-cliente">Cliente</th>
-                  <th className="col-acoes">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhas.map((l, idx) => {
-                  if (l.deleted || !passaFiltro(l, filtro)) return null
-                  return (
-                    <TabelaRow key={l._key || l.id || idx}
-                      linha={l} idx={idx} listas={listas}
-                      onFieldChange={handleFieldChange}
-                      onClienteBlur={handleClienteBlur}
-                      onNovoFromRow={novo}
-                      onAbrirModal={setModalEdicaoIdx}
-                      onAbrirFila={setModalFilaIdx}
-                      onEnviar={handleEnviar}
-                      onEstornar={handleEstornar}
-                      onCopiar={handleCopiar}
-                      onExcluir={handleExcluir}
-                    />
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
+      {/* TOOLBAR — MODO LIVE */}
+      {modo === 'live' && (
+        <div className="no-print">
+          <div className="toolbar">
+            <div className="field">
+              <label>Data</label>
+              <input type="date" value={dataLive} onChange={e => setDataLive(e.target.value)}
+                onClick={e => { try { e.target.showPicker() } catch {} }} />
+            </div>
+            <div className="field">
+              <label>Live</label>
+              <AutocompleteInput value={liveNome} onChange={setLiveNome}
+                list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
+            </div>
+            <div className="total-container">
+              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>
+              <div className="total-valor">
+                {totalFmt}{' '}
+                <span style={{ fontSize:13, color:'var(--muted)', fontWeight:600 }}>({totalInfo.qtd} unid.)</span>
+              </div>
+            </div>
+            <div className="actions">
+              <button className="btn-acao btn-ghost" onClick={atualizarDados} disabled={busy}
+                style={{ minWidth:44, padding:'0 10px' }} title="Sincronizar dados">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+              </button>
+              <button className="btn-acao btn-ghost" style={{ color: 'var(--purple)', borderColor: 'rgba(197,138,249,0.3)' }}
+                onClick={() => { setModo('historico'); setFiltro('') }} disabled={busy} title="Buscar e editar registros já enviados">
+                Histórico
+              </button>
+              <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
+              <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
+              <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
+              <div className="save-group">
+                <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
+              </div>
+            </div>
+          </div>
+          <div className="filter-header-bar">
+            <input type="text" value={filtro} onChange={e => setFiltro(e.target.value)}
+              placeholder="Filtro Rápido: Digite para buscar (Ex: camiseta, verde, zara)" />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* TABELA — MODO HISTÓRICO */}
+      {modo === 'historico' && (
+        <div id="tabela-container">
+          <div className="table-responsive" ref={scrollRef}
+            onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
+            {linhasHist.length === 0 ? (
+              <div id="tabela-msg">
+                {busy ? 'Buscando...' : 'Use os filtros acima e clique em "Buscar Enviados".'}
+              </div>
+            ) : (
+              <table id="tabela">
+                <thead>
+                  <tr>
+                    <th className="col-sacola">Data / Live</th>
+                    <th>Produto</th><th>Modelo</th>
+                    <th className="col-cor">Cor</th><th>Marca</th>
+                    <th className="col-tam">Tam.</th>
+                    <th className="col-preco">Preço</th>
+                    <th className="col-cod">Cód.</th>
+                    <th className="col-cliente">Cliente</th>
+                    <th className="col-acoes">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linhasHist.map((l, idx) => {
+                    if (!passaFiltro(l, filtro)) return null
+                    return (
+                      <TabelaRow key={l.id} linha={l} idx={idx} listas={listas}
+                        modoHistorico={true}
+                        onFieldChange={() => {}}
+                        onClienteBlur={() => {}}
+                        onNovoFromRow={() => {}}
+                        onAbrirModal={setModalHistIdx}
+                        onAbrirFila={() => {}}
+                        onEnviar={() => {}}
+                        onEstornar={estornarHist}
+                        onCopiar={() => {}}
+                        onExcluir={excluirHist}
+                      />
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TABELA — MODO LIVE */}
+      {modo === 'live' && (
+        <div id="tabela-container" style={flash ? { backgroundColor: 'rgba(255, 249, 196, 0.45)', transition: 'background-color 0.25s ease' } : undefined}>
+          <div className="table-responsive" ref={scrollRef}
+            onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
+            {!pronto || visivel.length === 0 ? (
+              <div id="tabela-msg">{tabelaMsg}</div>
+            ) : null}
+            {pronto && visivel.length > 0 && (
+              <table id="tabela">
+                <thead>
+                  <tr>
+                    <th className="col-sacola">Sacola</th>
+                    <th>Produto</th><th>Modelo</th>
+                    <th className="col-cor">Cor</th><th>Marca</th>
+                    <th className="col-tam">Tam.</th>
+                    <th className="col-preco">Preço</th>
+                    <th className="col-cod">Cód.</th>
+                    <th className="col-cliente">Cliente</th>
+                    <th className="col-acoes">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linhas.map((l, idx) => {
+                    if (l.deleted || !passaFiltro(l, filtro)) return null
+                    return (
+                      <TabelaRow key={l._key || l.id || idx}
+                        linha={l} idx={idx} listas={listas}
+                        onFieldChange={handleFieldChange}
+                        onClienteBlur={handleClienteBlur}
+                        onNovoFromRow={novo}
+                        onAbrirModal={setModalEdicaoIdx}
+                        onAbrirFila={setModalFilaIdx}
+                        onEnviar={handleEnviar}
+                        onEstornar={handleEstornar}
+                        onCopiar={handleCopiar}
+                        onExcluir={handleExcluir}
+                      />
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MODAIS */}
       {modalFilaIdx !== null && (
@@ -611,6 +788,14 @@ export default function VendasPage() {
             showToast('Cadastro realizado!', 'success')
           }}
           onFechar={() => setShowModalCadastro(false)}
+        />
+      )}
+      {modalHistIdx !== null && (
+        <ModalEdicao
+          linha={linhasHist[modalHistIdx]}
+          listas={listas}
+          onConfirmar={(campos) => confirmarEdicaoHist(modalHistIdx, campos)}
+          onFechar={() => setModalHistIdx(null)}
         />
       )}
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}

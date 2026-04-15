@@ -6,15 +6,31 @@ const TabelaRow = memo(function TabelaRow({
   onFieldChange, onClienteBlur, onNovoFromRow,
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
+  modoHistorico = false,
 }) {
   const upd = (field, val) => onFieldChange(idx, field, val)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
 
+  // Formata data_live (YYYY-MM-DD → DD/MM) para exibição compacta no histórico
+  const dataFormatada = linha.data_live
+    ? `${linha.data_live.slice(8, 10)}/${linha.data_live.slice(5, 7)}`
+    : '—'
+
   return (
-    <tr className={linha.isSent ? 'linha-enviada' : ''}>
-      {/* SACOLA */}
-      <td className="col-sacola td-sacola" onClick={() => !linha.isSent && onAbrirModal(idx)} title="Clique para editar">
-        <input className="cell-input sacola" value={linha.sacolinha ?? ''} readOnly tabIndex={-1} />
+    <tr className={linha.isSent && !modoHistorico ? 'linha-enviada' : ''}>
+      {/* SACOLA / DATA-LIVE */}
+      <td className="col-sacola td-sacola"
+        onClick={() => (modoHistorico || !linha.isSent) && onAbrirModal(idx)}
+        title="Clique para editar">
+        {modoHistorico ? (
+          <div style={{ textAlign: 'center', lineHeight: 1.4 }}>
+            <div style={{ color: 'var(--blue)', fontWeight: 700, fontSize: 13 }}>{dataFormatada}</div>
+            <div style={{ color: 'var(--muted)', fontSize: 10, maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '0 auto' }}
+              title={linha.live_nome}>{linha.live_nome || '—'}</div>
+          </div>
+        ) : (
+          <input className="cell-input sacola" value={linha.sacolinha ?? ''} readOnly tabIndex={-1} />
+        )}
       </td>
 
       {/* PRODUTO */}
@@ -76,20 +92,22 @@ const TabelaRow = memo(function TabelaRow({
       {/* AÇÕES */}
       <td className="col-acoes">
         <div className="acoes-wrapper">
-          {/* Fila */}
-          <button
-            className={`btn-action-sm fila${hasFila ? ' has-fila' : ''}`}
-            title="Fila de Espera"
-            onClick={e => { e.stopPropagation(); onAbrirFila(idx) }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
-              <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
-            </svg>
-          </button>
+          {/* Fila — oculto no modo histórico */}
+          {!modoHistorico && (
+            <button
+              className={`btn-action-sm fila${hasFila ? ' has-fila' : ''}`}
+              title="Fila de Espera"
+              onClick={e => { e.stopPropagation(); onAbrirFila(idx) }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+              </svg>
+            </button>
+          )}
 
-          {/* Enviar */}
-          {!linha.isSent && (
+          {/* Enviar — oculto no histórico */}
+          {!linha.isSent && !modoHistorico && (
             <button className="btn-action-sm send" title="Enviar para o banco"
               onClick={e => { e.stopPropagation(); onEnviar(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -98,8 +116,8 @@ const TabelaRow = memo(function TabelaRow({
             </button>
           )}
 
-          {/* Estornar */}
-          {linha.isSent && (
+          {/* Estornar — sempre visível no histórico */}
+          {(linha.isSent || modoHistorico) && (
             <button className="btn-action-sm undo" title="Estornar envio" style={{ display: 'flex' }}
               onClick={e => { e.stopPropagation(); onEstornar(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -108,8 +126,8 @@ const TabelaRow = memo(function TabelaRow({
             </button>
           )}
 
-          {/* Copiar */}
-          {!linha.isSent && (
+          {/* Copiar — oculto no histórico */}
+          {!linha.isSent && !modoHistorico && (
             <button className="btn-action-sm copy" title="Copiar linha"
               onClick={e => { e.stopPropagation(); onCopiar(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -119,8 +137,8 @@ const TabelaRow = memo(function TabelaRow({
             </button>
           )}
 
-          {/* Excluir */}
-          {!linha.isSent && (
+          {/* Excluir — visível sempre (pendente ou histórico) */}
+          {(!linha.isSent || modoHistorico) && (
             <button className="btn-action-sm del" title="Excluir linha"
               onClick={e => { e.stopPropagation(); onExcluir(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

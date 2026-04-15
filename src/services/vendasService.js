@@ -245,6 +245,61 @@ export async function estornarVenda(id) {
   return { ok: true }
 }
 
+// ── getVendasEnviadas ──────────────────────────────────────────
+export async function getVendasEnviadas(tenantId = null, filtros = {}) {
+  const tid = TENANT_ID(tenantId)
+  const { dataInicio, dataFim, clienteNome } = filtros
+
+  let query = supabase
+    .from('vendas')
+    .select('*')
+    .eq('tenant_id', tid)
+    .eq('status', 'ENVIADO')
+    .order('data_live', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(300)
+
+  if (dataInicio)         query = query.gte('data_live', dataInicio)
+  if (dataFim)            query = query.lte('data_live', dataFim)
+  if (clienteNome?.trim()) query = query.ilike('cliente_nome', `%${clienteNome.trim()}%`)
+
+  const { data, error } = await query
+  if (error) throw error
+
+  return (data || []).map(row => ({
+    _key: row.id, id: row.id,
+    produto: row.produto || '', modelo: row.modelo || '', cor: row.cor || '',
+    marca: row.marca || '', tamanho: row.tamanho || '',
+    preco: row.preco != null ? formatMoney(row.preco) : '',
+    codigo: row.codigo || '', cliente_nome: row.cliente_nome || '',
+    data_live: row.data_live || '', live_nome: row.live_nome || '',
+    sacolinha: row.sacolinha ?? null, status: row.status || '',
+    fila1: row.fila1 || '', fila2: row.fila2 || '', fila3: row.fila3 || '',
+    isNew: false, deleted: false, isSent: true, liberado: false,
+  }))
+}
+
+// ── updateVendaEnviada ─────────────────────────────────────────
+export async function updateVendaEnviada(tenantId = null, linha) {
+  const tid = TENANT_ID(tenantId)
+  const { error } = await supabase
+    .from('vendas')
+    .update({
+      produto:      linha.produto      || '',
+      modelo:       linha.modelo       || '',
+      cor:          linha.cor          || '',
+      marca:        linha.marca        || '',
+      tamanho:      linha.tamanho      || '',
+      preco:        parseMoney(linha.preco),
+      codigo:       linha.codigo       || '',
+      cliente_nome: linha.cliente_nome || '',
+    })
+    .eq('id', linha.id)
+    .eq('tenant_id', tid)
+  if (error) throw error
+  return { ok: true }
+}
+
 // ── finalizarLive ──────────────────────────────────────────────
 export async function finalizarLive(tenantId = null, linhas, dataLive, liveNome) {
   const tid = TENANT_ID(tenantId)
