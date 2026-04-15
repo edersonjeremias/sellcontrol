@@ -19,6 +19,7 @@ DROP POLICY IF EXISTS "vendas_insert"         ON vendas;
 DROP POLICY IF EXISTS "vendas_update"         ON vendas;
 DROP POLICY IF EXISTS "vendas_delete"         ON vendas;
 DROP POLICY IF EXISTS "vendas_authenticated"  ON vendas;
+DROP POLICY IF EXISTS "vendas_rw"             ON vendas;
 CREATE POLICY "vendas_rw" ON vendas FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- ── CLIENTES ─────────────────────────────────────────────────
