@@ -306,24 +306,29 @@ export async function updateVendaEnviada(tenantId = null, linha) {
 export async function finalizarLive(tenantId = null, linhas, dataLive, liveNome) {
   const tid = TENANT_ID(tenantId)
 
-  // 1) Salva/atualiza todas as linhas pendentes com data e live
-  const saveRes = await salvarVendas(tenantId, linhas, dataLive, liveNome)
-  if (!saveRes.ok) throw new Error('Falha ao salvar as linhas antes de finalizar.')
+  // 1) Salva/atualiza todas as linhas (inclusive novas) com data e live corretos
+  await salvarVendas(tenantId, linhas, dataLive, liveNome)
 
-  // 2) Coleta os IDs que têm cliente (devem ser marcados ENVIADO)
-  const idsParaEnviar = linhas
-    .filter(l => !l.deleted && !l.isSent && l.cliente_nome?.trim() && (l.id || saveRes.novosIds?.find(n => n)))
-    .map(l => l.id)
-    .filter(Boolean)
+  // 2) Busca no banco todas as linhas COM cliente pendentes nessa data+live
+  //    (inclui linhas recém-inseridas que ainda não tinham id no state)
+  const { data: comCliente, error: qErr } = await supabase
+    .from('vendas')
+    .select('id')
+    .eq('tenant_id', tid)
+    .eq('data_live', dataLive)
+    .eq('live_nome', liveNome || '')
+    .eq('status', '')
+    .neq('cliente_nome', '')
+  if (qErr) throw qErr
 
-  if (idsParaEnviar.length === 0) {
-    return { ok: true, movidos: 0 }
-  }
+  const ids = (comCliente || []).map(r => r.id)
+  if (ids.length === 0) return { ok: true, movidos: 0 }
 
-  // 3) Marca como ENVIADO pelos IDs (não filtra por live_nome para evitar race condition)
-  const { data, error } = await supabase.from('vendas')
-    .update({ status: 'ENVIADO', tipo_envio: 'lote', data_live: dataLive, live_nome: liveNome })
-    .in('id', idsParaEnviar)
+  // 3) Marca todas como ENVIADO em lote
+  const { data, error } = await supabase
+    .from('vendas')
+    .update({ status: 'ENVIADO', tipo_envio: 'lote' })
+    .in('id', ids)
     .eq('tenant_id', tid)
     .select('id')
   if (error) throw error

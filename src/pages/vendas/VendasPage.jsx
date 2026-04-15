@@ -141,13 +141,18 @@ export default function VendasPage() {
   useEffect(() => { linhasHistRef.current = linhasHist }, [linhasHist])
 
   // ── Refs ──
-  const scrollRef   = useRef(null)
-  const linhasRef   = useRef(linhas)
-  const globalDBRef = useRef(globalDB)
+  const scrollRef    = useRef(null)
+  const linhasRef    = useRef(linhas)
+  const globalDBRef  = useRef(globalDB)
   const busyTimerRef = useRef(null)
-  useEffect(() => { linhasRef.current = linhas },     [linhas])
-  useEffect(() => { globalDBRef.current = globalDB }, [globalDB])
-  useEffect(() => { busyRef.current = busy }, [busy])
+  const autoSaveRef  = useRef(null)
+  const dataLiveRef  = useRef(dataLive)
+  const liveNomeRef  = useRef(liveNome)
+  useEffect(() => { linhasRef.current = linhas },       [linhas])
+  useEffect(() => { globalDBRef.current = globalDB },   [globalDB])
+  useEffect(() => { busyRef.current = busy },           [busy])
+  useEffect(() => { dataLiveRef.current = dataLive },   [dataLive])
+  useEffect(() => { liveNomeRef.current = liveNome },   [liveNome])
 
   // ── setBusy helper ──
   const setBusy = useCallback((v, msg = '') => {
@@ -238,18 +243,22 @@ export default function VendasPage() {
     }, 120)
   }, [linhas])
 
-  // ── Autosave a cada 60s ──
+  // ── Auto-save: 3s após última alteração ──
   useEffect(() => {
-    const id = setInterval(async () => {
-      if (!hasUnsaved || busy || !tenantId) return
+    if (!hasUnsaved || !tenantId) return
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current)
+    autoSaveRef.current = setTimeout(async () => {
+      if (busyRef.current) return
       try {
-        await salvarVendas(tenantId, linhasRef.current, { data_live: dataLive, live_nome: liveNome })
+        await salvarVendas(tenantId, linhasRef.current, {
+          data_live: dataLiveRef.current || null,
+          live_nome: liveNomeRef.current || '',
+        })
         setHasUnsaved(false)
-        showToast('✅ Salvo automaticamente', 'info')
-      } catch (err) { showToast('Autosave falhou: ' + (err?.message || String(err)), 'error') }
-    }, 60000)
-    return () => clearInterval(id)
-  }, [hasUnsaved, busy, dataLive, liveNome])
+      } catch {}  // erro silencioso — não interrompe o usuário
+    }, 3000)
+    return () => clearTimeout(autoSaveRef.current)
+  }, [hasUnsaved, tenantId])
 
   // ── AÇÕES PRINCIPAIS ──
   const atualizarDados = useCallback(async () => {
