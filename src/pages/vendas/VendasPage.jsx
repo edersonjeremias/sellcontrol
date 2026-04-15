@@ -441,10 +441,22 @@ export default function VendasPage() {
   }, [])
 
   // ── FINALIZAR LIVE ──
+  const salvarRascunho = useCallback(async () => {
+    if (busy) return
+    setBusy(true, 'Salvando...')
+    try {
+      await salvarVendas(tenantId, linhasRef.current, { data_live: dataLive, live_nome: liveNome })
+      setHasUnsaved(false)
+      showToast('✅ Salvo com sucesso!', 'success')
+    } catch (err) {
+      showToast('Erro ao salvar: ' + (err?.message || 'Tente novamente.'), 'error')
+    } finally { setBusy(false) }
+  }, [busy, tenantId, dataLive, liveNome])
+
   const iniciarFinalizacao = useCallback(() => {
     if (busy) return
     if (!dataLive || !liveNome.trim()) {
-      setAlerta({ titulo: 'Dados Faltando', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> antes de salvar.' }); return
+      setAlerta({ titulo: 'Dados Faltando', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> antes de finalizar.' }); return
     }
     const semPreco = linhasRef.current.some(l => {
       if (l.deleted || l.isSent || !l.cliente_nome?.trim()) return false
@@ -452,11 +464,11 @@ export default function VendasPage() {
       return !p || parseFloat(p) === 0
     })
     if (semPreco) {
-      setAlerta({ titulo: 'Preço Ausente', mensagem: 'Há itens com cliente mas <b>sem preço</b>. Corrija antes de salvar.' }); return
+      setAlerta({ titulo: 'Preço Ausente', mensagem: 'Há itens com cliente mas <b>sem preço</b>. Corrija antes de finalizar.' }); return
     }
     setConfirmacao({
       titulo: 'Finalizar a Live?',
-      mensagem: 'Todos os itens com cliente serão confirmados no banco.<br><br>Deseja continuar?',
+      mensagem: 'Todos os itens com cliente serão marcados como <b>ENVIADO</b> no banco.<br><br>Deseja continuar?',
       onSim: async () => {
         setConfirmacao(null); setBusy(true, 'Finalizando live...')
         try {
@@ -582,10 +594,13 @@ export default function VendasPage() {
             </div>
             <div className="field" style={{ flex: 2 }}>
               <label>Cliente</label>
-              <input type="text" placeholder="Nome do cliente..."
+              <AutocompleteInput
                 value={filtrosHist.clienteNome}
-                onChange={e => setFiltrosHist(p => ({ ...p, clienteNome: e.target.value }))}
-                onKeyDown={e => e.key === 'Enter' && buscarHistorico()} />
+                onChange={v => setFiltrosHist(p => ({ ...p, clienteNome: v }))}
+                list={listas.clientes}
+                placeholder="Nome do cliente..."
+                showOnFocus
+              />
             </div>
             <div className="total-container">
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Encontrados</label>
@@ -647,7 +662,8 @@ export default function VendasPage() {
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
               <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
               <div className="save-group">
-                <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
+                <button className="btn-acao btn-ghost" onClick={salvarRascunho} disabled={busy} title="Salva os dados sem finalizar a live">Salvar</button>
+                <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy} title="Requer Data e Live preenchidos — marca tudo como ENVIADO">Finalizar</button>
               </div>
             </div>
           </div>
