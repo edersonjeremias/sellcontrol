@@ -93,6 +93,14 @@ function passaFiltro(l, filtro) {
   return termos.every(t => txt.includes(t))
 }
 
+// ─── HELPERS DE PERSISTÊNCIA ──────────────────────────────
+function storageSave(tid, data) {
+  try { localStorage.setItem(`sc_vendas_${tid}`, JSON.stringify(data)) } catch {}
+}
+function storageLoad(tid) {
+  try { return JSON.parse(localStorage.getItem(`sc_vendas_${tid}`) || 'null') } catch { return null }
+}
+
 // ─── COMPONENT ────────────────────────────────────────────
 export default function VendasPage() {
   const { showToast } = useApp()
@@ -196,6 +204,30 @@ export default function VendasPage() {
     }
     init()
   }, [tenantId])
+
+  // ── Restaurar estado ao montar (navegação entre páginas) ──
+  useEffect(() => {
+    if (!tenantId) return
+    const saved = storageLoad(tenantId)
+    if (!saved) return
+    if (saved.dataLive) setDataLive(saved.dataLive)
+    if (saved.liveNome) setLiveNome(saved.liveNome)
+    if (saved.linhas?.length) {
+      setLinhas(saved.linhas)
+      setPronto(true)
+      setTabelaMsg('')
+    }
+  }, [tenantId])
+
+  // ── Persistir estado sempre que mudar ──
+  useEffect(() => {
+    if (!tenantId) return
+    storageSave(tenantId, {
+      linhas: linhas.filter(l => !l.deleted),
+      dataLive,
+      liveNome,
+    })
+  }, [linhas, dataLive, liveNome, tenantId])
 
   useEffect(() => {
     if (!novoProdutoFocus.current) return

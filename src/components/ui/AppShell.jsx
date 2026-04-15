@@ -15,8 +15,8 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     <div className="app-shell">
       <header className="app-header">
         <div className="app-brand">
-          <div className="app-logo">VM Kids App</div>
-          <div className="app-subtitle">Menu global | SaaS</div>
+          <span className="app-logo-dot" />
+          <span className="app-logo-text">sellControl</span>
         </div>
 
         <nav className="app-nav">
@@ -40,9 +40,9 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
         </nav>
 
         <div className="app-userbar">
-          <div>
-            <div className="app-user-name">{profile?.nome || 'Usuário'}</div>
-            <div className="app-user-role">{profile?.role?.toUpperCase()}</div>
+          <div className="app-user-info">
+            <span className="app-user-name">{profile?.nome || 'Usuário'}</span>
+            <span className="app-user-role">{profile?.role?.toUpperCase()}</span>
           </div>
           <button className="app-logout-btn" onClick={handleLogout}>Sair</button>
         </div>
