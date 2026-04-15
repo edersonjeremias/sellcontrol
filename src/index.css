@@ -368,8 +368,9 @@ input[type="date"] { color-scheme: dark; }
 .autocomplete-list::-webkit-scrollbar { width: 8px; }
 .autocomplete-list::-webkit-scrollbar-thumb { background: #5f6368; border-radius: 6px; }
 .autocomplete-list li { padding: 12px 14px; cursor: pointer; color: var(--text-body); font-size: 14px; border-bottom: 1px solid var(--border-light); }
-.autocomplete-list li:hover, .autocomplete-list li.active { background: var(--table-row-hover); }
-.autocomplete-list li.active { background: var(--blue); color: #171717; font-weight: 600; }
+.autocomplete-list li:hover { background: var(--table-row-hover); }
+.autocomplete-list li.active,
+.autocomplete-list li.dropdown-item-active { background: var(--blue); color: #171717; font-weight: 600; }
 
 /* ── TOTAL ── */
 .total-container { flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; gap: 4px; justify-content: flex-end; height: 44px; }
