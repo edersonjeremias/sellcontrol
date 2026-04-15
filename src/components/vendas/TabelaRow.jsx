@@ -36,25 +36,25 @@ const TabelaRow = memo(function TabelaRow({
       {/* PRODUTO */}
       <td>
         <AutocompleteInput className="cell-input" value={linha.produto}
-          list={listas.produtos} onChange={v => upd('produto', v)} disabled={linha.isSent} showOnFocus />
+          list={listas.produtos} onChange={v => upd('produto', v)} disabled={linha.isSent} />
       </td>
 
       {/* MODELO */}
       <td>
         <AutocompleteInput className="cell-input" value={linha.modelo}
-          list={listas.modelos} onChange={v => upd('modelo', v)} disabled={linha.isSent} showOnFocus />
+          list={listas.modelos} onChange={v => upd('modelo', v)} disabled={linha.isSent} />
       </td>
 
       {/* COR */}
       <td className="col-cor">
         <AutocompleteInput className="cell-input" value={linha.cor}
-          list={listas.cores} onChange={v => upd('cor', v)} disabled={linha.isSent} showOnFocus />
+          list={listas.cores} onChange={v => upd('cor', v)} disabled={linha.isSent} />
       </td>
 
       {/* MARCA */}
       <td>
         <AutocompleteInput className="cell-input" value={linha.marca}
-          list={listas.marcas} onChange={v => upd('marca', v)} disabled={linha.isSent} showOnFocus />
+          list={listas.marcas} onChange={v => upd('marca', v)} disabled={linha.isSent} />
       </td>
 
       {/* TAMANHO */}
@@ -86,7 +86,6 @@ const TabelaRow = memo(function TabelaRow({
           onBlur={() => onClienteBlur(idx)}
           onEnterNewRow={onNovoFromRow}
           disabled={linha.isSent}
-          showOnFocus
         />
       </td>
 
