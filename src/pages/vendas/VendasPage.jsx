@@ -214,7 +214,7 @@ export default function VendasPage() {
         await salvarVendas(tenantId, linhasRef.current, { data_live: dataLive, live_nome: liveNome })
         setHasUnsaved(false)
         showToast('✅ Salvo automaticamente', 'info')
-      } catch {}
+      } catch (err) { showToast('Autosave falhou: ' + (err?.message || String(err)), 'error') }
     }, 60000)
     return () => clearInterval(id)
   }, [hasUnsaved, busy, dataLive, liveNome])
