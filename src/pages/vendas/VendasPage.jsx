@@ -381,7 +381,7 @@ export default function VendasPage() {
       }
       setHasUnsaved(false)
       showToast('✅ Linha salva no banco!', 'success')
-    } catch { showToast('Erro ao salvar linha.', 'error') }
+    } catch (err) { showToast('Erro ao salvar linha: ' + (err?.message || String(err)), 'error') }
     finally { setBusy(false) }
   }, [tenantId, dataLive, liveNome])
 
