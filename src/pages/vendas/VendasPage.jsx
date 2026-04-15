@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   getDadosIniciais, getListas, salvarNovoCadastro,
-  getVendas, salvarVendas, enviarVenda, estornarVenda,
+  getVendas, salvarVendas, estornarVenda,
   finalizarLive, formatMoney,
   getVendasEnviadas, updateVendaEnviada,
 } from '../../services/vendasService'
@@ -209,7 +209,7 @@ export default function VendasPage() {
   // ── Autosave a cada 60s ──
   useEffect(() => {
     const id = setInterval(async () => {
-      if (!hasUnsaved || busy || !tenantId || !dataLive || !liveNome.trim()) return
+      if (!hasUnsaved || busy || !tenantId) return
       try {
         await salvarVendas(tenantId, linhasRef.current, { data_live: dataLive, live_nome: liveNome })
         setHasUnsaved(false)
@@ -365,28 +365,25 @@ export default function VendasPage() {
     setHasUnsaved(true); showToast('Cliente alterado!', 'success')
   }, [])
 
-  // ── ENVIAR / ESTORNAR ──
+  // ── SALVAR LINHA (aviãozinho) ──
   const handleEnviar = useCallback(async (idx) => {
     const l = linhasRef.current[idx]
-    if (l.isSent) { showToast('Esta venda já foi enviada!', 'info'); return }
-    if (!dataLive || !liveNome.trim()) {
-      setAlerta({ titulo: 'Faltam Dados', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> no topo.' }); return
+    if (l.isSent) { showToast('Esta venda já foi finalizada!', 'info'); return }
+    if (!l.produto && !l.codigo && !l.preco && !l.cliente_nome) {
+      showToast('Linha vazia, nada para salvar.', 'info'); return
     }
-    if (!l.cliente_nome.trim()) {
-      setAlerta({ titulo: 'Cliente Vazio', mensagem: 'Esta linha precisa de um <b>Cliente</b>.' }); return
-    }
-    const p = (l.preco || '').replace(/\./g,'').replace(',','.')
-    if (!p || parseFloat(p) === 0) {
-      setAlerta({ titulo: 'Preço Ausente', mensagem: 'O <b>Preço</b> precisa ser preenchido.' }); return
-    }
-    setBusy(true, 'Enviando...')
+    setBusy(true, 'Salvando linha...')
     try {
-      const res = await enviarVenda(tenantId, l, dataLive, liveNome)
-      setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],isSent:true,status:'ENVIADO',id:res.id||n[idx].id}; return n })
-      showToast('✅ Venda enviada com sucesso!'); setHasUnsaved(true)
-    } catch { showToast('Erro ao enviar venda.', 'error') }
+      const res = await salvarVendas(tenantId, [l], { data_live: dataLive || null, live_nome: liveNome || '' })
+      // se era linha nova, atualiza o id no estado
+      if (!l.id && res.novosIds?.length > 0) {
+        setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx], id: res.novosIds[0].id, isNew: false}; return n })
+      }
+      setHasUnsaved(false)
+      showToast('✅ Linha salva no banco!', 'success')
+    } catch { showToast('Erro ao salvar linha.', 'error') }
     finally { setBusy(false) }
-  }, [dataLive, liveNome, busy])
+  }, [tenantId, dataLive, liveNome])
 
   const handleEstornar = useCallback((idx) => {
     setConfirmacao({
