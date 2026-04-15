@@ -369,6 +369,9 @@ export default function VendasPage() {
   const handleEnviar = useCallback(async (idx) => {
     const l = linhasRef.current[idx]
     if (l.isSent) { showToast('Esta venda já foi finalizada!', 'info'); return }
+    if (!dataLive || !liveNome.trim()) {
+      showToast('Preencha a Data e a Live antes de salvar.', 'error'); return
+    }
     if (!l.produto && !l.codigo && !l.preco && !l.cliente_nome) {
       showToast('Linha vazia, nada para salvar.', 'info'); return
     }
