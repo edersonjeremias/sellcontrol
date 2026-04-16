@@ -4,6 +4,7 @@ import {
   getVendas, salvarVendas, estornarVenda,
   finalizarLive, formatMoney,
   getVendasEnviadas, updateVendaEnviada,
+  enviarVenda,
 } from '../../services/vendasService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -426,20 +427,47 @@ export default function VendasPage() {
     if (!dataLive || !liveNome.trim()) {
       showToast('Preencha a Data e a Live antes de salvar.', 'error'); return
     }
-    if (!l.produto && !l.codigo && !l.preco && !l.cliente_nome) {
+    
+    // Verifica se há qualquer dado para salvar
+    const temDados = !!(
+      l.produto?.trim() || l.modelo?.trim() || l.cor?.trim() || 
+      l.marca?.trim() || l.tamanho?.trim() || l.preco?.trim() || 
+      l.codigo?.trim() || l.cliente_nome?.trim()
+    )
+    if (!temDados) {
       showToast('Linha vazia, nada para salvar.', 'info'); return
     }
+
     setBusy(true, 'Salvando linha...')
     try {
-      const res = await salvarVendas(tenantId, [l], { data_live: dataLive || null, live_nome: liveNome || '' })
-      // se era linha nova, atualiza o id no estado
-      if (!l.id && res.novosIds?.length > 0) {
-        setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx], id: res.novosIds[0].id, isNew: false}; return n })
+      let res;
+      // Se tiver cliente, já marca como ENVIADO (individual)
+      if (l.cliente_nome?.trim()) {
+        res = await enviarVenda(tenantId, l, dataLive || null, liveNome || '')
+        setLinhas(prev => {
+          const n = [...prev]
+          n[idx] = { ...n[idx], id: res.id, isNew: false, isSent: true, status: 'ENVIADO' }
+          return n
+        })
+        showToast('✅ Venda finalizada!', 'success')
+      } else {
+        // Se não tiver cliente, apenas salva como rascunho/estoque
+        res = await salvarVendas(tenantId, [l], { data_live: dataLive || null, live_nome: liveNome || '' })
+        if (!l.id && res.novosIds?.length > 0) {
+          setLinhas(prev => { 
+            const n = [...prev]
+            n[idx] = { ...n[idx], id: res.novosIds[0].id, isNew: false }
+            return n
+          })
+        }
+        showToast('✅ Linha salva no banco!', 'success')
       }
       setHasUnsaved(false)
-      showToast('✅ Linha salva no banco!', 'success')
-    } catch (err) { showToast('Erro ao salvar linha: ' + (err?.message || String(err)), 'error') }
-    finally { setBusy(false) }
+    } catch (err) { 
+      showToast('Erro ao salvar linha: ' + (err?.message || String(err)), 'error') 
+    } finally { 
+      setBusy(false) 
+    }
   }, [tenantId, dataLive, liveNome])
 
   const handleEstornar = useCallback((idx) => {

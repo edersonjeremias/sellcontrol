@@ -128,7 +128,10 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
     rows = rows.filter((row) => {
       // Regra de negocio: vendido apenas apos finalizacao (status ENVIADO).
       const status = String(row.status || '').trim().toUpperCase()
-      return status !== 'ENVIADO'
+      const temCliente = !!(row.cliente_nome || '').trim()
+      
+      // Não puxa se já foi enviado OU se já tem cliente (considerado vendido pelo usuário)
+      return status !== 'ENVIADO' && !temCliente
     })
   }
 
@@ -172,7 +175,19 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
   linhas.forEach(l => {
     if (l.deleted || l.isDeleted) { if (l.id) toDelete.push(l.id); return }
     if (l.isSent) return
-    if (!l.produto && !l.codigo && !l.preco && !l.cliente_nome) return
+    
+    // Salva se houver QUALQUER dado preenchido
+    const temDados = !!(
+      (l.produto || '').trim() || 
+      (l.modelo || '').trim() || 
+      (l.cor || '').trim() || 
+      (l.marca || '').trim() || 
+      (l.tamanho || '').trim() || 
+      (l.preco || '').trim() || 
+      (l.codigo || '').trim() || 
+      (l.cliente_nome || '').trim()
+    )
+    if (!temDados) return
 
     const row = {
       tenant_id: tid,
