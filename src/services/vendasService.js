@@ -171,6 +171,7 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
   const toInsert = []
   const toUpdate = []
   const toDelete = []
+  const idsVistos = new Set()
 
   linhas.forEach(l => {
     if (l.deleted || l.isDeleted) { if (l.id) toDelete.push(l.id); return }
@@ -201,6 +202,8 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     }
 
     if (l.id) {
+      if (idsVistos.has(l.id)) return // Pula se o ID já foi processado nesta leva
+      idsVistos.add(l.id)
       row.id = l.id
       toUpdate.push(row)
     } else {

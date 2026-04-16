@@ -252,7 +252,9 @@ export default function VendasPage() {
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current)
     autoSaveRef.current = setTimeout(async () => {
       const tid = tenantIdRef.current
-      if (!tid || busyRef.current) return
+      if (!tid || busyRef.current || isSavingRef.current) return
+      
+      isSavingRef.current = true
       try {
         const res = await salvarVendas(tid, linhasRef.current, {
           data_live: dataLiveRef.current || null,
@@ -271,7 +273,11 @@ export default function VendasPage() {
           })
         }
         setHasUnsaved(false)
-      } catch {}  // silencioso — não interrompe o usuário
+      } catch (err) {
+        console.error('Erro no auto-save:', err)
+      } finally {
+        isSavingRef.current = false
+      }
     }, 3000)
   }, [])
 
