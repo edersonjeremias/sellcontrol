@@ -148,11 +148,13 @@ export default function VendasPage() {
   const autoSaveRef  = useRef(null)
   const dataLiveRef  = useRef(dataLive)
   const liveNomeRef  = useRef(liveNome)
+  const tenantIdRef  = useRef(tenantId)
   useEffect(() => { linhasRef.current = linhas },       [linhas])
   useEffect(() => { globalDBRef.current = globalDB },   [globalDB])
   useEffect(() => { busyRef.current = busy },           [busy])
   useEffect(() => { dataLiveRef.current = dataLive },   [dataLive])
   useEffect(() => { liveNomeRef.current = liveNome },   [liveNome])
+  useEffect(() => { tenantIdRef.current = tenantId },   [tenantId])
 
   // ── setBusy helper ──
   const setBusy = useCallback((v, msg = '') => {
@@ -243,22 +245,34 @@ export default function VendasPage() {
     }, 120)
   }, [linhas])
 
-  // ── Auto-save: 3s após última alteração ──
-  useEffect(() => {
-    if (!hasUnsaved || !tenantId) return
+  // ── triggerAutoSave: reseta o timer a cada chamada (debounce 3s) ──
+  const triggerAutoSave = useCallback(() => {
+    setHasUnsaved(true)
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current)
     autoSaveRef.current = setTimeout(async () => {
-      if (busyRef.current) return
+      const tid = tenantIdRef.current
+      if (!tid || busyRef.current) return
       try {
-        await salvarVendas(tenantId, linhasRef.current, {
+        const res = await salvarVendas(tid, linhasRef.current, {
           data_live: dataLiveRef.current || null,
           live_nome: liveNomeRef.current || '',
         })
+        // Atualiza IDs das linhas recém-inseridas para evitar duplicatas
+        if (res.novosIds?.length) {
+          setLinhas(prev => {
+            const queue = [...res.novosIds]
+            return prev.map(l => {
+              if (!l.id && !l.deleted && queue.length) {
+                return { ...l, id: queue.shift().id, isNew: false }
+              }
+              return l
+            })
+          })
+        }
         setHasUnsaved(false)
-      } catch {}  // erro silencioso — não interrompe o usuário
+      } catch {}  // silencioso — não interrompe o usuário
     }, 3000)
-    return () => clearTimeout(autoSaveRef.current)
-  }, [hasUnsaved, tenantId])
+  }, [])
 
   // ── AÇÕES PRINCIPAIS ──
   const atualizarDados = useCallback(async () => {
@@ -298,7 +312,6 @@ export default function VendasPage() {
     novoProdutoFocus.current = true
     setLinhas(prev => [nl, ...prev])
     setPronto(true)
-    setHasUnsaved(true)
     setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
   }, [busy])
 
@@ -358,8 +371,8 @@ export default function VendasPage() {
       n[idx] = l
       return n
     })
-    setHasUnsaved(true)
-  }, [])
+    triggerAutoSave()
+  }, [triggerAutoSave])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
   const handleClienteBlur = useCallback((idx) => {
@@ -395,16 +408,16 @@ export default function VendasPage() {
   // ── FILA ──
   const salvarFila = useCallback((idx, f1, f2, f3) => {
     setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],fila1:f1,fila2:f2,fila3:f3}; return n })
-    setHasUnsaved(true); setModalFilaIdx(null)
-  }, [])
+    triggerAutoSave(); setModalFilaIdx(null)
+  }, [triggerAutoSave])
 
   const trocarClienteFila = useCallback((idx, novoCliente) => {
     setLinhas(prev => {
       const n=[...prev]; n[idx]={...n[idx],cliente_nome:novoCliente,liberado:false,sacolinha:null}
       return calcSacolas(n)
     })
-    setHasUnsaved(true); showToast('Cliente alterado!', 'success')
-  }, [])
+    triggerAutoSave(); showToast('Cliente alterado!', 'success')
+  }, [triggerAutoSave])
 
   // ── SALVAR LINHA (aviãozinho) ──
   const handleEnviar = useCallback(async (idx) => {
@@ -438,7 +451,7 @@ export default function VendasPage() {
         try {
           await estornarVenda(linhasRef.current[idx].id)
           setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],isSent:false,status:''}; return n })
-          showToast('Venda estornada!', 'success'); setHasUnsaved(true)
+          showToast('Venda estornada!', 'success')
         } catch { showToast('Erro ao estornar.', 'error') }
         finally { setBusy(false) }
       },
@@ -451,7 +464,7 @@ export default function VendasPage() {
     const o = linhasRef.current[idx]
     const copia = { ...novaLinha(), produto:o.produto, modelo:o.modelo, cor:o.cor, marca:o.marca, tamanho:o.tamanho, preco:o.preco, codigo:o.codigo }
     setLinhas(prev => [copia, ...prev])
-    setHasUnsaved(true)
+    triggerAutoSave()
     setTimeout(() => scrollRef.current?.scrollTo({ top:0, behavior:'smooth' }), 50)
   }, [])
 
@@ -464,11 +477,11 @@ export default function VendasPage() {
           const n=[...prev]; n[idx]={...n[idx],deleted:true,cliente_nome:'',sacolinha:null}
           setConfirmacao(null); return calcSacolas(n)
         })
-        setHasUnsaved(true)
+        triggerAutoSave()
       },
       onNao: () => setConfirmacao(null),
     })
-  }, [])
+  }, [triggerAutoSave])
 
   // ── MODAL EDIÇÃO ──
   const confirmarEdicao = useCallback((idx, campos) => {
@@ -478,7 +491,7 @@ export default function VendasPage() {
       if (clienteMudou) n[idx].sacolinha = null
       return calcSacolas(n)
     })
-    setHasUnsaved(true); setModalEdicaoIdx(null)
+    triggerAutoSave(); setModalEdicaoIdx(null)
   }, [])
 
   // ── FINALIZAR LIVE ──
