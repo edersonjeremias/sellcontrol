@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getUserProfile, getPagesForUser, createGoogleUserProfile } from '../services/authService'
@@ -12,10 +12,11 @@ const DEFAULT_PAGES = [
 ]
 
 export function AuthProvider({ children }) {
-  const [loading, setLoading] = useState(true)
-  const [session, setSession] = useState(null)
-  const [profile, setProfile] = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [session, setSession]     = useState(null)
+  const [profile, setProfile]     = useState(null)
   const [menuItems, setMenuItems] = useState(DEFAULT_PAGES)
+  const initializedRef            = useRef(false)
 
   const loadProfile = useCallback(async (user) => {
     if (!user) {
@@ -25,7 +26,6 @@ export function AuthProvider({ children }) {
     }
     const { data, error } = await getUserProfile(user.id)
     if (error || !data) {
-      // Auto-cria perfil para quem entra pela primeira vez via Google OAuth
       const isGoogle =
         user.app_metadata?.provider === 'google' ||
         (user.identities || []).some((i) => i.provider === 'google')
@@ -64,45 +64,62 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    let subscription = null
+    let isMounted = true
 
-    async function init() {
-      try {
-        await Promise.race([
-          (async () => {
-            const { data } = await supabase.auth.getSession()
-            setSession(data?.session ?? null)
-            await loadProfile(data?.session?.user)
-          })(),
-          new Promise(resolve => setTimeout(resolve, 6000)),
-        ])
-      } catch (e) {
-        console.error('Auth init error:', e)
-      } finally {
-        setLoading(false)
+    // Timeout de segurança: nunca prende na tela de "Carregando..."
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted) setLoading(false)
+    }, 8000)
+
+    // Supabase v2 — onAuthStateChange dispara INITIAL_SESSION no boot (lê do localStorage).
+    // Esse é o ponto canônico para saber se há sessão salva, incluindo F5 e nova aba.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
+      if (!isMounted) return
+
+      if (event === 'INITIAL_SESSION') {
+        // Primeira carga: sessão vinda do localStorage (ou null se não logado)
+        setSession(sess)
+        if (sess?.user) {
+          await loadProfile(sess.user)
+        }
+        clearTimeout(safetyTimeout)
+        if (isMounted) setLoading(false)
+        initializedRef.current = true
+
+      } else if (event === 'SIGNED_IN') {
+        // Login explícito ou renovação de token que vira SIGNED_IN
+        setSession(sess)
+        if (sess?.user && initializedRef.current) {
+          // Evita duplo loadProfile no boot (INITIAL_SESSION já fez isso)
+          await loadProfile(sess.user)
+        }
+
+      } else if (event === 'TOKEN_REFRESHED') {
+        setSession(sess)
+
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null)
+        setProfile(null)
+        setMenuItems(DEFAULT_PAGES)
+        if (isMounted) setLoading(false)
       }
-    }
-
-    init()
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      await loadProfile(session?.user)
     })
-    subscription = listener?.subscription
 
     return () => {
-      if (subscription?.unsubscribe) {
-        subscription.unsubscribe()
-      }
+      isMounted = false
+      clearTimeout(safetyTimeout)
+      subscription.unsubscribe()
     }
   }, [loadProfile])
 
   const signIn = useCallback(async (email, password) => {
     const result = await supabase.auth.signInWithPassword({ email, password })
     if (result.error) throw result.error
+    // SIGNED_IN event dispara automaticamente via onAuthStateChange,
+    // mas para garantir o profile aqui também:
     const profileData = await loadProfile(result.data.session?.user)
     setSession(result.data.session)
+    initializedRef.current = true
     if (!profileData) {
       throw new Error('Login feito, mas o perfil não existe em users_perfil. Crie o perfil manualmente no Supabase ou use outro email.')
     }
@@ -124,6 +141,7 @@ export function AuthProvider({ children }) {
     setProfile(null)
     setMenuItems(DEFAULT_PAGES)
     setSession(null)
+    initializedRef.current = false
     return result
   }, [])
 
@@ -147,8 +165,10 @@ export function useAuth() {
 }
 
 export function RequireAuth({ children }) {
-  const { loading, profile } = useAuth()
+  const { loading, session, profile } = useAuth()
   if (loading) return <div style={{ padding: 24, color: '#fff' }}>Carregando...</div>
+  // Tem sessão mas o profile ainda não veio (DB lento) → aguarda em vez de redirecionar
+  if (session && !profile) return <div style={{ padding: 24, color: '#fff' }}>Carregando...</div>
   if (!profile) return <Navigate to="/login" replace />
   return children
 }
