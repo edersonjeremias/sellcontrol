@@ -174,7 +174,10 @@ export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live,
 
   const payload = {
     items: [{ title: titulo, quantity: 1, currency_id: 'BRL', unit_price: parseFloat(Number(total).toFixed(2)) }],
-    payer: { email: 'comprador@email.com' },
+    payer: {
+      name: cliente,
+      email: String(cliente).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') + '@vmkids.com.br',
+    },
     external_reference: String(idCobranca),
     notification_url: WEBHOOK_URL,
     back_urls: {
