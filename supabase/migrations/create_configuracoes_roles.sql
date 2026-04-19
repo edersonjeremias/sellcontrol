@@ -15,5 +15,5 @@ DROP POLICY IF EXISTS "configuracoes_rw" ON configuracoes;
 CREATE POLICY "configuracoes_rw" ON configuracoes
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- Adiciona coluna role em profiles (se ainda não existir)
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS role text DEFAULT 'admin';
+-- Adiciona coluna role em users_perfil (se ainda não existir)
+ALTER TABLE users_perfil ADD COLUMN IF NOT EXISTS role text DEFAULT 'admin';

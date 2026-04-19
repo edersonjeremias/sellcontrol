@@ -63,7 +63,7 @@ export const ROLES = [
 
 export async function getUsuarios(tenantId) {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('users_perfil')
     .select('id, nome, email, role, created_at')
     .eq('tenant_id', tenantId)
     .order('nome')
@@ -73,7 +73,7 @@ export async function getUsuarios(tenantId) {
 
 export async function updateUsuarioRole(userId, role) {
   const { error } = await supabase
-    .from('profiles')
+    .from('users_perfil')
     .update({ role })
     .eq('id', userId)
   if (error) throw error
