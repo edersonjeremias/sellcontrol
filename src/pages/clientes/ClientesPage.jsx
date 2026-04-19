@@ -190,10 +190,35 @@ export default function ClientesPage() {
 
   const isEditing = !!current
 
-  const SQL_MIGRATION = `ALTER TABLE clientes
-  ADD COLUMN IF NOT EXISTS whatsapp  text  DEFAULT '',
-  ADD COLUMN IF NOT EXISTS senha     text  DEFAULT '',
-  ADD COLUMN IF NOT EXISTS detalhes  jsonb DEFAULT '{}';`
+  const SQL_MIGRATION = `ALTER TABLE clientes\n  ADD COLUMN IF NOT EXISTS whatsapp  text  DEFAULT '',\n  ADD COLUMN IF NOT EXISTS senha     text  DEFAULT '',\n  ADD COLUMN IF NOT EXISTS detalhes  jsonb DEFAULT '{}';`
+
+  const [migrating,  setMigrating]  = useState(false)
+  const [sqlCopied,  setSqlCopied]  = useState(false)
+
+  const copiarSQL = () => {
+    navigator.clipboard.writeText(SQL_MIGRATION).then(() => {
+      setSqlCopied(true)
+      setTimeout(() => setSqlCopied(false), 2500)
+    })
+  }
+
+  const executarMigracao = async () => {
+    setMigrating(true)
+    try {
+      const r = await fetch('/api/run-migration?secret=vmkids-migrate-2026')
+      const json = await r.json()
+      if (json.success) {
+        showToast('Migração concluída! Recarregando...', 'success')
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        showToast('Erro: ' + (json.error || 'Falhou'), 'error')
+      }
+    } catch (e) {
+      showToast('Erro de rede: ' + e.message, 'error')
+    } finally {
+      setMigrating(false)
+    }
+  }
 
   return (
     <AppShell title="Clientes">
@@ -202,23 +227,64 @@ export default function ClientesPage() {
       {needsMigration && (
         <div style={{
           background: 'rgba(251,188,4,0.12)', border: '1px solid rgba(251,188,4,0.5)',
-          borderRadius: 8, padding: '12px 16px', margin: '0 16px 16px',
+          borderRadius: 8, padding: '14px 18px', margin: '0 16px 16px',
           maxWidth: 760, marginLeft: 'auto', marginRight: 'auto',
-          display: 'flex', flexDirection: 'column', gap: 8,
+          display: 'flex', flexDirection: 'column', gap: 10,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fbbc04', fontWeight: 700 }}>
-            <span className="material-icons" style={{ fontSize: 18 }}>warning</span>
-            Migração pendente — Execute o SQL abaixo no Supabase SQL Editor para habilitar whatsapp, senha e dados de endereço
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fbbc04', fontWeight: 700, fontSize: '0.95rem' }}>
+            <span className="material-icons" style={{ fontSize: 20 }}>warning</span>
+            Migração pendente — colunas whatsapp, senha e detalhes ausentes na tabela clientes
           </div>
-          <div style={{
-            background: 'var(--input-bg)', borderRadius: 6, padding: '10px 14px',
-            fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-body)',
-            whiteSpace: 'pre', overflowX: 'auto', border: '1px solid var(--border-light)',
-          }}>
-            {SQL_MIGRATION}
+
+          {/* Opção 1: botão automático */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              onClick={executarMigracao}
+              disabled={migrating}
+              style={{
+                background: '#fbbc04', color: '#171717', border: 'none', borderRadius: 6,
+                padding: '8px 16px', fontWeight: 700, cursor: 'pointer', display: 'flex',
+                alignItems: 'center', gap: 6, fontSize: '0.88rem',
+              }}
+            >
+              <span className="material-icons" style={{ fontSize: 16 }}>bolt</span>
+              {migrating ? 'Executando...' : 'Executar Migração Automática'}
+            </button>
+            <span style={{ color: 'var(--muted)', fontSize: '0.78rem' }}>
+              (requer SUPABASE_DB_URL no Vercel)
+            </span>
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-            Supabase Dashboard → SQL Editor → New query → cole o SQL → clique em Run
+
+          {/* Opção 2: manual */}
+          <div style={{ borderTop: '1px solid rgba(251,188,4,0.3)', paddingTop: 10 }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
+              Ou cole manualmente no <b>Supabase → SQL Editor → New query → Run:</b>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                background: 'var(--input-bg)', borderRadius: 6, padding: '10px 14px',
+                fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-body)',
+                whiteSpace: 'pre', overflowX: 'auto', border: '1px solid var(--border-light)',
+              }}>
+                {SQL_MIGRATION}
+              </div>
+              <button
+                onClick={copiarSQL}
+                style={{
+                  position: 'absolute', top: 8, right: 8,
+                  background: sqlCopied ? 'var(--green)' : 'var(--btn-cancel-bg)',
+                  color: sqlCopied ? '#171717' : 'var(--text-body)',
+                  border: 'none', borderRadius: 4, padding: '4px 10px',
+                  fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.2s',
+                }}
+              >
+                <span className="material-icons" style={{ fontSize: 14 }}>
+                  {sqlCopied ? 'check' : 'content_copy'}
+                </span>
+                {sqlCopied ? 'Copiado!' : 'Copiar'}
+              </button>
+            </div>
           </div>
         </div>
       )}
