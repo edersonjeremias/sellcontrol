@@ -6,10 +6,12 @@ const TabelaRow = memo(function TabelaRow({
   onFieldChange, onClienteBlur, onNovoFromRow,
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
+  onStatusChange,
   modoHistorico = false,
 }) {
   const upd = (field, val) => onFieldChange(idx, field, val)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
+  const isCancelado = (linha.status || '').toUpperCase() === 'CANCELADO'
 
   // Formata data_live (YYYY-MM-DD → DD/MM) para exibição compacta no histórico
   const dataFormatada = linha.data_live
@@ -17,7 +19,7 @@ const TabelaRow = memo(function TabelaRow({
     : '—'
 
   return (
-    <tr className={linha.isSent && !modoHistorico ? 'linha-enviada' : ''}>
+    <tr className={linha.isSent && !modoHistorico ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
       {/* SACOLA / DATA-LIVE */}
       <td className="col-sacola td-sacola"
         onClick={() => (modoHistorico || !linha.isSent) && onAbrirModal(idx)}
@@ -89,22 +91,40 @@ const TabelaRow = memo(function TabelaRow({
         />
       </td>
 
+      {/* STATUS — só no histórico */}
+      {modoHistorico && (
+        <td className="col-status">
+          <select
+            value={linha.status || 'ENVIADO'}
+            onChange={e => onStatusChange && onStatusChange(idx, e.target.value)}
+            style={{
+              background: isCancelado ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.1)',
+              color: isCancelado ? 'var(--red)' : 'var(--green)',
+              border: `1px solid ${isCancelado ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+              borderRadius: 4, fontSize: 11, fontWeight: 700,
+              padding: '2px 4px', width: '100%', cursor: 'pointer',
+            }}
+          >
+            <option value="ENVIADO">Enviado</option>
+            <option value="CANCELADO">Cancelado</option>
+          </select>
+        </td>
+      )}
+
       {/* AÇÕES */}
       <td className="col-acoes">
         <div className="acoes-wrapper">
-          {/* Fila — oculto no modo histórico */}
-          {!modoHistorico && (
-            <button
-              className={`btn-action-sm fila${hasFila ? ' has-fila' : ''}`}
-              title="Fila de Espera"
-              onClick={e => { e.stopPropagation(); onAbrirFila(idx) }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
-                <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
-              </svg>
-            </button>
-          )}
+          {/* Fila — visível em live e no histórico */}
+          <button
+            className={`btn-action-sm fila${hasFila ? ' has-fila' : ''}`}
+            title="Fila de Espera"
+            onClick={e => { e.stopPropagation(); onAbrirFila(idx) }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+          </button>
 
           {/* Enviar — oculto no histórico */}
           {!linha.isSent && !modoHistorico && (

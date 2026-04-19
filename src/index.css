@@ -450,7 +450,10 @@ tbody td { padding: 6px 8px; border-bottom: 1px solid var(--table-border); verti
 /* ── AÇÕES DA LINHA ── */
 .col-acoes { min-width: 130px; text-align: center; }
 .col-sacola { min-width: 50px; text-align: center; }
+.col-status { min-width: 100px; text-align: center; }
 .col-cor { min-width: 100px; } .col-tam { min-width: 80px; text-align: center; }
+.linha-cancelada td { opacity: 0.45; text-decoration: line-through; }
+.linha-cancelada .col-status td, .linha-cancelada td.col-status { text-decoration: none; opacity: 1; }
 .col-preco { min-width: 80px; } .col-cod { min-width: 70px; text-align: center; }
 .col-cliente { min-width: 180px; }
 .acoes-wrapper { display: flex; gap: 5px; justify-content: center; align-items: center; }

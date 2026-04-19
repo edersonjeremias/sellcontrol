@@ -134,10 +134,11 @@ export default function VendasPage() {
   const [confirmacao,       setConfirmacao]       = useState(null)
 
   // ── Modo Histórico ──
-  const [modo,          setModo]          = useState('live')
-  const [filtrosHist,   setFiltrosHist]   = useState({ dataInicio: '', dataFim: '', clienteNome: '' })
-  const [linhasHist,    setLinhasHist]    = useState([])
-  const [modalHistIdx,  setModalHistIdx]  = useState(null)
+  const [modo,             setModo]             = useState('live')
+  const [filtrosHist,      setFiltrosHist]      = useState({ dataInicio: '', dataFim: '', clienteNome: '' })
+  const [linhasHist,       setLinhasHist]       = useState([])
+  const [modalHistIdx,     setModalHistIdx]     = useState(null)
+  const [modalFilaHistIdx, setModalFilaHistIdx] = useState(null)
   const linhasHistRef = useRef(linhasHist)
   useEffect(() => { linhasHistRef.current = linhasHist }, [linhasHist])
 
@@ -564,6 +565,9 @@ export default function VendasPage() {
   // ── HISTÓRICO: handlers ──────────────────────────────────────
   const buscarHistorico = useCallback(async () => {
     if (busyRef.current || !tenantId) return
+    if (!filtrosHist.dataInicio && !filtrosHist.dataFim) {
+      showToast('Preencha ao menos uma data para buscar.', 'error'); return
+    }
     setBusy(true, 'Buscando histórico...')
     try {
       const rows = await getVendasEnviadas(tenantId, filtrosHist)
@@ -621,6 +625,35 @@ export default function VendasPage() {
       onNao: () => setConfirmacao(null),
     })
   }, [])
+
+  const handleStatusChangeHist = useCallback(async (idx, novoStatus) => {
+    const linha = linhasHistRef.current[idx]
+    if (!linha?.id) return
+    try {
+      const { error } = await supabase.from('vendas').update({ status: novoStatus }).eq('id', linha.id)
+      if (error) throw error
+      setLinhasHist(prev => { const n = [...prev]; n[idx] = { ...n[idx], status: novoStatus }; return n })
+      showToast(novoStatus === 'CANCELADO' ? 'Marcado como cancelado.' : 'Status atualizado.', 'success')
+    } catch { showToast('Erro ao atualizar status.', 'error') }
+  }, [])
+
+  const salvarFilaHist = useCallback(async (idx, f1, f2, f3) => {
+    const linha = { ...linhasHistRef.current[idx], fila1: f1, fila2: f2, fila3: f3 }
+    setLinhasHist(prev => { const n = [...prev]; n[idx] = linha; return n })
+    setModalFilaHistIdx(null)
+    try {
+      await updateVendaEnviada(tenantId, linha)
+    } catch { showToast('Erro ao salvar fila.', 'error') }
+  }, [tenantId])
+
+  const trocarClienteFilaHist = useCallback(async (idx, novoCliente) => {
+    const linha = { ...linhasHistRef.current[idx], cliente_nome: novoCliente }
+    setLinhasHist(prev => { const n = [...prev]; n[idx] = linha; return n })
+    try {
+      await updateVendaEnviada(tenantId, linha)
+      showToast('Cliente alterado!', 'success')
+    } catch { showToast('Erro ao salvar.', 'error') }
+  }, [tenantId])
 
   // ── RENDER ──
   const visivel = linhas.filter(l => !l.deleted && passaFiltro(l, filtro))
@@ -769,6 +802,7 @@ export default function VendasPage() {
                     <th className="col-preco">Preço</th>
                     <th className="col-cod">Cód.</th>
                     <th className="col-cliente">Cliente</th>
+                    <th className="col-status">Status</th>
                     <th className="col-acoes">Ações</th>
                   </tr>
                 </thead>
@@ -782,11 +816,12 @@ export default function VendasPage() {
                         onClienteBlur={() => {}}
                         onNovoFromRow={() => {}}
                         onAbrirModal={setModalHistIdx}
-                        onAbrirFila={() => {}}
+                        onAbrirFila={setModalFilaHistIdx}
                         onEnviar={() => {}}
                         onEstornar={estornarHist}
                         onCopiar={() => {}}
                         onExcluir={excluirHist}
+                        onStatusChange={handleStatusChangeHist}
                       />
                     )
                   })}
@@ -892,6 +927,24 @@ export default function VendasPage() {
           listas={listas}
           onConfirmar={(campos) => confirmarEdicaoHist(modalHistIdx, campos)}
           onFechar={() => setModalHistIdx(null)}
+        />
+      )}
+      {modalFilaHistIdx !== null && (
+        <ModalFila
+          linha={linhasHist[modalFilaHistIdx]}
+          clientes={listas.clientes}
+          onSalvar={(res) => {
+            if (res.trocarCliente) {
+              trocarClienteFilaHist(modalFilaHistIdx, res.trocarCliente)
+              salvarFilaHist(modalFilaHistIdx,
+                res.numFila === 1 ? '' : res.fila1,
+                res.numFila === 2 ? '' : res.fila2,
+                res.numFila === 3 ? '' : res.fila3)
+            } else {
+              salvarFilaHist(modalFilaHistIdx, res.fila1, res.fila2, res.fila3)
+            }
+          }}
+          onFechar={() => setModalFilaHistIdx(null)}
         />
       )}
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
