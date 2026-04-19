@@ -23,11 +23,12 @@ export default function ClientesPage() {
   const { showToast } = useApp()
   const tenantId      = profile?.tenant_id
 
-  const [clientes,   setClientes]   = useState([])
-  const [saving,     setSaving]     = useState(false)
-  const [confirmacao, setConfirmacao] = useState(null)
-  const [showDados,  setShowDados]  = useState(false)
-  const [showDrop,   setShowDrop]   = useState(false)
+  const [clientes,      setClientes]      = useState([])
+  const [saving,        setSaving]        = useState(false)
+  const [confirmacao,   setConfirmacao]   = useState(null)
+  const [showDados,     setShowDados]     = useState(false)
+  const [showDrop,      setShowDrop]      = useState(false)
+  const [needsMigration, setNeedsMigration] = useState(false)
 
   // Form fields
   const [searchVal,  setSearchVal]  = useState('')
@@ -48,6 +49,9 @@ export default function ClientesPage() {
       showToast('Erro ao carregar clientes: ' + error.message, 'error')
       return
     }
+    // Detecta se colunas novas existem (migração necessária)
+    const primeiroComDetalhes = data.find(c => 'detalhes' in c)
+    setNeedsMigration(data.length === 0 ? false : !primeiroComDetalhes)
     setClientes(data)
   }, [tenantId, showToast])
 
@@ -186,9 +190,40 @@ export default function ClientesPage() {
 
   const isEditing = !!current
 
+  const SQL_MIGRATION = `ALTER TABLE clientes
+  ADD COLUMN IF NOT EXISTS whatsapp  text  DEFAULT '',
+  ADD COLUMN IF NOT EXISTS senha     text  DEFAULT '',
+  ADD COLUMN IF NOT EXISTS detalhes  jsonb DEFAULT '{}';`
+
   return (
     <AppShell title="Clientes">
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 16px' }}>
+
+      {/* Banner de migração pendente */}
+      {needsMigration && (
+        <div style={{
+          background: 'rgba(251,188,4,0.12)', border: '1px solid rgba(251,188,4,0.5)',
+          borderRadius: 8, padding: '12px 16px', margin: '0 16px 16px',
+          maxWidth: 760, marginLeft: 'auto', marginRight: 'auto',
+          display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fbbc04', fontWeight: 700 }}>
+            <span className="material-icons" style={{ fontSize: 18 }}>warning</span>
+            Migração pendente — Execute o SQL abaixo no Supabase SQL Editor para habilitar whatsapp, senha e dados de endereço
+          </div>
+          <div style={{
+            background: 'var(--input-bg)', borderRadius: 6, padding: '10px 14px',
+            fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--text-body)',
+            whiteSpace: 'pre', overflowX: 'auto', border: '1px solid var(--border-light)',
+          }}>
+            {SQL_MIGRATION}
+          </div>
+          <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+            Supabase Dashboard → SQL Editor → New query → cole o SQL → clique em Run
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px 20px' }}>
         <div style={{
           width: '100%', maxWidth: 560,
           background: 'var(--card-bg)', borderRadius: 12,
