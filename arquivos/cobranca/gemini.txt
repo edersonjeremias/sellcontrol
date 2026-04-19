@@ -1,0 +1,98 @@
+Os seus prints foram fundamentais! Analisando a tela da Vercel (onde mostra o erro em 3ms), as variáveis de ambiente e o seu código no VS Code, eu identifiquei exatamente os dois vilões que estão causando esse problema.
+
+Você fez a lógica e a configuração certinho, mas a Vercel está "sabotando" o processo por baixo dos panos. Vamos resolver isso em duas etapas simples:
+
+1º Vilão: A Vercel está barrando o Mercado Pago (O Erro 403)
+Repare no seu primeiro print: o erro 403 aconteceu em apenas 3ms. Isso significa que o seu código nem chegou a rodar! A Vercel olhou para o Mercado Pago tentando acessar o sistema e fechou a porta na cara dele, achando que era um ataque ou um robô não autorizado.
+
+Como remover esse bloqueio:
+
+Vá no painel da Vercel, abra o seu projeto (webhook-vmkids) e clique na aba Settings (Configurações).
+
+No menu lateral esquerdo, clique em Deployment Protection.
+
+Desative a opção Vercel Authentication (se estiver ligada).
+
+Em seguida, ainda no menu lateral, vá em Security.
+
+Verifique se a opção Attack Challenge Mode está desligada. Se estiver ligada, ela bloqueia o webhook do Mercado Pago achando que é um "bot".
+
+2º Vilão: O "Desmaio" da Vercel no Código
+No nosso código anterior (que está no seu print do VS Code), nós colocamos o comando res.status(200).send('OK') lá no comecinho. Em servidores tradicionais isso funciona, mas a Vercel tem uma regra rigorosa: assim que você envia a resposta, ela "congela" a sua função instantaneamente para economizar bateria.
+
+Ou seja, o sistema enviava o OK pro Mercado Pago e a Vercel "desmaiava" o código antes que ele conseguisse avisar o Supabase!
+
+Para resolver isso, precisamos mover o OK para a última linha.
+
+Substitua todo o código do seu arquivo api/webhook.js por este:
+
+
+import { createClient } from '@supabase/supabase-js';
+
+// Inicializa o banco de dados
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+export default async function handler(req, res) {
+  // 1. Bloqueia curiosos, aceita apenas POST do Mercado Pago
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Método não permitido' });
+  }
+
+  try {
+    // 2. Tenta capturar o ID do pagamento
+    const { type, data, action } = req.body || {};
+    let paymentId;
+
+    if (type === 'payment' || action === 'payment.updated') {
+        paymentId = data?.id;
+    } else if (req.query && req.query.type === 'payment') {
+        paymentId = req.query['data.id'];
+    }
+
+    // Se o Mercado Pago mandou um aviso inútil (sem ID), devolve 200 e encerra
+    if (!paymentId) {
+        return res.status(200).send('Recebido, mas sem ID');
+    }
+
+    // 3. Consulta oficial no MP usando a sua chave de segurança
+    const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN; 
+    
+    const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { "Authorization": `Bearer ${ACCESS_TOKEN}` }
+    });
+
+    const paymentData = await mpResponse.json();
+
+    // 4. Se o pagamento foi Aprovado, hora de dar baixa no banco de dados!
+    if (paymentData.status === 'approved') {
+        const externalReference = paymentData.external_reference; 
+        
+        const { error } = await supabase
+          .from('cobrancas') 
+          .update({ status: 'PAGO' })
+          .eq('id_unico', externalReference); // Procurando pelo ID invisível blindado!
+          
+        if (error) {
+            console.error('Erro ao gravar no Supabase:', error);
+        } else {
+            console.log(`Sucesso Absoluto: Pedido ${externalReference} PAGO!`);
+        }
+    }
+
+    // 5. A REGRA DE OURO DA VERCEL: Responder OK somente após o Supabase terminar!
+    return res.status(200).send('OK');
+
+  } catch (error) {
+    console.error('Erro interno na API:', error);
+    // Mesmo se der erro no seu código, responda 200 pro MP não bloquear seu Webhook
+    return res.status(200).send('Erro interno reportado');
+  }
+}
+
+
+O Passo Final (Muito Importante)
+Como a Vercel não atualiza os arquivos ao vivo igual o Google Apps Script, após salvar esse arquivo no VS Code e fazer o Commit para o GitHub, vá até o painel da Vercel e clique em Deployments > Redeploy (ou espere o deploy automático terminar).
+
+Depois que as chaves de segurança da Vercel estiverem destrancadas (Passo 1) e o código com o aviso no final estiver no ar (Passo 2), o painel do Mercado Pago vai passar a registrar 200 OK em verdinho e os seus cartões do Supabase vão dar baixa automaticamente!

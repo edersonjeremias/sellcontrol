@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node --input-type=module)",
+      "Bash(node scripts/importar.mjs)",
+      "Bash(node --check scripts/importar.mjs)",
+      "Bash(git commit -m 'fix: destacar item ativo no autocomplete ao navegar com setas *)",
+      "Bash(git commit -m 'fix: mostrar erros reais no autosave + migration para RLS e colunas *)",
+      "Bash(git commit -m 'fix: reverter filtro OR que causava 400 no Buscar *)"
+    ]
+  }
+}

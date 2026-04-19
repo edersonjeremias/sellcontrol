@@ -11,64 +11,78 @@ serve(async (req) => {
   try {
     const { method } = req
     if (method === 'OPTIONS') return new Response("OK", { status: 200, headers: CORS })
-    if (method === 'GET') return new Response("OK", { status: 200, headers: CORS })
+    if (method === 'GET') return new Response(JSON.stringify({ received: true }), { status: 200, headers: { ...CORS, "Content-Type": "application/json" } })
 
-    // Tenta ler o JSON, mas não trava se estiver vazio (importante para o teste do MP)
-    let body = {}
+    let body: Record<string, any> = {}
     try {
       body = await req.json()
-    } catch (e) {
-      console.log('Webhook sem corpo JSON (provavelmente teste de validação)')
-      return new Response(JSON.stringify({ received: true, note: "empty body" }), { status: 200 })
+    } catch {
+      return new Response(JSON.stringify({ received: true }), { status: 200, headers: CORS })
     }
 
     console.log('Webhook MP recebido:', body)
 
-    // O Mercado Pago envia o ID do pagamento no campo resource ou data.id
     const paymentId = body.data?.id || body.resource?.split('/').pop()
     const action = body.action || body.type
 
-    // Só processamos se for uma atualização de pagamento
-    if (paymentId && (action === 'payment.updated' || action === 'payment.created' || action === 'payment' || action === 'opened')) {
-      
-      const MP_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')
-      if (!MP_TOKEN) throw new Error('MP_ACCESS_TOKEN não configurado nos Secrets do Supabase')
+    const isPaymentEvent = ['payment.updated', 'payment.created', 'payment'].includes(action)
+    if (!paymentId || !isPaymentEvent) {
+      return new Response(JSON.stringify({ received: true }), { status: 200, headers: CORS })
+    }
 
-      // 1. Consulta o status real do pagamento no Mercado Pago
-      const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: { 'Authorization': `Bearer ${MP_TOKEN}` }
-      })
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-      if (!mpResp.ok) {
-        console.error(`Erro ao consultar MP para pagamento ${paymentId}: ${mpResp.status}`)
-        return new Response(JSON.stringify({ received: true }), { status: 200 })
-      }
+    // Token padrão do env (fallback)
+    let MP_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
 
-      const paymentData = await mpResp.json()
+    // Consulta o pagamento no MP com token padrão primeiro
+    const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { 'Authorization': `Bearer ${MP_TOKEN}` }
+    })
 
-      // 2. Se estiver aprovado, damos baixa no banco
-      if (paymentData.status === 'approved') {
-        const externalReference = paymentData.external_reference // ID da nossa tabela 'cobrancas'
-        
-        if (externalReference) {
-          const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-          const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-          const supabase = createClient(supabaseUrl, supabaseKey)
+    if (!mpResp.ok) {
+      console.error(`Erro ao consultar MP: ${mpResp.status}`)
+      return new Response(JSON.stringify({ received: true }), { status: 200, headers: CORS })
+    }
 
-          const { error } = await supabase
-            .from('cobrancas')
-            .update({ 
-              status: 'PAGO', 
-              data_pagamento: new Date().toISOString(),
-              id_mp: String(paymentId)
-            })
-            .eq('id', externalReference)
-            .neq('status', 'PAGO') // Evita processar duas vezes
+    const paymentData = await mpResp.json()
 
-          if (error) console.error('Erro ao atualizar banco:', error)
-          else console.log(`Pagamento ${paymentId} aprovado e baixado para cobrança ${externalReference}`)
+    if (paymentData.status === 'approved' && paymentData.external_reference) {
+      const cobrancaId = paymentData.external_reference
+
+      // Busca o tenant para usar o token correto da configuração
+      const { data: cobranca } = await supabase
+        .from('cobrancas')
+        .select('tenant_id')
+        .eq('id', cobrancaId)
+        .maybeSingle()
+
+      if (cobranca?.tenant_id) {
+        const { data: cfg } = await supabase
+          .from('configuracoes')
+          .select('mp_access_token')
+          .eq('tenant_id', cobranca.tenant_id)
+          .maybeSingle()
+
+        if (cfg?.mp_access_token?.trim()) {
+          MP_TOKEN = cfg.mp_access_token.trim()
         }
       }
+
+      const { error } = await supabase
+        .from('cobrancas')
+        .update({
+          status: 'PAGO',
+          data_pagamento: new Date().toISOString(),
+          id_mp: String(paymentId)
+        })
+        .eq('id', cobrancaId)
+        .neq('status', 'PAGO')
+
+      if (error) console.error('Erro ao atualizar banco:', error)
+      else console.log(`Pagamento ${paymentId} aprovado — cobrança ${cobrancaId} marcada como PAGA`)
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -78,7 +92,7 @@ serve(async (req) => {
 
   } catch (err) {
     console.error('Erro Webhook:', err.message)
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { ...CORS, "Content-Type": "application/json" },
     })

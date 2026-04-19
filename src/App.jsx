@@ -11,6 +11,7 @@ import AdminPage from './pages/AdminPage'
 import MasterEmpresasPage from './pages/MasterEmpresasPage'
 import CobrancasPage from './pages/cobrancas/CobrancasPage'
 import ReciboPage from './pages/recibo/ReciboPage'
+import ConfiguracoesPage from './pages/configuracoes/ConfiguracoesPage'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/master/empresas" element={<RequireAuth><RequireRole allowed={['master']}><MasterEmpresasPage /></RequireRole></RequireAuth>} />
             <Route path="/cobrancas" element={<RequireAuth><CobrancasPage /></RequireAuth>} />
             <Route path="/recibo/:id" element={<ReciboPage />} />
+            <Route path="/configuracoes" element={<RequireAuth><RequireRole allowed={['master','admin']}><ConfiguracoesPage /></RequireRole></RequireAuth>} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>

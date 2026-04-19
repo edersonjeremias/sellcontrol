@@ -9,7 +9,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ received: true })
   }
 
-  // Sempre retorna 200 ao MP para evitar reenvios infinitos
   try {
     const body = req.body || {}
     console.log('Webhook MP recebido:', JSON.stringify(body))
@@ -18,24 +17,25 @@ export default async function handler(req, res) {
       || (body?.resource ? String(body.resource).split('/').pop() : null)
     const action = body?.action || body?.type
 
-    if (!paymentId) {
-      return res.status(200).json({ received: true })
-    }
+    if (!paymentId) return res.status(200).json({ received: true })
 
     const isPaymentEvent = ['payment.updated', 'payment.created', 'payment'].includes(action)
-    if (!isPaymentEvent) {
-      return res.status(200).json({ received: true })
-    }
+    if (!isPaymentEvent) return res.status(200).json({ received: true })
 
-    // Variáveis sem prefixo VITE_ (serverless usa process.env direto)
-    const MP_TOKEN = process.env.MP_ACCESS_TOKEN
     const SUPABASE_URL = process.env.SUPABASE_URL
     const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-    if (!MP_TOKEN) {
-      console.error('MP_ACCESS_TOKEN não configurado no Vercel')
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.error('Variáveis Supabase não configuradas no Vercel')
       return res.status(200).json({ received: true })
     }
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+    // Busca a cobrança pelo external_reference para pegar o tenant_id
+    // (será preenchido depois de consultar o MP)
+    // Primeiro consulta o MP com token padrão do env
+    let MP_TOKEN = process.env.MP_ACCESS_TOKEN
 
     const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: { Authorization: `Bearer ${MP_TOKEN}` },
@@ -49,7 +49,28 @@ export default async function handler(req, res) {
     const paymentData = await mpResp.json()
 
     if (paymentData.status === 'approved' && paymentData.external_reference) {
-      const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
+      const cobrancaId = paymentData.external_reference
+
+      // Busca o tenant_id da cobrança para pegar o token correto
+      const { data: cobranca } = await supabase
+        .from('cobrancas')
+        .select('tenant_id')
+        .eq('id', cobrancaId)
+        .maybeSingle()
+
+      // Se o tenant tem token próprio, re-consulta com ele (confirma autenticidade)
+      if (cobranca?.tenant_id) {
+        const { data: cfg } = await supabase
+          .from('configuracoes')
+          .select('mp_access_token')
+          .eq('tenant_id', cobranca.tenant_id)
+          .maybeSingle()
+
+        if (cfg?.mp_access_token?.trim()) {
+          MP_TOKEN = cfg.mp_access_token.trim()
+        }
+      }
+
       const { error } = await supabase
         .from('cobrancas')
         .update({
@@ -57,11 +78,11 @@ export default async function handler(req, res) {
           data_pagamento: new Date().toISOString(),
           id_mp: String(paymentId),
         })
-        .eq('id', paymentData.external_reference)
+        .eq('id', cobrancaId)
         .neq('status', 'PAGO')
 
       if (error) console.error('Erro Supabase:', error)
-      else console.log(`Cobrança ${paymentData.external_reference} marcada como PAGA`)
+      else console.log(`Cobrança ${cobrancaId} marcada como PAGA`)
     }
 
     return res.status(200).json({ received: true })

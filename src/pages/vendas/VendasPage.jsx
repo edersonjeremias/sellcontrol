@@ -218,8 +218,7 @@ export default function VendasPage() {
     if (!tenantId) return
     const saved = storageLoad(tenantId)
     if (!saved) return
-    if (saved.dataLive) setDataLive(saved.dataLive)
-    if (saved.liveNome) setLiveNome(saved.liveNome)
+    // Removido o preenchimento automático de dataLive e liveNome para não filtrar a busca inicial
     if (saved.linhas?.length) {
       setLinhas(saved.linhas)
       setPronto(true)

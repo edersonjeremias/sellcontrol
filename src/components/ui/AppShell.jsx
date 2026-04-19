@@ -29,6 +29,14 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
               {item.label}
             </Link>
           ))}
+          {['admin', 'master'].includes(profile?.role) && (
+            <Link
+              to="/configuracoes"
+              className={location.pathname === '/configuracoes' ? 'app-nav-link active' : 'app-nav-link'}
+            >
+              Configurações
+            </Link>
+          )}
           {profile?.role === 'master' && (
             <Link
               to="/master/empresas"

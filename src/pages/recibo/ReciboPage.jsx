@@ -18,9 +18,16 @@ export default function ReciboPage() {
 
   useEffect(() => {
     if (!id) { setErro(true); return }
+    setErro(false);
     getCobrancaById(id)
-      .then(setCob)
-      .catch(() => setErro(true))
+      .then(res => {
+        if (!res) setErro(true);
+        else setCob(res);
+      })
+      .catch(err => {
+        console.error('Falha no recibo:', err);
+        setErro(true);
+      })
   }, [id])
 
   if (erro) return (

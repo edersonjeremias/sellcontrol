@@ -1,4 +1,5 @@
 import { supabase, supabasePublic } from '../lib/supabase'
+import { getMpToken } from './configService'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -163,9 +164,9 @@ export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
 
 // ── Mercado Pago ───────────────────────────────────────────────
 
-export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live, idCobranca }) {
-  const MP_TOKEN = import.meta.env.VITE_MP_ACCESS_TOKEN
-  if (!MP_TOKEN) throw new Error('VITE_MP_ACCESS_TOKEN não configurado.')
+export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live, idCobranca, tenantId }) {
+  const MP_TOKEN = await getMpToken(tenantId || import.meta.env.VITE_TENANT_ID)
+  if (!MP_TOKEN) throw new Error('Token do Mercado Pago não configurado. Acesse Configurações e informe sua chave.')
 
   const titulo = `Pedido-${String(cliente).split(' ')[0]}-${String(data).replace(/\//g,'-')}`
 

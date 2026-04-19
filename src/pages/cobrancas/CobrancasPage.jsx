@@ -8,6 +8,7 @@ import {
   getLivesParaCobranca, getClientesParaCobranca,
   getSaldoCliente, abaterCredito,
   buscarVendasParaCobranca, gerarPreferenciaMp,
+  sincronizarCobrancaComVendas,
 } from '../../services/cobrancasService'
 
 // ── Constantes ─────────────────────────────────────────────────
@@ -104,9 +105,10 @@ export default function CobrancasPage() {
   const [dropClientes,   setDropClientes]   = useState([])
 
   // Modal de ação (detalhe da cobrança)
-  const [sel,         setSel]         = useState(null)   // cobrança selecionada
-  const [obsTexto,    setObsTexto]    = useState('')
-  const [salvandoObs, setSalvandoObs] = useState(false)
+  const [sel,           setSel]           = useState(null)   // cobrança selecionada
+  const [obsTexto,      setObsTexto]      = useState('')
+  const [salvandoObs,   setSalvandoObs]   = useState(false)
+  const [sincronizando, setSincronizando] = useState(false)
 
   // Modal novo manual
   const [showManual,    setShowManual]    = useState(false)
@@ -211,14 +213,14 @@ export default function CobrancasPage() {
       } catch { showToast('Erro ao atualizar status', 'error') }
     }
 
-    const reciboUrl = `${window.location.origin}/recibo/${cobranca.id}`
+    const reciboUrl = `https://sellcontrol.vercel.app/recibo/${cobranca.id}`
     let msg = ''
     if (tipo === 'chat') {
       msg = `Olá ${cobranca.cliente}! Tudo bem? 😊`
     } else if (tipo === 'lembrete') {
-      msg = `Olá ${cobranca.cliente}! 🌸 Lembrando que sua compra VM Kids no valor de *R$ ${vlrStr(cobranca.total)}* ainda está aguardando o pagamento.\n\nSeu link: ${cobranca.link_mp || reciboUrl}`
+      msg = `Olá ${cobranca.cliente}! 🌸 Lembrando que sua compra VM Kids no valor de *R$ ${vlrStr(cobranca.total)}* ainda está aguardando o pagamento.\n\nSeu link: ${reciboUrl}`
     } else {
-      msg = `Olá ${cobranca.cliente}! 🌸 Aqui está o resumo da sua compra VM Kids!\n\n💰 Total: *R$ ${vlrStr(cobranca.total)}*\n\nClique aqui para ver e pagar 👇\n${cobranca.link_mp || reciboUrl}`
+      msg = `Olá ${cobranca.cliente}! 🌸 Aqui está o resumo da sua compra VM Kids!\n\n💰 Total: *R$ ${vlrStr(cobranca.total)}*\n\nClique aqui para ver e pagar 👇\n${reciboUrl}`
     }
 
     if (zap) window.open(`https://wa.me/55${zap}?text=${encodeURIComponent(msg)}`, '_blank')
@@ -242,16 +244,30 @@ export default function CobrancasPage() {
 
   function excluir(cobranca) {
     setConfirm({
-      msg: `Excluir cobrança de ${cobranca.cliente}?`,
+      msg: `Excluir cobrança de ${cobranca.cliente}? Se houver crédito aplicado, ele será devolvido.`,
       onSim: async () => {
         try {
-          await excluirCobranca(cobranca.id)
+          await excluirCobranca(tenantId, cobranca)
           setCobrancas(prev => prev.filter(c => c.id !== cobranca.id))
           setSel(null)
-          showToast('Excluído')
+          showToast('Excluído e créditos devolvidos (se houver)')
         } catch { showToast('Erro ao excluir', 'error') }
       },
     })
+  }
+
+  async function sincronizar(cobranca) {
+    setSincronizando(true)
+    try {
+      const at = await sincronizarCobrancaComVendas(tenantId, cobranca)
+      setSel(at)
+      setCobrancas(prev => prev.map(c => c.id === cobranca.id ? at : c))
+      showToast('Sincronizado com as vendas!')
+    } catch (e) {
+      showToast('Erro ao sincronizar: ' + e.message, 'error')
+    } finally {
+      setSincronizando(false)
+    }
   }
 
   function copiarLink(cobranca) {
@@ -296,8 +312,11 @@ export default function CobrancasPage() {
       if (novoTotal > 0) {
         try {
           const mp = await gerarPreferenciaMp({ cliente: sel.cliente, total: novoTotal, whatsapp: sel.whatsapp, data: fmtData(sel.data), live: sel.live, idCobranca: sel.id })
-          novoLink = mp.link; novoIdMp = mp.idMp
-        } catch (e) { console.warn('MP indisponível:', e.message) }
+          novoLink = mp.link; novoIdMp = mp.id_mp
+        } catch (e) { 
+          console.warn('MP indisponível:', e.message)
+          showToast('Link MP não atualizado: ' + e.message, 'warning')
+        }
       } else {
         novoLink = 'Pago com Crédito'
       }
@@ -326,8 +345,11 @@ export default function CobrancasPage() {
       let link = '', idMp = ''
       try {
         const mp = await gerarPreferenciaMp({ cliente: mNome, total: valor, whatsapp: mWhats, data: mData, live: '', idCobranca })
-        link = mp.link; idMp = mp.idMp
-      } catch (e) { console.warn('MP indisponível:', e.message) }
+        link = mp.link; idMp = mp.id_mp
+      } catch (e) { 
+        console.warn('MP indisponível:', e.message)
+        showToast('Link MP não gerado: ' + e.message, 'warning')
+      }
 
       const nova = await criarCobranca(tenantId, {
         id: idCobranca, data: mData,
@@ -369,8 +391,11 @@ export default function CobrancasPage() {
         if (g.total > 0) {
           try {
             const mp = await gerarPreferenciaMp({ cliente: g.cliente, total: g.total, whatsapp: g.whatsapp, data: fmtData(g.data) || g.data, live: g.live, idCobranca: id })
-            link = mp.link; idMp = mp.idMp
-          } catch (e) { console.warn('MP:', e.message) }
+            link = mp.link; idMp = mp.id_mp
+          } catch (e) { 
+            console.warn('MP erro para cliente:', g.cliente, e.message)
+            err++
+          }
         }
         await criarCobranca(tenantId, {
           id, data: g.data, cliente: g.cliente, whatsapp: g.whatsapp || '',
@@ -395,14 +420,15 @@ export default function CobrancasPage() {
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
         {/* ── Navbar: período + botão Manual ── */}
-        <div style={{ background: '#1a1a1a', borderBottom: '1px solid var(--border-header)', padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ background: '#1a1a1a', borderBottom: '1px solid var(--border-header)', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ color: 'var(--muted)', fontSize: 12 }}>De:</span>
             <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} onBlur={carregar} style={{ ...SI, width: 130 }} />
             <span style={{ color: 'var(--muted)', fontSize: 12 }}>Até:</span>
             <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} onBlur={carregar} style={{ ...SI, width: 130 }} />
           </div>
-          <button className="btn-acao btn-ghost" style={{ minWidth: 'auto', minHeight: 32, padding: '0 14px', fontSize: 13 }} onClick={() => { setShowManual(true); setMData(HOJE) }}>
+          
+          <button className="btn-acao btn-ghost" style={{ flex: 'none', width: 140, height: 32, minHeight: 32, padding: '0 12px', fontSize: 13, border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--blue)', fontWeight: 600 }} onClick={() => { setShowManual(true); setMData(HOJE) }}>
             + Manual
           </button>
         </div>
@@ -415,8 +441,8 @@ export default function CobrancasPage() {
         </div>
 
         {/* ── Filtros ── */}
-        <div style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--border-header)', padding: '8px 10px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end' }}>
+        <div style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--border-header)', padding: '8px 12px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase' }}>Data Venda</span>
@@ -458,15 +484,15 @@ export default function CobrancasPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase' }}>Live</span>
-              <select value={filtroLive} onChange={e => setFiltroLive(e.target.value)} style={{ ...SL, width: 130 }}>
+              <select value={filtroLive} onChange={e => setFiltroLive(e.target.value)} style={{ ...SL, width: 150 }}>
                 <option value="">Todas</option>
                 {listaLives.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end' }}>
-              <button className="btn-acao btn-blue" style={{ minWidth: 'auto', minHeight: 31, padding: '0 12px', fontSize: 13, color: '#171717' }} onClick={carregar}>🔍</button>
-              <button className="btn-acao btn-ghost" style={{ minWidth: 'auto', minHeight: 31, padding: '0 12px', fontSize: 13 }} onClick={() => { setShowImportar(true); setImpResultado([]) }} title="Importar vendas">🔄</button>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+              <button className="btn-acao btn-blue" style={{ flex: 'none', width: 42, height: 32, minHeight: 32, padding: 0, minWidth: 42, fontSize: 16, color: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={carregar} title="Buscar">🔍</button>
+              <button className="btn-acao btn-ghost" style={{ flex: 'none', width: 42, height: 32, minHeight: 32, padding: 0, minWidth: 42, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)' }} onClick={() => { setShowImportar(true); setImpResultado([]) }} title="Importar vendas">🔄</button>
             </div>
           </div>
         </div>
@@ -539,9 +565,14 @@ export default function CobrancasPage() {
 
               {/* Ações */}
               <div style={{ display: 'grid', gap: 8 }}>
-                <button className="btn-acao btn-ghost" style={{ minHeight: 40, fontSize: 13 }} onClick={abrirDesconto}>
-                  🏷️ Aplicar Desconto / Crédito
-                </button>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button className="btn-acao btn-ghost" style={{ minHeight: 40, fontSize: 13 }} onClick={() => sincronizar(sel)} disabled={sincronizando}>
+                    {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar'}
+                  </button>
+                  <button className="btn-acao btn-ghost" style={{ minHeight: 40, fontSize: 13 }} onClick={abrirDesconto}>
+                    🏷️ Desconto
+                  </button>
+                </div>
                 <button
                   className="btn-acao"
                   style={{ background: 'rgba(37,99,63,0.4)', color: 'var(--green)', border: '1px solid var(--green)', borderRadius: 8, minHeight: 40, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}
@@ -743,7 +774,7 @@ export default function CobrancasPage() {
           MODAL: CONFIRMAÇÃO
       ══════════════════════════════════════════════════════ */}
       {confirm && (
-        <div className="modal-overlay" onClick={() => setConfirm(null)}>
+        <div className="modal-overlay" style={{ zIndex: 11000 }} onClick={() => setConfirm(null)}>
           <div className="modal-card mini" style={{ maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'rgba(251,188,4,0.08)', borderBottom: '1px solid rgba(251,188,4,0.4)' }}>
               <h3 style={{ margin: 0, color: 'var(--yellow)' }}>Confirmação</h3>
@@ -755,7 +786,11 @@ export default function CobrancasPage() {
               <button className="btn-cancel" onClick={() => setConfirm(null)}>Cancelar</button>
               <button
                 style={{ flex: 1, minHeight: 50, borderRadius: 8, fontWeight: 700, fontSize: 15, cursor: 'pointer', border: 'none', background: 'var(--yellow)', color: '#171717' }}
-                onClick={() => { confirm.onSim(); setConfirm(null) }}
+                onClick={async () => { 
+                  console.log('Executando ação de confirmação...');
+                  await confirm.onSim(); 
+                  setConfirm(null); 
+                }}
               >
                 Sim
               </button>
