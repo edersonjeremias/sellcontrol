@@ -67,10 +67,18 @@ export function AuthProvider({ children }) {
     let subscription = null
 
     async function init() {
-      const { data } = await supabase.auth.getSession()
-      setSession(data?.session ?? null)
-      await loadProfile(data?.session?.user)
-      setLoading(false)
+      try {
+        const { data } = await supabase.auth.getSession()
+        setSession(data?.session ?? null)
+        await Promise.race([
+          loadProfile(data?.session?.user),
+          new Promise(resolve => setTimeout(resolve, 5000)),
+        ])
+      } catch (e) {
+        console.error('Auth init error:', e)
+      } finally {
+        setLoading(false)
+      }
     }
 
     init()
