@@ -44,7 +44,7 @@ export async function getCobrancas(tenantId, filtros = {}) {
 
   if (filtroStatus && filtroStatus !== 'Todos') {
     if (filtroStatus === 'PAGO') q = q.in('status', ['PAGO', 'BAIXADO'])
-    else if (filtroStatus === 'PENDENTE') q = q.not('status', 'in', '("PAGO","BAIXADO","CANCELADO")')
+    else if (filtroStatus === 'PENDENTE') q = q.in('status', ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE'])
     else q = q.eq('status', filtroStatus)
   }
 
