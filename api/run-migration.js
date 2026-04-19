@@ -25,9 +25,19 @@ export default async function handler(req, res) {
     await client.connect()
 
     const sqls = [
-      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS whatsapp text DEFAULT ''`,
-      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS senha    text DEFAULT ''`,
-      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS detalhes jsonb DEFAULT '{}'`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS whatsapp        text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS senha           text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS nome_completo   text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cpf             text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS data_nascimento text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cep             text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS rua             text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS numero          text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS complemento     text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS bairro          text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cidade          text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS uf              text DEFAULT ''`,
+      `ALTER TABLE clientes ADD COLUMN IF NOT EXISTS email           text DEFAULT ''`,
     ]
 
     const results = []

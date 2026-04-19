@@ -49,9 +49,10 @@ export default function ClientesPage() {
       showToast('Erro ao carregar clientes: ' + error.message, 'error')
       return
     }
-    // Detecta se colunas novas existem (migração necessária)
-    const primeiroComDetalhes = data.find(c => 'detalhes' in c)
-    setNeedsMigration(data.length === 0 ? false : !primeiroComDetalhes)
+    // Detecta se colunas individuais existem (migração necessária)
+    const sample = data[0]
+    const migrado = !sample || 'nome_completo' in sample
+    setNeedsMigration(!migrado)
     setClientes(data)
   }, [tenantId, showToast])
 
@@ -68,7 +69,21 @@ export default function ClientesPage() {
     setObs(c.msg_bloqueio || '')
     setSenha(c.senha || '')
     setBloqueado(!!c.bloqueado)
-    setDetalhes(c.detalhes && typeof c.detalhes === 'object' ? { ...EMPTY_DETALHES, ...c.detalhes } : EMPTY_DETALHES)
+    // Lê das colunas individuais (migração nova) ou do jsonb legado
+    const d = c.detalhes && typeof c.detalhes === 'object' ? c.detalhes : {}
+    setDetalhes({
+      nomeCompleto: c.nome_completo   || d.nomeCompleto || '',
+      cpf:          c.cpf             || d.cpf          || '',
+      nasc:         c.data_nascimento || d.nasc         || '',
+      cep:          c.cep             || d.cep          || '',
+      rua:          c.rua             || d.rua          || '',
+      num:          c.numero          || d.num          || '',
+      comp:         c.complemento     || d.comp         || '',
+      bairro:       c.bairro          || d.bairro       || '',
+      cidade:       c.cidade          || d.cidade       || '',
+      estado:       c.uf              || d.estado       || '',
+      email:        c.email           || d.email        || '',
+    })
     setSearchVal(c.instagram)
     setShowDrop(false)
   }, [])
@@ -190,7 +205,20 @@ export default function ClientesPage() {
 
   const isEditing = !!current
 
-  const SQL_MIGRATION = `ALTER TABLE clientes\n  ADD COLUMN IF NOT EXISTS whatsapp  text  DEFAULT '',\n  ADD COLUMN IF NOT EXISTS senha     text  DEFAULT '',\n  ADD COLUMN IF NOT EXISTS detalhes  jsonb DEFAULT '{}';`
+  const SQL_MIGRATION = `ALTER TABLE clientes
+  ADD COLUMN IF NOT EXISTS whatsapp        text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS senha           text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS nome_completo   text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS cpf             text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS data_nascimento text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS cep             text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS rua             text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS numero          text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS complemento     text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS bairro          text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS cidade          text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS uf              text DEFAULT '',
+  ADD COLUMN IF NOT EXISTS email           text DEFAULT '';`
 
   const [migrating,  setMigrating]  = useState(false)
   const [sqlCopied,  setSqlCopied]  = useState(false)
