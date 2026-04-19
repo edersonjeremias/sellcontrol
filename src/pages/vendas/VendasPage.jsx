@@ -147,6 +147,7 @@ export default function VendasPage() {
   const globalDBRef  = useRef(globalDB)
   const busyTimerRef = useRef(null)
   const autoSaveRef  = useRef(null)
+  const isSavingRef  = useRef(false)
   const dataLiveRef  = useRef(dataLive)
   const liveNomeRef  = useRef(liveNome)
   const tenantIdRef  = useRef(tenantId)
