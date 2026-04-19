@@ -407,13 +407,13 @@ html, body {
 .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; max-width: 1200px; margin: 0 auto; }
 .field { flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
-.toolbar input, .toolbar select { height: 44px; padding: 0 15px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--input-bg); color: var(--text-header); font-size: 0.95rem; outline: none; width: 100%; }
+.toolbar input, .toolbar select { height: 36px; padding: 0 12px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--input-bg); color: var(--text-header); font-size: 0.9rem; outline: none; width: 100%; }
 .toolbar input::placeholder { color: var(--muted); }
 input[type="date"] { color-scheme: dark; }
 .toolbar input:focus, .toolbar select:focus { border-color: var(--blue); background: #252525; }
 
 .filter-header-bar { max-width: 1200px; margin: 12px auto 0; }
-.filter-header-bar input { width: 100%; height: 44px; padding: 12px 15px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.95rem; background: var(--input-bg); color: var(--input-text); outline: none; transition: all 0.2s; }
+.filter-header-bar input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.9rem; background: var(--input-bg); color: var(--input-text); outline: none; transition: all 0.2s; }
 .filter-header-bar input:focus { border-color: var(--blue); background: #252525; }
 
 /* ── AUTOCOMPLETE ── */
@@ -421,18 +421,18 @@ input[type="date"] { color-scheme: dark; }
 .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; z-index: 10005; background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 8px; max-height: 220px; overflow-y: auto; margin-top: 4px; padding: 0; list-style: none; box-shadow: var(--shadow); }
 .autocomplete-list::-webkit-scrollbar { width: 8px; }
 .autocomplete-list::-webkit-scrollbar-thumb { background: #5f6368; border-radius: 6px; }
-.autocomplete-list li { padding: 12px 14px; cursor: pointer; color: var(--text-body); font-size: 14px; border-bottom: 1px solid var(--border-light); }
+.autocomplete-list li { padding: 8px 12px; cursor: pointer; color: var(--text-body); font-size: 13px; border-bottom: 1px solid var(--border-light); }
 .autocomplete-list li:hover { background: var(--table-row-hover); }
 .autocomplete-list li.active,
 .autocomplete-list li.dropdown-item-active { background: var(--blue); color: #171717; font-weight: 600; }
 
 /* ── TOTAL ── */
-.total-container { flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; gap: 4px; justify-content: flex-end; height: 44px; }
+.total-container { flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; gap: 4px; justify-content: flex-end; height: 36px; }
 .total-valor { font-size: 20px; font-weight: 800; color: var(--green); line-height: 1; }
 
 /* ── BOTÕES ── */
 .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; flex: 1 1 auto; justify-content: flex-end; }
-.btn-acao { min-height: 44px; padding: 12px 15px; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; justify-content: center; white-space: nowrap; flex: 1; min-width: 90px; border: none; flex-shrink: 0; transition: transform 0.1s, filter 0.2s; }
+.btn-acao { min-height: 36px; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; justify-content: center; white-space: nowrap; flex: 1; min-width: 80px; border: none; flex-shrink: 0; transition: transform 0.1s, filter 0.2s; }
 .btn-acao:active { transform: scale(0.97); }
 .btn-acao:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-green  { background: var(--green);  color: #171717; }
@@ -448,10 +448,10 @@ input[type="date"] { color-scheme: dark; }
 .table-responsive::-webkit-scrollbar { display: none; }
 #tabela-msg { padding: 50px 20px; text-align: center; color: var(--tabela-msg); font-size: 15px; }
 table { width: 100%; min-width: 950px; border-collapse: separate; border-spacing: 0; }
-thead th { position: sticky; top: 0; z-index: 90; background: var(--table-header-bg); color: var(--table-header-text); font-weight: 700; font-size: 11.5px; text-transform: uppercase; padding: 12px 10px; text-align: left; white-space: nowrap; border-bottom: 2px solid var(--border-light); }
+thead th { position: sticky; top: 0; z-index: 90; background: var(--table-header-bg); color: var(--table-header-text); font-weight: 700; font-size: 11px; text-transform: uppercase; padding: 9px 8px; text-align: left; white-space: nowrap; border-bottom: 2px solid var(--border-light); }
 tbody tr { transition: background 0.2s; }
 tbody tr:hover { background-color: var(--table-row-hover); }
-tbody td { padding: 6px 8px; border-bottom: 1px solid var(--table-border); vertical-align: middle; position: relative; }
+tbody td { padding: 4px 6px; border-bottom: 1px solid var(--table-border); vertical-align: middle; position: relative; }
 
 .linha-apagada { display: none !important; }
 .linha-enviada input.cell-input { color: var(--green) !important; border-color: transparent !important; pointer-events: none !important; }
@@ -461,7 +461,7 @@ tbody td { padding: 6px 8px; border-bottom: 1px solid var(--table-border); verti
 .linha-enviada .btn-action-sm.undo { display: flex !important; }
 
 /* ── INPUTS DE CÉLULA ── */
-.cell-input { width: 100%; padding: 12px 15px; border: 1px solid var(--input-border); border-radius: 8px; font-size: 0.95rem; background: var(--input-bg); color: var(--input-text); transition: all 0.2s; }
+.cell-input { width: 100%; padding: 7px 10px; border: 1px solid var(--input-border); border-radius: 8px; font-size: 0.88rem; background: var(--input-bg); color: var(--input-text); transition: all 0.2s; }
 .cell-input:focus { border-color: var(--blue); outline: none; background: #252525; }
 .cell-input.price { text-align: right; color: var(--green); font-weight: 700; }
 .td-sacola { cursor: pointer; transition: background 0.2s; border-radius: 6px; }
