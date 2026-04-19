@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 export async function getClientes(tenantId) {
   const { data, error } = await supabase
     .from('clientes')
-    .select('instagram, whatsapp, bloqueado, msg_bloqueio, senha, detalhes, created_at')
+    .select('*')
     .eq('tenant_id', tenantId)
     .order('instagram')
   return { data: data || [], error }
@@ -11,9 +11,9 @@ export async function getClientes(tenantId) {
 
 export async function saveCliente(tenantId, { instagram, whatsapp, msg_bloqueio, senha, oldInstagram }) {
   const ig = instagram.trim()
+  const payload = { tenant_id: tenantId, instagram: ig, whatsapp, msg_bloqueio, senha }
 
   if (oldInstagram && oldInstagram !== ig) {
-    // Renomeando instagram: update direto
     const { data, error } = await supabase
       .from('clientes')
       .update({ instagram: ig, whatsapp, msg_bloqueio, senha })
@@ -24,13 +24,9 @@ export async function saveCliente(tenantId, { instagram, whatsapp, msg_bloqueio,
     return { data, error }
   }
 
-  // Novo ou mesmo nome: upsert
   const { data, error } = await supabase
     .from('clientes')
-    .upsert(
-      { tenant_id: tenantId, instagram: ig, whatsapp, msg_bloqueio, senha },
-      { onConflict: 'tenant_id,instagram' }
-    )
+    .upsert(payload, { onConflict: 'tenant_id,instagram', ignoreDuplicates: false })
     .select()
     .single()
   return { data, error }

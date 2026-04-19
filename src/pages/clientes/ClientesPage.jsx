@@ -43,9 +43,13 @@ export default function ClientesPage() {
 
   const carregarClientes = useCallback(async () => {
     if (!tenantId) return
-    const { data } = await getClientes(tenantId)
+    const { data, error } = await getClientes(tenantId)
+    if (error) {
+      showToast('Erro ao carregar clientes: ' + error.message, 'error')
+      return
+    }
     setClientes(data)
-  }, [tenantId])
+  }, [tenantId, showToast])
 
   useEffect(() => { carregarClientes() }, [carregarClientes])
 
