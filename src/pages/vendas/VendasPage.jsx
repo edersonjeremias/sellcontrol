@@ -395,17 +395,12 @@ export default function VendasPage() {
     if (info.dividas?.length) {
       msg += `<b>Pendências Financeiras:</b><br>`
       info.dividas.forEach(d => { msg += `- Live <b>${d.data}</b> — R$ <b>${d.valor}</b><br>` })
-      msg += '<br>'
     }
-    msg += 'Deseja liberar a venda mesmo assim?'
 
     setConfirmacao({
       titulo: '🚫 Cliente Bloqueado',
       mensagem: msg,
-      onSim: () => {
-        setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],liberado:true,sacolinha:null}; return calcSacolas(n) })
-        setConfirmacao(null)
-      },
+      hideConfirm: true,
       onNao: () => {
         setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],cliente_nome:'',sacolinha:null,liberado:false}; return calcSacolas(n) })
         setConfirmacao(null)
@@ -948,7 +943,7 @@ export default function VendasPage() {
         />
       )}
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
-      {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} />}
+      {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} hideConfirm={confirmacao.hideConfirm} />}
     </div>
     </AppShell>
   )
