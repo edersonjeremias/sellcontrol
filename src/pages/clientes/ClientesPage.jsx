@@ -339,10 +339,10 @@ export default function ClientesPage() {
           {/* ── Footer / Botões ── */}
           <div style={{
             padding: '14px 20px', borderTop: '1px solid var(--border-light)',
-            display: 'flex', gap: 8,
+            display: 'flex', flexWrap: 'wrap', gap: 8,
           }}>
-            <button onClick={handleSalvar} disabled={saving} className="btn-acao btn-blue" style={{ flex: 2 }}>
-              <span className="material-icons" style={{ fontSize: 18 }}>save</span>
+            <button onClick={handleSalvar} disabled={saving} className="btn-acao btn-blue" style={{ flex: '2 1 120px', minWidth: 0 }}>
+              <span className="material-icons" style={{ fontSize: 16 }}>save</span>
               SALVAR
             </button>
             {isEditing && (
@@ -350,26 +350,26 @@ export default function ClientesPage() {
                 <button
                   onClick={() => setShowDados(true)}
                   className="btn-acao"
-                  style={{ flex: 1, background: 'transparent', border: '1px solid var(--blue)', color: 'var(--blue)' }}
+                  style={{ flex: '1 1 80px', minWidth: 0, background: 'transparent', border: '1px solid var(--blue)', color: 'var(--blue)' }}
                 >
-                  <span className="material-icons" style={{ fontSize: 18 }}>edit_document</span>
+                  <span className="material-icons" style={{ fontSize: 16 }}>edit_document</span>
                   DADOS
                 </button>
                 {bloqueado
                   ? (
-                    <button onClick={() => handleToggleBloqueio(false)} disabled={saving} className="btn-acao btn-green" style={{ flex: 1 }}>
-                      <span className="material-icons" style={{ fontSize: 18 }}>check</span>
+                    <button onClick={() => handleToggleBloqueio(false)} disabled={saving} className="btn-acao btn-green" style={{ flex: '1 1 80px', minWidth: 0 }}>
+                      <span className="material-icons" style={{ fontSize: 16 }}>check</span>
                       LIBERAR
                     </button>
                   ) : (
-                    <button onClick={() => handleToggleBloqueio(true)} disabled={saving} className="btn-acao" style={{ flex: 1, background: '#fbbc04', color: '#171717' }}>
-                      <span className="material-icons" style={{ fontSize: 18 }}>block</span>
+                    <button onClick={() => handleToggleBloqueio(true)} disabled={saving} className="btn-acao" style={{ flex: '1 1 80px', minWidth: 0, background: '#fbbc04', color: '#171717' }}>
+                      <span className="material-icons" style={{ fontSize: 16 }}>block</span>
                       BLOQ
                     </button>
                   )
                 }
-                <button onClick={handleExcluir} disabled={saving} className="btn-acao" style={{ flex: 1, background: 'rgba(242,139,130,0.1)', border: '1px solid var(--red)', color: 'var(--red)' }}>
-                  <span className="material-icons" style={{ fontSize: 18 }}>delete</span>
+                <button onClick={handleExcluir} disabled={saving} className="btn-acao" style={{ flex: '1 1 80px', minWidth: 0, background: 'rgba(242,139,130,0.1)', border: '1px solid var(--red)', color: 'var(--red)' }}>
+                  <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
                   EXCLUIR
                 </button>
               </>
