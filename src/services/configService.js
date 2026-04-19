@@ -13,24 +13,13 @@ export async function getConfig(tenantId) {
 }
 
 export async function saveConfig(tenantId, campos) {
-  const { data: existing } = await supabase
+  const { error } = await supabase
     .from('configuracoes')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
-
-  if (existing) {
-    const { error } = await supabase
-      .from('configuracoes')
-      .update({ ...campos, updated_at: new Date().toISOString() })
-      .eq('tenant_id', tenantId)
-    if (error) throw error
-  } else {
-    const { error } = await supabase
-      .from('configuracoes')
-      .insert([{ tenant_id: tenantId, ...campos }])
-    if (error) throw error
-  }
+    .upsert(
+      { tenant_id: tenantId, ...campos, updated_at: new Date().toISOString() },
+      { onConflict: 'tenant_id' }
+    )
+  if (error) throw error
 }
 
 // Cache em memória para não bater no banco a cada link gerado
