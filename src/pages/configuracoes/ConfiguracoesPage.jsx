@@ -130,8 +130,11 @@ function AbaConfiguracoes({ tenantId, showToast }) {
 
 // ── Aba: Usuários ──────────────────────────────────────────────
 function AbaUsuarios({ tenantId, profileAtual, showToast }) {
-  const [usuarios, setUsuarios] = useState([])
-  const [salvando, setSalvando] = useState(null)
+  const [usuarios, setUsuarios]     = useState([])
+  const [salvando, setSalvando]     = useState(null)
+  const [showForm, setShowForm]     = useState(false)
+  const [criando, setCriando]       = useState(false)
+  const [form, setForm]             = useState({ nome: '', email: '', password: '', role: 'vendedor' })
 
   useEffect(() => {
     if (!tenantId) return
@@ -154,11 +157,34 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
     }
   }
 
-  const roleInfo = Object.fromEntries(ROLES.map(r => [r.value, r]))
+  async function criarUsuario() {
+    if (!form.nome || !form.email || !form.password) {
+      showToast('Preencha nome, e-mail e senha', 'error'); return
+    }
+    setCriando(true)
+    try {
+      const resp = await fetch('/api/criar-usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, tenant_id: tenantId }),
+      })
+      const json = await resp.json()
+      if (!resp.ok) throw new Error(json.error || 'Erro ao criar usuário')
+      setUsuarios(prev => [...prev, { id: json.userId, nome: form.nome, email: form.email, role: form.role }])
+      setForm({ nome: '', email: '', password: '', role: 'vendedor' })
+      setShowForm(false)
+      showToast(`Usuário ${form.nome} criado com sucesso!`)
+    } catch (e) {
+      showToast('Erro: ' + e.message, 'error')
+    } finally {
+      setCriando(false)
+    }
+  }
 
   return (
     <div style={{ padding: '20px 0' }}>
 
+      {/* Legenda de funções */}
       <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--muted)' }}>
         <strong style={{ color: 'var(--blue)' }}>Funções disponíveis:</strong>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginTop: 6 }}>
@@ -168,6 +194,50 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
         </div>
       </div>
 
+      {/* Botão novo usuário */}
+      <button
+        className="btn-acao btn-blue"
+        style={{ marginBottom: 16, padding: '0 18px', height: 36, fontSize: 13, color: '#171717', fontWeight: 600 }}
+        onClick={() => setShowForm(v => !v)}
+      >
+        {showForm ? '✕ Cancelar' : '+ Novo Usuário'}
+      </button>
+
+      {/* Formulário de criação */}
+      {showForm && (
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-light)', borderRadius: 8, padding: '16px', marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Nome *</label>
+              <input type="text" value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Ana Paula" style={SI} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>E-mail *</label>
+              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="ana@email.com" style={SI} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Senha * (mín. 6 caracteres)</label>
+              <input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="••••••" style={SI} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Função</label>
+              <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} style={{ ...SI, height: 36, padding: '0 8px' }}>
+                {ROLES.map(r => <option key={r.value} value={r.value}>{r.label} — {r.desc}</option>)}
+              </select>
+            </div>
+          </div>
+          <button
+            className="btn-acao btn-green"
+            style={{ width: '100%', minHeight: 40, fontSize: 14, color: '#171717', fontWeight: 700 }}
+            onClick={criarUsuario}
+            disabled={criando}
+          >
+            {criando ? 'Criando…' : 'Criar Usuário'}
+          </button>
+        </div>
+      )}
+
+      {/* Lista de usuários */}
       {usuarios.length === 0 && (
         <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 30 }}>Nenhum usuário encontrado</div>
       )}
@@ -187,9 +257,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
               {u.nome || u.email}
               {u.id === profileAtual?.id && <span style={{ fontSize: 11, color: 'var(--blue)', marginLeft: 8 }}>(você)</span>}
             </div>
-            {u.nome && u.email && (
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</div>
-            )}
+            {u.email && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</div>}
           </div>
           <select
             value={u.role || 'admin'}
