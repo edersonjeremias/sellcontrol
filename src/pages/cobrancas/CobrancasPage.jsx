@@ -44,15 +44,9 @@ function CardCobranca({ c, onClick }) {
   const cor = COR_STATUS[c.status] || 'var(--muted)'
   return (
     <div
+      className="cobranca-card"
       onClick={onClick}
-      style={{
-        background: 'var(--card-bg)', borderRadius: 6, padding: '9px 12px',
-        marginBottom: 3, borderLeft: `4px solid ${cor}`, cursor: 'pointer',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8,
-        transition: 'background 0.15s',
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'var(--card-bg)'}
+      style={{ borderLeft: `4px solid ${cor}` }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-header)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

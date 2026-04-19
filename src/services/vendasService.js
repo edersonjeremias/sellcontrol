@@ -29,32 +29,35 @@ function safeQuery(promise) {
 
 export async function getDadosIniciais(tenantId = null) {
   const tid = TENANT_ID(tenantId)
-  const [livesRes, bloqRes, inadRes] = await Promise.all([
+  const [livesRes, bloqRes, cobRes] = await Promise.all([
     safeQuery(supabase.from('lives').select('nome').eq('tenant_id', tid).order('nome')),
     safeQuery(supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
       .eq('tenant_id', tid).eq('bloqueado', true)),
-    safeQuery(supabase.from('inadimplencias')
-      .select('valor, data_referencia, clientes(instagram)')
-      .eq('tenant_id', tid).eq('status', 'pendente')),
+    // Cobrancas pendentes = dívidas ativas do cliente
+    safeQuery(supabase.from('cobrancas')
+      .select('cliente, total, data')
+      .eq('tenant_id', tid)
+      .in('status', ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE'])),
   ])
 
   const lives = livesRes.data?.map(l => l.nome) || []
   const bloqueados = {}
 
   bloqRes.data?.forEach(c => {
-    const key = c.instagram.toLowerCase()
+    const key = (c.instagram || '').toLowerCase()
+    if (!key) return
     if (!bloqueados[key]) bloqueados[key] = { dividas: [], manual: false, msgManual: '' }
     bloqueados[key].manual    = true
     bloqueados[key].msgManual = c.msg_bloqueio || ''
   })
 
-  inadRes.data?.forEach(i => {
-    const key = i.clientes?.instagram?.toLowerCase()
+  cobRes.data?.forEach(c => {
+    const key = (c.cliente || '').toLowerCase()
     if (!key) return
     if (!bloqueados[key]) bloqueados[key] = { dividas: [], manual: false, msgManual: '' }
     bloqueados[key].dividas.push({
-      data:  i.data_referencia || '',
-      valor: i.valor != null ? formatMoney(i.valor) : '',
+      data:  c.data || '',
+      valor: c.total != null ? formatMoney(c.total) : '',
     })
   })
 

@@ -12,6 +12,7 @@ import MasterEmpresasPage from './pages/MasterEmpresasPage'
 import CobrancasPage from './pages/cobrancas/CobrancasPage'
 import ReciboPage from './pages/recibo/ReciboPage'
 import ConfiguracoesPage from './pages/configuracoes/ConfiguracoesPage'
+import ClientesPage from './pages/clientes/ClientesPage'
 
 export default function App() {
   return (
@@ -19,7 +20,7 @@ export default function App() {
       <AppProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/master/empresas" element={<RequireAuth><RequireRole allowed={['master']}><MasterEmpresasPage /></RequireRole></RequireAuth>} />
             <Route path="/cobrancas" element={<RequireAuth><CobrancasPage /></RequireAuth>} />
             <Route path="/recibo/:id" element={<ReciboPage />} />
+            <Route path="/clientes" element={<RequireAuth><ClientesPage /></RequireAuth>} />
             <Route path="/configuracoes" element={<RequireAuth><RequireRole allowed={['master','admin']}><ConfiguracoesPage /></RequireRole></RequireAuth>} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

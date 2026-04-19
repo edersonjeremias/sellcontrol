@@ -29,6 +29,12 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
               {item.label}
             </Link>
           ))}
+          <Link
+            to="/clientes"
+            className={location.pathname === '/clientes' ? 'app-nav-link active' : 'app-nav-link'}
+          >
+            Clientes
+          </Link>
           {['admin', 'master'].includes(profile?.role) && (
             <Link
               to="/configuracoes"
