@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
   if (req.method === 'OPTIONS' || req.method === 'GET') {
-    return res.status(200).send('OK')
+    return res.status(200).json({ received: true })
   }
 
   // Sempre retorna 200 ao MP para evitar reenvios infinitos
@@ -19,12 +19,12 @@ export default async function handler(req, res) {
     const action = body?.action || body?.type
 
     if (!paymentId) {
-      return res.status(200).send('OK')
+      return res.status(200).json({ received: true })
     }
 
     const isPaymentEvent = ['payment.updated', 'payment.created', 'payment'].includes(action)
     if (!isPaymentEvent) {
-      return res.status(200).send('OK')
+      return res.status(200).json({ received: true })
     }
 
     // Variáveis sem prefixo VITE_ (serverless usa process.env direto)
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
     if (!MP_TOKEN) {
       console.error('MP_ACCESS_TOKEN não configurado no Vercel')
-      return res.status(200).send('OK')
+      return res.status(200).json({ received: true })
     }
 
     const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
 
     if (!mpResp.ok) {
       console.error(`Erro ao consultar MP: ${mpResp.status}`)
-      return res.status(200).send('OK')
+      return res.status(200).json({ received: true })
     }
 
     const paymentData = await mpResp.json()
@@ -64,9 +64,9 @@ export default async function handler(req, res) {
       else console.log(`Cobrança ${paymentData.external_reference} marcada como PAGA`)
     }
 
-    return res.status(200).send('OK')
+    return res.status(200).json({ received: true })
   } catch (err) {
     console.error('Erro Webhook:', err.message)
-    return res.status(200).send('OK')
+    return res.status(200).json({ received: true })
   }
 }
