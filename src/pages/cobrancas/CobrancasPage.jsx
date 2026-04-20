@@ -183,14 +183,17 @@ export default function CobrancasPage() {
       setSel(atualizado)
       setCobrancas(prev => prev.map(c => c.id === sel.id ? atualizado : c))
       showToast('Anotação salva')
+      setSel(null)
     } catch { showToast('Erro ao salvar', 'error') }
     finally { setSalvandoObs(false) }
   }
 
   async function enviarWhatsApp(cobranca, tipo) {
-    // tipo: 'enviar' | 'lembrete' | 'chat'
     const zap = String(cobranca.whatsapp || '').replace(/\D/g, '')
-    if (!zap && tipo !== 'chat') { showToast('Cliente sem WhatsApp', 'error'); return }
+    if (!zap) { showToast('Cliente sem WhatsApp', 'error'); return }
+
+    // Abre a janela ANTES do await para não ser bloqueada pelo popup blocker
+    const win = window.open('', '_blank')
 
     if (tipo !== 'chat') {
       const novoStatus = cobranca.qt_envios > 0
@@ -202,22 +205,23 @@ export default function CobrancasPage() {
           qt_envios: cobranca.qt_envios + 1,
         })
         const at = { ...cobranca, status: novoStatus, qt_envios: cobranca.qt_envios + 1 }
-        setSel(at)
         setCobrancas(prev => prev.map(c => c.id === cobranca.id ? at : c))
       } catch { showToast('Erro ao atualizar status', 'error') }
     }
 
     const reciboUrl = `https://sellcontrol.vercel.app/recibo/${cobranca.id}`
-    let msg = ''
-    if (tipo === 'chat') {
-      msg = `Olá ${cobranca.cliente}! Tudo bem? 😊`
-    } else if (tipo === 'lembrete') {
-      msg = `Olá ${cobranca.cliente}! 🌸 Lembrando que sua compra VM Kids no valor de *R$ ${vlrStr(cobranca.total)}* ainda está aguardando o pagamento.\n\nSeu link: ${reciboUrl}`
-    } else {
-      msg = `Olá ${cobranca.cliente}! 🌸 Aqui está o resumo da sua compra VM Kids!\n\n💰 Total: *R$ ${vlrStr(cobranca.total)}*\n\nClique aqui para ver e pagar 👇\n${reciboUrl}`
+    let url = `https://wa.me/55${zap}`
+    if (tipo === 'lembrete') {
+      const msg = `Olá ${cobranca.cliente}! 🌸 Lembrando que sua compra VM Kids no valor de *R$ ${vlrStr(cobranca.total)}* ainda está aguardando o pagamento.\n\nSeu link: ${reciboUrl}`
+      url += `?text=${encodeURIComponent(msg)}`
+    } else if (tipo === 'enviar') {
+      const msg = `Olá ${cobranca.cliente}! 🌸 Aqui está o resumo da sua compra VM Kids!\n\n💰 Total: *R$ ${vlrStr(cobranca.total)}*\n\nClique aqui para ver e pagar 👇\n${reciboUrl}`
+      url += `?text=${encodeURIComponent(msg)}`
     }
+    // tipo === 'chat': abre só o WhatsApp sem mensagem
 
-    if (zap) window.open(`https://wa.me/55${zap}?text=${encodeURIComponent(msg)}`, '_blank')
+    win.location.href = url
+    setSel(null)
   }
 
   function baixar(cobranca) {
@@ -267,7 +271,7 @@ export default function CobrancasPage() {
   function copiarLink(cobranca) {
     const url = `${window.location.origin}/recibo/${cobranca.id}`
     navigator.clipboard?.writeText(url)
-      .then(() => showToast('Link copiado!'))
+      .then(() => { showToast('Link copiado!'); setSel(null) })
       .catch(() => showToast('Não foi possível copiar', 'error'))
   }
 
