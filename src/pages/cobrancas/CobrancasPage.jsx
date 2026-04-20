@@ -188,27 +188,11 @@ export default function CobrancasPage() {
     finally { setSalvandoObs(false) }
   }
 
-  async function enviarWhatsApp(cobranca, tipo) {
+  function enviarWhatsApp(cobranca, tipo) {
     const zap = String(cobranca.whatsapp || '').replace(/\D/g, '')
     if (!zap) { showToast('Cliente sem WhatsApp', 'error'); return }
 
-    // Abre a janela ANTES do await para não ser bloqueada pelo popup blocker
-    const win = window.open('', '_blank')
-
-    if (tipo !== 'chat') {
-      const novoStatus = cobranca.qt_envios > 0
-        ? (tipo === 'lembrete' ? 'LEMBRETE' : 'REENVIADO')
-        : 'ENVIADO'
-      try {
-        await atualizarCobranca(cobranca.id, {
-          status: novoStatus,
-          qt_envios: cobranca.qt_envios + 1,
-        })
-        const at = { ...cobranca, status: novoStatus, qt_envios: cobranca.qt_envios + 1 }
-        setCobrancas(prev => prev.map(c => c.id === cobranca.id ? at : c))
-      } catch { showToast('Erro ao atualizar status', 'error') }
-    }
-
+    // Monta URL antes de qualquer async para abrir WhatsApp imediatamente
     const reciboUrl = `https://sellcontrol.vercel.app/recibo/${cobranca.id}`
     let url = `https://wa.me/55${zap}`
     if (tipo === 'lembrete') {
@@ -218,9 +202,25 @@ export default function CobrancasPage() {
       const msg = `Olá ${cobranca.cliente}! 🌸 Aqui está o resumo da sua compra VM Kids!\n\n💰 Total: *R$ ${vlrStr(cobranca.total)}*\n\nClique aqui para ver e pagar 👇\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     }
-    // tipo === 'chat': abre só o WhatsApp sem mensagem
+    // tipo === 'chat': abre só o WhatsApp sem mensagem pré-definida
 
-    win.location.href = url
+    // Abre WhatsApp/app ANTES de qualquer await (evita bloqueio de popup no browser e mobile)
+    window.open(url, '_blank', 'noopener')
+
+    // Atualiza status em background sem bloquear a abertura
+    if (tipo !== 'chat') {
+      const novoStatus = cobranca.qt_envios > 0
+        ? (tipo === 'lembrete' ? 'LEMBRETE' : 'REENVIADO')
+        : 'ENVIADO'
+      atualizarCobranca(cobranca.id, {
+        status: novoStatus,
+        qt_envios: cobranca.qt_envios + 1,
+      }).then(() => {
+        const at = { ...cobranca, status: novoStatus, qt_envios: cobranca.qt_envios + 1 }
+        setCobrancas(prev => prev.map(c => c.id === cobranca.id ? at : c))
+      }).catch(() => showToast('Erro ao atualizar status', 'error'))
+    }
+
     setSel(null)
   }
 
