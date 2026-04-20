@@ -196,10 +196,10 @@ export default function CobrancasPage() {
     const reciboUrl = `https://sellcontrol.vercel.app/recibo/${cobranca.id}`
     let url = `https://wa.me/55${zap}`
     if (tipo === 'lembrete') {
-      const msg = `Olá ${cobranca.cliente}! 🌸 Lembrando que sua compra VM Kids no valor de *R$ ${vlrStr(cobranca.total)}* ainda está aguardando o pagamento.\n\nSeu link: ${reciboUrl}`
+      const msg = `Olá ${cobranca.cliente}! Tudo bem? 🌸\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* no valor de *R$ ${vlrStr(cobranca.total)}* ainda está aguardando o pagamento.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     } else if (tipo === 'enviar') {
-      const msg = `Olá ${cobranca.cliente}! 🌸 Aqui está o resumo da sua compra VM Kids!\n\n💰 Total: *R$ ${vlrStr(cobranca.total)}*\n\nClique aqui para ver e pagar 👇\n${reciboUrl}`
+      const msg = `Olá ${cobranca.cliente}! Tudo bem? 🌸\n\nSegue sua compra do dia *${fmtData(cobranca.data)}* no valor de *R$ ${vlrStr(cobranca.total)}*.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     }
     // tipo === 'chat': abre só o WhatsApp sem mensagem pré-definida
