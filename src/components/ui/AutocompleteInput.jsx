@@ -4,11 +4,12 @@ export default function AutocompleteInput({
   value = '',
   onChange,
   onBlur,
+  onSelect,
   list = [],
   placeholder = '',
   className = '',
   disabled = false,
-  showOnFocus = false,   // true: abre no foco mesmo sem texto (campo Live no topo)
+  showOnFocus = false,
   onEnterNewRow,
   style,
 }) {
@@ -20,11 +21,8 @@ export default function AutocompleteInput({
     !value || item.toLowerCase().includes(value.toLowerCase())
   )
 
-  // Dropdown abre: se showOnFocus → basta estar aberto com itens
-  // Se não showOnFocus → só mostra quando o campo tem texto (igual ao original)
   const visible = open && filtered.length > 0 && (showOnFocus || value?.trim())
 
-  // Rola o item ativo para ficar visível
   useEffect(() => {
     if (activeIdx >= 0 && listRef.current) {
       const items = listRef.current.querySelectorAll('li')
@@ -36,6 +34,7 @@ export default function AutocompleteInput({
     onChange(item)
     setOpen(false)
     setActiveIdx(-1)
+    onSelect?.(item)
   }
 
   function handleKeyDown(e) {
@@ -43,7 +42,6 @@ export default function AutocompleteInput({
       e.preventDefault()
       if (!open) { setOpen(true); setActiveIdx(0); return }
       if (!visible) return
-      // Circular: passa do último vai pro primeiro
       setActiveIdx(i => (i + 1) >= filtered.length ? 0 : i + 1)
       return
     }
@@ -51,7 +49,6 @@ export default function AutocompleteInput({
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (!visible) return
-      // Circular: passa do primeiro vai pro último
       setActiveIdx(i => (i - 1) < 0 ? filtered.length - 1 : i - 1)
       return
     }
@@ -62,29 +59,32 @@ export default function AutocompleteInput({
       return
     }
 
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    if (e.key === 'Tab') {
       if (visible) {
-        if (activeIdx >= 0) {
-          // Usuário navegou com seta → seleciona o item destacado
-          if (e.key === 'Enter') e.preventDefault()
-          select(filtered[activeIdx])
-          return
-        } else if (value?.trim()) {
-          // Usuário digitou mas não navegou → seleciona o primeiro da lista
-          if (e.key === 'Enter') e.preventDefault()
-          select(filtered[0])
+        const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
+        if (chosen) select(chosen)
+      }
+      setOpen(false)
+      setActiveIdx(-1)
+      return
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault()
+
+      if (visible) {
+        const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
+        if (chosen) {
+          select(chosen)
+          if (!onEnterNewRow) navigateNext(e.target)
           return
         }
       }
-      // Dropdown fechado ou vazio: Enter chama onEnterNewRow se definido
-      if (e.key === 'Enter' && onEnterNewRow) {
-        e.preventDefault()
+
+      if (onEnterNewRow) {
         onEnterNewRow()
-      }
-      // Tab sem seleção: fecha o dropdown e deixa o Tab agir normalmente
-      if (e.key === 'Tab') {
-        setOpen(false)
-        setActiveIdx(-1)
+      } else {
+        navigateNext(e.target)
       }
     }
   }
@@ -120,4 +120,16 @@ export default function AutocompleteInput({
       )}
     </div>
   )
+}
+
+export function navigateNext(input) {
+  const tr = input.closest('tr')
+  if (!tr) return
+  const inputs = Array.from(tr.querySelectorAll(
+    'input:not([readonly]):not([type="hidden"]):not([disabled]), select:not([disabled])'
+  ))
+  const i = inputs.indexOf(input)
+  if (i >= 0 && i < inputs.length - 1) {
+    inputs[i + 1].focus()
+  }
 }

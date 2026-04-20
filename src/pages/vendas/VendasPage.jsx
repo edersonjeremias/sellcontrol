@@ -383,20 +383,16 @@ export default function VendasPage() {
   }, [triggerAutoSave])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
-  const handleClienteBlur = useCallback((idx) => {
-    const l = linhasRef.current[idx]
-    if (!l || l.liberado) return
-    const nome = (l.cliente_nome || '').trim().toLowerCase()
-    if (!nome || !globalDBRef.current.bloqueados[nome]) return
-
+  function showBloqueioModal(idx, nomeExibido) {
+    const nome = nomeExibido.trim().toLowerCase()
     const info = globalDBRef.current.bloqueados[nome]
-    let msg = `O cliente <b style="color:#f28b82">${l.cliente_nome}</b> está BLOQUEADO.<br><br>`
+    if (!info) return
+    let msg = `O cliente <b style="color:#f28b82">${nomeExibido.trim()}</b> está BLOQUEADO.<br><br>`
     if (info.manual) msg += `<b>Bloqueio Manual:</b> ${info.msgManual || 'Sem motivo especificado.'}<br><br>`
     if (info.dividas?.length) {
       msg += `<b>Pendências Financeiras:</b><br>`
       info.dividas.forEach(d => { msg += `- Live <b>${d.data}</b> — R$ <b>${d.valor}</b><br>` })
     }
-
     setConfirmacao({
       titulo: '🚫 Cliente Bloqueado',
       mensagem: msg,
@@ -406,6 +402,20 @@ export default function VendasPage() {
         setConfirmacao(null)
       },
     })
+  }
+
+  const handleClienteBlur = useCallback((idx) => {
+    const l = linhasRef.current[idx]
+    if (!l || l.liberado) return
+    const nome = (l.cliente_nome || '').trim()
+    if (!nome) return
+    showBloqueioModal(idx, nome)
+  }, [])
+
+  const handleClienteSelect = useCallback((idx, nome) => {
+    const l = linhasRef.current[idx]
+    if (l?.liberado) return
+    showBloqueioModal(idx, nome)
   }, [])
 
   // ── FILA ──
@@ -857,6 +867,7 @@ export default function VendasPage() {
                         linha={l} idx={idx} listas={listas}
                         onFieldChange={handleFieldChange}
                         onClienteBlur={handleClienteBlur}
+                        onClienteSelect={handleClienteSelect}
                         onNovoFromRow={novo}
                         onAbrirModal={setModalEdicaoIdx}
                         onAbrirFila={setModalFilaIdx}

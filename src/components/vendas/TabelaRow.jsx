@@ -1,9 +1,15 @@
 import { memo } from 'react'
-import AutocompleteInput from '../ui/AutocompleteInput'
+import AutocompleteInput, { navigateNext } from '../ui/AutocompleteInput'
+
+function onEnterNext(e) {
+  if (e.key !== 'Enter') return
+  e.preventDefault()
+  navigateNext(e.target)
+}
 
 const TabelaRow = memo(function TabelaRow({
   linha, idx, listas,
-  onFieldChange, onClienteBlur, onNovoFromRow,
+  onFieldChange, onClienteBlur, onClienteSelect, onNovoFromRow,
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
   onStatusChange,
@@ -62,20 +68,22 @@ const TabelaRow = memo(function TabelaRow({
       {/* TAMANHO */}
       <td className="col-tam">
         <input className="cell-input" value={linha.tamanho}
-          onChange={e => upd('tamanho', e.target.value)} disabled={linha.isSent} />
+          onChange={e => upd('tamanho', e.target.value)}
+          onKeyDown={onEnterNext} disabled={linha.isSent} />
       </td>
 
       {/* PREÇO */}
       <td className="col-preco">
         <input className="cell-input price" value={linha.preco}
           onChange={e => upd('preco', e.target.value.replace(/[^\d,]/g, ''))}
-          disabled={linha.isSent} />
+          onKeyDown={onEnterNext} disabled={linha.isSent} />
       </td>
 
       {/* CÓDIGO */}
       <td className="col-cod">
         <input className="cell-input" value={linha.codigo}
-          onChange={e => upd('codigo', e.target.value)} disabled={linha.isSent} />
+          onChange={e => upd('codigo', e.target.value)}
+          onKeyDown={onEnterNext} disabled={linha.isSent} />
       </td>
 
       {/* CLIENTE */}
@@ -86,6 +94,7 @@ const TabelaRow = memo(function TabelaRow({
           list={listas.clientes}
           onChange={v => upd('cliente_nome', v)}
           onBlur={() => onClienteBlur(idx)}
+          onSelect={v => onClienteSelect?.(idx, v)}
           onEnterNewRow={onNovoFromRow}
           disabled={linha.isSent}
         />
