@@ -506,20 +506,23 @@ export default function CobrancasPage() {
       ══════════════════════════════════════════════════════ */}
       {sel && (
         <div className="modal-overlay" onClick={() => setSel(null)}>
-          <div className="modal-card" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%', margin: 0 }}>{sel.cliente}</h3>
-              <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1 }} onClick={() => setSel(null)}>✕</button>
+          <div className="modal-card" style={{ maxWidth: 440, width: '95vw', maxHeight: '92vh', overflowY: 'auto', scrollbarWidth: 'none' }} onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 14px' }}>
+              <h3 style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%', margin: 0, fontSize: 14 }}>{sel.cliente}</h3>
+              <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }} onClick={() => setSel(null)}>✕</button>
             </div>
 
-            <div className="modal-body" style={{ paddingBottom: 20 }}>
-              {/* Cabeçalho da cobrança */}
-              <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--green)' }}>{formatMoeda(sel.total)}</div>
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+            <div className="modal-body" style={{ padding: '10px 14px 14px' }}>
+
+              {/* Valor compacto */}
+              <div style={{ textAlign: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green)', lineHeight: 1.2 }}>{formatMoeda(sel.total)}</div>
+                <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
                   {fmtData(sel.data)}{sel.live && ` · ${sel.live}`}
                 </div>
-                <div style={{ color: COR_STATUS[sel.status] || 'var(--muted)', fontWeight: 700, fontSize: 13, marginTop: 2 }}>
+                <div style={{ color: COR_STATUS[sel.status] || 'var(--muted)', fontWeight: 700, fontSize: 12 }}>
                   {LABEL_STATUS[sel.status] || sel.status}
                   {sel.qt_envios > 0 && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6 }}>· ✉ {sel.qt_envios}x</span>}
                 </div>
@@ -527,9 +530,9 @@ export default function CobrancasPage() {
 
               {/* Itens */}
               {itens.length > 0 && (
-                <div style={{ background: '#1a1a1a', borderRadius: 6, padding: '8px 10px', marginBottom: 12, maxHeight: 150, overflowY: 'auto', scrollbarWidth: 'none' }}>
+                <div style={{ background: '#1a1a1a', borderRadius: 6, padding: '6px 10px', marginBottom: 10, maxHeight: 110, overflowY: 'auto', scrollbarWidth: 'none' }}>
                   {itens.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, padding: '3px 0', borderBottom: i < itens.length - 1 ? '1px solid var(--border-light)' : 'none', color: item.cancelado ? 'var(--muted)' : 'var(--text-body)', textDecoration: item.cancelado ? 'line-through' : 'none' }}>
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, padding: '2px 0', borderBottom: i < itens.length - 1 ? '1px solid var(--border-light)' : 'none', color: item.cancelado ? 'var(--muted)' : 'var(--text-body)', textDecoration: item.cancelado ? 'line-through' : 'none' }}>
                       <span style={{ flex: 1 }}>{item.descricao}</span>
                       <span style={{ fontWeight: 700, whiteSpace: 'nowrap', color: item.valor < 0 ? 'var(--green)' : 'inherit' }}>
                         {item.valor < 0 ? '-' : ''}R$ {Math.abs(item.valor).toFixed(2).replace('.', ',')}
@@ -539,64 +542,68 @@ export default function CobrancasPage() {
                 </div>
               )}
 
-              {/* Anotação */}
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 12, color: 'var(--yellow)', display: 'block', marginBottom: 4, fontWeight: 600 }}>📝 Anotação (aparece na lista):</label>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input
-                    type="text"
-                    value={obsTexto}
-                    onChange={e => setObsTexto(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && salvarObs()}
-                    placeholder="Ex: Paga no dia 05..."
-                    style={{ ...SI, flex: 1 }}
-                  />
-                  <button className="btn-acao btn-ghost" style={{ minWidth: 'auto', minHeight: 34, padding: '0 10px', fontSize: 13 }} onClick={salvarObs} disabled={salvandoObs}>
-                    {salvandoObs ? '…' : '💾'}
-                  </button>
-                </div>
+              {/* Anotação + botões utilitários na mesma linha */}
+              <div style={{ display: 'flex', gap: 5, marginBottom: 10, alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={obsTexto}
+                  onChange={e => setObsTexto(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && salvarObs()}
+                  placeholder="📝 Anotação (aparece na lista)..."
+                  style={{ ...SI, flex: 1, fontSize: 12 }}
+                />
+                {/* Salvar */}
+                <button onClick={salvarObs} disabled={salvandoObs} title="Salvar anotação"
+                  style={{ flexShrink: 0, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(138,180,248,0.12)', border: '1px solid rgba(138,180,248,0.3)', color: 'var(--blue)', borderRadius: 6, cursor: 'pointer', fontSize: 14 }}>
+                  {salvandoObs ? '…' : '💾'}
+                </button>
+                {/* Sincronizar */}
+                <button onClick={() => sincronizar(sel)} disabled={sincronizando} title="Sincronizar com vendas"
+                  style={{ flexShrink: 0, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(138,180,248,0.12)', border: '1px solid rgba(138,180,248,0.3)', color: 'var(--blue)', borderRadius: 6, cursor: 'pointer' }}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                  </svg>
+                </button>
+                {/* Desconto */}
+                <button onClick={abrirDesconto} title="Aplicar desconto"
+                  style={{ flexShrink: 0, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(251,188,4,0.12)', border: '1px solid rgba(251,188,4,0.3)', color: 'var(--yellow)', borderRadius: 6, cursor: 'pointer', fontWeight: 800, fontSize: 15 }}>
+                  %
+                </button>
               </div>
 
-              {/* Ações */}
-              <div style={{ display: 'grid', gap: 8 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button className="btn-acao btn-ghost" style={{ minHeight: 40, fontSize: 13 }} onClick={() => sincronizar(sel)} disabled={sincronizando}>
-                    {sincronizando ? 'Sincronizando...' : '🔄 Sincronizar'}
-                  </button>
-                  <button className="btn-acao btn-ghost" style={{ minHeight: 40, fontSize: 13 }} onClick={abrirDesconto}>
-                    🏷️ Desconto
-                  </button>
-                </div>
-                <button
-                  className="btn-acao"
-                  style={{ background: 'rgba(37,99,63,0.4)', color: 'var(--green)', border: '1px solid var(--green)', borderRadius: 8, minHeight: 40, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}
-                  onClick={() => enviarWhatsApp(sel, 'chat')}
-                >
-                  💬 Conversar (Sem Link)
+              {/* Botões de comunicação — mesma linha */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5, marginBottom: sel.qt_envios > 0 ? 5 : 8 }}>
+                <button onClick={() => enviarWhatsApp(sel, 'chat')}
+                  style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, background: 'rgba(129,201,149,0.1)', color: 'var(--green)', border: '1px solid rgba(129,201,149,0.3)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }}>
+                  💬 Conversar
                 </button>
-                <button className="btn-acao btn-green" style={{ minHeight: 40, fontSize: 13, color: '#171717' }} onClick={() => enviarWhatsApp(sel, 'enviar')}>
-                  📲 {sel.qt_envios > 0 ? 'Reenviar Link' : 'Enviar Link'}
+                <button onClick={() => enviarWhatsApp(sel, 'enviar')}
+                  style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, background: 'rgba(129,201,149,0.6)', color: '#171717', border: '1px solid var(--green)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>
+                  📲 {sel.qt_envios > 0 ? 'Reenviar' : 'Enviar'}
                 </button>
-                {sel.qt_envios > 0 && (
-                  <button
-                    className="btn-acao"
-                    style={{ background: 'rgba(251,188,4,0.15)', color: 'var(--yellow)', border: '1px solid rgba(251,188,4,0.4)', borderRadius: 8, minHeight: 40, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}
-                    onClick={() => enviarWhatsApp(sel, 'lembrete')}
-                  >
-                    ⏰ Lembrete
-                  </button>
-                )}
-                <button className="btn-acao btn-ghost" style={{ minHeight: 40, fontSize: 13 }} onClick={() => copiarLink(sel)}>
-                  🔗 Copiar Link Recibo
+                <button onClick={() => copiarLink(sel)}
+                  style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, background: 'rgba(138,180,248,0.1)', color: 'var(--blue)', border: '1px solid rgba(138,180,248,0.3)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }}>
+                  🔗 Copiar
                 </button>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
-                  <button className="btn-acao btn-blue" style={{ minHeight: 42, fontSize: 13, color: '#171717' }} onClick={() => baixar(sel)}>
-                    Baixar
-                  </button>
-                  <button className="btn-acao btn-danger" style={{ minHeight: 42, fontSize: 13 }} onClick={() => excluir(sel)}>
-                    Excluir
-                  </button>
-                </div>
+              </div>
+
+              {/* Lembrete */}
+              {sel.qt_envios > 0 && (
+                <button onClick={() => enviarWhatsApp(sel, 'lembrete')}
+                  style={{ width: '100%', height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(251,188,4,0.1)', color: 'var(--yellow)', border: '1px solid rgba(251,188,4,0.3)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
+                  ⏰ Lembrete
+                </button>
+              )}
+
+              {/* Baixar / Excluir */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button className="btn-acao btn-blue" style={{ minHeight: 38, fontSize: 13, color: '#171717' }} onClick={() => baixar(sel)}>
+                  Baixar
+                </button>
+                <button className="btn-acao btn-danger" style={{ minHeight: 38, fontSize: 13 }} onClick={() => excluir(sel)}>
+                  Excluir
+                </button>
               </div>
             </div>
           </div>
