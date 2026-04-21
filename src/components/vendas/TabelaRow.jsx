@@ -126,7 +126,7 @@ const TabelaRow = memo(function TabelaRow({
           list={listas.clientes}
           onChange={v => upd('cliente_nome', v)}
           onBlur={() => onClienteBlur(idx)}
-          onSelect={v => onClienteSelect?.(idx, v)}
+          onSelect={(v, inputEl) => onClienteSelect?.(idx, v, inputEl)}
           isBlocked={v => onIsBlocked?.(v)}
           onEnterNewRow={onNovoFromRow}
           disabled={linha.isSent}
@@ -157,7 +157,7 @@ const TabelaRow = memo(function TabelaRow({
       <td className="col-acoes">
         <div className="acoes-wrapper">
           {/* Fila */}
-          <button
+          <button type="button"
             className={`btn-action-sm fila${hasFila ? ' has-fila' : ''}`}
             title="Fila de Espera"
             onClick={e => { e.stopPropagation(); onAbrirFila(idx) }}
@@ -170,10 +170,10 @@ const TabelaRow = memo(function TabelaRow({
 
           {/* Copiar texto da linha */}
           {!modoHistorico && (
-            <button
+            <button type="button"
               className="btn-action-sm copy-txt"
               title="Copiar texto da linha"
-              onClick={copiarTexto}
+              onClick={e => { e.stopPropagation(); copiarTexto(e) }}
               style={txtCopiado ? { color: 'var(--green)' } : undefined}
             >
               {txtCopiado
@@ -185,7 +185,7 @@ const TabelaRow = memo(function TabelaRow({
 
           {/* Enviar — oculto no histórico */}
           {!linha.isSent && !modoHistorico && (
-            <button className="btn-action-sm send" title="Enviar para o banco"
+            <button type="button" className="btn-action-sm send" title="Enviar para o banco"
               onClick={e => { e.stopPropagation(); onEnviar(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -195,7 +195,7 @@ const TabelaRow = memo(function TabelaRow({
 
           {/* Estornar */}
           {(linha.isSent || modoHistorico) && (
-            <button className="btn-action-sm undo" title="Estornar envio" style={{ display: 'flex' }}
+            <button type="button" className="btn-action-sm undo" title="Estornar envio" style={{ display: 'flex' }}
               onClick={e => { e.stopPropagation(); onEstornar(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
@@ -205,7 +205,7 @@ const TabelaRow = memo(function TabelaRow({
 
           {/* Copiar linha */}
           {!linha.isSent && !modoHistorico && (
-            <button className="btn-action-sm copy" title="Copiar linha"
+            <button type="button" className="btn-action-sm copy" title="Copiar linha"
               onClick={e => { e.stopPropagation(); onCopiar(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -216,7 +216,7 @@ const TabelaRow = memo(function TabelaRow({
 
           {/* Excluir */}
           {(!linha.isSent || modoHistorico) && (
-            <button className="btn-action-sm del" title="Excluir linha"
+            <button type="button" className="btn-action-sm del" title="Excluir linha"
               onClick={e => { e.stopPropagation(); onExcluir(idx) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/>
