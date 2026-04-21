@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
@@ -5,11 +6,19 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   const { profile, menuItems, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleLogout = async () => {
     await signOut()
     navigate('/login')
   }
+
+  const navLinks = [
+    ...menuItems.map(item => ({ to: `/${item.slug}`, label: item.label })),
+    { to: '/clientes', label: 'Clientes' },
+    ...(['admin', 'master'].includes(profile?.role) ? [{ to: '/configuracoes', label: 'Configurações' }] : []),
+    ...(profile?.role === 'master' ? [{ to: '/master/empresas', label: 'Empresas' }] : []),
+  ]
 
   return (
     <div className="app-shell">
@@ -19,38 +28,14 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
           <span className="app-logo-text">sellControl</span>
         </div>
 
+        {/* Nav desktop */}
         <nav className="app-nav">
-          {menuItems.map((item) => (
-            <Link
-              key={item.slug}
-              to={`/${item.slug}`}
-              className={location.pathname === `/${item.slug}` ? 'app-nav-link active' : 'app-nav-link'}
-            >
+          {navLinks.map(item => (
+            <Link key={item.to} to={item.to}
+              className={location.pathname === item.to ? 'app-nav-link active' : 'app-nav-link'}>
               {item.label}
             </Link>
           ))}
-          <Link
-            to="/clientes"
-            className={location.pathname === '/clientes' ? 'app-nav-link active' : 'app-nav-link'}
-          >
-            Clientes
-          </Link>
-          {['admin', 'master'].includes(profile?.role) && (
-            <Link
-              to="/configuracoes"
-              className={location.pathname === '/configuracoes' ? 'app-nav-link active' : 'app-nav-link'}
-            >
-              Configurações
-            </Link>
-          )}
-          {profile?.role === 'master' && (
-            <Link
-              to="/master/empresas"
-              className={location.pathname === '/master/empresas' ? 'app-nav-link active' : 'app-nav-link'}
-            >
-              Empresas
-            </Link>
-          )}
         </nav>
 
         <div className="app-userbar">
@@ -60,7 +45,26 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
           </div>
           <button className="app-logout-btn" onClick={handleLogout}>Sair</button>
         </div>
+
+        {/* Botão sanduíche — só mobile */}
+        <button className="app-hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
+          <span /><span /><span />
+        </button>
       </header>
+
+      {/* Menu mobile dropdown */}
+      {menuOpen && (
+        <div className="app-mobile-menu">
+          {navLinks.map(item => (
+            <Link key={item.to} to={item.to}
+              className={location.pathname === item.to ? 'app-mobile-link active' : 'app-mobile-link'}
+              onClick={() => setMenuOpen(false)}>
+              {item.label}
+            </Link>
+          ))}
+          <button className="app-mobile-logout" onClick={handleLogout}>Sair</button>
+        </div>
+      )}
 
       <main className={`app-main${flush ? ' app-main-flush' : ''}`}>
         {!hideTitle && (
