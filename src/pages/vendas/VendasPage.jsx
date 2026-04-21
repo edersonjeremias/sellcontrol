@@ -125,6 +125,7 @@ export default function VendasPage() {
   const novoProdutoFocus = useRef(false)
   const busyRef = useRef(false)
   const lastRealtimeKeyRef = useRef('')
+  const focusReturnRef = useRef(null)  // guarda o input de cliente que disparou o bloqueio
 
   // ── Modal state ──
   const [modalEdicaoIdx,    setModalEdicaoIdx]    = useState(null)
@@ -383,10 +384,11 @@ export default function VendasPage() {
   }, [triggerAutoSave])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
-  function showBloqueioModal(idx, nomeExibido) {
+  function showBloqueioModal(idx, nomeExibido, inputEl) {
     const nome = nomeExibido.trim().toLowerCase()
     const info = globalDBRef.current.bloqueados[nome]
     if (!info) return
+    focusReturnRef.current = inputEl || null
     let msg = `O cliente <b style="color:#f28b82">${nomeExibido.trim()}</b> está BLOQUEADO.<br><br>`
     if (info.manual) msg += `<b>Bloqueio Manual:</b> ${info.msgManual || 'Sem motivo especificado.'}<br><br>`
     if (info.dividas?.length) {
@@ -400,6 +402,8 @@ export default function VendasPage() {
       onNao: () => {
         setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],cliente_nome:'',sacolinha:null,liberado:false}; return calcSacolas(n) })
         setConfirmacao(null)
+        const el = focusReturnRef.current
+        if (el) setTimeout(() => { el.focus(); focusReturnRef.current = null }, 50)
       },
     })
   }
@@ -413,10 +417,10 @@ export default function VendasPage() {
   }, [])
 
   // Sem useCallback para garantir closure sempre atualizada
-  function handleClienteSelect(idx, nome) {
+  function handleClienteSelect(idx, nome, inputEl) {
     const l = linhasRef.current[idx]
     if (l?.liberado) return
-    showBloqueioModal(idx, nome)
+    showBloqueioModal(idx, nome, inputEl)
   }
 
   function handleIsBlocked(nome) {
