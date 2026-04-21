@@ -1,14 +1,4 @@
-import { useEffect } from 'react'
-
 export default function ModalConfirmacao({ titulo = 'Atenção', mensagem, onSim, onNao, hideConfirm = false }) {
-  useEffect(() => {
-    function onKey(e) {
-      if (e.repeat) return
-      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); onNao() }
-    }
-    document.addEventListener('keyup', onKey)
-    return () => document.removeEventListener('keyup', onKey)
-  }, [onNao])
 
   return (
     <div className="modal-overlay">
