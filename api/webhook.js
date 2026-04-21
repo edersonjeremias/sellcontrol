@@ -71,18 +71,22 @@ export default async function handler(req, res) {
         }
       }
 
+      const valorBruto   = paymentData.transaction_amount
+      const valorLiquido = paymentData.transaction_details?.net_received_amount ?? 0
+
       const { error } = await supabase
         .from('cobrancas')
         .update({
           status: 'PAGO',
           data_pagamento: new Date().toISOString(),
           id_mp: String(paymentId),
+          valor_liquido: valorLiquido,
         })
         .eq('id', cobrancaId)
         .neq('status', 'PAGO')
 
       if (error) console.error('Erro Supabase:', error)
-      else console.log(`Cobrança ${cobrancaId} marcada como PAGA`)
+      else console.log(`Cobrança ${cobrancaId} PAGA! Bruto: ${valorBruto} | Líquido: ${valorLiquido}`)
     }
 
     return res.status(200).json({ received: true })
