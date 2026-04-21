@@ -1,10 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
 
+export function navigateNext(input) {
+  const tr = input.closest('tr')
+  if (!tr) return
+  const inputs = Array.from(tr.querySelectorAll(
+    'input:not([readonly]):not([type="hidden"]):not([disabled]), select:not([disabled])'
+  ))
+  const i = inputs.indexOf(input)
+  if (i >= 0 && i < inputs.length - 1) inputs[i + 1].focus()
+}
+
 export default function AutocompleteInput({
   value = '',
   onChange,
   onBlur,
   onSelect,
+  isBlocked,        // (value: string) => boolean — verificação síncrona de bloqueio
   list = [],
   placeholder = '',
   className = '',
@@ -15,6 +26,7 @@ export default function AutocompleteInput({
 }) {
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
+  const inputRef = useRef(null)
   const listRef = useRef(null)
 
   const filtered = (list || []).filter(item =>
@@ -45,30 +57,22 @@ export default function AutocompleteInput({
       setActiveIdx(i => (i + 1) >= filtered.length ? 0 : i + 1)
       return
     }
-
     if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (!visible) return
       setActiveIdx(i => (i - 1) < 0 ? filtered.length - 1 : i - 1)
       return
     }
-
     if (e.key === 'Escape') {
-      setOpen(false)
-      setActiveIdx(-1)
-      return
+      setOpen(false); setActiveIdx(-1); return
     }
-
     if (e.key === 'Tab') {
       if (visible) {
         const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
         if (chosen) select(chosen)
       }
-      setOpen(false)
-      setActiveIdx(-1)
-      return
+      setOpen(false); setActiveIdx(-1); return
     }
-
     if (e.key === 'Enter') {
       e.preventDefault()
 
@@ -76,7 +80,12 @@ export default function AutocompleteInput({
         const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
         if (chosen) {
           select(chosen)
-          if (!onEnterNewRow) navigateNext(e.target)
+          // Após selecionar: se há handler de nova linha, só pula se NÃO estiver bloqueado
+          if (onEnterNewRow) {
+            if (!isBlocked?.(chosen)) onEnterNewRow()
+          } else {
+            navigateNext(e.target)
+          }
           return
         }
       }
@@ -92,6 +101,7 @@ export default function AutocompleteInput({
   return (
     <div className="autocomplete-wrapper" style={style}>
       <input
+        ref={inputRef}
         className={className}
         value={value}
         placeholder={placeholder}
@@ -120,16 +130,4 @@ export default function AutocompleteInput({
       )}
     </div>
   )
-}
-
-export function navigateNext(input) {
-  const tr = input.closest('tr')
-  if (!tr) return
-  const inputs = Array.from(tr.querySelectorAll(
-    'input:not([readonly]):not([type="hidden"]):not([disabled]), select:not([disabled])'
-  ))
-  const i = inputs.indexOf(input)
-  if (i >= 0 && i < inputs.length - 1) {
-    inputs[i + 1].focus()
-  }
 }

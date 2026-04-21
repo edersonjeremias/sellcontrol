@@ -412,11 +412,16 @@ export default function VendasPage() {
     showBloqueioModal(idx, nome)
   }, [])
 
-  const handleClienteSelect = useCallback((idx, nome) => {
+  // Sem useCallback para garantir closure sempre atualizada
+  function handleClienteSelect(idx, nome) {
     const l = linhasRef.current[idx]
     if (l?.liberado) return
     showBloqueioModal(idx, nome)
-  }, [])
+  }
+
+  function handleIsBlocked(nome) {
+    return !!globalDBRef.current.bloqueados[(nome || '').trim().toLowerCase()]
+  }
 
   // ── FILA ──
   const salvarFila = useCallback((idx, f1, f2, f3) => {
@@ -868,6 +873,7 @@ export default function VendasPage() {
                         onFieldChange={handleFieldChange}
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
+                        onIsBlocked={handleIsBlocked}
                         onNovoFromRow={novo}
                         onAbrirModal={setModalEdicaoIdx}
                         onAbrirFila={setModalFilaIdx}

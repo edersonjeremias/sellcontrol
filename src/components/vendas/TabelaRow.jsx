@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import AutocompleteInput, { navigateNext } from '../ui/AutocompleteInput'
 
 function onEnterNext(e) {
@@ -7,22 +7,54 @@ function onEnterNext(e) {
   navigateNext(e.target)
 }
 
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+  }
+  return new Promise((res, rej) => {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.cssText = 'position:fixed;left:-999999px;top:-999999px'
+    document.body.appendChild(ta)
+    ta.focus(); ta.select()
+    document.execCommand('copy') ? res() : rej()
+    ta.remove()
+  })
+}
+
 const TabelaRow = memo(function TabelaRow({
   linha, idx, listas,
-  onFieldChange, onClienteBlur, onClienteSelect, onNovoFromRow,
+  onFieldChange, onClienteBlur, onClienteSelect, onIsBlocked, onNovoFromRow,
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
   onStatusChange,
   modoHistorico = false,
 }) {
   const upd = (field, val) => onFieldChange(idx, field, val)
+  const [txtCopiado, setTxtCopiado] = useState(false)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
   const isCancelado = (linha.status || '').toUpperCase() === 'CANCELADO'
 
-  // Formata data_live (YYYY-MM-DD → DD/MM) para exibição compacta no histórico
   const dataFormatada = linha.data_live
     ? `${linha.data_live.slice(8, 10)}/${linha.data_live.slice(5, 7)}`
     : '—'
+
+  function copiarTexto(e) {
+    e.stopPropagation()
+    const partes = []
+    if (linha.codigo?.trim())      partes.push(`Código: ${linha.codigo.trim()}`)
+    if (linha.produto?.trim())     partes.push(linha.produto.trim())
+    if (linha.modelo?.trim())      partes.push(linha.modelo.trim())
+    if (linha.cor?.trim())         partes.push(linha.cor.trim())
+    if (linha.marca?.trim())       partes.push(linha.marca.trim())
+    if (linha.tamanho?.trim())     partes.push(`(${linha.tamanho.trim()})`)
+    if (linha.preco?.trim())       partes.push(`R$ ${linha.preco.trim()}`)
+    if (linha.cliente_nome?.trim()) partes.push(`- Cliente: ${linha.cliente_nome.trim()}`)
+    const texto = partes.join(' ').replace(/\s+/g, ' ')
+    copyToClipboard(texto)
+      .then(() => { setTxtCopiado(true); setTimeout(() => setTxtCopiado(false), 1000) })
+      .catch(() => {})
+  }
 
   return (
     <tr className={linha.isSent && !modoHistorico ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
@@ -95,6 +127,7 @@ const TabelaRow = memo(function TabelaRow({
           onChange={v => upd('cliente_nome', v)}
           onBlur={() => onClienteBlur(idx)}
           onSelect={v => onClienteSelect?.(idx, v)}
+          isBlocked={v => onIsBlocked?.(v)}
           onEnterNewRow={onNovoFromRow}
           disabled={linha.isSent}
         />
@@ -123,7 +156,7 @@ const TabelaRow = memo(function TabelaRow({
       {/* AÇÕES */}
       <td className="col-acoes">
         <div className="acoes-wrapper">
-          {/* Fila — visível em live e no histórico */}
+          {/* Fila */}
           <button
             className={`btn-action-sm fila${hasFila ? ' has-fila' : ''}`}
             title="Fila de Espera"
@@ -135,6 +168,21 @@ const TabelaRow = memo(function TabelaRow({
             </svg>
           </button>
 
+          {/* Copiar texto da linha */}
+          {!modoHistorico && (
+            <button
+              className="btn-action-sm copy-txt"
+              title="Copiar texto da linha"
+              onClick={copiarTexto}
+              style={txtCopiado ? { color: 'var(--green)' } : undefined}
+            >
+              {txtCopiado
+                ? <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                : <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              }
+            </button>
+          )}
+
           {/* Enviar — oculto no histórico */}
           {!linha.isSent && !modoHistorico && (
             <button className="btn-action-sm send" title="Enviar para o banco"
@@ -145,7 +193,7 @@ const TabelaRow = memo(function TabelaRow({
             </button>
           )}
 
-          {/* Estornar — sempre visível no histórico */}
+          {/* Estornar */}
           {(linha.isSent || modoHistorico) && (
             <button className="btn-action-sm undo" title="Estornar envio" style={{ display: 'flex' }}
               onClick={e => { e.stopPropagation(); onEstornar(idx) }}>
@@ -155,7 +203,7 @@ const TabelaRow = memo(function TabelaRow({
             </button>
           )}
 
-          {/* Copiar — oculto no histórico */}
+          {/* Copiar linha */}
           {!linha.isSent && !modoHistorico && (
             <button className="btn-action-sm copy" title="Copiar linha"
               onClick={e => { e.stopPropagation(); onCopiar(idx) }}>
@@ -166,7 +214,7 @@ const TabelaRow = memo(function TabelaRow({
             </button>
           )}
 
-          {/* Excluir — visível sempre (pendente ou histórico) */}
+          {/* Excluir */}
           {(!linha.isSent || modoHistorico) && (
             <button className="btn-action-sm del" title="Excluir linha"
               onClick={e => { e.stopPropagation(); onExcluir(idx) }}>
