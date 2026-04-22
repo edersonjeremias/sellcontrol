@@ -70,6 +70,23 @@ function buildWaMsg(phone, clienteNome, valorFrete, linkFrete) {
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
 }
 
+function buildWaRastreio(phone, clienteNome, rastreio) {
+  const d = (phone || '').replace(/\D/g, '')
+  if (!d || d.length < 8 || !rastreio) return null
+  const num = d.length === 10 || d.length === 11 ? `55${d}` : d
+  const cod = (rastreio || '').trim()
+  let url = ''
+  if (cod.toUpperCase().startsWith('BLI')) {
+    url = `https://www.loggi.com/rastreador/${cod}`
+  } else if (cod.match(/^[A-Za-z]/)) {
+    url = `https://rastreamento.correios.com.br/app/index.php?objetos=${cod}`
+  } else {
+    return null
+  }
+  const msg = `${saudacao()} ${clienteNome || ''}, segue seu código de rastreio: ${url}`
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+}
+
 // ── Modal: Erro ────────────────────────────────────────────────
 function ErrModal({ titulo, mensagem, onClose }) {
   return (
@@ -481,12 +498,17 @@ export default function ProducaoPage() {
 
                       {showDelivery && (
                         <td style={{ textAlign: 'center' }}>
-                          {waLink
-                            ? <a href={waLink} target="_blank" rel="noreferrer"><IconWa /></a>
-                            : <button type="button" style={{ background:'none',border:'none',cursor:'pointer',padding:0 }}
+                          {(() => {
+                            const waRastreio = buildWaRastreio(row.whatsapp, row.cliente_nome, row.rastreio)
+                            if (waRastreio) return <a href={waRastreio} target="_blank" rel="noreferrer" title="Enviar código de rastreio via WhatsApp"><IconWa /></a>
+                            if (waLink) return <a href={waLink} target="_blank" rel="noreferrer" title="Abrir WhatsApp"><IconWa /></a>
+                            return (
+                              <button type="button" style={{ background:'none',border:'none',cursor:'pointer',padding:0 }}
                                 onClick={() => navigator.clipboard?.writeText(row.cliente_nome || '')}>
                                 <IconCopyLink />
-                              </button>}
+                              </button>
+                            )
+                          })()}
                         </td>
                       )}
 

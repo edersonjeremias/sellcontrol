@@ -866,7 +866,7 @@ tbody td { padding: 4px 6px; border-bottom: 1px solid var(--table-border); verti
   position: sticky; top: 0; z-index: 5;
   background: #191b20;
   border-bottom: 2px solid #3c414b;
-  padding: 10px 6px;
+  padding: 12px 6px;
   text-align: left;
   font-size: 9px; font-weight: 700;
   color: #abb1bd;
@@ -876,7 +876,7 @@ tbody td { padding: 4px 6px; border-bottom: 1px solid var(--table-border); verti
 }
 .prod-v2-table tbody tr  { border-bottom: 1px solid #252830; }
 .prod-v2-table tbody tr:hover { background: #252830; }
-.prod-v2-table tbody td  { padding: 7px 6px; vertical-align: middle; }
+.prod-v2-table tbody td  { padding: 10px 6px; vertical-align: middle; }
 .prod-td-nb { white-space: nowrap; }
 
 .prod-row-blocked { background: rgba(244,67,54,.1) !important; border-left: 3px solid #f44336 !important; }

@@ -101,10 +101,8 @@ export async function getProducaoData(tenantId = null) {
 
   const clientMap = new Map()
   ;(clientesRes.data || []).forEach((row) => {
-    clientMap.set((row.instagram || '').trim().toLowerCase(), {
-      whatsapp: row.whatsapp || '',
-      bloqueado: !!row.bloqueado,
-    })
+    const key = (row.instagram || '').replace(/^@/, '').trim().toLowerCase()
+    if (key) clientMap.set(key, { whatsapp: row.whatsapp || '', bloqueado: !!row.bloqueado })
   })
 
   const devedorSet = new Set(
@@ -113,7 +111,7 @@ export async function getProducaoData(tenantId = null) {
 
   const today = new Date()
   let rows = (pedidosRes.data || []).map((row) => {
-    const clienteKey = (row.cliente_nome || '').trim().toLowerCase()
+    const clienteKey = (row.cliente_nome || '').replace(/^@/, '').trim().toLowerCase()
     const clientInfo = clientMap.get(clienteKey) || { whatsapp: '', bloqueado: false }
 
     const isFinal = FINAL_ENTREGA.has(row.status_entrega || '') || (row.status_prod || '') === 'Repetido'
