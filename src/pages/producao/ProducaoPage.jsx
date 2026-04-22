@@ -6,6 +6,7 @@ import {
   createProducaoPedido, duplicateProducaoPedido, getProducaoData,
   checkInadimplencia, saveProducaoField,
 } from '../../services/producaoService'
+import { getConfig } from '../../services/configService'
 import DashboardModal from './DashboardModal'
 import DetalheModal   from './DetalheModal'
 
@@ -52,6 +53,22 @@ const SP_COLOR = {
 }
 const spColor = (v) => SP_COLOR[v] || '#f0f0f1'
 const fk = (id, field) => `${id}__${field}`
+
+function saudacao() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Bom dia'
+  if (h < 18) return 'Boa tarde'
+  return 'Boa noite'
+}
+
+function buildWaMsg(phone, clienteNome, valorFrete, linkFrete) {
+  const d = (phone || '').replace(/\D/g, '')
+  if (!d || d.length < 8) return null
+  const num = d.length === 10 || d.length === 11 ? `55${d}` : d
+  const frete = valorFrete ? `R$${valorFrete}` : 'R$—'
+  const msg = `${saudacao()} ${clienteNome || ''}, o valor do frete ficou em ${frete}, segue link pagamento do frete ${linkFrete || ''}`
+  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+}
 
 // ── Modal: Erro ────────────────────────────────────────────────
 function ErrModal({ titulo, mensagem, onClose }) {
@@ -115,14 +132,16 @@ export default function ProducaoPage() {
   const [motivoText,  setMotivoText]  = useState('')
   const [showDash,    setShowDash]    = useState(false)
   const [detalhe,     setDetalhe]     = useState(null)
+  const [linkFrete,   setLinkFrete]   = useState('')
 
   // ── Load ────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     if (!tenantId) return
     setLoading(true)
     try {
-      const data = await getProducaoData(tenantId)
+      const [data, cfg] = await Promise.all([getProducaoData(tenantId), getConfig(tenantId)])
       setRows(data.rows); setClientes(data.clientes)
+      if (cfg?.link_frete) setLinkFrete(cfg.link_frete)
     } catch (e) {
       setModalErr({ titulo: '⚠️ Erro', mensagem: e.message || 'Erro ao carregar.' })
     } finally { setLoading(false) }
@@ -262,11 +281,17 @@ export default function ProducaoPage() {
         {/* ── Toolbar ── */}
         <div className="prod-v2-toolbar">
           <div className="prod-v2-toolbar-left">
+            <input className="prod-v2-input" list="prod-v2-clientes-novo"
+              placeholder="Nome do cliente..."
+              value={novoCliente} onChange={(e) => setNovoCliente(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleNovo() }}
+              style={{ minWidth: 140 }} />
+            <datalist id="prod-v2-clientes-novo">{clientes.map((c) => <option key={c} value={c} />)}</datalist>
             <button type="button" className="prod-btn prod-btn-green" onClick={handleNovo} disabled={loading}>+ NOVO</button>
-            <input className="prod-v2-input" list="prod-v2-clientes"
+            <input className="prod-v2-input"
               placeholder="Buscar (ex: nome, pacote, obs)..."
               value={busca} onChange={(e) => setBusca(e.target.value)}
-              style={{ minWidth: 180, flex: 1 }} />
+              style={{ minWidth: 160, flex: 1 }} />
             <select className="prod-v2-input" value={filtroEntrega}
               onChange={(e) => setFiltroEntrega(e.target.value)} style={{ minWidth: 170 }}>
               <option value="">Status Entrega (Todos)</option>
@@ -326,12 +351,6 @@ export default function ProducaoPage() {
                       {/* Dias */}
                       <td className="prod-td-nb" style={{ textAlign:'center' }}>
                         <span style={{ color: row.atrasado ? '#ff9800' : '#f0f0f1', fontWeight: row.atrasado ? 700 : 400 }}>{row.dias_u}</span>
-                        {precisaMotivo && (
-                          <button type="button" className="prod-motivo-btn"
-                            onClick={() => { setModalMotivo(row.id); setMotivoText('') }}>
-                            + MOTIVO
-                          </button>
-                        )}
                       </td>
 
                       {/* Cliente */}
@@ -348,7 +367,7 @@ export default function ProducaoPage() {
                         <select className="prod-v2-cell"
                           value={row.status_prod || ''}
                           onChange={(e) => handleStatusProd(row, e.target.value)}
-                          style={{ borderColor: bc(row.id, 'status_prod'), color: spColor(row.status_prod), fontWeight: 600, width: 125 }}>
+                          style={{ borderColor: bc(row.id, 'status_prod'), color: spColor(row.status_prod), fontWeight: 600, width: 105 }}>
                           <option value="">--</option>
                           {STATUS_PROD_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -356,7 +375,7 @@ export default function ProducaoPage() {
 
                       {/* Obs Cliente — input INLINE sem componente helper */}
                       <td>
-                        <input className="prod-v2-cell" style={{ width: 120, borderColor: bc(row.id,'obs_cliente') }}
+                        <input className="prod-v2-cell" style={{ width: 95, borderColor: bc(row.id,'obs_cliente') }}
                           value={row.obs_cliente || ''}
                           onChange={(e) => updRow(row.id, { obs_cliente: e.target.value })}
                           onBlur={(e) => savePatch(row.id, 'obs_cliente', e.target.value)} />
@@ -364,7 +383,7 @@ export default function ProducaoPage() {
 
                       {/* Obs Prod */}
                       <td>
-                        <input className="prod-v2-cell" style={{ width: 110, borderColor: bc(row.id,'obs_prod') }}
+                        <input className="prod-v2-cell" style={{ width: 95, borderColor: bc(row.id,'obs_prod') }}
                           value={row.obs_prod || ''}
                           onChange={(e) => updRow(row.id, { obs_prod: e.target.value })}
                           onBlur={(e) => savePatch(row.id, 'obs_prod', e.target.value)} />
@@ -380,7 +399,7 @@ export default function ProducaoPage() {
 
                       {/* Pacote */}
                       <td>
-                        <select className="prod-v2-cell" style={{ width: 125, borderColor: bc(row.id,'pacote') }}
+                        <select className="prod-v2-cell" style={{ width: 100, borderColor: bc(row.id,'pacote') }}
                           value={row.pacote || ''}
                           onChange={(e) => handlePacote(row, e.target.value)}>
                           <option value="">--</option>
@@ -396,7 +415,7 @@ export default function ProducaoPage() {
                       {/* ── Colunas de entrega ── */}
                       {showDelivery && (
                         <td>
-                          <select className="prod-v2-cell" style={{ width: 140, borderColor: bc(row.id,'status_entrega') }}
+                          <select className="prod-v2-cell" style={{ width: 112, borderColor: bc(row.id,'status_entrega') }}
                             value={row.status_entrega || ''}
                             onChange={(e) => handleStatusEntrega(row, e.target.value)}>
                             <option value="">--</option>
@@ -441,17 +460,19 @@ export default function ProducaoPage() {
                       )}
 
                       {showDelivery && (
-                        <td>
-                          <input className="prod-v2-cell" style={{ width: 90, borderColor: bc(row.id,'msg_cobranca') }}
-                            value={row.msg_cobranca || ''}
-                            onChange={(e) => updRow(row.id, { msg_cobranca: e.target.value })}
-                            onBlur={(e) => savePatch(row.id, 'msg_cobranca', e.target.value)} />
+                        <td style={{ textAlign: 'center' }}>
+                          {(() => {
+                            const waCobranca = buildWaMsg(row.whatsapp, row.cliente_nome, row.valor_frete, linkFrete)
+                            return waCobranca
+                              ? <a href={waCobranca} target="_blank" rel="noreferrer" title="Enviar cobrança de frete via WhatsApp"><IconWa /></a>
+                              : <span style={{ color: '#6b7280', fontSize: 10 }}>sem tel.</span>
+                          })()}
                         </td>
                       )}
 
                       {showDelivery && (
                         <td>
-                          <input className="prod-v2-cell" style={{ width: 90, borderColor: bc(row.id,'rastreio') }}
+                          <input className="prod-v2-cell" style={{ width: 75, borderColor: bc(row.id,'rastreio') }}
                             value={row.rastreio || ''}
                             onChange={(e) => updRow(row.id, { rastreio: e.target.value })}
                             onBlur={(e) => savePatch(row.id, 'rastreio', e.target.value)} />
@@ -482,8 +503,6 @@ export default function ProducaoPage() {
             </table>
           )}
         </div>
-
-        <datalist id="prod-v2-clientes">{clientes.map((c) => <option key={c} value={c} />)}</datalist>
 
         {modalErr && <ErrModal titulo={modalErr.titulo} mensagem={modalErr.mensagem} onClose={() => setModalErr(null)} />}
         {modalMotivo !== null && (

@@ -32,14 +32,20 @@ function TabBtn({ label, active, onClick }) {
 
 // ── Aba: Configurações da empresa ──────────────────────────────
 function AbaConfiguracoes({ tenantId, showToast }) {
-  const [form, setForm]       = useState({ mp_access_token: '', nome_loja: '', whatsapp: '', email_contato: '' })
+  const [form, setForm]       = useState({ mp_access_token: '', nome_loja: '', whatsapp: '', email_contato: '', link_frete: '' })
   const [salvando, setSalvando] = useState(false)
   const [mostrarToken, setMostrarToken] = useState(false)
 
   useEffect(() => {
     if (!tenantId) return
     getConfig(tenantId).then(cfg => {
-      if (cfg) setForm({ mp_access_token: cfg.mp_access_token || '', nome_loja: cfg.nome_loja || '', whatsapp: cfg.whatsapp || '', email_contato: cfg.email_contato || '' })
+      if (cfg) setForm({
+        mp_access_token: cfg.mp_access_token || '',
+        nome_loja: cfg.nome_loja || '',
+        whatsapp: cfg.whatsapp || '',
+        email_contato: cfg.email_contato || '',
+        link_frete: cfg.link_frete || '',
+      })
     })
   }, [tenantId])
 
@@ -90,6 +96,20 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           placeholder="contato@suaempresa.com"
           style={SI}
         />
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Link de Pagamento do Frete (para Produção)</label>
+        <input
+          type="url"
+          value={form.link_frete}
+          onChange={e => setForm(p => ({ ...p, link_frete: e.target.value }))}
+          placeholder="https://linknabio.gg/suaempresa"
+          style={SI}
+        />
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+          Este link é enviado automaticamente na mensagem de cobrança do frete via WhatsApp na página de Produção.
+        </div>
       </div>
 
       <div style={{ marginBottom: 28 }}>
