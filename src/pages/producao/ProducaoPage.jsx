@@ -152,19 +152,27 @@ export default function ProducaoPage() {
   const [linkFrete,   setLinkFrete]   = useState('')
 
   // ── Load ────────────────────────────────────────────────────
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal) => {
     if (!tenantId) return
     setLoading(true)
     try {
       const [data, cfg] = await Promise.all([getProducaoData(tenantId), getConfig(tenantId)])
+      if (signal?.cancelled) return
       setRows(data.rows); setClientes(data.clientes)
       if (cfg?.link_frete) setLinkFrete(cfg.link_frete)
     } catch (e) {
+      if (signal?.cancelled) return
       setModalErr({ titulo: '⚠️ Erro', mensagem: e.message || 'Erro ao carregar.' })
-    } finally { setLoading(false) }
+    } finally {
+      if (!signal?.cancelled) setLoading(false)
+    }
   }, [tenantId])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => {
+    const signal = { cancelled: false }
+    loadData(signal)
+    return () => { signal.cancelled = true }
+  }, [loadData])
 
   // ── Saving helpers ──────────────────────────────────────────
   const markSaving = (id, field) => setSaving((p) => ({ ...p, [fk(id, field)]: 'saving' }))

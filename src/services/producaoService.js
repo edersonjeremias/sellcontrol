@@ -144,7 +144,10 @@ export async function getProducaoData(tenantId = null) {
     rows = rows.map((r) => (liberadosIds.has(r.id) ? { ...r, status_prod: 'Liberado' } : r))
   }
 
-  const clientes = (clientesRes.data || []).map((row) => row.instagram).filter(Boolean).sort()
+  const clientes = (clientesRes.data || [])
+    .map((row) => (row.instagram || '').replace(/^@/, '').trim())
+    .filter(Boolean)
+    .sort()
   return { rows, clientes }
 }
 
