@@ -79,7 +79,7 @@ function saudacaoHora() {
 
 export async function getProducaoData(tenantId = null) {
   const tid = TENANT_ID(tenantId)
-  const [pedidosRes, clientesRes] = await Promise.all([
+  const [pedidosRes, clientesRes, devedoresRes] = await Promise.all([
     supabase
       .from('producao_pedidos')
       .select('*')
@@ -89,6 +89,11 @@ export async function getProducaoData(tenantId = null) {
       .from('clientes')
       .select('instagram, whatsapp, bloqueado')
       .eq('tenant_id', tid),
+    supabase
+      .from('cobrancas')
+      .select('cliente')
+      .eq('tenant_id', tid)
+      .not('status', 'in', '("PAGO","BAIXADO","CANCELADO")'),
   ])
 
   if (pedidosRes.error) throw pedidosRes.error
@@ -102,15 +107,17 @@ export async function getProducaoData(tenantId = null) {
     })
   })
 
+  const devedorSet = new Set(
+    (devedoresRes.data || []).map((d) => (d.cliente || '').trim().toLowerCase())
+  )
+
   const today = new Date()
-  const rows = (pedidosRes.data || []).map((row) => {
+  let rows = (pedidosRes.data || []).map((row) => {
     const clienteKey = (row.cliente_nome || '').trim().toLowerCase()
     const clientInfo = clientMap.get(clienteKey) || { whatsapp: '', bloqueado: false }
 
     const isFinal = FINAL_ENTREGA.has(row.status_entrega || '') || (row.status_prod || '') === 'Repetido'
-    const endDate = isFinal
-      ? (row.data_enviado || row.data_pronto || today)
-      : today
+    const endDate = isFinal ? (row.data_enviado || row.data_pronto || today) : today
     const diasUteis = businessDaysBetween(row.data_solicitado, endDate)
 
     return {
@@ -125,8 +132,44 @@ export async function getProducaoData(tenantId = null) {
     }
   })
 
+  // Auto-liberação: 'Aguard. pag.' → 'Liberado' se cliente não tem mais dívida
+  const toLiberar = rows.filter(
+    (r) => r.status_prod === 'Aguard. pag.' && !devedorSet.has((r.cliente_nome || '').trim().toLowerCase())
+  )
+  if (toLiberar.length > 0) {
+    await Promise.all(
+      toLiberar.map((r) =>
+        supabase.from('producao_pedidos').update({ status_prod: 'Liberado' }).eq('tenant_id', tid).eq('id', r.id)
+      )
+    )
+    const liberadosIds = new Set(toLiberar.map((r) => r.id))
+    rows = rows.map((r) => (liberadosIds.has(r.id) ? { ...r, status_prod: 'Liberado' } : r))
+  }
+
   const clientes = (clientesRes.data || []).map((row) => row.instagram).filter(Boolean).sort()
   return { rows, clientes }
+}
+
+export async function checkInadimplencia(tenantId, clienteNome) {
+  const nome = (clienteNome || '').trim()
+  if (!nome) return false
+  const { data } = await supabase
+    .from('cobrancas')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .ilike('cliente', nome)
+    .not('status', 'in', '("PAGO","BAIXADO","CANCELADO")')
+    .limit(1)
+  return (data?.length ?? 0) > 0
+}
+
+export async function saveProducaoField(tenantId, id, fields) {
+  const { error } = await supabase
+    .from('producao_pedidos')
+    .update(fields)
+    .eq('tenant_id', tenantId)
+    .eq('id', id)
+  if (error) throw error
 }
 
 export async function createProducaoPedido(tenantId = null, clienteNome) {
