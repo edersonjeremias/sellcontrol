@@ -24,7 +24,7 @@ const COLS = [
   { key: 'marca',         label: 'MARCA',      w: 75 },
   { key: 'tamanho',       label: 'TAM.',       w: 55 },
   { key: 'preco',         label: 'PREÇO',      w: 80 },
-  { key: 'codigo_peca',   label: 'CÓD.',       w: 80 },
+  { key: 'codigo',        label: 'CÓD.',       w: 80 },
   { key: 'cliente_nome',  label: 'CLIENTE',    w: 110 },
   { key: 'data_live',     label: 'DATA LIVE',  w: 90 },
   { key: 'observacao',    label: 'OBSERVAÇÃO', w: 140 },
@@ -145,7 +145,7 @@ function PrintModal({ data, onClose }) {
                   <td style={TD}>{i.marca}</td>
                   <td style={TD}>{i.tamanho}</td>
                   <td style={{ ...TD, textAlign: 'right' }}>{i.preco ? `R$ ${fmtMoney(i.preco)}` : ''}</td>
-                  <td style={TD}>{i.codigo_peca}</td>
+                  <td style={TD}>{i.codigo}</td>
                   <td style={TD}>{i.cliente_nome}</td>
                   <td style={TD}>{fmtDate(i.data_live)}</td>
                   <td style={TD}>{i.observacao}</td>
@@ -322,7 +322,7 @@ export default function PedidosPage() {
     if (!filtros.busca.trim()) return itens
     const termos = filtros.busca.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
     return itens.filter(i => {
-      const txt = [i.produto, i.modelo, i.cor, i.marca, i.tamanho, i.codigo_peca, i.cliente_nome]
+      const txt = [i.produto, i.modelo, i.cor, i.marca, i.tamanho, i.codigo, i.cliente_nome]
         .join(' ').toLowerCase()
       return termos.every(t => txt.includes(t))
     })
@@ -460,7 +460,7 @@ function ItemRow({ item, onChange }) {
       <td style={{ ...TD, textAlign: 'right' }}>
         {item.preco ? `R$ ${fmtMoney(item.preco)}` : ''}
       </td>
-      <td style={TD}>{item.codigo_peca}</td>
+      <td style={TD}>{item.codigo}</td>
       <td style={TD} title={item.cliente_nome}>{item.cliente_nome}</td>
       <td style={TD}>{fmtDate(item.data_live)}</td>
       <td style={{ ...TD, padding: '4px 6px' }}>
