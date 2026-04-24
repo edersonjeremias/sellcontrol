@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { getClientes } from './clientesService'
 
 const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -85,10 +86,7 @@ export async function getProducaoData(tenantId = null) {
       .select('*')
       .eq('tenant_id', tid)
       .order('data_solicitado', { ascending: true }),
-    supabase
-      .from('clientes')
-      .select('instagram, whatsapp, bloqueado')
-      .eq('tenant_id', tid),
+    getClientes(tid),
     supabase
       .from('cobrancas')
       .select('cliente')
@@ -147,7 +145,6 @@ export async function getProducaoData(tenantId = null) {
   const clientes = (clientesRes.data || [])
     .map((row) => (row.instagram || '').replace(/^@/, '').trim())
     .filter(Boolean)
-    .sort()
   return { rows, clientes }
 }
 
