@@ -509,11 +509,16 @@ export default function CobrancasPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
-              <button className="btn-acao btn-blue" style={{ height: 32, minHeight: 32, padding: '0 14px', fontSize: 13, color: '#171717', display: 'flex', alignItems: 'center', gap: 5 }} onClick={carregar}>
-                🔍 Buscar
+              <button className="btn-acao btn-green" onClick={carregar} style={{ minWidth: 44, padding: '0 10px' }} title="Buscar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
               </button>
-              <button className="btn-acao btn-ghost" style={{ height: 32, minHeight: 32, padding: '0 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 5, border: '1px solid var(--border-light)' }} onClick={() => { setShowImportar(true); setImpResultado([]) }}>
-                🔄 Sincronizar
+              <button className="btn-acao btn-ghost" onClick={() => { setShowImportar(true); setImpResultado([]) }} style={{ minWidth: 44, padding: '0 10px' }} title="Importar vendas">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
               </button>
             </div>
           </div>
