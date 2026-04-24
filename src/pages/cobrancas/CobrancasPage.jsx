@@ -509,8 +509,12 @@ export default function CobrancasPage() {
             </div>
 
             <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
-              <button className="btn-acao btn-blue" style={{ flex: 'none', width: 42, height: 32, minHeight: 32, padding: 0, minWidth: 42, fontSize: 16, color: '#171717', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={carregar} title="Buscar">🔍</button>
-              <button className="btn-acao btn-ghost" style={{ flex: 'none', width: 42, height: 32, minHeight: 32, padding: 0, minWidth: 42, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-light)' }} onClick={() => { setShowImportar(true); setImpResultado([]) }} title="Importar vendas">🔄</button>
+              <button className="btn-acao btn-blue" style={{ height: 32, minHeight: 32, padding: '0 14px', fontSize: 13, color: '#171717', display: 'flex', alignItems: 'center', gap: 5 }} onClick={carregar}>
+                🔍 Buscar
+              </button>
+              <button className="btn-acao btn-ghost" style={{ height: 32, minHeight: 32, padding: '0 14px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 5, border: '1px solid var(--border-light)' }} onClick={() => { setShowImportar(true); setImpResultado([]) }}>
+                🔄 Sincronizar
+              </button>
             </div>
           </div>
         </div>
