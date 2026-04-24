@@ -35,6 +35,16 @@ function fmtData(iso) {
   return `${d}/${m}/${y}`
 }
 
+function fmtDataHora(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 function vlrStr(val) {
   return formatMoeda(val).replace('R$ ', '')
 }
@@ -59,6 +69,16 @@ function CardCobranca({ c, onClick }) {
         </div>
         {c.qt_envios > 0 && (
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>✉ {c.qt_envios}x enviado</div>
+        )}
+        {(c.status === 'PAGO' || c.status === 'BAIXADO') && c.data_pagamento && (
+          <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 2 }}>
+            ✅ {fmtDataHora(c.data_pagamento)}
+            {c.valor_liquido > 0 && (
+              <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
+                · líq. R$ {vlrStr(c.valor_liquido)}
+              </span>
+            )}
+          </div>
         )}
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -530,6 +550,18 @@ export default function CobrancasPage() {
                   {LABEL_STATUS[sel.status] || sel.status}
                   {sel.qt_envios > 0 && <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 6 }}>· ✉ {sel.qt_envios}x</span>}
                 </div>
+                {(sel.status === 'PAGO' || sel.status === 'BAIXADO') && sel.data_pagamento && (
+                  <div style={{ marginTop: 6, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, color: 'var(--green)' }}>
+                      ✅ Pago em: <b>{fmtDataHora(sel.data_pagamento)}</b>
+                    </span>
+                    {sel.valor_liquido > 0 && (
+                      <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                        · Líquido MP: <b style={{ color: 'var(--blue)' }}>R$ {vlrStr(sel.valor_liquido)}</b>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Itens */}

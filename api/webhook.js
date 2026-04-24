@@ -73,12 +73,15 @@ export default async function handler(req, res) {
 
       const valorBruto   = paymentData.transaction_amount
       const valorLiquido = paymentData.transaction_details?.net_received_amount ?? 0
+      const dataPagamento = paymentData.date_approved
+        ? new Date(paymentData.date_approved).toISOString()
+        : new Date().toISOString()
 
       const { error } = await supabase
         .from('cobrancas')
         .update({
           status: 'PAGO',
-          data_pagamento: new Date().toISOString(),
+          data_pagamento: dataPagamento,
           id_mp: String(paymentId),
           valor_liquido: valorLiquido,
         })
