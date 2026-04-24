@@ -505,6 +505,8 @@ input[type="date"] { color-scheme: dark; }
 .btn-blue   { background: var(--blue);   color: #171717; }
 .btn-ghost  { background: transparent;   color: var(--blue); border: 1px solid var(--border-light); }
 .btn-ghost:hover { border-color: var(--blue); background: #252525; }
+.btn-purple { background: var(--purple); color: #171717; }
+.btn-dark   { background: #35363a;       color: var(--text-body); }
 .save-group { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 120px; }
 .save-group .btn-acao { flex: 1; }
 
