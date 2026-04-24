@@ -438,7 +438,7 @@ export default function VendasPage() {
       const n=[...prev]; n[idx]={...n[idx],cliente_nome:novoCliente,liberado:false,sacolinha:null}
       return calcSacolas(n)
     })
-    triggerAutoSave(); showToast('Cliente alterado!', 'success')
+    triggerAutoSave()
   }, [triggerAutoSave])
 
   // ── SALVAR LINHA (aviãozinho) ──
@@ -459,10 +459,8 @@ export default function VendasPage() {
       showToast('Linha vazia, nada para salvar.', 'info'); return
     }
 
-    setBusy(true, 'Salvando linha...')
     try {
       let res;
-      // Se tiver cliente, já marca como ENVIADO (individual)
       if (l.cliente_nome?.trim()) {
         res = await enviarVenda(tenantId, l, dataLive || null, liveNome || '')
         setLinhas(prev => {
@@ -470,24 +468,19 @@ export default function VendasPage() {
           n[idx] = { ...n[idx], id: res.id, isNew: false, isSent: true, status: 'ENVIADO' }
           return n
         })
-        showToast('✅ Venda finalizada!', 'success')
       } else {
-        // Se não tiver cliente, apenas salva como rascunho/estoque
         res = await salvarVendas(tenantId, [l], { data_live: dataLive || null, live_nome: liveNome || '' })
         if (!l.id && res.novosIds?.length > 0) {
-          setLinhas(prev => { 
+          setLinhas(prev => {
             const n = [...prev]
             n[idx] = { ...n[idx], id: res.novosIds[0].id, isNew: false }
             return n
           })
         }
-        showToast('✅ Linha salva no banco!', 'success')
       }
       setHasUnsaved(false)
-    } catch (err) { 
-      showToast('Erro ao salvar linha: ' + (err?.message || String(err)), 'error') 
-    } finally { 
-      setBusy(false) 
+    } catch (err) {
+      showToast('Erro ao salvar: ' + (err?.message || String(err)), 'error')
     }
   }, [tenantId, dataLive, liveNome])
 
