@@ -384,7 +384,19 @@ export default function ProducaoPage() {
           {loading && <div className="prod-v2-empty">Carregando...</div>}
           {!loading && filteredRows.length === 0 && <div className="prod-v2-empty">Nenhum registro encontrado.</div>}
           {!loading && filteredRows.length > 0 && (
-            <table className="prod-v2-table" style={mode === 'producao' ? { fontSize: 'clamp(11px, 0.9vw, 13px)' } : undefined}>
+            <table className={`prod-v2-table${mode === 'producao' ? ' prod-table-producao' : ''}`}>
+              {mode === 'producao' && (
+                <colgroup>
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '19%' }} />
+                  <col style={{ width: '19%' }} />
+                  <col style={{ width: '7%' }}  />
+                  <col style={{ width: '9%' }}  />
+                  <col style={{ width: '3%' }}  />
+                </colgroup>
+              )}
               <thead>
                 <tr>
                   {mode === 'producao' ? <th>DATA · DIAS</th> : <><th>SOLICITADO</th><th>DIAS</th></>}
@@ -426,7 +438,7 @@ export default function ProducaoPage() {
                         </td>
                       ) : (
                         <>
-                          <td className="prod-td-nb" style={{ fontSize: 11 }}>{row.data_solicitado_fmt}</td>
+                          <td className="prod-td-nb">{row.data_solicitado_fmt}</td>
                           <td className="prod-td-nb" style={{ textAlign:'center' }}>
                             <span style={{ color: row.atrasado ? '#ff9800' : '#f0f0f1', fontWeight: row.atrasado ? 700 : 400 }}>{row.dias_u}</span>
                           </td>
@@ -489,7 +501,7 @@ export default function ProducaoPage() {
 
                       {/* Data Pronto — só nas abas Prontos e Enviados */}
                       {showDelivery && (
-                        <td className="prod-td-nb" style={{ fontSize: 11, color: row.data_pronto_fmt ? '#22c55e' : '#6b7280' }}>
+                        <td className="prod-td-nb" style={{ color: row.data_pronto_fmt ? '#22c55e' : '#6b7280' }}>
                           {row.data_pronto_fmt || '—'}
                         </td>
                       )}
@@ -508,7 +520,7 @@ export default function ProducaoPage() {
 
                       {/* Data Enviado — só na aba Enviados */}
                       {mode === 'finalizados' && (
-                        <td className="prod-td-nb" style={{ fontSize: 10 }}>
+                        <td className="prod-td-nb">
                           {rastreioLink
                             ? <a href={rastreioLink} target="_blank" rel="noreferrer" style={{ color: '#00bcd4', textDecoration: 'none' }}>{row.data_enviado_fmt || 'Ver'}</a>
                             : row.data_enviado_fmt || '—'}
@@ -589,7 +601,7 @@ export default function ProducaoPage() {
 
                       {/* Montado Por — só na aba Enviados */}
                       {mode === 'finalizados' && (
-                        <td className="prod-td-nb" style={{ fontSize: 11, color: '#8ab4f8' }}>
+                        <td className="prod-td-nb" style={{ color: '#8ab4f8' }}>
                           {row.montado_por || '—'}
                         </td>
                       )}

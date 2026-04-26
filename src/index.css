@@ -864,6 +864,20 @@ tbody td { padding: 4px 6px; border-bottom: 1px solid var(--table-border); verti
   font-size: clamp(9px, 0.72vw, 11px);
   color: #f0f0f1;
 }
+/* Modo Em Produção: layout fixo e fonte maior */
+.prod-table-producao {
+  width: 100%;
+  min-width: 100%;
+  table-layout: fixed;
+  font-size: clamp(12px, 0.95vw, 14px);
+}
+.prod-table-producao .prod-v2-cell {
+  width: 100%;
+  box-sizing: border-box;
+}
+.prod-table-producao .prod-cliente-btn {
+  max-width: 100%;
+}
 .prod-v2-table thead th {
   position: sticky; top: 0; z-index: 5;
   background: #191b20;
