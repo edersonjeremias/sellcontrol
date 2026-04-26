@@ -42,18 +42,19 @@ export async function buscarItensPedido(tenantId, { clienteNome, dataLive, statu
 export async function salvarItens(tenantId, dirty) {
   if (!dirty.size) return
   const agora = new Date().toISOString()
-  await Promise.all([...dirty.values()].map(item => {
+  for (const item of dirty.values()) {
     const updates = {
       status: item.status || '',
       observacao: item.observacao || '',
       updated_at: agora,
     }
     if (!item.status) updates.numero_pedido = null
-    return supabase.from('vendas')
+    const { error } = await supabase.from('vendas')
       .update(updates)
       .eq('tenant_id', tenantId)
       .eq('id', item.id)
-  }))
+    if (error) throw error
+  }
 }
 
 export async function getNextNumeroPedido(tenantId) {
@@ -103,6 +104,16 @@ export async function buscarPedidoParaReimprimir(tenantId, numeroPedido) {
 export async function atribuirRomaneio(tenantId, ids, romaneio) {
   const { error } = await supabase.from('vendas')
     .update({ numero_pedido: romaneio || null, updated_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
+    .in('id', ids)
+  if (error) throw error
+}
+
+export async function adicionarSeparadosAoRomaneio(tenantId, ids, romaneio) {
+  const hoje = new Date().toISOString().slice(0, 10)
+  const agora = new Date().toISOString()
+  const { error } = await supabase.from('vendas')
+    .update({ status: 'Enviado', numero_pedido: romaneio, data_envio: hoje, updated_at: agora })
     .eq('tenant_id', tenantId)
     .in('id', ids)
   if (error) throw error

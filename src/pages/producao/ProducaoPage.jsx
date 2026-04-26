@@ -62,6 +62,13 @@ function saudacao() {
   return 'Boa noite'
 }
 
+function fmtDateBr(dateStr) {
+  if (!dateStr) return ''
+  const parts = String(dateStr).slice(0, 10).split('-')
+  if (parts.length !== 3) return ''
+  return `${parts[2]}/${parts[1]}/${parts[0]}`
+}
+
 function buildWaMsg(phone, clienteNome, valorFrete, linkFrete) {
   const d = (phone || '').replace(/\D/g, '')
   if (!d || d.length < 8) return null
@@ -219,26 +226,38 @@ export default function ProducaoPage() {
           setModalErr({ titulo: '🚫 Cliente Inadimplente', mensagem: `<b>${row.cliente_nome}</b> possui cobranças em aberto.<br><br>Status alterado para <b>Aguard. pag.</b>` })
           return
         }
-        const patch = { status_prod: 'Pronto' }
-        if (!row.data_pronto) patch.data_pronto = new Date().toISOString().slice(0, 10)
-        updRow(row.id, patch)
-        await saveProducaoField(tenantId, row.id, patch)
+        const dbPatch = { status_prod: 'Pronto' }
+        const localExtra = {}
+        if (!row.data_pronto) {
+          const hoje = new Date().toISOString().slice(0, 10)
+          dbPatch.data_pronto = hoje
+          localExtra.data_pronto_fmt = fmtDateBr(hoje)
+        }
+        if (!row.montado_por) {
+          dbPatch.montado_por = profile?.nome || 'Usuário'
+        }
+        updRow(row.id, { ...dbPatch, ...localExtra })
+        await saveProducaoField(tenantId, row.id, dbPatch)
         markDone(row.id, 'status_prod', true)
       } catch { markDone(row.id, 'status_prod', false) }
       return
     }
     await savePatch(row.id, 'status_prod', val)
-  }, [tenantId, savePatch, updRow])
+  }, [tenantId, savePatch, updRow, profile])
 
   // ── Status Entrega ──────────────────────────────────────────
   const handleStatusEntrega = useCallback(async (row, val) => {
-    const patch = { status_entrega: val }
-    if ((val === 'Enviado' || val === 'Retirou') && !row.data_enviado)
-      patch.data_enviado = new Date().toISOString().slice(0, 10)
-    updRow(row.id, patch)
+    const dbPatch = { status_entrega: val }
+    const localExtra = {}
+    if ((val === 'Enviado' || val === 'Retirou') && !row.data_enviado) {
+      const hoje = new Date().toISOString().slice(0, 10)
+      dbPatch.data_enviado = hoje
+      localExtra.data_enviado_fmt = fmtDateBr(hoje)
+    }
+    updRow(row.id, { ...dbPatch, ...localExtra })
     markSaving(row.id, 'status_entrega')
     try {
-      await saveProducaoField(tenantId, row.id, patch)
+      await saveProducaoField(tenantId, row.id, dbPatch)
       markDone(row.id, 'status_entrega', true)
     } catch { markDone(row.id, 'status_entrega', false) }
   }, [tenantId, updRow])
@@ -376,9 +395,9 @@ export default function ProducaoPage() {
                   <th>OBS. PROD.</th>
                   <th>PESO</th>
                   <th>PACOTE</th>
-                  <th>PRONTO</th>
+                  {showDelivery && <th>PRONTO</th>}
                   {showDelivery && <th>STATUS ENTREGA</th>}
-                  {showDelivery && <th>ENVIADO</th>}
+                  {mode === 'finalizados' && <th>ENVIADO</th>}
                   {showDelivery && <th>PED.</th>}
                   {showDelivery && <th>FRETE</th>}
                   {showDelivery && <th>DEC.</th>}
@@ -386,6 +405,7 @@ export default function ProducaoPage() {
                   {showDelivery && <th>ROM.</th>}
                   {showDelivery && <th>RASTREIO</th>}
                   {showDelivery && <th style={{ textAlign:'center' }}>LINK</th>}
+                  {mode === 'finalizados' && <th>MONTADO POR</th>}
                   <th style={{ textAlign:'center' }}>+</th>
                 </tr>
               </thead>
@@ -419,7 +439,7 @@ export default function ProducaoPage() {
                         <select className="prod-v2-cell"
                           value={row.status_prod || ''}
                           onChange={(e) => handleStatusProd(row, e.target.value)}
-                          style={{ borderColor: bc(row.id, 'status_prod'), color: spColor(row.status_prod), fontWeight: 600, width: 105 }}>
+                          style={{ borderColor: bc(row.id, 'status_prod'), color: spColor(row.status_prod), fontWeight: 600, width: 88 }}>
                           <option value="">--</option>
                           {STATUS_PROD_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
                         </select>
@@ -427,7 +447,7 @@ export default function ProducaoPage() {
 
                       {/* Obs Cliente — input INLINE sem componente helper */}
                       <td>
-                        <input className="prod-v2-cell" style={{ width: 95, borderColor: bc(row.id,'obs_cliente') }}
+                        <input className="prod-v2-cell" style={{ width: 80, borderColor: bc(row.id,'obs_cliente') }}
                           value={row.obs_cliente || ''}
                           onChange={(e) => updRow(row.id, { obs_cliente: e.target.value })}
                           onBlur={(e) => savePatch(row.id, 'obs_cliente', e.target.value)} />
@@ -435,7 +455,7 @@ export default function ProducaoPage() {
 
                       {/* Obs Prod */}
                       <td>
-                        <input className="prod-v2-cell" style={{ width: 95, borderColor: bc(row.id,'obs_prod') }}
+                        <input className="prod-v2-cell" style={{ width: 80, borderColor: bc(row.id,'obs_prod') }}
                           value={row.obs_prod || ''}
                           onChange={(e) => updRow(row.id, { obs_prod: e.target.value })}
                           onBlur={(e) => savePatch(row.id, 'obs_prod', e.target.value)} />
@@ -451,7 +471,7 @@ export default function ProducaoPage() {
 
                       {/* Pacote */}
                       <td>
-                        <select className="prod-v2-cell" style={{ width: 100, borderColor: bc(row.id,'pacote') }}
+                        <select className="prod-v2-cell" style={{ width: 88, borderColor: bc(row.id,'pacote') }}
                           value={row.pacote || ''}
                           onChange={(e) => handlePacote(row, e.target.value)}>
                           <option value="">--</option>
@@ -459,10 +479,12 @@ export default function ProducaoPage() {
                         </select>
                       </td>
 
-                      {/* Data Pronto */}
-                      <td className="prod-td-nb" style={{ fontSize: 11, color: row.data_pronto_fmt ? '#22c55e' : '#6b7280' }}>
-                        {row.data_pronto_fmt || '—'}
-                      </td>
+                      {/* Data Pronto — só nas abas Prontos e Enviados */}
+                      {showDelivery && (
+                        <td className="prod-td-nb" style={{ fontSize: 11, color: row.data_pronto_fmt ? '#22c55e' : '#6b7280' }}>
+                          {row.data_pronto_fmt || '—'}
+                        </td>
+                      )}
 
                       {/* ── Colunas de entrega ── */}
                       {showDelivery && (
@@ -476,8 +498,9 @@ export default function ProducaoPage() {
                         </td>
                       )}
 
-                      {showDelivery && (
-                        <td className="prod-td-nb" style={{ fontSize: 11 }}>
+                      {/* Data Enviado — só na aba Enviados */}
+                      {mode === 'finalizados' && (
+                        <td className="prod-td-nb" style={{ fontSize: 10 }}>
                           {rastreioLink
                             ? <a href={rastreioLink} target="_blank" rel="noreferrer" style={{ color: '#00bcd4', textDecoration: 'none' }}>{row.data_enviado_fmt || 'Ver'}</a>
                             : row.data_enviado_fmt || '—'}
@@ -553,6 +576,13 @@ export default function ProducaoPage() {
                               </button>
                             )
                           })()}
+                        </td>
+                      )}
+
+                      {/* Montado Por — só na aba Enviados */}
+                      {mode === 'finalizados' && (
+                        <td className="prod-td-nb" style={{ fontSize: 11, color: '#8ab4f8' }}>
+                          {row.montado_por || '—'}
                         </td>
                       )}
 

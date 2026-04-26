@@ -3,7 +3,8 @@ import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import {
   STATUS_PEDIDO_OPTS, calcTotal,
-  buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir, atribuirRomaneio,
+  buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir,
+  atribuirRomaneio, adicionarSeparadosAoRomaneio,
 } from '../../services/pedidosService'
 import { getClientes } from '../../services/clientesService'
 
@@ -278,18 +279,25 @@ export default function PedidosPage() {
     if (!tenantId || !romAddVal) return
     const num = Number(romAddVal)
     if (!num) return
-    const semRomaneio = itens.filter(i => !i.numero_pedido)
-    if (!semRomaneio.length) {
-      setErr('Todos os itens carregados já possuem romaneio.')
+    const separados = itens.filter(i => i.status === 'Separado')
+    if (!separados.length) {
+      setErr('Nenhum item com status Separado para adicionar ao romaneio.')
       return
     }
-    if (!window.confirm(`Adicionar ${semRomaneio.length} item(s) ao Romaneio #${num}?`)) return
     setLoading(true)
     try {
-      await atribuirRomaneio(tenantId, semRomaneio.map(i => i.id), num)
-      const ids = new Set(semRomaneio.map(i => i.id))
-      setItens(prev => prev.map(i => ids.has(i.id) ? { ...i, numero_pedido: num } : i))
-      showMsg(`${semRomaneio.length} item(s) adicionados ao Romaneio #${num}!`)
+      const ids = separados.map(i => i.id)
+      await adicionarSeparadosAoRomaneio(tenantId, ids, num)
+      const idSet = new Set(ids)
+      setItens(prev => prev.map(i =>
+        idSet.has(i.id) ? { ...i, status: 'Enviado', numero_pedido: num } : i
+      ))
+      setDirty(prev => {
+        const next = new Map(prev)
+        ids.forEach(id => next.delete(id))
+        return next
+      })
+      showMsg(`${separados.length} item(s) adicionados ao Romaneio #${num}!`)
       setRomAddVal('')
     } catch (e) {
       setErr(e.message || 'Erro ao adicionar ao romaneio')
