@@ -387,19 +387,21 @@ export default function ProducaoPage() {
             <table className={`prod-v2-table${mode === 'producao' ? ' prod-table-producao' : ''}`}>
               {mode === 'producao' && (
                 <colgroup>
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '5%' }}  />
                   <col style={{ width: '13%' }} />
+                  <col style={{ width: '12%' }} />
                   <col style={{ width: '19%' }} />
                   <col style={{ width: '19%' }} />
-                  <col style={{ width: '7%' }}  />
-                  <col style={{ width: '9%' }}  />
+                  <col style={{ width: '6%' }}  />
+                  <col style={{ width: '11%' }} />
                   <col style={{ width: '3%' }}  />
                 </colgroup>
               )}
               <thead>
                 <tr>
-                  {mode === 'producao' ? <th>DATA · DIAS</th> : <><th>SOLICITADO</th><th>DIAS</th></>}
+                  <th>SOLICITADO</th>
+                  <th>DIAS</th>
                   <th>CLIENTE</th>
                   <th>STATUS PROD.</th>
                   <th>OBS. CLIENTE</th>
@@ -428,22 +430,13 @@ export default function ProducaoPage() {
                   const cls = row.bloqueado ? 'prod-row-blocked' : row.atrasado ? 'prod-row-delayed' : ''
                   return (
                     <tr key={row.id} className={cls}>
-                      {/* Solicitado + Dias */}
-                      {mode === 'producao' ? (
-                        <td className="prod-td-nb">
-                          <span style={{ color: '#abb1bd' }}>{row.data_solicitado_fmt}</span>
-                          <span style={{ marginLeft: 5, fontWeight: row.atrasado ? 700 : 400, color: row.atrasado ? '#ff9800' : '#6b7280' }}>
-                            · {row.dias_u}d
-                          </span>
-                        </td>
-                      ) : (
-                        <>
-                          <td className="prod-td-nb">{row.data_solicitado_fmt}</td>
-                          <td className="prod-td-nb" style={{ textAlign:'center' }}>
-                            <span style={{ color: row.atrasado ? '#ff9800' : '#f0f0f1', fontWeight: row.atrasado ? 700 : 400 }}>{row.dias_u}</span>
-                          </td>
-                        </>
-                      )}
+                      {/* Solicitado */}
+                      <td className="prod-td-nb">{row.data_solicitado_fmt}</td>
+
+                      {/* Dias */}
+                      <td className="prod-td-nb" style={{ textAlign:'center' }}>
+                        <span style={{ color: row.atrasado ? '#ff9800' : '#f0f0f1', fontWeight: row.atrasado ? 700 : 400 }}>{row.dias_u}</span>
+                      </td>
 
                       {/* Cliente */}
                       <td className="prod-td-nb">

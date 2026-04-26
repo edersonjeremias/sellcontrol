@@ -871,12 +871,18 @@ tbody td { padding: 4px 6px; border-bottom: 1px solid var(--table-border); verti
   table-layout: fixed;
   font-size: clamp(12px, 0.95vw, 14px);
 }
+.prod-table-producao td,
+.prod-table-producao th {
+  font-size: inherit;
+}
 .prod-table-producao .prod-v2-cell {
   width: 100%;
   box-sizing: border-box;
+  font-size: inherit;
 }
 .prod-table-producao .prod-cliente-btn {
   max-width: 100%;
+  font-size: inherit;
 }
 .prod-v2-table thead th {
   position: sticky; top: 0; z-index: 5;
