@@ -278,18 +278,17 @@ export default function PedidosPage() {
     if (!tenantId || !romAddVal) return
     const num = Number(romAddVal)
     if (!num) return
-    const semRomaneio = itensFiltrados.filter(i => !i.numero_pedido)
+    const semRomaneio = itens.filter(i => !i.numero_pedido)
     if (!semRomaneio.length) {
-      setErr('Todos os itens visíveis já possuem romaneio.')
+      setErr('Todos os itens carregados já possuem romaneio.')
       return
     }
     if (!window.confirm(`Adicionar ${semRomaneio.length} item(s) ao Romaneio #${num}?`)) return
     setLoading(true)
     try {
       await atribuirRomaneio(tenantId, semRomaneio.map(i => i.id), num)
-      setItens(prev => prev.map(i =>
-        semRomaneio.some(s => s.id === i.id) ? { ...i, numero_pedido: num } : i
-      ))
+      const ids = new Set(semRomaneio.map(i => i.id))
+      setItens(prev => prev.map(i => ids.has(i.id) ? { ...i, numero_pedido: num } : i))
       showMsg(`${semRomaneio.length} item(s) adicionados ao Romaneio #${num}!`)
       setRomAddVal('')
     } catch (e) {
@@ -297,7 +296,7 @@ export default function PedidosPage() {
     } finally {
       setLoading(false)
     }
-  }, [tenantId, romAddVal, itensFiltrados, showMsg])
+  }, [tenantId, romAddVal, itens, showMsg])
 
   const handleRomaneioItemBlur = useCallback(async (id, val) => {
     const num = val ? Number(val) : null
