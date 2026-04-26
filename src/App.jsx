@@ -35,7 +35,8 @@ export default function App() {
             <Route path="/recibo/:id" element={<ReciboPage />} />
             <Route path="/rastreio" element={<RastreioPage />} />
             <Route path="/clientes" element={<RequireAuth><ClientesPage /></RequireAuth>} />
-            <Route path="/pedidos" element={<RequireAuth><PedidosPage /></RequireAuth>} />
+            <Route path="/pedidos" element={<Navigate to="/expedicao" replace />} />
+            <Route path="/expedicao" element={<RequireAuth><PedidosPage /></RequireAuth>} />
             <Route path="/configuracoes" element={<RequireAuth><RequireRole allowed={['master','admin']}><ConfiguracoesPage /></RequireRole></RequireAuth>} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

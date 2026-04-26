@@ -42,16 +42,18 @@ export async function buscarItensPedido(tenantId, { clienteNome, dataLive, statu
 export async function salvarItens(tenantId, dirty) {
   if (!dirty.size) return
   const agora = new Date().toISOString()
-  await Promise.all([...dirty.values()].map(item =>
-    supabase.from('vendas')
-      .update({
-        status: item.status || '',
-        observacao: item.observacao || '',
-        updated_at: agora,
-      })
+  await Promise.all([...dirty.values()].map(item => {
+    const updates = {
+      status: item.status || '',
+      observacao: item.observacao || '',
+      updated_at: agora,
+    }
+    if (!item.status) updates.numero_pedido = null
+    return supabase.from('vendas')
+      .update(updates)
       .eq('tenant_id', tenantId)
       .eq('id', item.id)
-  ))
+  }))
 }
 
 export async function getNextNumeroPedido(tenantId) {
@@ -104,6 +106,7 @@ export async function calcRomaneioTotal(tenantId, romaneio, clienteNome) {
     .select('preco')
     .eq('tenant_id', tenantId)
     .eq('numero_pedido', Number(romaneio))
+    .eq('status', 'Enviado')
     .ilike('cliente_nome', clienteNome || '')
   return (data || []).reduce((s, i) => s + (Number(i.preco) || 0), 0)
 }
