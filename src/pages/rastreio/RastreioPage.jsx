@@ -121,28 +121,13 @@ export default function RastreioPage() {
                 ].filter(Boolean).join(' · ')}
               </div>
             </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              {item.preco > 0 && (
-                <div style={{ color: '#81c995', fontWeight: 600, fontSize: 13 }}>
-                  R$ {fmtMoney(item.preco)}
-                </div>
-              )}
-              {item.status && (
-                <div style={{ fontSize: 10, color: STATUS_COR[item.status] || '#9aa0a6', marginTop: 2 }}>
-                  {item.status.toUpperCase()}
-                </div>
-              )}
-            </div>
+            {item.status && (
+              <div style={{ fontSize: 10, color: STATUS_COR[item.status] || '#9aa0a6', flexShrink: 0, alignSelf: 'center' }}>
+                {item.status.toUpperCase()}
+              </div>
+            )}
           </div>
         ))}
-
-        {/* ── Total ── */}
-        {total > 0 && (
-          <div style={S.totalBox}>
-            <span style={{ color: '#9aa0a6', fontSize: 13 }}>Total declarado</span>
-            <span style={{ fontSize: 22, fontWeight: 800, color: '#81c995' }}>R$ {fmtMoney(total)}</span>
-          </div>
-        )}
 
         <div style={{ textAlign: 'center', marginTop: 18, fontSize: 11, color: '#5f6368' }}>
           Em caso de dúvidas, entre em contato via WhatsApp
@@ -154,7 +139,9 @@ export default function RastreioPage() {
 
 const S = {
   pagina: {
-    minHeight: '100vh',
+    height: '100vh',
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
     background: 'linear-gradient(180deg, #141517 0%, #202124 100%)',
     display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
     padding: '30px 16px 60px',
