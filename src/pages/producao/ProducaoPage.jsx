@@ -395,9 +395,9 @@ export default function ProducaoPage() {
                   <col style={{ width: '13%' }} />
                   <col style={{ width: '12%' }} />
                   <col style={{ width: '19%' }} />
-                  <col style={{ width: '19%' }} />
+                  <col style={{ width: '18%' }} />
                   <col style={{ width: '6%' }}  />
-                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '12%' }} />
                   <col style={{ width: '3%' }}  />
                 </colgroup>
               )}
@@ -487,7 +487,7 @@ export default function ProducaoPage() {
 
                       {/* Pacote */}
                       <td>
-                        <select className="prod-v2-cell" style={{ width: 88, borderColor: bc(row.id,'pacote') }}
+                        <select className="prod-v2-cell" style={{ width: 100, borderColor: bc(row.id,'pacote') }}
                           value={row.pacote || ''}
                           onChange={(e) => handlePacote(row, e.target.value)}>
                           <option value="">--</option>
