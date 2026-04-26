@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import {
   STATUS_PEDIDO_OPTS, calcTotal,
-  buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir,
+  buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir, atribuirRomaneio,
 } from '../../services/pedidosService'
 import { getClientes } from '../../services/clientesService'
 
@@ -184,6 +184,7 @@ export default function PedidosPage() {
   const [err, setErr]           = useState(null)
   const [msg, setMsg]           = useState(null)
   const [printData, setPrintData] = useState(null)
+  const [romAddVal, setRomAddVal] = useState('')
 
   useEffect(() => {
     if (!tenantId) return
@@ -258,12 +259,55 @@ export default function PedidosPage() {
     try {
       const numPedido = await gerarPedido(tenantId, semPedido)
       showMsg(`Romaneio #${numPedido} gerado!`)
-      await handleBuscar()
+      // Atualiza estado local sem recarregar a tela
+      const semIds = new Set(semPedido.map(i => i.id))
+      const sepIds = new Set(semPedido.filter(i => i.status === 'Separado').map(i => i.id))
+      setItens(prev => prev.map(i => {
+        if (!semIds.has(i.id)) return i
+        return { ...i, numero_pedido: numPedido, ...(sepIds.has(i.id) ? { status: 'Enviado' } : {}) }
+      }))
+      setDirty(new Map())
     } catch (e) {
-      setErr(e.message || 'Erro ao gerar pedido')
+      setErr(e.message || 'Erro ao gerar romaneio')
+    } finally {
       setLoading(false)
     }
-  }, [tenantId, itens, handleBuscar, showMsg])
+  }, [tenantId, itens, showMsg])
+
+  const handleAdicionarAoRomaneio = useCallback(async () => {
+    if (!tenantId || !romAddVal) return
+    const num = Number(romAddVal)
+    if (!num) return
+    const semRomaneio = itensFiltrados.filter(i => !i.numero_pedido)
+    if (!semRomaneio.length) {
+      setErr('Todos os itens visíveis já possuem romaneio.')
+      return
+    }
+    if (!window.confirm(`Adicionar ${semRomaneio.length} item(s) ao Romaneio #${num}?`)) return
+    setLoading(true)
+    try {
+      await atribuirRomaneio(tenantId, semRomaneio.map(i => i.id), num)
+      setItens(prev => prev.map(i =>
+        semRomaneio.some(s => s.id === i.id) ? { ...i, numero_pedido: num } : i
+      ))
+      showMsg(`${semRomaneio.length} item(s) adicionados ao Romaneio #${num}!`)
+      setRomAddVal('')
+    } catch (e) {
+      setErr(e.message || 'Erro ao adicionar ao romaneio')
+    } finally {
+      setLoading(false)
+    }
+  }, [tenantId, romAddVal, itensFiltrados, showMsg])
+
+  const handleRomaneioItemBlur = useCallback(async (id, val) => {
+    const num = val ? Number(val) : null
+    try {
+      await atribuirRomaneio(tenantId, [id], num)
+      setItens(prev => prev.map(i => i.id === id ? { ...i, numero_pedido: num } : i))
+    } catch (e) {
+      setErr(e.message || 'Erro ao atribuir romaneio')
+    }
+  }, [tenantId])
 
   const handleReimprimir = useCallback(async () => {
     if (!tenantId || !filtros.numeroPedido) {
@@ -396,6 +440,19 @@ export default function PedidosPage() {
             Imprimir
           </button>
 
+          <span style={{ color: 'var(--muted)', fontSize: 12, margin: '0 2px' }}>|</span>
+          <input
+            type="number" min="1" value={romAddVal}
+            onChange={e => setRomAddVal(e.target.value)}
+            placeholder="Nº Romaneio"
+            style={{ ...SI, width: 105, minWidth: 0 }}
+            onKeyDown={e => e.key === 'Enter' && handleAdicionarAoRomaneio()}
+          />
+          <button className="btn-acao btn-ghost" disabled={loading || !romAddVal}
+            onClick={handleAdicionarAoRomaneio} style={{ flex: 'none', minWidth: 130 }}>
+            + Adicionar ao Rom.
+          </button>
+
           {msg && <span style={{ color: '#81c995', fontSize: 13 }}>{msg}</span>}
           {err && (
             <span style={{ color: '#f28b82', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -432,7 +489,7 @@ export default function PedidosPage() {
                 </tr>
               )}
               {itensFiltrados.map(item => (
-                <ItemRow key={item.id} item={item} onChange={handleChange} />
+                <ItemRow key={item.id} item={item} onChange={handleChange} onRomaneioBlur={handleRomaneioItemBlur} />
               ))}
             </tbody>
           </table>
@@ -447,7 +504,7 @@ export default function PedidosPage() {
 }
 
 // ── Row component ────────────────────────────────────────────
-function ItemRow({ item, onChange }) {
+function ItemRow({ item, onChange, onRomaneioBlur }) {
   return (
     <tr style={{ borderBottom: '1px solid var(--table-border)' }}
       onMouseEnter={e => { e.currentTarget.style.background = 'var(--table-row-hover)' }}
@@ -488,8 +545,22 @@ function ItemRow({ item, onChange }) {
           ))}
         </select>
       </td>
-      <td style={{ ...TD, textAlign: 'center', color: item.numero_pedido ? '#8ab4f8' : 'var(--muted)', fontWeight: item.numero_pedido ? 700 : 400 }}>
-        {item.numero_pedido || ''}
+      <td style={{ ...TD, padding: '4px 4px' }}>
+        <input
+          type="number" min="1"
+          value={item.numero_pedido || ''}
+          onChange={e => {
+            const v = e.target.value ? Number(e.target.value) : null
+            onChange(item.id, 'numero_pedido', v)
+          }}
+          onBlur={e => onRomaneioBlur(item.id, e.target.value)}
+          style={{
+            background: 'transparent', border: 'none', outline: 'none',
+            width: '100%', fontSize: 12, textAlign: 'center',
+            color: item.numero_pedido ? '#8ab4f8' : 'var(--muted)',
+            fontWeight: item.numero_pedido ? 700 : 400,
+          }}
+        />
       </td>
     </tr>
   )

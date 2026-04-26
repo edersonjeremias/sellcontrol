@@ -100,6 +100,14 @@ export async function buscarPedidoParaReimprimir(tenantId, numeroPedido) {
   return data || []
 }
 
+export async function atribuirRomaneio(tenantId, ids, romaneio) {
+  const { error } = await supabase.from('vendas')
+    .update({ numero_pedido: romaneio || null, updated_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
+    .in('id', ids)
+  if (error) throw error
+}
+
 export async function calcRomaneioTotal(tenantId, romaneio, clienteNome) {
   const { data } = await supabase
     .from('vendas')
