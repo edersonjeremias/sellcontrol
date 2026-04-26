@@ -406,7 +406,7 @@ export default function ProducaoPage() {
                   {showDelivery && <th>RASTREIO</th>}
                   {showDelivery && <th style={{ textAlign:'center' }}>LINK</th>}
                   {mode === 'finalizados' && <th>MONTADO POR</th>}
-                  <th style={{ textAlign:'center' }}>+</th>
+                  {mode === 'producao' && <th style={{ textAlign:'center' }}>+</th>}
                 </tr>
               </thead>
               <tbody>
@@ -586,12 +586,14 @@ export default function ProducaoPage() {
                         </td>
                       )}
 
-                      {/* Duplicar */}
-                      <td style={{ textAlign: 'center' }}>
-                        <button type="button" className="prod-dup-btn" onClick={() => handleDuplicar(row.id)} title="Duplicar">
-                          <IconDup />
-                        </button>
-                      </td>
+                      {/* Duplicar — só na aba Em Produção */}
+                      {mode === 'producao' && (
+                        <td style={{ textAlign: 'center' }}>
+                          <button type="button" className="prod-dup-btn" onClick={() => handleDuplicar(row.id)} title="Duplicar">
+                            <IconDup />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   )
                 })}
