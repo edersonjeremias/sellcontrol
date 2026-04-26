@@ -97,3 +97,13 @@ export async function buscarPedidoParaReimprimir(tenantId, numeroPedido) {
   if (error) throw error
   return data || []
 }
+
+export async function calcRomaneioTotal(tenantId, romaneio, clienteNome) {
+  const { data } = await supabase
+    .from('vendas')
+    .select('preco')
+    .eq('tenant_id', tenantId)
+    .eq('numero_pedido', Number(romaneio))
+    .ilike('cliente_nome', clienteNome || '')
+  return (data || []).reduce((s, i) => s + (Number(i.preco) || 0), 0)
+}

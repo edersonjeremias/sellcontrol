@@ -242,6 +242,7 @@ export async function saveProducaoPedido(tenantId = null, row) {
     data_enviado: toDateOnly(row.data_enviado),
     rastreio: row.rastreio || '',
     link_rastreio: row.link_rastreio || '',
+    romaneio: row.romaneio ? Number(row.romaneio) : null,
   }
 
   if (payload.status_prod === 'Pronto' && payload.pacote && !payload.data_pronto) {

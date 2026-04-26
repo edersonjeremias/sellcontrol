@@ -14,6 +14,7 @@ import ReciboPage from './pages/recibo/ReciboPage'
 import ConfiguracoesPage from './pages/configuracoes/ConfiguracoesPage'
 import ClientesPage from './pages/clientes/ClientesPage'
 import PedidosPage from './pages/pedidos/PedidosPage'
+import RastreioPage from './pages/rastreio/RastreioPage'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="/master/empresas" element={<RequireAuth><RequireRole allowed={['master']}><MasterEmpresasPage /></RequireRole></RequireAuth>} />
             <Route path="/cobrancas" element={<RequireAuth><CobrancasPage /></RequireAuth>} />
             <Route path="/recibo/:id" element={<ReciboPage />} />
+            <Route path="/rastreio" element={<RastreioPage />} />
             <Route path="/clientes" element={<RequireAuth><ClientesPage /></RequireAuth>} />
             <Route path="/pedidos" element={<RequireAuth><PedidosPage /></RequireAuth>} />
             <Route path="/configuracoes" element={<RequireAuth><RequireRole allowed={['master','admin']}><ConfiguracoesPage /></RequireRole></RequireAuth>} />

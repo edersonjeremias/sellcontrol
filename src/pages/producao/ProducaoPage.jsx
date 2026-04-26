@@ -7,6 +7,7 @@ import {
   checkInadimplencia, saveProducaoField,
 } from '../../services/producaoService'
 import { getConfig } from '../../services/configService'
+import { calcRomaneioTotal } from '../../services/pedidosService'
 import DashboardModal from './DashboardModal'
 import DetalheModal   from './DetalheModal'
 
@@ -70,11 +71,18 @@ function buildWaMsg(phone, clienteNome, valorFrete, linkFrete) {
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
 }
 
-function buildWaRastreio(phone, clienteNome, rastreio) {
+function buildWaRastreio(phone, clienteNome, rastreio, romaneio, tenantId) {
   const d = (phone || '').replace(/\D/g, '')
   if (!d || d.length < 8 || !rastreio) return null
   const num = d.length === 10 || d.length === 11 ? `55${d}` : d
   const cod = (rastreio || '').trim()
+
+  if (romaneio && tenantId) {
+    const pageUrl = `${window.location.origin}/rastreio?r=${romaneio}&t=${tenantId}&cod=${encodeURIComponent(cod)}`
+    const msg = `${saudacao()} ${clienteNome || ''}, seu pedido está a caminho! Acompanhe aqui: ${pageUrl}`
+    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
+  }
+
   let url = ''
   if (cod.toUpperCase().startsWith('BLI')) {
     url = `https://www.loggi.com/rastreador/${cod}`
@@ -245,6 +253,24 @@ export default function ProducaoPage() {
     } catch { markDone(row.id, 'pacote', false) }
   }, [tenantId, updRow])
 
+  // ── Romaneio + auto DEC ─────────────────────────────────────
+  const handleRomaneioBlur = useCallback(async (row, val) => {
+    const num = val ? Number(val) : null
+    markSaving(row.id, 'romaneio')
+    try {
+      await saveProducaoField(tenantId, row.id, { romaneio: num })
+      markDone(row.id, 'romaneio', true)
+      if (num > 0) {
+        const total = await calcRomaneioTotal(tenantId, num, row.cliente_nome)
+        if (total > 0) {
+          const decVal = Number(total.toFixed(2))
+          updRow(row.id, { valor_dec: String(decVal).replace('.', ',') })
+          await saveProducaoField(tenantId, row.id, { valor_dec: decVal })
+        }
+      }
+    } catch { markDone(row.id, 'romaneio', false) }
+  }, [tenantId, updRow])
+
   // ── DetalheModal save ───────────────────────────────────────
   const handleDetalheSave = useCallback(async (updated) => {
     try {
@@ -357,6 +383,7 @@ export default function ProducaoPage() {
                   {showDelivery && <th>FRETE</th>}
                   {showDelivery && <th>DEC.</th>}
                   {showDelivery && <th>COB.</th>}
+                  {showDelivery && <th>ROM.</th>}
                   {showDelivery && <th>RASTREIO</th>}
                   {showDelivery && <th style={{ textAlign:'center' }}>LINK</th>}
                   <th style={{ textAlign:'center' }}>+</th>
@@ -497,6 +524,15 @@ export default function ProducaoPage() {
 
                       {showDelivery && (
                         <td>
+                          <input className="prod-v2-cell" style={{ width: 48, borderColor: bc(row.id,'romaneio') }}
+                            value={row.romaneio || ''}
+                            onChange={(e) => updRow(row.id, { romaneio: e.target.value })}
+                            onBlur={(e) => handleRomaneioBlur(row, e.target.value)} />
+                        </td>
+                      )}
+
+                      {showDelivery && (
+                        <td>
                           <input className="prod-v2-cell" style={{ width: 75, borderColor: bc(row.id,'rastreio') }}
                             value={row.rastreio || ''}
                             onChange={(e) => updRow(row.id, { rastreio: e.target.value })}
@@ -507,7 +543,7 @@ export default function ProducaoPage() {
                       {showDelivery && (
                         <td style={{ textAlign: 'center' }}>
                           {(() => {
-                            const waRastreio = buildWaRastreio(row.whatsapp, row.cliente_nome, row.rastreio)
+                            const waRastreio = buildWaRastreio(row.whatsapp, row.cliente_nome, row.rastreio, row.romaneio, tenantId)
                             if (waRastreio) return <a href={waRastreio} target="_blank" rel="noreferrer" title="Enviar código de rastreio via WhatsApp"><IconWa /></a>
                             if (waLink) return <a href={waLink} target="_blank" rel="noreferrer" title="Abrir WhatsApp"><IconWa /></a>
                             return (

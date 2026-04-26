@@ -29,7 +29,7 @@ const COLS = [
   { key: 'data_live',     label: 'DATA LIVE',  w: 90 },
   { key: 'observacao',    label: 'OBSERVAÇÃO', w: 140 },
   { key: 'status',        label: 'STATUS',     w: 130 },
-  { key: 'numero_pedido', label: 'PED.',       w: 55 },
+  { key: 'numero_pedido', label: 'ROM.',       w: 60 },
 ]
 
 const SI = {
@@ -115,7 +115,7 @@ function PrintModal({ data, onClose }) {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: 'var(--text-header)', fontWeight: 700, fontSize: 15 }}>
-            Pedido #{data.numero} — {data.itens.length} item(s)
+            Romaneio #{data.numero} — {data.itens.length} item(s)
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn-acao btn-blue" onClick={handlePrint} style={{ flex: 'none', minWidth: 90 }}>
@@ -250,14 +250,14 @@ export default function PedidosPage() {
     if (!tenantId) return
     const semPedido = itens.filter(i => !i.numero_pedido)
     if (!semPedido.length) {
-      setErr('Todos os itens já possuem número de pedido.')
+      setErr('Todos os itens já possuem romaneio.')
       return
     }
-    if (!window.confirm(`Gerar pedido para ${semPedido.length} item(s) sem número?`)) return
+    if (!window.confirm(`Gerar romaneio para ${semPedido.length} item(s) sem número?`)) return
     setLoading(true)
     try {
       const numPedido = await gerarPedido(tenantId, semPedido)
-      showMsg(`Pedido #${numPedido} gerado!`)
+      showMsg(`Romaneio #${numPedido} gerado!`)
       await handleBuscar()
     } catch (e) {
       setErr(e.message || 'Erro ao gerar pedido')
@@ -267,7 +267,7 @@ export default function PedidosPage() {
 
   const handleReimprimir = useCallback(async () => {
     if (!tenantId || !filtros.numeroPedido) {
-      setErr('Informe o Nº do Pedido para reimprimir.')
+      setErr('Informe o Romaneio para reimprimir.')
       return
     }
     setLoading(true)
@@ -366,7 +366,7 @@ export default function PedidosPage() {
 
           <input value={filtros.numeroPedido} type="number" min="1"
             onChange={e => setF('numeroPedido', e.target.value)}
-            placeholder="Nº Pedido" style={{ ...SI, width: 90 }} />
+            placeholder="Romaneio" style={{ ...SI, width: 90 }} />
 
           <span style={{ color: '#81c995', fontWeight: 700, fontSize: 14, marginLeft: 6, whiteSpace: 'nowrap' }}>
             R$ {fmtMoney(total)}
@@ -385,7 +385,7 @@ export default function PedidosPage() {
           </button>
           <button className="btn-acao btn-green" disabled={loading} onClick={handleGerarPedido}
             style={{ flex: 'none', minWidth: 110 }}>
-            Gerar Pedido
+            Gerar Romaneio
           </button>
           <button className="btn-acao btn-purple" disabled={loading} onClick={handleReimprimir}
             style={{ flex: 'none', minWidth: 95 }}>
