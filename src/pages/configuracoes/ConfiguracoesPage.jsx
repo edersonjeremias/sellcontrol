@@ -32,22 +32,63 @@ function TabBtn({ label, active, onClick }) {
 
 // ── Aba: Configurações da empresa ──────────────────────────────
 function AbaConfiguracoes({ tenantId, showToast }) {
-  const [form, setForm]       = useState({ mp_access_token: '', nome_loja: '', whatsapp: '', email_contato: '', link_frete: '' })
+  const [form, setForm]         = useState({ mp_access_token: '', nome_loja: '', whatsapp: '', email_contato: '', link_frete: '' })
   const [salvando, setSalvando] = useState(false)
   const [mostrarToken, setMostrarToken] = useState(false)
+  const [pacotes, setPacotes]   = useState([])
+  const [novoPacote, setNovoPacote] = useState('')
+  const [salvandoPacote, setSalvandoPacote] = useState(false)
 
   useEffect(() => {
     if (!tenantId) return
     getConfig(tenantId).then(cfg => {
-      if (cfg) setForm({
-        mp_access_token: cfg.mp_access_token || '',
-        nome_loja: cfg.nome_loja || '',
-        whatsapp: cfg.whatsapp || '',
-        email_contato: cfg.email_contato || '',
-        link_frete: cfg.link_frete || '',
-      })
+      if (cfg) {
+        setForm({
+          mp_access_token: cfg.mp_access_token || '',
+          nome_loja: cfg.nome_loja || '',
+          whatsapp: cfg.whatsapp || '',
+          email_contato: cfg.email_contato || '',
+          link_frete: cfg.link_frete || '',
+        })
+        setPacotes(cfg.pacotes || [])
+      }
     })
   }, [tenantId])
+
+  async function salvarPacotes(lista) {
+    setSalvandoPacote(true)
+    try {
+      await saveConfig(tenantId, { pacotes: lista })
+    } catch (e) {
+      showToast('Erro ao salvar embalagem: ' + e.message, 'error')
+    } finally {
+      setSalvandoPacote(false)
+    }
+  }
+
+  function addPacote() {
+    const nome = novoPacote.trim()
+    if (!nome || pacotes.includes(nome)) return
+    const nova = [...pacotes, nome]
+    setPacotes(nova)
+    setNovoPacote('')
+    salvarPacotes(nova)
+  }
+
+  function removePacote(idx) {
+    const nova = pacotes.filter((_, i) => i !== idx)
+    setPacotes(nova)
+    salvarPacotes(nova)
+  }
+
+  function moverPacote(idx, dir) {
+    const nova = [...pacotes]
+    const troca = idx + dir
+    if (troca < 0 || troca >= nova.length) return
+    ;[nova[idx], nova[troca]] = [nova[troca], nova[idx]]
+    setPacotes(nova)
+    salvarPacotes(nova)
+  }
 
   async function salvar() {
     setSalvando(true)
@@ -109,6 +150,59 @@ function AbaConfiguracoes({ tenantId, showToast }) {
         />
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
           Este link é enviado automaticamente na mensagem de cobrança do frete via WhatsApp na página de Produção.
+        </div>
+      </div>
+
+      {/* ── Embalagens ── */}
+      <div style={{ marginBottom: 28 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 8, fontWeight: 600 }}>
+          📦 Tipos de Embalagem (Produção)
+        </label>
+
+        {/* Lista existente */}
+        <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {pacotes.length === 0 && (
+            <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>
+              Nenhuma embalagem cadastrada. Adicione abaixo.
+            </div>
+          )}
+          {pacotes.map((p, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+              borderRadius: 6, padding: '6px 10px',
+            }}>
+              <span style={{ flex: 1, fontSize: 13, color: 'var(--text-body)' }}>{p}</span>
+              <button onClick={() => moverPacote(i, -1)} disabled={i === 0 || salvandoPacote}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 13, padding: '0 4px' }}>▲</button>
+              <button onClick={() => moverPacote(i, 1)} disabled={i === pacotes.length - 1 || salvandoPacote}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 13, padding: '0 4px' }}>▼</button>
+              <button onClick={() => removePacote(i)} disabled={salvandoPacote}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f28b82', fontSize: 14, padding: '0 4px', lineHeight: 1 }}>✕</button>
+            </div>
+          ))}
+        </div>
+
+        {/* Adicionar nova embalagem */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            value={novoPacote}
+            onChange={e => setNovoPacote(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addPacote()}
+            placeholder="Ex: CP 40x20x20"
+            style={{ ...SI, flex: 1 }}
+          />
+          <button
+            className="btn-acao btn-green"
+            onClick={addPacote}
+            disabled={salvandoPacote || !novoPacote.trim()}
+            style={{ whiteSpace: 'nowrap', padding: '0 16px', fontSize: 13, color: '#171717', fontWeight: 700 }}
+          >
+            {salvandoPacote ? '…' : '+ Adicionar'}
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+          Estas opções aparecem no campo Pacote da página de Produção.
         </div>
       </div>
 

@@ -6,6 +6,7 @@ import {
   createProducaoPedido, duplicateProducaoPedido, getProducaoData,
   checkInadimplencia, saveProducaoField,
 } from '../../services/producaoService'
+// PACOTE_OPTS é usado como fallback quando a empresa não cadastrou embalagens
 import { getConfig } from '../../services/configService'
 import { calcRomaneioTotal } from '../../services/pedidosService'
 import DashboardModal from './DashboardModal'
@@ -149,10 +150,11 @@ export default function ProducaoPage() {
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
 
-  const [rows,      setRows]      = useState([])
-  const [clientes,  setClientes]  = useState([])
-  const [loading,   setLoading]   = useState(false)
-  const [saving,    setSaving]    = useState({})
+  const [rows,       setRows]      = useState([])
+  const [clientes,   setClientes]  = useState([])
+  const [loading,    setLoading]   = useState(false)
+  const [saving,     setSaving]    = useState({})
+  const [pacoteOpts, setPacoteOpts] = useState(PACOTE_OPTS)
 
   const [mode,          setMode]          = useState('producao')
   const [busca,         setBusca]         = useState('')
@@ -175,6 +177,7 @@ export default function ProducaoPage() {
       if (signal?.cancelled) return
       setRows(data.rows); setClientes(data.clientes)
       if (cfg?.link_frete) setLinkFrete(cfg.link_frete)
+      if (cfg?.pacotes?.length) setPacoteOpts(cfg.pacotes)
     } catch (e) {
       if (signal?.cancelled) return
       setModalErr({ titulo: '⚠️ Erro', mensagem: e.message || 'Erro ao carregar.' })
@@ -488,7 +491,7 @@ export default function ProducaoPage() {
                           value={row.pacote || ''}
                           onChange={(e) => handlePacote(row, e.target.value)}>
                           <option value="">--</option>
-                          {PACOTE_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
+                          {pacoteOpts.map((o) => <option key={o} value={o}>{o}</option>)}
                         </select>
                       </td>
 

@@ -1,0 +1,1 @@
+ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS pacotes TEXT[];
