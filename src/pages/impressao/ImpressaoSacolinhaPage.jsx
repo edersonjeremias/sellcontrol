@@ -13,29 +13,13 @@ export default function ImpressaoSacolinhaPage() {
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
 
-  const [dataFiltro, setDataFiltro]   = useState('')
-  const [liveOpts,   setLiveOpts]     = useState([])
-  const [liveNome,   setLiveNome]     = useState('')
-  const [clientes,   setClientes]     = useState([])
-  const [gerado,     setGerado]       = useState(false)
-  const [loading,    setLoading]      = useState(false)
-  const [err,        setErr]          = useState(null)
-
-  // Carrega datas disponíveis para o select de live
-  const [datas, setDatas] = useState([])
-  useEffect(() => {
-    if (!tenantId) return
-    supabase
-      .from('vendas')
-      .select('data_live')
-      .eq('tenant_id', tenantId)
-      .not('data_live', 'is', null)
-      .order('data_live', { ascending: false })
-      .then(({ data: rows }) => {
-        const unicas = [...new Set((rows || []).map(r => r.data_live))].slice(0, 60)
-        setDatas(unicas)
-      })
-  }, [tenantId])
+  const [dataFiltro, setDataFiltro] = useState('')
+  const [liveOpts,   setLiveOpts]   = useState([])
+  const [liveNome,   setLiveNome]   = useState('')
+  const [clientes,   setClientes]   = useState([])
+  const [gerado,     setGerado]     = useState(false)
+  const [loading,    setLoading]    = useState(false)
+  const [err,        setErr]        = useState(null)
 
   // Quando muda a data, carrega as lives disponíveis nessa data
   useEffect(() => {
@@ -49,8 +33,10 @@ export default function ImpressaoSacolinhaPage() {
       .then(({ data: rows }) => {
         const unicas = [...new Set((rows || []).map(r => r.live_nome).filter(Boolean))].sort()
         setLiveOpts(unicas)
-        setLiveNome(unicas[0] || '')
+        setLiveNome(unicas.length === 1 ? unicas[0] : '')
       })
+    setGerado(false)
+    setClientes([])
   }, [tenantId, dataFiltro])
 
   const gerar = useCallback(async () => {
@@ -109,12 +95,12 @@ export default function ImpressaoSacolinhaPage() {
       <div className="sacol-toolbar no-print">
         <div className="sacol-field">
           <label>DATA DA LIVE</label>
-          <select value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} style={SI}>
-            <option value="">-- Selecione a data --</option>
-            {datas.map(d => (
-              <option key={d} value={d}>{fmtDateBr(d)}</option>
-            ))}
-          </select>
+          <input
+            type="date"
+            value={dataFiltro}
+            onChange={e => setDataFiltro(e.target.value)}
+            style={SI}
+          />
         </div>
 
         {liveOpts.length > 1 && (
@@ -128,7 +114,7 @@ export default function ImpressaoSacolinhaPage() {
         )}
 
         <div className="sacol-actions">
-          <button className="sacol-btn sacol-btn-green" onClick={gerar} disabled={loading}>
+          <button className="sacol-btn sacol-btn-green" onClick={gerar} disabled={loading || !dataFiltro}>
             {loading ? 'Carregando…' : 'Gerar'}
           </button>
           <button className="sacol-btn sacol-btn-blue" onClick={() => window.print()} disabled={!gerado}>
@@ -156,17 +142,21 @@ export default function ImpressaoSacolinhaPage() {
         {gerado && clientes.length > 0 && (
           <>
             {/* 1ª Sequência: Identificação */}
-            <div className="sacol-divisor no-print">1ª Sequência — Identificação</div>
+            <div className="sacol-divisor no-print">
+              1ª Sequência — Identificação ({clientes.length} etiquetas)
+            </div>
             {clientes.map((c, i) => (
               <div key={`id-${i}`} className="etiqueta-sacola">
-                <div className="sacol-num">{c.sacolinha ?? i + 1}</div>
                 <div className="sacol-nome">{c.nome}</div>
+                <div className="sacol-num">{c.sacolinha ?? i + 1}</div>
                 <div className="sacol-data">{c.data}</div>
               </div>
             ))}
 
             {/* 2ª Sequência: Números gigantes */}
-            <div className="sacol-divisor no-print">2ª Sequência — Números Gigantes</div>
+            <div className="sacol-divisor no-print">
+              2ª Sequência — Números Gigantes ({clientes.length} etiquetas)
+            </div>
             {clientes.map((c, i) => (
               <div key={`num-${i}`} className="etiqueta-sacola">
                 <div className="sacol-num-gigante">{c.sacolinha ?? i + 1}</div>
