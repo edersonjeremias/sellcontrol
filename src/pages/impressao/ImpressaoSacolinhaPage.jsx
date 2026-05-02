@@ -103,7 +103,7 @@ export default function ImpressaoSacolinhaPage() {
           />
         </div>
 
-        {liveOpts.length > 1 && (
+        {liveOpts.length >= 1 && (
           <div className="sacol-field">
             <label>LIVE</label>
             <select value={liveNome} onChange={e => setLiveNome(e.target.value)} style={SI}>
@@ -147,8 +147,8 @@ export default function ImpressaoSacolinhaPage() {
             </div>
             {clientes.map((c, i) => (
               <div key={`id-${i}`} className="etiqueta-sacola">
-                <div className="sacol-nome">{c.nome}</div>
                 <div className="sacol-num">{c.sacolinha ?? i + 1}</div>
+                <div className="sacol-nome">{c.nome}</div>
                 <div className="sacol-data">{c.data}</div>
               </div>
             ))}
