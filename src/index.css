@@ -991,6 +991,7 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   border-bottom: 1px solid rgba(255,255,255,.12);
   padding: 12px 16px;
   display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 20;
 }
 .sacol-field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 150px; }
 .sacol-field label { font-size: 11px; text-transform: uppercase; color: #9fb0c0; font-weight: 700; }
@@ -1009,9 +1010,13 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   background: #f3f4f6;
 }
 .sacol-divisor {
-  width: 100%; max-width: 400px; text-align: center; font-weight: 800;
-  padding: 16px; color: #4b5563; text-transform: uppercase;
-  border-bottom: 3px dashed #cbd5e1; margin: 20px 0; font-size: 14px;
+  width: 100%; max-width: 600px; text-align: center; font-weight: 600;
+  padding: 20px 0 8px; color: #6b7280; text-transform: uppercase;
+  font-size: 13px; letter-spacing: 0.05em;
+}
+.sacol-divisor::after {
+  content: ''; display: block; margin: 8px auto 0;
+  width: 80%; border-bottom: 2px dashed #cbd5e1;
 }
 .etiqueta-sacola {
   width: 60mm; height: 40mm;
