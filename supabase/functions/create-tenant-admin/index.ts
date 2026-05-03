@@ -89,16 +89,24 @@ serve(async (req) => {
       })
     }
 
-    const { data: tenantData, error: tenantError } = await supabaseAdmin
-      .from('tenants')
-      .insert([{ nome: empresaNome, cnpj: empresaCnpj, contato_celular: adminCelular }])
-      .select('id')
-      .single()
+    // Gera UUID para o novo tenant
+    const tenantId = crypto.randomUUID()
 
-    if (tenantError || !tenantData) {
-      throw new Error(tenantError?.message || 'Não foi possível criar a empresa.')
+    // Cria a linha em configuracoes (tabela usada como registro mestre do tenant)
+    const { error: configError } = await supabaseAdmin
+      .from('configuracoes')
+      .insert([{
+        tenant_id: tenantId,
+        nome_loja: empresaNome,
+        email_contato: adminEmail,
+        whatsapp: adminCelular,
+      }])
+
+    if (configError) {
+      throw new Error(configError.message || 'Não foi possível criar a empresa.')
     }
 
+    // Cria o usuário admin no Auth
     const { data: userCreated, error: userError } = await supabaseAdmin.auth.admin.createUser({
       email: adminEmail,
       password: adminSenha,
@@ -111,15 +119,17 @@ serve(async (req) => {
     })
 
     if (userError || !userCreated.user) {
-      await supabaseAdmin.from('tenants').delete().eq('id', tenantData.id)
+      // Rollback: remove a linha de configuracoes criada
+      await supabaseAdmin.from('configuracoes').delete().eq('tenant_id', tenantId)
       throw new Error(userError?.message || 'Não foi possível criar usuário no Auth.')
     }
 
+    // Cria o perfil do admin em users_perfil
     const { error: profileError } = await supabaseAdmin
       .from('users_perfil')
       .insert([{
         id: userCreated.user.id,
-        tenant_id: tenantData.id,
+        tenant_id: tenantId,
         role: 'admin',
         nome: adminNome,
         email: adminEmail,
@@ -128,12 +138,13 @@ serve(async (req) => {
       }])
 
     if (profileError) {
+      // Rollback: remove user e configuracoes
       await supabaseAdmin.auth.admin.deleteUser(userCreated.user.id)
-      await supabaseAdmin.from('tenants').delete().eq('id', tenantData.id)
+      await supabaseAdmin.from('configuracoes').delete().eq('tenant_id', tenantId)
       throw new Error(profileError.message || 'Usuário criado, mas falhou ao criar perfil.')
     }
 
-    return new Response(JSON.stringify({ ok: true, tenantId: tenantData.id, adminId: userCreated.user.id }), {
+    return new Response(JSON.stringify({ ok: true, tenantId, adminId: userCreated.user.id }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
