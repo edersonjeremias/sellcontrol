@@ -1,17 +1,25 @@
 import { supabase } from '../lib/supabase'
 
 export async function createTenantAndAdmin(payload) {
-  const timeoutMs = 20000
-
-  const invokePromise = supabase.functions.invoke('create-tenant-admin', {
+  const { data, error } = await supabase.functions.invoke('create-tenant-admin', {
     body: payload,
   })
 
-  const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new Error('Tempo de resposta excedido ao criar empresa. Verifique se a função create-tenant-admin foi publicada no Supabase.'))
-    }, timeoutMs)
-  })
+  if (error) {
+    // Tenta extrair a mensagem real do corpo da resposta da Edge Function
+    let msg = error.message || 'Erro ao criar empresa.'
+    try {
+      const ctx = error.context
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json()
+        if (body?.message) msg = body.message
+      } else if (ctx && typeof ctx.text === 'function') {
+        const text = await ctx.text()
+        try { const parsed = JSON.parse(text); if (parsed?.message) msg = parsed.message } catch {}
+      }
+    } catch {}
+    return { data: null, error: new Error(msg) }
+  }
 
-  return Promise.race([invokePromise, timeoutPromise])
+  return { data, error: null }
 }
