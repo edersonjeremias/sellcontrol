@@ -1,4 +1,18 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+
+// Intercepta o hash do Supabase quando o link de e-mail aponta para a raiz
+// em vez de /reset-password (acontece quando Site URL no Supabase é a raiz)
+function RecoveryGuard() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('type=recovery') && hash.includes('access_token')) {
+      navigate('/reset-password' + hash, { replace: true })
+    }
+  }, [navigate])
+  return null
+}
 import { AppProvider } from './context/AppContext'
 import { AuthProvider, RequireAuth, RequireRole } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
@@ -25,6 +39,7 @@ export default function App() {
     <AuthProvider>
       <AppProvider>
         <BrowserRouter>
+          <RecoveryGuard />
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/login" element={<LoginPage />} />
