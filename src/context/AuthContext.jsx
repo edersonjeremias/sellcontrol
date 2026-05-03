@@ -11,7 +11,8 @@ const DEFAULT_PAGES = [
   { slug: 'producao',            label: 'Produção',            category: 'Operações', icon: 'factory',        order_index: 30 },
   { slug: 'expedicao',           label: 'Expedição',           category: 'Operações', icon: 'local_shipping', order_index: 35 },
   { slug: 'impressao-sacolinha', label: 'Impressão Sacolinha', category: 'Operações', icon: 'local_offer',    order_index: 40 },
-  { slug: 'impressao-pedidos',   label: 'Impressão Pedidos',  category: 'Operações', icon: 'receipt_long',   order_index: 45 },
+  { slug: 'impressao-pedidos',           label: 'Impressão Pedidos',          category: 'Operações', icon: 'receipt_long',   order_index: 45 },
+  { slug: 'impressao-sacolinha-cliente', label: 'Impressão Sacol. Cliente',   category: 'Operações', icon: 'shopping_bag',   order_index: 50 },
 ]
 
 export function AuthProvider({ children }) {

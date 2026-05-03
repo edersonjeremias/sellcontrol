@@ -1085,6 +1085,46 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   border: 1px solid rgba(255,255,255,.15);
 }
 
+/* ──────────────────────────────────────────
+   IMPRESSÃO SACOLINHA CLIENTE
+══════════════════════════════════════════ */
+#sacol-cli-resultado {
+  padding: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  background: #f3f4f6;
+  min-height: calc(100vh - 68px);
+}
+.sacol-cli-card {
+  width: 100mm; min-height: 150mm;
+  background: white; color: #000;
+  padding: 5mm; box-sizing: border-box;
+  display: flex; flex-direction: column;
+  box-shadow: 0 8px 20px rgba(0,0,0,.15);
+  border-radius: 4px;
+}
+.sacol-cli-header {
+  border-bottom: 2px solid #000; padding-bottom: 5px; margin-bottom: 8px;
+}
+.sacol-cli-header-top {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+}
+.sacol-cli-nome { font-size: 16px; font-weight: 900; text-transform: uppercase; }
+.sacol-cli-data { font-size: 15px; font-weight: 900; white-space: nowrap; }
+.sacol-cli-info {
+  display: flex; justify-content: space-between;
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  margin-top: 5px; color: #374151;
+}
+.sacol-cli-info strong { font-weight: 900; color: #000; }
+.sacol-cli-itens { flex: 1; }
+.sacol-cli-item {
+  display: flex; gap: 6px; align-items: baseline;
+  font-size: 13px; padding: 3px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+.sacol-cli-cod  { font-weight: 900; min-width: 38px; flex-shrink: 0; }
+.sacol-cli-desc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 @media print {
   /* @page size é injetado dinamicamente pela página ativa */
   .app-header,
@@ -1093,8 +1133,10 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .no-print,
   .sacol-divisor { display: none !important; }
   body, .app-shell, .app-main { background: white !important; padding: 0 !important; margin: 0 !important; }
-  #sacol-resultado  { padding: 0; background: white; display: block; }
-  #pedidos-resultado { padding: 0; background: white; display: block; gap: 0; min-height: unset; }
+  #sacol-resultado      { padding: 0; background: white; display: block; }
+  #pedidos-resultado    { padding: 0; background: white; display: block; gap: 0; min-height: unset; }
+  #sacol-cli-resultado  { padding: 0; background: white; display: block; gap: 0; min-height: unset; }
   .etiqueta-sacola { margin: 0; border: none; box-shadow: none; page-break-after: always; }
   .pedido-card     { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; }
+  .sacol-cli-card  { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; }
 }
