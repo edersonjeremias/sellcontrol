@@ -20,7 +20,8 @@ export default function ForgotPasswordPage() {
 
     setLoading(true)
     try {
-      const redirectTo = `${window.location.origin}/reset-password`
+      const base = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') || window.location.origin
+      const redirectTo = `${base}/reset-password`
       const { error: resendError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
       if (resendError) throw resendError
 
