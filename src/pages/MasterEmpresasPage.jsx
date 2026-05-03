@@ -84,21 +84,21 @@ function AbaNova({ showToast }) {
       <p style={{ color: 'var(--muted)', marginTop: 6 }}>
         Somente o master pode cadastrar uma nova empresa e o administrador responsável.
       </p>
-      <form className="login-form" onSubmit={handleSubmit}>
+      <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
         <label>Nome da empresa</label>
-        <input name="empresaNome" type="text" value={form.empresaNome} onChange={handleChange} placeholder="Ex: VM Kids" />
+        <input name="empresaNome" type="text" value={form.empresaNome} onChange={handleChange} placeholder="Ex: VM Kids" autoComplete="off" />
         <label>CNPJ</label>
-        <input name="empresaCnpj" type="text" value={form.empresaCnpj} onChange={handleChange} placeholder="00.000.000/0001-00" />
+        <input name="empresaCnpj" type="text" value={form.empresaCnpj} onChange={handleChange} placeholder="00.000.000/0001-00" autoComplete="off" />
         <label>Nome completo do admin</label>
-        <input name="adminNome" type="text" value={form.adminNome} onChange={handleChange} placeholder="Nome completo" />
+        <input name="adminNome" type="text" value={form.adminNome} onChange={handleChange} placeholder="Nome completo" autoComplete="off" />
         <label>E-mail do admin</label>
-        <input name="adminEmail" type="email" value={form.adminEmail} onChange={handleChange} placeholder="admin@empresa.com" />
+        <input name="adminEmail" type="text" value={form.adminEmail} onChange={handleChange} placeholder="admin@empresa.com" autoComplete="off" />
         <label>CPF do admin</label>
-        <input name="adminCpf" type="text" value={form.adminCpf} onChange={handleChange} placeholder="000.000.000-00" />
+        <input name="adminCpf" type="text" value={form.adminCpf} onChange={handleChange} placeholder="000.000.000-00" autoComplete="off" />
         <label>Celular do admin</label>
-        <input name="adminCelular" type="text" value={form.adminCelular} onChange={handleChange} placeholder="(00) 90000-0000" />
+        <input name="adminCelular" type="text" value={form.adminCelular} onChange={handleChange} placeholder="(00) 90000-0000" autoComplete="off" />
         <label>Senha inicial do admin</label>
-        <input name="adminSenha" type="password" value={form.adminSenha} onChange={handleChange} placeholder="Mínimo 6 caracteres" />
+        <input name="adminSenha" type="password" value={form.adminSenha} onChange={handleChange} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
         <button type="submit" className="btn-acao btn-blue" disabled={saving}>
           {saving ? 'Criando empresa...' : 'Criar empresa + admin'}
         </button>
