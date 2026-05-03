@@ -13,6 +13,15 @@ export default function ImpressaoSacolinhaPage() {
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
 
+  // Injeta @page correto para esta página (60x40) e remove ao sair
+  useEffect(() => {
+    const style = document.createElement('style')
+    style.id = 'print-sacolinha-page'
+    style.textContent = '@media print { @page { size: 60mm 40mm; margin: 0; } }'
+    document.head.appendChild(style)
+    return () => { if (document.getElementById('print-sacolinha-page')) document.head.removeChild(style) }
+  }, [])
+
   const [dataFiltro, setDataFiltro] = useState('')
   const [liveOpts,   setLiveOpts]   = useState([])
   const [liveNome,   setLiveNome]   = useState('')

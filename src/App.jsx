@@ -16,6 +16,7 @@ import ClientesPage from './pages/clientes/ClientesPage'
 import PedidosPage from './pages/pedidos/PedidosPage'
 import RastreioPage from './pages/rastreio/RastreioPage'
 import ImpressaoSacolinhaPage from './pages/impressao/ImpressaoSacolinhaPage'
+import ImpressaoPedidosPage   from './pages/impressao/ImpressaoPedidosPage'
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/expedicao" element={<RequireAuth><PedidosPage /></RequireAuth>} />
             <Route path="/configuracoes" element={<RequireAuth><RequireRole allowed={['master','admin']}><ConfiguracoesPage /></RequireRole></RequireAuth>} />
             <Route path="/impressao-sacolinha" element={<RequireAuth><ImpressaoSacolinhaPage /></RequireAuth>} />
+            <Route path="/impressao-pedidos"   element={<RequireAuth><ImpressaoPedidosPage /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
