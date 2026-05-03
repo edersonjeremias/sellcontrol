@@ -92,6 +92,14 @@ export default function ResetPasswordPage() {
           return
         }
 
+        // Fluxo 4: Supabase já processou os tokens via detectSessionInUrl antes do navigate.
+        // Neste caso o hash foi limpo, mas a sessão de recovery já está ativa localmente.
+        const { data: { session: existingSession } } = await supabase.auth.getSession()
+        if (existingSession) {
+          setTokenValid(true)
+          return
+        }
+
         setTokenValid(false)
         setError('Link inválido ou incompleto. Solicite um novo email de redefinição.')
       } catch (err) {
