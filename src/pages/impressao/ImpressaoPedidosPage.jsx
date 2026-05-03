@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import DateSearchInput from '../../components/ui/DateSearchInput'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import { supabase } from '../../lib/supabase'
 import { getConfig } from '../../services/configService'
 
@@ -141,14 +142,6 @@ export default function ImpressaoPedidosPage() {
     setClientes([]); setGerado(false); setErr(null)
   }
 
-  const SI = {
-    background: 'linear-gradient(180deg,#111b28,#0f1621)',
-    border: '1px solid rgba(255,255,255,.12)',
-    color: '#e6edf3', borderRadius: 8, padding: '0 12px',
-    height: 44, fontSize: 14, outline: 'none', width: '100%',
-    colorScheme: 'dark',
-  }
-
   return (
     <AppShell flush hideTitle>
       {/* ── Toolbar ── */}
@@ -166,20 +159,24 @@ export default function ImpressaoPedidosPage() {
         {liveOpts.length >= 1 && (
           <div className="sacol-field" style={{ flex: '0 0 180px' }}>
             <label>LIVE</label>
-            <select value={liveNome} onChange={e => setLiveNome(e.target.value)} style={SI}>
-              <option value="">-- Selecione a live --</option>
-              {liveOpts.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
+            <SearchableSelect
+              value={liveNome}
+              onChange={setLiveNome}
+              options={liveOpts}
+              emptyLabel="-- Selecione a live --"
+            />
           </div>
         )}
 
         {clienteOpts.length > 0 && (
           <div className="sacol-field" style={{ flex: '0 0 220px' }}>
             <label>CLIENTE (FILTRO)</label>
-            <select value={clienteFiltro} onChange={e => setClienteFiltro(e.target.value)} style={SI}>
-              <option value="">-- Todos os clientes --</option>
-              {clienteOpts.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <SearchableSelect
+              value={clienteFiltro}
+              onChange={setClienteFiltro}
+              options={clienteOpts}
+              emptyLabel="-- Todos os clientes --"
+            />
           </div>
         )}
 

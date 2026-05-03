@@ -2,20 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import DateSearchInput from '../../components/ui/DateSearchInput'
+import SearchableSelect from '../../components/ui/SearchableSelect'
 import { supabase } from '../../lib/supabase'
 
 function fmtDateBr(dateStr) {
   if (!dateStr) return ''
   const [y, m, d] = String(dateStr).slice(0, 10).split('-')
   return `${d}/${m}/${y}`
-}
-
-const SI = {
-  background: 'linear-gradient(180deg,#111b28,#0f1621)',
-  border: '1px solid rgba(255,255,255,.12)',
-  color: '#e6edf3', borderRadius: 8, padding: '0 12px',
-  height: 44, fontSize: 14, outline: 'none', width: '100%',
-  colorScheme: 'dark',
 }
 
 export default function ImpressaoSacolinhaPage() {
@@ -125,10 +118,12 @@ export default function ImpressaoSacolinhaPage() {
         {liveOpts.length >= 1 && (
           <div className="sacol-field" style={{ flex: '0 0 180px' }}>
             <label>LIVE</label>
-            <select value={liveNome} onChange={e => setLiveNome(e.target.value)} style={SI}>
-              <option value="">-- Todas --</option>
-              {liveOpts.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
+            <SearchableSelect
+              value={liveNome}
+              onChange={setLiveNome}
+              options={liveOpts}
+              emptyLabel="-- Todas --"
+            />
           </div>
         )}
 
