@@ -1,15 +1,24 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import { supabase } from './lib/supabase'
 
-// Intercepta o hash do Supabase quando o link de e-mail aponta para a raiz
-// em vez de /reset-password (acontece quando Site URL no Supabase é a raiz)
+// Redireciona para /reset-password quando o Supabase confirma fluxo de recovery,
+// independente de o link do e-mail apontar para a raiz ou para /reset-password.
 function RecoveryGuard() {
   const navigate = useNavigate()
   useEffect(() => {
-    const hash = window.location.hash
-    if (hash.includes('type=recovery') && hash.includes('access_token')) {
-      navigate('/reset-password' + hash, { replace: true })
+    // Verifica o hash imediatamente (antes de o Supabase limpá-lo)
+    if (window.location.hash.includes('type=recovery')) {
+      navigate('/reset-password', { replace: true })
+      return
     }
+    // Também escuta o evento PASSWORD_RECOVERY para garantir o redirect
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password', { replace: true })
+      }
+    })
+    return () => subscription.unsubscribe()
   }, [navigate])
   return null
 }

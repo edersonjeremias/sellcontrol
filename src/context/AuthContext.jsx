@@ -16,12 +16,19 @@ const DEFAULT_PAGES = [
   { slug: 'etiquetas',                  label: 'Etiquetas',                  category: 'Operações', icon: 'label',          order_index: 55 },
 ]
 
+// Captura o hash ANTES de o Supabase limpá-lo da URL.
+// Supabase limpa o hash de forma assíncrona, então esta verificação
+// a nível de módulo pega o valor original no carregamento inicial da página.
+const _recoveryOnLoad =
+  typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
+
 export function AuthProvider({ children }) {
-  const [loading, setLoading]     = useState(true)
-  const [session, setSession]     = useState(null)
-  const [profile, setProfile]     = useState(null)
-  const [menuItems, setMenuItems] = useState(DEFAULT_PAGES)
-  const initializedRef            = useRef(false)
+  const [loading,    setLoading]    = useState(true)
+  const [session,    setSession]    = useState(null)
+  const [profile,    setProfile]    = useState(null)
+  const [menuItems,  setMenuItems]  = useState(DEFAULT_PAGES)
+  const [isRecovery, setIsRecovery] = useState(_recoveryOnLoad)
+  const initializedRef              = useRef(false)
 
   const loadProfile = useCallback(async (user) => {
     if (!user) {
@@ -71,31 +78,35 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true
 
-    // Timeout de segurança: nunca prende na tela de "Carregando..."
     const safetyTimeout = setTimeout(() => {
       if (isMounted) setLoading(false)
     }, 8000)
 
-    // Supabase v2 — onAuthStateChange dispara INITIAL_SESSION no boot (lê do localStorage).
-    // Esse é o ponto canônico para saber se há sessão salva, incluindo F5 e nova aba.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, sess) => {
       if (!isMounted) return
 
       if (event === 'INITIAL_SESSION') {
-        // Primeira carga: sessão vinda do localStorage (ou null se não logado)
         setSession(sess)
-        if (sess?.user) {
+        // Se for fluxo de recuperação de senha, NÃO faz login normal —
+        // aguarda o evento PASSWORD_RECOVERY redirecionar para /reset-password
+        if (sess?.user && !_recoveryOnLoad) {
           await loadProfile(sess.user)
         }
         clearTimeout(safetyTimeout)
         if (isMounted) setLoading(false)
         initializedRef.current = true
 
-      } else if (event === 'SIGNED_IN') {
-        // Login explícito ou renovação de token que vira SIGNED_IN
+      } else if (event === 'PASSWORD_RECOVERY') {
+        // Supabase confirmou que é um fluxo de reset — bloqueia login normal
         setSession(sess)
-        if (sess?.user && initializedRef.current) {
-          // Evita duplo loadProfile no boot (INITIAL_SESSION já fez isso)
+        setProfile(null)
+        setMenuItems(DEFAULT_PAGES)
+        setIsRecovery(true)
+        if (isMounted) setLoading(false)
+
+      } else if (event === 'SIGNED_IN') {
+        setSession(sess)
+        if (sess?.user && initializedRef.current && !isRecovery) {
           await loadProfile(sess.user)
         }
 
@@ -106,6 +117,7 @@ export function AuthProvider({ children }) {
         setSession(null)
         setProfile(null)
         setMenuItems(DEFAULT_PAGES)
+        setIsRecovery(false)
         if (isMounted) setLoading(false)
       }
     })
@@ -115,13 +127,11 @@ export function AuthProvider({ children }) {
       clearTimeout(safetyTimeout)
       subscription.unsubscribe()
     }
-  }, [loadProfile])
+  }, [loadProfile]) // isRecovery não entra nas deps para evitar re-subscribe
 
   const signIn = useCallback(async (email, password) => {
     const result = await supabase.auth.signInWithPassword({ email, password })
     if (result.error) throw result.error
-    // SIGNED_IN event dispara automaticamente via onAuthStateChange,
-    // mas para garantir o profile aqui também:
     const profileData = await loadProfile(result.data.session?.user)
     setSession(result.data.session)
     initializedRef.current = true
@@ -132,10 +142,10 @@ export function AuthProvider({ children }) {
   }, [loadProfile])
 
   const signInWithGoogle = useCallback(async () => {
-    const redirectTo = `${window.location.origin}/dashboard`
+    const base = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') || window.location.origin
     const result = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo },
+      options: { redirectTo: `${base}/dashboard` },
     })
     if (result.error) throw result.error
     return result
@@ -146,6 +156,7 @@ export function AuthProvider({ children }) {
     setProfile(null)
     setMenuItems(DEFAULT_PAGES)
     setSession(null)
+    setIsRecovery(false)
     initializedRef.current = false
     return result
   }, [])
@@ -155,10 +166,11 @@ export function AuthProvider({ children }) {
     session,
     profile,
     menuItems,
+    isRecovery,
     signIn,
     signInWithGoogle,
     signOut,
-  }), [loading, session, profile, menuItems, signIn, signInWithGoogle, signOut])
+  }), [loading, session, profile, menuItems, isRecovery, signIn, signInWithGoogle, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
@@ -170,9 +182,11 @@ export function useAuth() {
 }
 
 export function RequireAuth({ children }) {
-  const { loading, session, profile } = useAuth()
+  const { loading, session, profile, isRecovery } = useAuth()
   if (loading) return <div style={{ padding: 24, color: '#fff' }}>Carregando...</div>
-  // Tem sessão mas o profile ainda não veio (DB lento) → aguarda em vez de redirecionar
+  // Fluxo de reset de senha — redireciona para a página correta
+  if (isRecovery) return <Navigate to="/reset-password" replace />
+  // Tem sessão mas o profile ainda não veio (DB lento) → aguarda
   if (session && !profile) return <div style={{ padding: 24, color: '#fff' }}>Carregando...</div>
   if (!profile) return <Navigate to="/login" replace />
   return children
