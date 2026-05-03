@@ -1024,7 +1024,6 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   padding: 2mm 3mm; box-sizing: border-box;
   margin: 8px auto;
   border: 1px solid #ccc;
-  page-break-after: always;
   display: flex; flex-direction: column;
   justify-content: center; align-items: center; text-align: center;
   gap: 1mm;
@@ -1053,7 +1052,6 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   display: flex; flex-direction: column;
   box-shadow: 0 8px 20px rgba(0,0,0,.15);
   border-radius: 4px;
-  page-break-after: always;
 }
 .pedido-header {
   border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 6px;
@@ -1097,6 +1095,6 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   body, .app-shell, .app-main { background: white !important; padding: 0 !important; margin: 0 !important; }
   #sacol-resultado  { padding: 0; background: white; display: block; }
   #pedidos-resultado { padding: 0; background: white; display: block; gap: 0; min-height: unset; }
-  .etiqueta-sacola { margin: 0; border: none; box-shadow: none; }
-  .pedido-card     { margin: 0; box-shadow: none; border-radius: 0; border: none; }
+  .etiqueta-sacola { margin: 0; border: none; box-shadow: none; page-break-after: always; }
+  .pedido-card     { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; }
 }

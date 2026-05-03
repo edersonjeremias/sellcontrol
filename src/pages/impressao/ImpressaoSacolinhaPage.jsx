@@ -99,7 +99,7 @@ export default function ImpressaoSacolinhaPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell flush hideTitle>
       {/* ── Toolbar ── */}
       <div className="sacol-toolbar no-print">
         <div className="sacol-field">

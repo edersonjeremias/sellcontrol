@@ -138,7 +138,7 @@ export default function ImpressaoPedidosPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell flush hideTitle>
       {/* ── Toolbar ── */}
       <div className="sacol-toolbar no-print">
         <div className="sacol-field">
