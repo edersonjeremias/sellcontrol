@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
+import DateSearchInput from '../../components/ui/DateSearchInput'
 import { supabase } from '../../lib/supabase'
 import { getConfig } from '../../services/configService'
 
@@ -20,6 +21,7 @@ export default function ImpressaoPedidosPage() {
   const tenantId = profile?.tenant_id
 
   const [nomeLoja,      setNomeLoja]      = useState('')
+  const [datasRaw,      setDatasRaw]      = useState([])
   const [dataFiltro,    setDataFiltro]    = useState('')
   const [liveOpts,      setLiveOpts]      = useState([])
   const [liveNome,      setLiveNome]      = useState('')
@@ -39,10 +41,20 @@ export default function ImpressaoPedidosPage() {
     return () => { if (document.getElementById('print-pedidos-page')) document.head.removeChild(style) }
   }, [])
 
-  // Carrega nome da loja
+  // Carrega nome da loja e datas com live cadastrada
   useEffect(() => {
     if (!tenantId) return
     getConfig(tenantId).then(cfg => { if (cfg?.nome_loja) setNomeLoja(cfg.nome_loja) })
+    supabase
+      .from('vendas')
+      .select('data_live')
+      .eq('tenant_id', tenantId)
+      .not('data_live', 'is', null)
+      .order('data_live', { ascending: false })
+      .then(({ data: rows }) => {
+        const unicas = [...new Set((rows || []).map(r => r.data_live))].slice(0, 90)
+        setDatasRaw(unicas)
+      })
   }, [tenantId])
 
   // Quando muda a data: carrega lives disponíveis
@@ -141,13 +153,18 @@ export default function ImpressaoPedidosPage() {
     <AppShell flush hideTitle>
       {/* ── Toolbar ── */}
       <div className="sacol-toolbar no-print">
-        <div className="sacol-field">
+        <div className="sacol-field" style={{ flex: '0 0 160px' }}>
           <label>DATA</label>
-          <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)} style={SI} />
+          <DateSearchInput
+            value={dataFiltro}
+            onChange={setDataFiltro}
+            options={datasRaw}
+            placeholder="DD/MM/AAAA"
+          />
         </div>
 
         {liveOpts.length >= 1 && (
-          <div className="sacol-field">
+          <div className="sacol-field" style={{ flex: '0 0 180px' }}>
             <label>LIVE</label>
             <select value={liveNome} onChange={e => setLiveNome(e.target.value)} style={SI}>
               <option value="">-- Selecione a live --</option>
@@ -157,7 +174,7 @@ export default function ImpressaoPedidosPage() {
         )}
 
         {clienteOpts.length > 0 && (
-          <div className="sacol-field">
+          <div className="sacol-field" style={{ flex: '0 0 220px' }}>
             <label>CLIENTE (FILTRO)</label>
             <select value={clienteFiltro} onChange={e => setClienteFiltro(e.target.value)} style={SI}>
               <option value="">-- Todos os clientes --</option>

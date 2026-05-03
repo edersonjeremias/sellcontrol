@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
+import DateSearchInput from '../../components/ui/DateSearchInput'
 import { supabase } from '../../lib/supabase'
 
 function fmtDateBr(dateStr) {
@@ -9,11 +10,18 @@ function fmtDateBr(dateStr) {
   return `${d}/${m}/${y}`
 }
 
+const SI = {
+  background: 'linear-gradient(180deg,#111b28,#0f1621)',
+  border: '1px solid rgba(255,255,255,.12)',
+  color: '#e6edf3', borderRadius: 8, padding: '0 12px',
+  height: 44, fontSize: 14, outline: 'none', width: '100%',
+  colorScheme: 'dark',
+}
+
 export default function ImpressaoSacolinhaPage() {
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
 
-  // Injeta @page correto para esta página (60x40) e remove ao sair
   useEffect(() => {
     const style = document.createElement('style')
     style.id = 'print-sacolinha-page'
@@ -22,6 +30,7 @@ export default function ImpressaoSacolinhaPage() {
     return () => { if (document.getElementById('print-sacolinha-page')) document.head.removeChild(style) }
   }, [])
 
+  const [datasRaw,  setDatasRaw]  = useState([])
   const [dataFiltro, setDataFiltro] = useState('')
   const [liveOpts,   setLiveOpts]   = useState([])
   const [liveNome,   setLiveNome]   = useState('')
@@ -30,9 +39,25 @@ export default function ImpressaoSacolinhaPage() {
   const [loading,    setLoading]    = useState(false)
   const [err,        setErr]        = useState(null)
 
+  // Carrega datas com live cadastrada
+  useEffect(() => {
+    if (!tenantId) return
+    supabase
+      .from('vendas')
+      .select('data_live')
+      .eq('tenant_id', tenantId)
+      .not('data_live', 'is', null)
+      .order('data_live', { ascending: false })
+      .then(({ data: rows }) => {
+        const unicas = [...new Set((rows || []).map(r => r.data_live))].slice(0, 90)
+        setDatasRaw(unicas)
+      })
+  }, [tenantId])
+
   // Quando muda a data, carrega as lives disponíveis nessa data
   useEffect(() => {
-    if (!tenantId || !dataFiltro) { setLiveOpts([]); setLiveNome(''); return }
+    setLiveOpts([]); setLiveNome(''); setGerado(false); setClientes([])
+    if (!tenantId || !dataFiltro) return
     supabase
       .from('vendas')
       .select('live_nome')
@@ -42,17 +67,13 @@ export default function ImpressaoSacolinhaPage() {
       .then(({ data: rows }) => {
         const unicas = [...new Set((rows || []).map(r => r.live_nome).filter(Boolean))].sort()
         setLiveOpts(unicas)
-        setLiveNome(unicas.length === 1 ? unicas[0] : '')
+        if (unicas.length === 1) setLiveNome(unicas[0])
       })
-    setGerado(false)
-    setClientes([])
   }, [tenantId, dataFiltro])
 
   const gerar = useCallback(async () => {
     if (!dataFiltro) { setErr('Selecione a data da live.'); return }
-    setLoading(true)
-    setErr(null)
-    setGerado(false)
+    setLoading(true); setErr(null); setGerado(false)
     try {
       let q = supabase
         .from('vendas')
@@ -64,16 +85,13 @@ export default function ImpressaoSacolinhaPage() {
       const { data: rows, error } = await q
       if (error) throw error
 
-      // Agrupa por cliente: mantém o primeiro sacolinha encontrado
       const mapa = new Map()
       ;(rows || []).forEach(r => {
         if (!r.cliente_nome) return
-        if (!mapa.has(r.cliente_nome)) {
+        if (!mapa.has(r.cliente_nome))
           mapa.set(r.cliente_nome, { nome: r.cliente_nome, sacolinha: r.sacolinha, data: fmtDateBr(r.data_live) })
-        }
       })
 
-      // Ordena por número de sacolinha; sem número vai para o final por nome
       const lista = [...mapa.values()].sort((a, b) => {
         const na = Number(a.sacolinha) || 9999
         const nb = Number(b.sacolinha) || 9999
@@ -90,30 +108,22 @@ export default function ImpressaoSacolinhaPage() {
     }
   }, [tenantId, dataFiltro, liveNome])
 
-  const SI = {
-    background: 'linear-gradient(180deg,#111b28,#0f1621)',
-    border: '1px solid rgba(255,255,255,.12)',
-    color: '#e6edf3', borderRadius: 8, padding: '0 12px',
-    height: 44, fontSize: 14, outline: 'none', width: '100%',
-    colorScheme: 'dark',
-  }
-
   return (
     <AppShell flush hideTitle>
       {/* ── Toolbar ── */}
       <div className="sacol-toolbar no-print">
-        <div className="sacol-field">
+        <div className="sacol-field" style={{ flex: '0 0 160px' }}>
           <label>DATA DA LIVE</label>
-          <input
-            type="date"
+          <DateSearchInput
             value={dataFiltro}
-            onChange={e => setDataFiltro(e.target.value)}
-            style={SI}
+            onChange={setDataFiltro}
+            options={datasRaw}
+            placeholder="DD/MM/AAAA"
           />
         </div>
 
         {liveOpts.length >= 1 && (
-          <div className="sacol-field">
+          <div className="sacol-field" style={{ flex: '0 0 180px' }}>
             <label>LIVE</label>
             <select value={liveNome} onChange={e => setLiveNome(e.target.value)} style={SI}>
               <option value="">-- Todas --</option>
@@ -141,16 +151,13 @@ export default function ImpressaoSacolinhaPage() {
             Selecione a data e clique em Gerar para visualizar as etiquetas.
           </div>
         )}
-
         {gerado && clientes.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#6b7280', fontSize: 14 }}>
             Nenhum cliente encontrado para os filtros selecionados.
           </div>
         )}
-
         {gerado && clientes.length > 0 && (
           <>
-            {/* 1ª Sequência: Identificação */}
             <div className="sacol-divisor no-print">
               1ª Sequência — Identificação ({clientes.length} etiquetas)
             </div>
@@ -161,8 +168,6 @@ export default function ImpressaoSacolinhaPage() {
                 <div className="sacol-data">{c.data}</div>
               </div>
             ))}
-
-            {/* 2ª Sequência: Números gigantes */}
             <div className="sacol-divisor no-print">
               2ª Sequência — Números Gigantes ({clientes.length} etiquetas)
             </div>
