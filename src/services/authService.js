@@ -1,5 +1,18 @@
 import { supabase } from '../lib/supabase'
 
+// Catálogo completo de páginas disponíveis no sistema
+export const ALL_PAGES = [
+  { slug: 'dashboard',                   label: 'Dashboard',                 category: 'Principal',  icon: 'dashboard',      order_index: 10 },
+  { slug: 'vendas',                      label: 'Vendas',                    category: 'Operações',  icon: 'sell',           order_index: 20 },
+  { slug: 'producao',                    label: 'Produção',                  category: 'Operações',  icon: 'factory',        order_index: 30 },
+  { slug: 'expedicao',                   label: 'Expedição',                 category: 'Operações',  icon: 'local_shipping', order_index: 35 },
+  { slug: 'impressao-sacolinha',         label: 'Impressão Sacolinha',       category: 'Operações',  icon: 'local_offer',    order_index: 40 },
+  { slug: 'impressao-pedidos',           label: 'Impressão Pedidos',         category: 'Operações',  icon: 'receipt_long',   order_index: 45 },
+  { slug: 'impressao-sacolinha-cliente', label: 'Impressão Sacol. Cliente',  category: 'Operações',  icon: 'shopping_bag',   order_index: 50 },
+  { slug: 'etiquetas',                   label: 'Etiquetas',                 category: 'Operações',  icon: 'label',          order_index: 55 },
+  { slug: 'cobrancas',                   label: 'Cobranças',                 category: 'Financeiro', icon: 'payments',       order_index: 60 },
+]
+
 function isMissingResource(error) {
   if (!error) return false
   return error.code === 'PGRST205' || error.code === '42P01' || error.status === 404
@@ -132,6 +145,43 @@ export async function createPage(tenantId, page) {
     return { data: null, error: null }
   }
   return result
+}
+
+// Lista todas as empresas (para o master gerenciar)
+export async function getAllTenants() {
+  const { data, error } = await supabase
+    .from('configuracoes')
+    .select('tenant_id, nome_loja')
+    .order('nome_loja')
+  return { data: data || [], error }
+}
+
+// Sincroniza quais páginas uma empresa pode usar (master)
+export async function saveTenantPages(tenantId, slugs) {
+  const { data: current } = await supabase
+    .from('pages').select('id, slug').eq('tenant_id', tenantId)
+
+  const currentMap = new Map((current || []).map(p => [p.slug, p.id]))
+  const currentSlugs = new Set(currentMap.keys())
+  const newSlugs = new Set(slugs)
+
+  const toRemoveSlugs = [...currentSlugs].filter(s => !newSlugs.has(s))
+  const toRemoveIds   = toRemoveSlugs.map(s => currentMap.get(s)).filter(Boolean)
+  const toAddSlugs    = [...newSlugs].filter(s => !currentSlugs.has(s))
+
+  if (toRemoveIds.length > 0) {
+    await supabase.from('pages_access').delete().in('page_id', toRemoveIds)
+    await supabase.from('pages').delete().eq('tenant_id', tenantId).in('slug', toRemoveSlugs)
+  }
+
+  if (toAddSlugs.length > 0) {
+    const rows = toAddSlugs.map(slug => {
+      const p = ALL_PAGES.find(x => x.slug === slug)
+      return { tenant_id: tenantId, slug, label: p?.label || slug, category: p?.category || '', icon: p?.icon || '', order_index: p?.order_index || 99 }
+    })
+    const { error } = await supabase.from('pages').insert(rows)
+    if (error) throw error
+  }
 }
 
 // Cria perfil automático para usuários que entram pela primeira vez via Google OAuth

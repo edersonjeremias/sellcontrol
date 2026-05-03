@@ -18,6 +18,7 @@ import RastreioPage from './pages/rastreio/RastreioPage'
 import ImpressaoSacolinhaPage from './pages/impressao/ImpressaoSacolinhaPage'
 import ImpressaoPedidosPage          from './pages/impressao/ImpressaoPedidosPage'
 import ImpressaoSacolinhaClientePage from './pages/impressao/ImpressaoSacolinhaClientePage'
+import EtiquetasPage                 from './pages/impressao/EtiquetasPage'
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/impressao-sacolinha" element={<RequireAuth><ImpressaoSacolinhaPage /></RequireAuth>} />
             <Route path="/impressao-pedidos"          element={<RequireAuth><ImpressaoPedidosPage /></RequireAuth>} />
             <Route path="/impressao-sacolinha-cliente" element={<RequireAuth><ImpressaoSacolinhaClientePage /></RequireAuth>} />
+            <Route path="/etiquetas" element={<RequireAuth><EtiquetasPage /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>

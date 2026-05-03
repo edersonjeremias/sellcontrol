@@ -46,7 +46,7 @@ export default function AutocompleteInput({
     onChange(item)
     setOpen(false)
     setActiveIdx(-1)
-    onSelect?.(item)
+    onSelect?.(item, inputRef.current)  // passa o elemento DOM junto com o valor
   }
 
   function handleKeyDown(e) {

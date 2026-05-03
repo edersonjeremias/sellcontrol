@@ -6,6 +6,9 @@ import {
   getConfig, saveConfig, invalidateMpTokenCache,
   getUsuarios, updateUsuarioRole, ROLES,
 } from '../../services/configService'
+import {
+  getTenantPages, getUserPageIds, saveUserPageAccess,
+} from '../../services/authService'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -244,15 +247,20 @@ function AbaConfiguracoes({ tenantId, showToast }) {
 
 // ── Aba: Usuários ──────────────────────────────────────────────
 function AbaUsuarios({ tenantId, profileAtual, showToast }) {
-  const [usuarios, setUsuarios]     = useState([])
-  const [salvando, setSalvando]     = useState(null)
-  const [showForm, setShowForm]     = useState(false)
-  const [criando, setCriando]       = useState(false)
-  const [form, setForm]             = useState({ nome: '', email: '', password: '', role: 'vendedor' })
+  const [usuarios,     setUsuarios]     = useState([])
+  const [salvando,     setSalvando]     = useState(null)
+  const [showForm,     setShowForm]     = useState(false)
+  const [criando,      setCriando]      = useState(false)
+  const [form,         setForm]         = useState({ nome: '', email: '', password: '', role: 'vendedor' })
+  const [tenantPages,  setTenantPages]  = useState([])   // páginas disponíveis na empresa
+  const [paginasOpen,  setPaginasOpen]  = useState(null) // userId com painel de páginas aberto
+  const [userPageIds,  setUserPageIds]  = useState([])
+  const [salvandoPag,  setSalvandoPag]  = useState(false)
 
   useEffect(() => {
     if (!tenantId) return
     getUsuarios(tenantId).then(setUsuarios)
+    getTenantPages(tenantId).then(({ data }) => setTenantPages(data || []))
   }, [tenantId])
 
   async function mudarRole(userId, novoRole) {
@@ -268,6 +276,32 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
       showToast('Erro: ' + e.message, 'error')
     } finally {
       setSalvando(null)
+    }
+  }
+
+  async function abrirPaginas(userId) {
+    if (paginasOpen === userId) { setPaginasOpen(null); return }
+    const { data } = await getUserPageIds(userId)
+    setUserPageIds(data || [])
+    setPaginasOpen(userId)
+  }
+
+  function togglePagina(pageId) {
+    setUserPageIds(prev =>
+      prev.includes(pageId) ? prev.filter(id => id !== pageId) : [...prev, pageId]
+    )
+  }
+
+  async function salvarPaginas(userId) {
+    setSalvandoPag(true)
+    try {
+      await saveUserPageAccess(userId, tenantId, userPageIds)
+      showToast('Páginas do usuário salvas!')
+      setPaginasOpen(null)
+    } catch (e) {
+      showToast('Erro: ' + e.message, 'error')
+    } finally {
+      setSalvandoPag(false)
     }
   }
 
@@ -340,12 +374,9 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
               </select>
             </div>
           </div>
-          <button
-            className="btn-acao btn-green"
+          <button className="btn-acao btn-green"
             style={{ width: '100%', minHeight: 40, fontSize: 14, color: '#171717', fontWeight: 700 }}
-            onClick={criarUsuario}
-            disabled={criando}
-          >
+            onClick={criarUsuario} disabled={criando}>
             {criando ? 'Criando…' : 'Criar Usuário'}
           </button>
         </div>
@@ -356,34 +387,106 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
         <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 30 }}>Nenhum usuário encontrado</div>
       )}
 
-      {usuarios.map(u => (
-        <div
-          key={u.id}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            background: 'var(--card-bg)', borderRadius: 8,
-            padding: '10px 14px', marginBottom: 8,
-            border: u.id === profileAtual?.id ? '1px solid rgba(59,130,246,0.3)' : '1px solid var(--border-light)',
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {u.nome || u.email}
-              {u.id === profileAtual?.id && <span style={{ fontSize: 11, color: 'var(--blue)', marginLeft: 8 }}>(você)</span>}
+      {usuarios.map(u => {
+        const isMaster = u.role === 'master'
+        const isOpen   = paginasOpen === u.id
+        return (
+          <div key={u.id} style={{ marginBottom: 8 }}>
+            {/* Linha do usuário */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: 'var(--card-bg)', borderRadius: isOpen ? '8px 8px 0 0' : 8,
+              padding: '10px 14px',
+              border: u.id === profileAtual?.id ? '1px solid rgba(59,130,246,0.3)' : '1px solid var(--border-light)',
+              borderBottom: isOpen ? 'none' : undefined,
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {u.nome || u.email}
+                  {u.id === profileAtual?.id && <span style={{ fontSize: 11, color: 'var(--blue)', marginLeft: 8 }}>(você)</span>}
+                </div>
+                {u.email && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</div>}
+              </div>
+
+              {/* Role: badge para master, select para os demais */}
+              {isMaster ? (
+                <span style={{
+                  padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700,
+                  background: 'rgba(197,138,249,.15)', color: 'var(--purple)',
+                  border: '1px solid rgba(197,138,249,.3)',
+                }}>Master</span>
+              ) : (
+                <select
+                  value={u.role || 'admin'}
+                  onChange={e => mudarRole(u.id, e.target.value)}
+                  disabled={salvando === u.id}
+                  style={{ ...SI, width: 130, height: 34, padding: '0 8px', fontSize: 13 }}
+                >
+                  {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              )}
+
+              {/* Botão páginas — apenas para não-master */}
+              {!isMaster && (
+                <button
+                  onClick={() => abrirPaginas(u.id)}
+                  style={{
+                    height: 34, padding: '0 12px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                    border: '1px solid var(--border-light)', background: isOpen ? 'rgba(138,180,248,.15)' : 'transparent',
+                    color: isOpen ? 'var(--blue)' : 'var(--muted)', cursor: 'pointer', whiteSpace: 'nowrap',
+                  }}>
+                  Páginas {isOpen ? '▲' : '▼'}
+                </button>
+              )}
+
+              {salvando === u.id && <span style={{ fontSize: 12, color: 'var(--muted)' }}>…</span>}
             </div>
-            {u.email && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</div>}
+
+            {/* Painel de páginas */}
+            {isOpen && (
+              <div style={{
+                background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+                borderTop: '1px solid rgba(138,180,248,.2)',
+                borderRadius: '0 0 8px 8px', padding: '14px 14px 12px',
+              }}>
+                {tenantPages.length === 0 ? (
+                  <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>
+                    Esta empresa ainda não tem páginas configuradas. Acesse <strong>Master → Empresas → Páginas por Empresa</strong> para configurar.
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
+                      Marque as páginas que <strong style={{ color: 'var(--text-body)' }}>{u.nome}</strong> poderá acessar:
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6, marginBottom: 12 }}>
+                      {tenantPages.map(p => (
+                        <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '5px 6px', borderRadius: 5 }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <input type="checkbox"
+                            checked={userPageIds.includes(p.id)}
+                            onChange={() => togglePagina(p.id)}
+                            style={{ accentColor: 'var(--blue)', width: 15, height: 15, cursor: 'pointer' }} />
+                          <span style={{ fontSize: 13, color: 'var(--text-body)' }}>{p.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <button className="btn-acao btn-blue"
+                      onClick={() => salvarPaginas(u.id)} disabled={salvandoPag}
+                      style={{ height: 34, padding: '0 18px', fontSize: 13, color: '#171717', fontWeight: 700 }}>
+                      {salvandoPag ? 'Salvando…' : 'Salvar Páginas'}
+                    </button>
+                    <button onClick={() => setPaginasOpen(null)}
+                      style={{ marginLeft: 8, height: 34, padding: '0 14px', borderRadius: 6, border: '1px solid var(--border-light)', background: 'transparent', color: 'var(--muted)', fontSize: 13, cursor: 'pointer' }}>
+                      Cancelar
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-          <select
-            value={u.role || 'admin'}
-            onChange={e => mudarRole(u.id, e.target.value)}
-            disabled={salvando === u.id}
-            style={{ ...SI, width: 130, height: 34, padding: '0 8px', fontSize: 13 }}
-          >
-            {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-          </select>
-          {salvando === u.id && <span style={{ fontSize: 12, color: 'var(--muted)' }}>…</span>}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

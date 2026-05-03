@@ -13,6 +13,7 @@ const DEFAULT_PAGES = [
   { slug: 'impressao-sacolinha', label: 'Impressão Sacolinha', category: 'Operações', icon: 'local_offer',    order_index: 40 },
   { slug: 'impressao-pedidos',           label: 'Impressão Pedidos',          category: 'Operações', icon: 'receipt_long',   order_index: 45 },
   { slug: 'impressao-sacolinha-cliente', label: 'Impressão Sacol. Cliente',   category: 'Operações', icon: 'shopping_bag',   order_index: 50 },
+  { slug: 'etiquetas',                  label: 'Etiquetas',                  category: 'Operações', icon: 'label',          order_index: 55 },
 ]
 
 export function AuthProvider({ children }) {
