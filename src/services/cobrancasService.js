@@ -212,15 +212,73 @@ export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live,
 
 // ── Dividir Pagamento ──────────────────────────────────────────
 
-export async function dividirPagamento(idCobranca, valorParte1) {
+export async function dividirPagamento(cobranca, valorParte1, tenantId) {
+  const total = Number(cobranca.total)
+  const v1 = parseFloat(parseFloat(String(valorParte1).replace(',', '.')).toFixed(2))
+  const v2 = parseFloat((total - v1).toFixed(2))
+
+  if (v1 <= 0 || v2 <= 0 || v1 >= total) {
+    throw new Error('Valor inválido para divisão')
+  }
+
+  const MP_TOKEN = await getMpToken(tenantId || import.meta.env.VITE_TENANT_ID)
+  if (!MP_TOKEN) throw new Error('Token do Mercado Pago não configurado. Acesse Configurações.')
+
+  const WEBHOOK_URL = 'https://gtsdgkalolqzjmmwtvdv.supabase.co/functions/v1/mercadopago-webhook'
+  const clienteSlug = String(cobranca.cliente).toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+
+  async function criarPref(valor, parte) {
+    const payload = {
+      items: [{
+        title: `Pedido-${String(cobranca.cliente).split(' ')[0]}-P${parte}`,
+        quantity: 1, currency_id: 'BRL',
+        unit_price: parseFloat(Number(valor).toFixed(2)),
+      }],
+      payer: {
+        name: cobranca.cliente,
+        email: `${clienteSlug}@vmkids.com.br`,
+      },
+      external_reference: `${cobranca.id}-P${parte}`,
+      notification_url: WEBHOOK_URL,
+      back_urls: {
+        success: `https://sellcontrol.vercel.app/recibo/${cobranca.id}`,
+        failure:  `https://sellcontrol.vercel.app/recibo/${cobranca.id}`,
+        pending:  `https://sellcontrol.vercel.app/recibo/${cobranca.id}`,
+      },
+      auto_return: 'approved',
+    }
+    const resp = await fetch('/api/mercadopago/checkout/preferences', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${MP_TOKEN.trim()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const text = await resp.text()
+    let json = {}
+    try { if (text) json = JSON.parse(text) } catch { /* ignore */ }
+    if (!resp.ok) {
+      if (resp.status === 403) throw new Error('Acesso Negado (403). Verifique seu Token no Mercado Pago.')
+      throw new Error(json.message || `Erro ${resp.status} no Mercado Pago`)
+    }
+    if (!json.init_point) throw new Error('Link não retornado pelo Mercado Pago')
+    return { link: json.init_point, id_mp: String(json.id) }
+  }
+
+  const [pref1, pref2] = await Promise.all([criarPref(v1, 1), criarPref(v2, 2)])
+
+  const dados_divisao = {
+    link_p1: pref1.link, valor_p1: v1, status_p1: 'PENDENTE', id_mp_pref_p1: pref1.id_mp,
+    link_p2: pref2.link, valor_p2: v2, status_p2: 'PENDENTE', id_mp_pref_p2: pref2.id_mp,
+  }
+
   const resp = await fetch('/api/dividir-pagamento', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ idCobranca, valorParte1 }),
+    body: JSON.stringify({ idCobranca: cobranca.id, dados_divisao }),
   })
-  const data = await resp.json()
-  if (!resp.ok) throw new Error(data.error || 'Erro ao dividir pagamento')
-  return data
+  const result = await resp.json()
+  if (!resp.ok) throw new Error(result.error || 'Erro ao salvar divisão no banco')
+  return { dados_divisao }
 }
 
 // ── Lives e Clientes ───────────────────────────────────────────

@@ -444,7 +444,7 @@ export default function CobrancasPage() {
     }
     setDividindo(true)
     try {
-      const { dados_divisao } = await dividirPagamento(sel.id, v1)
+      const { dados_divisao } = await dividirPagamento(sel, v1, tenantId)
       const at = { ...sel, dados_divisao }
       setSel(at)
       setCobrancas(prev => prev.map(c => c.id === sel.id ? at : c))
