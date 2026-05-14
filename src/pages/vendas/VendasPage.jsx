@@ -311,17 +311,21 @@ export default function VendasPage() {
 
   const novo = useCallback(() => {
     if (busy) return
-    const primeira = linhasRef.current.find(l => !l.deleted)
-    if (primeira) {
-      const vazia = !primeira.produto && !primeira.modelo && !primeira.cor &&
-        !primeira.marca && !primeira.preco && !primeira.cliente_nome
-      if (vazia) { scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); return }
-    }
-    const nl = novaLinha()
-    novoProdutoFocus.current = true
-    setLinhas(prev => [nl, ...prev])
+    setLinhas(prev => {
+      const primeira = prev.find(l => !l.deleted)
+      if (primeira) {
+        const vazia = !primeira.produto && !primeira.modelo && !primeira.cor &&
+          !primeira.marca && !primeira.preco && !primeira.cliente_nome
+        if (vazia) {
+          setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
+          return prev
+        }
+      }
+      novoProdutoFocus.current = true
+      setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
+      return [novaLinha(), ...prev]
+    })
     setPronto(true)
-    setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
   }, [busy])
 
   // Adiciona nova linha ao FINAL sem scroll — chamado quando usuário dá Enter na última linha
@@ -359,6 +363,10 @@ export default function VendasPage() {
           lastRealtimeKeyRef.current = realtimeKey
 
           if (novoCliente && !antigoCliente) {
+            // Ignora atualização do próprio auto-save (evita re-render/flash desnecessário)
+            const existingRow = linhasRef.current.find(l => l.id === payload.new?.id)
+            if (existingRow?.cliente_nome?.trim() === novoCliente) return
+
             setLinhas(prev => {
               const idx = prev.findIndex(l => l.id === payload.new?.id)
               if (idx < 0) return prev
@@ -466,13 +474,11 @@ export default function VendasPage() {
     if (!dl || !ln.trim()) {
       showToast('Preencha a Data e a Live antes de salvar.', 'error'); return
     }
-    const temDados = !!(
-      l.produto?.trim() || l.modelo?.trim() || l.cor?.trim() ||
-      l.marca?.trim() || l.tamanho?.trim() || l.preco?.trim() ||
-      l.codigo?.trim() || l.cliente_nome?.trim()
-    )
-    if (!temDados) {
-      showToast('Linha vazia, nada para salvar.', 'info'); return
+    if (!l.cliente_nome?.trim()) {
+      showToast('Preencha o nome do Cliente antes de enviar.', 'error'); return
+    }
+    if (!l.preco?.trim()) {
+      showToast('Preencha o Preço antes de enviar.', 'error'); return
     }
     try {
       const tid = tenantIdRef.current
@@ -571,8 +577,10 @@ export default function VendasPage() {
         setConfirmacao(null); setBusy(true, 'Finalizando live...')
         try {
           const res = await finalizarLive(tenantId, linhasRef.current, dataLive, liveNome)
-          showToast(`✅ ${res.movidos} vendas confirmadas!`, 'success')
-          setHasUnsaved(false); await buscar()
+          showToast(`✅ ${res.movidos} vendas confirmadas! Mesa limpa para a próxima live.`, 'success')
+          setHasUnsaved(false)
+          setLinhas([])
+          setTabelaMsg('Live finalizada. Clique em + Novo para começar ou Buscar para carregar registros.')
         } catch (err) {
           console.error('Erro ao finalizar live:', err)
           const msg = err?.message || String(err) || 'Tente novamente.'
