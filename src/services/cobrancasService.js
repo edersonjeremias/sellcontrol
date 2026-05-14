@@ -210,6 +210,19 @@ export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live,
   return { link: json.init_point, id_mp: json.id }
 }
 
+// ── Dividir Pagamento ──────────────────────────────────────────
+
+export async function dividirPagamento(idCobranca, valorParte1) {
+  const resp = await fetch('/api/dividir-pagamento', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idCobranca, valorParte1 }),
+  })
+  const data = await resp.json()
+  if (!resp.ok) throw new Error(data.error || 'Erro ao dividir pagamento')
+  return data
+}
+
 // ── Lives e Clientes ───────────────────────────────────────────
 export async function getLivesParaCobranca(tenantId) {
   const t = tid(tenantId)

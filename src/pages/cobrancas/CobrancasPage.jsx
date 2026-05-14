@@ -8,7 +8,7 @@ import {
   getLivesParaCobranca, getClientesParaCobranca,
   getSaldoCliente, abaterCredito,
   buscarVendasParaCobranca, gerarPreferenciaMp,
-  sincronizarCobrancaComVendas,
+  sincronizarCobrancaComVendas, dividirPagamento,
 } from '../../services/cobrancasService'
 
 // ── Constantes ─────────────────────────────────────────────────
@@ -152,6 +152,11 @@ export default function CobrancasPage() {
 
   // Modal confirmação
   const [confirm, setConfirm] = useState(null)  // { msg, onSim }
+
+  // Modal dividir pagamento
+  const [showDividir,    setShowDividir]    = useState(false)
+  const [divValorP1,     setDivValorP1]     = useState('')
+  const [dividindo,      setDividindo]      = useState(false)
 
   // ── Carga de dados ─────────────────────────────────────────
   const carregar = useCallback(async () => {
@@ -430,6 +435,29 @@ export default function CobrancasPage() {
     carregar()
   }
 
+  // ── Dividir pagamento ──────────────────────────────────────
+  async function executarDivisao() {
+    if (!sel || !divValorP1) { showToast('Informe o valor da Parte 1', 'error'); return }
+    const v1 = parseFloat(String(divValorP1).replace(',', '.'))
+    if (isNaN(v1) || v1 <= 0 || v1 >= Number(sel.total)) {
+      showToast('Valor inválido. Deve ser maior que zero e menor que o total.', 'error'); return
+    }
+    setDividindo(true)
+    try {
+      const { dados_divisao } = await dividirPagamento(sel.id, v1)
+      const at = { ...sel, dados_divisao }
+      setSel(at)
+      setCobrancas(prev => prev.map(c => c.id === sel.id ? at : c))
+      setShowDividir(false)
+      setDivValorP1('')
+      showToast('Pagamento dividido! Dois links gerados.')
+    } catch (e) {
+      showToast('Erro: ' + e.message, 'error')
+    } finally {
+      setDividindo(false)
+    }
+  }
+
   // ── Render ─────────────────────────────────────────────────
   const itens = sel ? (Array.isArray(sel.itens) ? sel.itens : []) : []
 
@@ -641,6 +669,15 @@ export default function CobrancasPage() {
                 </button>
               )}
 
+              {/* Dividir pagamento — só para pendentes */}
+              {sel.status !== 'PAGO' && sel.status !== 'BAIXADO' && sel.status !== 'CANCELADO' && (
+                <button
+                  onClick={() => { setDivValorP1(''); setShowDividir(true) }}
+                  style={{ width: '100%', height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'rgba(110,63,217,0.12)', color: '#a78bfa', border: '1px solid rgba(110,63,217,0.35)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
+                  ✂️ Dividir Pagamento em 2 Partes
+                </button>
+              )}
+
               {/* Baixar / Excluir */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <button className="btn-acao btn-blue" style={{ minHeight: 38, fontSize: 13, color: '#171717' }} onClick={() => baixar(sel)}>
@@ -810,6 +847,63 @@ export default function CobrancasPage() {
               </div>
               <button className="btn-acao btn-green" style={{ width: '100%', minHeight: 46, fontSize: 14, color: '#171717' }} onClick={aplicarDesconto} disabled={aplicandoDesc}>
                 {aplicandoDesc ? 'Aplicando…' : 'Aplicar e Recalcular'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          MODAL: DIVIDIR PAGAMENTO
+      ══════════════════════════════════════════════════════ */}
+      {showDividir && sel && (
+        <div className="modal-overlay" style={{ zIndex: 11000 }} onClick={() => setShowDividir(false)}>
+          <div className="modal-card" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: 'rgba(110,63,217,0.1)', borderBottom: '1px solid rgba(110,63,217,0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: '#a78bfa', fontSize: 15 }}>✂️ Dividir Pagamento</h3>
+              <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1 }} onClick={() => setShowDividir(false)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ paddingBottom: 20 }}>
+              <div style={{ textAlign: 'center', padding: '10px 12px', background: '#1a1a1a', borderRadius: 6, marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>Total da cobrança</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--green)' }}>{formatMoeda(sel.total)}</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{sel.cliente}</div>
+              </div>
+
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Valor da Parte 1 (R$)</label>
+                <input
+                  type="number"
+                  value={divValorP1}
+                  onChange={e => setDivValorP1(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && executarDivisao()}
+                  placeholder="Ex: 50.00"
+                  step="0.01" min="0.01"
+                  style={SI}
+                  autoFocus
+                />
+              </div>
+
+              {divValorP1 && !isNaN(parseFloat(String(divValorP1).replace(',', '.'))) && parseFloat(String(divValorP1).replace(',', '.')) > 0 && parseFloat(String(divValorP1).replace(',', '.')) < Number(sel.total) && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 14, padding: '8px 10px', background: '#1a1a1a', borderRadius: 6 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: '#a78bfa' }}>Parte 1</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-body)' }}>{formatMoeda(parseFloat(String(divValorP1).replace(',', '.')))}</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: '#a78bfa' }}>Parte 2</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-body)' }}>{formatMoeda(parseFloat((Number(sel.total) - parseFloat(String(divValorP1).replace(',', '.'))).toFixed(2)))}</div>
+                  </div>
+                </div>
+              )}
+
+              <button
+                className="btn-acao"
+                style={{ width: '100%', minHeight: 46, fontSize: 14, background: '#6e3fd9', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}
+                onClick={executarDivisao}
+                disabled={dividindo}
+              >
+                {dividindo ? 'Gerando links…' : '✂️ Gerar 2 Links de Pagamento'}
               </button>
             </div>
           </div>

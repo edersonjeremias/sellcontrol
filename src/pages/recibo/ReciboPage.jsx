@@ -46,10 +46,13 @@ export default function ReciboPage() {
     </div>
   )
 
-  const itens  = Array.isArray(cob.itens) ? cob.itens : []
+  const itens       = Array.isArray(cob.itens) ? cob.itens : []
   const statusCor   = STATUS_COR[cob.status]   || '#9aa0a6'
   const statusLabel = STATUS_LABEL[cob.status] || cob.status
   const pago        = cob.status === 'PAGO' || cob.status === 'BAIXADO'
+  const div         = cob.dados_divisao || null
+  const div_p1_pago = div?.status_p1 === 'PAGO'
+  const div_p2_pago = div?.status_p2 === 'PAGO'
 
   return (
     <div style={estilos.pagina}>
@@ -95,8 +98,39 @@ export default function ReciboPage() {
           <span style={{ fontSize: 28, fontWeight: 800, color: '#81c995' }}>{formatMoeda(cob.total)}</span>
         </div>
 
-        {/* Botão de pagamento */}
-        {!pago && cob.link_mp && cob.link_mp !== 'Pago com Crédito' && (
+        {/* Pagamento dividido */}
+        {!pago && div && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
+            <div style={{ fontSize: 12, color: '#9aa0a6', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Pagamento dividido em 2 partes
+            </div>
+
+            {/* Parte 1 */}
+            {div_p1_pago ? (
+              <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(129,201,149,0.12)', borderRadius: 8, border: '1px solid rgba(129,201,149,0.3)', color: '#81c995', fontWeight: 700, fontSize: 14 }}>
+                ✅ Parte 1 — R$ {Number(div.valor_p1).toFixed(2).replace('.', ',')} — Pago
+              </div>
+            ) : (
+              <a href={div.link_p1} target="_blank" rel="noopener noreferrer" style={{ ...estilos.btnPagar, background: '#009ee3', marginBottom: 0 }}>
+                💳 Pagar Parte 1 — R$ {Number(div.valor_p1).toFixed(2).replace('.', ',')}
+              </a>
+            )}
+
+            {/* Parte 2 */}
+            {div_p2_pago ? (
+              <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(129,201,149,0.12)', borderRadius: 8, border: '1px solid rgba(129,201,149,0.3)', color: '#81c995', fontWeight: 700, fontSize: 14 }}>
+                ✅ Parte 2 — R$ {Number(div.valor_p2).toFixed(2).replace('.', ',')} — Pago
+              </div>
+            ) : (
+              <a href={div.link_p2} target="_blank" rel="noopener noreferrer" style={{ ...estilos.btnPagar, background: '#6e3fd9', marginBottom: 0 }}>
+                💳 Pagar Parte 2 — R$ {Number(div.valor_p2).toFixed(2).replace('.', ',')}
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* Botão de pagamento simples (não dividido) */}
+        {!pago && !div && cob.link_mp && cob.link_mp !== 'Pago com Crédito' && (
           <a
             href={cob.link_mp}
             target="_blank"
@@ -113,7 +147,7 @@ export default function ReciboPage() {
           </div>
         )}
 
-        {!pago && (!cob.link_mp || cob.link_mp === 'Pago com Crédito') && (
+        {!pago && !div && (!cob.link_mp || cob.link_mp === 'Pago com Crédito') && (
           <div style={{ textAlign: 'center', padding: '14px', background: 'rgba(251,188,4,0.1)', borderRadius: 8, border: '1px solid rgba(251,188,4,0.3)', color: '#fbbc04', fontWeight: 600, fontSize: 14 }}>
             Aguardando processamento do link de pagamento
           </div>

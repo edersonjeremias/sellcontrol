@@ -32,9 +32,6 @@ export default async function handler(req, res) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-    // Busca a cobrança pelo external_reference para pegar o tenant_id
-    // (será preenchido depois de consultar o MP)
-    // Primeiro consulta o MP com token padrão do env
     let MP_TOKEN = process.env.MP_ACCESS_TOKEN
 
     const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
@@ -49,47 +46,68 @@ export default async function handler(req, res) {
     const paymentData = await mpResp.json()
 
     if (paymentData.status === 'approved' && paymentData.external_reference) {
-      const cobrancaId = paymentData.external_reference
-
-      // Busca o tenant_id da cobrança para pegar o token correto
-      const { data: cobranca } = await supabase
-        .from('cobrancas')
-        .select('tenant_id')
-        .eq('id', cobrancaId)
-        .maybeSingle()
-
-      // Se o tenant tem token próprio, re-consulta com ele (confirma autenticidade)
-      if (cobranca?.tenant_id) {
-        const { data: cfg } = await supabase
-          .from('configuracoes')
-          .select('mp_access_token')
-          .eq('tenant_id', cobranca.tenant_id)
-          .maybeSingle()
-
-        if (cfg?.mp_access_token?.trim()) {
-          MP_TOKEN = cfg.mp_access_token.trim()
-        }
-      }
-
-      const valorBruto   = paymentData.transaction_amount
+      const extRef = paymentData.external_reference
       const valorLiquido = paymentData.transaction_details?.net_received_amount ?? 0
       const dataPagamento = paymentData.date_approved
         ? new Date(paymentData.date_approved).toISOString()
         : new Date().toISOString()
 
-      const { error } = await supabase
-        .from('cobrancas')
-        .update({
-          status: 'PAGO',
-          data_pagamento: dataPagamento,
-          id_mp: String(paymentId),
-          valor_liquido: valorLiquido,
-        })
-        .eq('id', cobrancaId)
-        .neq('status', 'PAGO')
+      // Detecta pagamento dividido: external_reference termina em -P1 ou -P2
+      const splitMatch = String(extRef).match(/^(.+)-(P[12])$/)
 
-      if (error) console.error('Erro Supabase:', error)
-      else console.log(`Cobrança ${cobrancaId} PAGA! Bruto: ${valorBruto} | Líquido: ${valorLiquido}`)
+      if (splitMatch) {
+        const cobrancaId = splitMatch[1]
+        const parte = splitMatch[2]
+
+        console.log(`Split payment detectado: ${parte} da cobrança ${cobrancaId}`)
+
+        const { error: rpcErr } = await supabase.rpc('process_split_payment', {
+          p_cobranca_id:    cobrancaId,
+          p_parte:          parte,
+          p_payment_id:     String(paymentId),
+          p_valor_liquido:  valorLiquido,
+          p_data_pagamento: dataPagamento,
+        })
+
+        if (rpcErr) console.error('Erro RPC split payment:', rpcErr)
+        else console.log(`Split ${parte} da cobrança ${cobrancaId} processado`)
+
+      } else {
+        // Pagamento normal
+        const cobrancaId = extRef
+
+        const { data: cobranca } = await supabase
+          .from('cobrancas')
+          .select('tenant_id')
+          .eq('id', cobrancaId)
+          .maybeSingle()
+
+        if (cobranca?.tenant_id) {
+          const { data: cfg } = await supabase
+            .from('configuracoes')
+            .select('mp_access_token')
+            .eq('tenant_id', cobranca.tenant_id)
+            .maybeSingle()
+
+          if (cfg?.mp_access_token?.trim()) {
+            MP_TOKEN = cfg.mp_access_token.trim()
+          }
+        }
+
+        const { error } = await supabase
+          .from('cobrancas')
+          .update({
+            status: 'PAGO',
+            data_pagamento: dataPagamento,
+            id_mp: String(paymentId),
+            valor_liquido: valorLiquido,
+          })
+          .eq('id', cobrancaId)
+          .neq('status', 'PAGO')
+
+        if (error) console.error('Erro Supabase:', error)
+        else console.log(`Cobrança ${cobrancaId} PAGA! Líquido: ${valorLiquido}`)
+      }
     }
 
     return res.status(200).json({ received: true })

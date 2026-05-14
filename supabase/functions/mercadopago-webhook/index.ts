@@ -34,10 +34,8 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Token padrão do env (fallback)
     let MP_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
 
-    // Consulta o pagamento no MP com token padrão primeiro
     const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: { 'Authorization': `Bearer ${MP_TOKEN}` }
     })
@@ -50,39 +48,68 @@ serve(async (req) => {
     const paymentData = await mpResp.json()
 
     if (paymentData.status === 'approved' && paymentData.external_reference) {
-      const cobrancaId = paymentData.external_reference
+      const extRef = paymentData.external_reference
+      const valorLiquido = paymentData.transaction_details?.net_received_amount ?? 0
+      const dataPagamento = paymentData.date_approved
+        ? new Date(paymentData.date_approved).toISOString()
+        : new Date().toISOString()
 
-      // Busca o tenant para usar o token correto da configuração
-      const { data: cobranca } = await supabase
-        .from('cobrancas')
-        .select('tenant_id')
-        .eq('id', cobrancaId)
-        .maybeSingle()
+      // Detecta pagamento dividido: external_reference termina em -P1 ou -P2
+      const splitMatch = String(extRef).match(/^(.+)-(P[12])$/)
 
-      if (cobranca?.tenant_id) {
-        const { data: cfg } = await supabase
-          .from('configuracoes')
-          .select('mp_access_token')
-          .eq('tenant_id', cobranca.tenant_id)
+      if (splitMatch) {
+        const cobrancaId = splitMatch[1]
+        const parte = splitMatch[2]
+
+        console.log(`Split payment detectado: ${parte} da cobrança ${cobrancaId}`)
+
+        const { error: rpcErr } = await supabase.rpc('process_split_payment', {
+          p_cobranca_id:    cobrancaId,
+          p_parte:          parte,
+          p_payment_id:     String(paymentId),
+          p_valor_liquido:  valorLiquido,
+          p_data_pagamento: dataPagamento,
+        })
+
+        if (rpcErr) console.error('Erro RPC split payment:', rpcErr)
+        else console.log(`Split ${parte} da cobrança ${cobrancaId} processado`)
+
+      } else {
+        // Pagamento normal
+        const cobrancaId = extRef
+
+        const { data: cobranca } = await supabase
+          .from('cobrancas')
+          .select('tenant_id')
+          .eq('id', cobrancaId)
           .maybeSingle()
 
-        if (cfg?.mp_access_token?.trim()) {
-          MP_TOKEN = cfg.mp_access_token.trim()
+        if (cobranca?.tenant_id) {
+          const { data: cfg } = await supabase
+            .from('configuracoes')
+            .select('mp_access_token')
+            .eq('tenant_id', cobranca.tenant_id)
+            .maybeSingle()
+
+          if (cfg?.mp_access_token?.trim()) {
+            MP_TOKEN = cfg.mp_access_token.trim()
+          }
         }
+
+        const { error } = await supabase
+          .from('cobrancas')
+          .update({
+            status: 'PAGO',
+            data_pagamento: dataPagamento,
+            id_mp: String(paymentId),
+            valor_liquido: valorLiquido,
+          })
+          .eq('id', cobrancaId)
+          .neq('status', 'PAGO')
+
+        if (error) console.error('Erro ao atualizar banco:', error)
+        else console.log(`Pagamento ${paymentId} aprovado — cobrança ${cobrancaId} marcada como PAGA`)
       }
-
-      const { error } = await supabase
-        .from('cobrancas')
-        .update({
-          status: 'PAGO',
-          data_pagamento: new Date().toISOString(),
-          id_mp: String(paymentId)
-        })
-        .eq('id', cobrancaId)
-        .neq('status', 'PAGO')
-
-      if (error) console.error('Erro ao atualizar banco:', error)
-      else console.log(`Pagamento ${paymentId} aprovado — cobrança ${cobrancaId} marcada como PAGA`)
     }
 
     return new Response(JSON.stringify({ received: true }), {
