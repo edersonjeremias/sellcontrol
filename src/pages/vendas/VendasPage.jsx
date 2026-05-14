@@ -878,7 +878,6 @@ export default function VendasPage() {
                 <tbody>
                   {linhas.map((l, idx) => {
                     if (l.deleted || !passaFiltro(l, filtro)) return null
-                    const isLastRow = l._key === visivel[visivel.length - 1]?._key
                     return (
                       <TabelaRow key={l._key || l.id || idx}
                         linha={l} idx={idx} listas={listas}
@@ -886,7 +885,7 @@ export default function VendasPage() {
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
                         onIsBlocked={handleIsBlocked}
-                        onNovoFromRow={isLastRow ? novo : undefined}
+                        onNovoFromRow={novo}
                         onAbrirModal={setModalEdicaoIdx}
                         onAbrirFila={setModalFilaIdx}
                         onEnviar={handleEnviar}

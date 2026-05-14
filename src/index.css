@@ -484,7 +484,7 @@ input[type="date"] { color-scheme: dark; }
 
 /* ── AUTOCOMPLETE ── */
 .autocomplete-wrapper { position: relative; width: 100%; }
-.autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; z-index: 10005; background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 8px; max-height: 220px; overflow-y: auto; margin-top: 4px; padding: 0; list-style: none; box-shadow: var(--shadow); }
+.autocomplete-list { position: absolute; top: 100%; left: 0; min-width: 100%; width: max-content; max-width: 320px; z-index: 10005; background: var(--card-bg); border: 1px solid var(--border-light); border-radius: 8px; max-height: 220px; overflow-y: auto; margin-top: 4px; padding: 0; list-style: none; box-shadow: var(--shadow); }
 .autocomplete-list::-webkit-scrollbar { width: 8px; }
 .autocomplete-list::-webkit-scrollbar-thumb { background: #5f6368; border-radius: 6px; }
 .autocomplete-list li { padding: 8px 12px; cursor: pointer; color: var(--text-body); font-size: 13px; border-bottom: 1px solid var(--border-light); }
@@ -529,7 +529,7 @@ tbody td { padding: 6px 8px; border-bottom: 1px solid var(--table-border); verti
 .linha-enviada .btn-action-sm.undo { display: flex !important; }
 
 /* ── INPUTS DE CÉLULA ── */
-.cell-input { width: 100%; padding: 10px 14px; border: 1px solid var(--input-border); border-radius: 8px; font-size: 0.9rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--input-bg); color: var(--input-text); transition: all 0.2s; }
+.cell-input { width: 100%; padding: 10px 14px; border: 1px solid var(--input-border); border-radius: 8px; font-size: 14px; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--input-bg); color: var(--input-text); transition: all 0.2s; }
 .cell-input:focus { border-color: var(--blue); outline: none; background: #252525; }
 .cell-input.price { text-align: right; color: var(--green); font-weight: 700; }
 .td-sacola { cursor: pointer; transition: background 0.2s; border-radius: 6px; }
