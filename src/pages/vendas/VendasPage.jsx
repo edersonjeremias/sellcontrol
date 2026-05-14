@@ -60,7 +60,7 @@ function calcSacolas(linhas) {
   const usados = new Set()
   const mapa   = {}
   linhas.forEach(l => {
-    if (l.deleted || l.isSent || !l.cliente_nome?.trim()) return
+    if (l.deleted || !l.cliente_nome?.trim()) return   // inclui isSent para reservar seus números
     const c = l.cliente_nome.trim().toLowerCase()
     if (l.sacolinha && !isNaN(l.sacolinha)) {
       usados.add(Number(l.sacolinha))
@@ -148,8 +148,8 @@ export default function VendasPage() {
   const linhasRef    = useRef(linhas)
   const globalDBRef  = useRef(globalDB)
   const busyTimerRef = useRef(null)
-  const autoSaveRef  = useRef(null)
-  const isSavingRef  = useRef(false)
+  const isSavingRef    = useRef(false)
+  const hasUnsavedRef  = useRef(false)
   const dataLiveRef  = useRef(dataLive)
   const liveNomeRef  = useRef(liveNome)
   const tenantIdRef  = useRef(tenantId)
@@ -159,6 +159,7 @@ export default function VendasPage() {
   useEffect(() => { dataLiveRef.current = dataLive },   [dataLive])
   useEffect(() => { liveNomeRef.current = liveNome },   [liveNome])
   useEffect(() => { tenantIdRef.current = tenantId },   [tenantId])
+  useEffect(() => { hasUnsavedRef.current = hasUnsaved }, [hasUnsaved])
 
   // ── setBusy helper ──
   const setBusy = useCallback((v, msg = '') => {
@@ -248,21 +249,22 @@ export default function VendasPage() {
     }, 120)
   }, [linhas])
 
-  // ── triggerAutoSave: reseta o timer a cada chamada (debounce 3s) ──
+  // ── triggerAutoSave: apenas marca que há alterações pendentes ──
   const triggerAutoSave = useCallback(() => {
     setHasUnsaved(true)
-    if (autoSaveRef.current) clearTimeout(autoSaveRef.current)
-    autoSaveRef.current = setTimeout(async () => {
-      const tid = tenantIdRef.current
-      if (!tid || busyRef.current || isSavingRef.current) return
-      
+  }, [])
+
+  // ── Auto-save periódico (1 minuto) ──
+  useEffect(() => {
+    if (!tenantId || !pronto) return
+    const interval = setInterval(async () => {
+      if (!hasUnsavedRef.current || isSavingRef.current || busyRef.current) return
       isSavingRef.current = true
       try {
-        const res = await salvarVendas(tid, linhasRef.current, {
+        const res = await salvarVendas(tenantIdRef.current, linhasRef.current, {
           data_live: dataLiveRef.current || null,
           live_nome: liveNomeRef.current || '',
         })
-        // Atualiza IDs das linhas recém-inseridas para evitar duplicatas
         if (res.novosIds?.length) {
           setLinhas(prev => {
             const queue = [...res.novosIds]
@@ -275,13 +277,15 @@ export default function VendasPage() {
           })
         }
         setHasUnsaved(false)
+        showToast('Salvo', 'success', 1800)
       } catch (err) {
-        console.error('Erro no auto-save:', err)
+        console.error('Erro no auto-save periódico:', err)
       } finally {
         isSavingRef.current = false
       }
-    }, 3000)
-  }, [])
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [tenantId, pronto, showToast])
 
   // ── AÇÕES PRINCIPAIS ──
   const atualizarDados = useCallback(async () => {
@@ -300,11 +304,11 @@ export default function VendasPage() {
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      const rows = await getVendas(tenantId, null, null, { somentePendentes: true, semCliente: true })
+      const rows = await getVendas(tenantId, null, null, { somentePendentes: true })
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
       setHasUnsaved(false)
-      if (!novas.length) setTabelaMsg('Nenhum produto pendente encontrado.')
+      if (!novas.length) setTabelaMsg('Nenhum registro pendente encontrado.')
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
     finally { setBusy(false) }
   }, [tenantId])
@@ -485,7 +489,7 @@ export default function VendasPage() {
       let res
       if (l.cliente_nome?.trim()) {
         res = await enviarVenda(tid, l, dl || null, ln || '')
-        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r))
+        setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r)))
       } else {
         res = await salvarVendas(tid, [l], { data_live: dl || null, live_nome: ln || '' })
         if (!l.id && res.novosIds?.length > 0) {

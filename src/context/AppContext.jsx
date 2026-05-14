@@ -5,10 +5,10 @@ const AppContext = createContext(null)
 
 // ── Toast global simples ──────────────────────────────────────
 let _setToasts = null
-export function showGlobalToast(msg, type = 'success') {
+export function showGlobalToast(msg, type = 'success', duration = 3300) {
   _setToasts?.(prev => {
     const id = Date.now()
-    setTimeout(() => _setToasts?.(p => p.filter(t => t.id !== id)), 3300)
+    setTimeout(() => _setToasts?.(p => p.filter(t => t.id !== id)), duration)
     return [...prev, { id, msg, type }]
   })
 }
@@ -20,7 +20,7 @@ export function AppProvider({ children }) {
   const [lives,      setLives]      = useState([])
   const [bloqueados, setBloqueados] = useState({})
 
-  const showToast = useCallback((msg, type = 'success') => showGlobalToast(msg, type), [])
+  const showToast = useCallback((msg, type = 'success', duration = 3300) => showGlobalToast(msg, type, duration), [])
 
   const carregarDados = useCallback(async () => {
     const [dados] = await Promise.all([ getDadosIniciais() ])
