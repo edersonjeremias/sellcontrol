@@ -128,14 +128,11 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
   if (error) throw error
   let rows = data || []
   if (somentePendentes) {
-    rows = rows.filter((row) => {
-      // Regra de negocio: vendido apenas apos finalizacao (status ENVIADO).
-      const status = String(row.status || '').trim().toUpperCase()
-      
-      // Não puxa se já foi enviado. 
-      // Antigamente filtrava !temCliente, mas isso impedia de carregar itens com cliente que ainda não foram finalizados.
-      return status !== 'ENVIADO'
-    })
+    rows = rows.filter(row => String(row.status || '').trim().toUpperCase() !== 'ENVIADO')
+  }
+  // semCliente: retorna apenas itens sem cliente (produto cadastrado, ainda não vendido)
+  if (opts?.semCliente) {
+    rows = rows.filter(row => !row.cliente_nome?.trim())
   }
 
   return rows.map(row => ({

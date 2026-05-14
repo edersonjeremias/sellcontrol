@@ -186,7 +186,7 @@ const TabelaRow = memo(function TabelaRow({
           {/* Enviar — oculto no histórico */}
           {!linha.isSent && !modoHistorico && (
             <button type="button" className="btn-action-sm send" title="Enviar para o banco"
-              onClick={e => { e.stopPropagation(); onEnviar(idx) }}>
+              onClick={e => { e.stopPropagation(); onEnviar(linha._key) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
               </svg>
@@ -196,7 +196,7 @@ const TabelaRow = memo(function TabelaRow({
           {/* Estornar */}
           {(linha.isSent || modoHistorico) && (
             <button type="button" className="btn-action-sm undo" title="Estornar envio" style={{ display: 'flex' }}
-              onClick={e => { e.stopPropagation(); onEstornar(idx) }}>
+              onClick={e => { e.stopPropagation(); onEstornar(linha._key) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
               </svg>
@@ -206,7 +206,7 @@ const TabelaRow = memo(function TabelaRow({
           {/* Copiar linha */}
           {!linha.isSent && !modoHistorico && (
             <button type="button" className="btn-action-sm copy" title="Copiar linha"
-              onClick={e => { e.stopPropagation(); onCopiar(idx) }}>
+              onClick={e => { e.stopPropagation(); onCopiar(linha._key) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -217,7 +217,7 @@ const TabelaRow = memo(function TabelaRow({
           {/* Excluir */}
           {(!linha.isSent || modoHistorico) && (
             <button type="button" className="btn-action-sm del" title="Excluir linha"
-              onClick={e => { e.stopPropagation(); onExcluir(idx) }}>
+              onClick={e => { e.stopPropagation(); onExcluir(linha._key) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>

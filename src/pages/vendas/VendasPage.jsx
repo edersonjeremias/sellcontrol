@@ -300,14 +300,14 @@ export default function VendasPage() {
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      const rows = await getVendas(tenantId, dataLive || null, liveNome.trim() || null, { somentePendentes: true })
+      const rows = await getVendas(tenantId, null, null, { somentePendentes: true, semCliente: true })
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
       setHasUnsaved(false)
-      if (!novas.length) setTabelaMsg('Nenhum registro pendente encontrado.')
+      if (!novas.length) setTabelaMsg('Nenhum produto pendente encontrado.')
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
     finally { setBusy(false) }
-  }, [tenantId, dataLive, liveNome])
+  }, [tenantId])
 
   const novo = useCallback(() => {
     if (busy) return
@@ -323,6 +323,21 @@ export default function VendasPage() {
     setPronto(true)
     setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
   }, [busy])
+
+  // Adiciona nova linha ao FINAL sem scroll — chamado quando usuário dá Enter na última linha
+  const novoAbaixo = useCallback(() => {
+    const nl = novaLinha()
+    setLinhas(prev => [...prev, nl])
+    setPronto(true)
+    // Foca o primeiro input da nova última linha sem rolar a tela para o topo
+    setTimeout(() => {
+      const rows = document.querySelectorAll('#tabela tbody tr')
+      const lastRow = rows[rows.length - 1]
+      const input = lastRow?.querySelector('td:nth-child(2) .cell-input')
+      input?.focus()
+    }, 80)
+    triggerAutoSave()
+  }, [triggerAutoSave])
 
   useEffect(() => {
     if (!pronto || !tenantId) return
@@ -442,57 +457,52 @@ export default function VendasPage() {
   }, [triggerAutoSave])
 
   // ── SALVAR LINHA (aviãozinho) ──
-  const handleEnviar = useCallback(async (idx) => {
-    const l = linhasRef.current[idx]
+  const handleEnviar = useCallback(async (rowKey) => {
+    const l = linhasRef.current.find(r => r._key === rowKey)
+    if (!l) return
     if (l.isSent) { showToast('Esta venda já foi finalizada!', 'info'); return }
-    if (!dataLive || !liveNome.trim()) {
+    const dl = dataLiveRef.current
+    const ln = liveNomeRef.current
+    if (!dl || !ln.trim()) {
       showToast('Preencha a Data e a Live antes de salvar.', 'error'); return
     }
-    
-    // Verifica se há qualquer dado para salvar
     const temDados = !!(
-      l.produto?.trim() || l.modelo?.trim() || l.cor?.trim() || 
-      l.marca?.trim() || l.tamanho?.trim() || l.preco?.trim() || 
+      l.produto?.trim() || l.modelo?.trim() || l.cor?.trim() ||
+      l.marca?.trim() || l.tamanho?.trim() || l.preco?.trim() ||
       l.codigo?.trim() || l.cliente_nome?.trim()
     )
     if (!temDados) {
       showToast('Linha vazia, nada para salvar.', 'info'); return
     }
-
     try {
-      let res;
+      const tid = tenantIdRef.current
+      let res
       if (l.cliente_nome?.trim()) {
-        res = await enviarVenda(tenantId, l, dataLive || null, liveNome || '')
-        setLinhas(prev => {
-          const n = [...prev]
-          n[idx] = { ...n[idx], id: res.id, isNew: false, isSent: true, status: 'ENVIADO' }
-          return n
-        })
+        res = await enviarVenda(tid, l, dl || null, ln || '')
+        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r))
       } else {
-        res = await salvarVendas(tenantId, [l], { data_live: dataLive || null, live_nome: liveNome || '' })
+        res = await salvarVendas(tid, [l], { data_live: dl || null, live_nome: ln || '' })
         if (!l.id && res.novosIds?.length > 0) {
-          setLinhas(prev => {
-            const n = [...prev]
-            n[idx] = { ...n[idx], id: res.novosIds[0].id, isNew: false }
-            return n
-          })
+          setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.novosIds[0].id, isNew: false } : r))
         }
       }
       setHasUnsaved(false)
     } catch (err) {
       showToast('Erro ao salvar: ' + (err?.message || String(err)), 'error')
     }
-  }, [tenantId, dataLive, liveNome])
+  }, [])
 
-  const handleEstornar = useCallback((idx) => {
+  const handleEstornar = useCallback((rowKey) => {
     setConfirmacao({
       titulo: '↩️ Estornar Venda',
       mensagem: 'Deseja ESTORNAR esta venda?<br><br>Ela voltará a ficar editável.',
       onSim: async () => {
         setConfirmacao(null); setBusy(true, 'Estornando...')
         try {
-          await estornarVenda(linhasRef.current[idx].id)
-          setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],isSent:false,status:''}; return n })
+          const l = linhasRef.current.find(r => r._key === rowKey)
+          if (!l?.id) return
+          await estornarVenda(l.id)
+          setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, isSent: false, status: '' } : r))
           showToast('Venda estornada!', 'success')
         } catch { showToast('Erro ao estornar.', 'error') }
         finally { setBusy(false) }
@@ -502,23 +512,27 @@ export default function VendasPage() {
   }, [])
 
   // ── COPIAR / EXCLUIR ──
-  const handleCopiar = useCallback((idx) => {
-    const o = linhasRef.current[idx]
-    const copia = { ...novaLinha(), produto:o.produto, modelo:o.modelo, cor:o.cor, marca:o.marca, tamanho:o.tamanho, preco:o.preco, codigo:o.codigo }
-    setLinhas(prev => [copia, ...prev])
+  const handleCopiar = useCallback((rowKey) => {
+    const o = linhasRef.current.find(r => r._key === rowKey)
+    if (!o) return
+    const copia = { ...novaLinha(), produto: o.produto, modelo: o.modelo, cor: o.cor, marca: o.marca, tamanho: o.tamanho, preco: o.preco, codigo: o.codigo }
+    setLinhas(prev => {
+      const idx = prev.findIndex(r => r._key === rowKey)
+      if (idx < 0) return [...prev, copia]
+      const next = [...prev]
+      next.splice(idx + 1, 0, copia)
+      return next
+    })
     triggerAutoSave()
-    setTimeout(() => scrollRef.current?.scrollTo({ top:0, behavior:'smooth' }), 50)
-  }, [])
+  }, [triggerAutoSave])
 
-  const handleExcluir = useCallback((idx) => {
+  const handleExcluir = useCallback((rowKey) => {
     setConfirmacao({
       titulo: '🗑️ Excluir Linha',
       mensagem: 'Deseja realmente EXCLUIR esta linha?',
       onSim: () => {
-        setLinhas(prev => {
-          const n=[...prev]; n[idx]={...n[idx],deleted:true,cliente_nome:'',sacolinha:null}
-          setConfirmacao(null); return calcSacolas(n)
-        })
+        setConfirmacao(null)
+        setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, deleted: true, cliente_nome: '', sacolinha: null } : r)))
         triggerAutoSave()
       },
       onNao: () => setConfirmacao(null),
@@ -872,7 +886,7 @@ export default function VendasPage() {
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
                         onIsBlocked={handleIsBlocked}
-                        onNovoFromRow={isLastRow ? novo : undefined}
+                        onNovoFromRow={isLastRow ? novoAbaixo : undefined}
                         onAbrirModal={setModalEdicaoIdx}
                         onAbrirFila={setModalFilaIdx}
                         onEnviar={handleEnviar}
