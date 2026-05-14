@@ -519,7 +519,7 @@ table { width: 100%; min-width: 950px; border-collapse: separate; border-spacing
 thead th { position: sticky; top: 0; z-index: 90; background: var(--table-header-bg); color: var(--table-header-text); font-weight: 700; font-size: 11px; text-transform: uppercase; padding: 9px 8px; text-align: left; white-space: nowrap; border-bottom: 2px solid var(--border-light); }
 tbody tr { transition: background 0.2s; }
 tbody tr:hover { background-color: var(--table-row-hover); }
-tbody td { padding: 4px 6px; border-bottom: 1px solid var(--table-border); vertical-align: middle; position: relative; }
+tbody td { padding: 6px 8px; border-bottom: 1px solid var(--table-border); vertical-align: middle; position: relative; }
 
 .linha-apagada { display: none !important; }
 .linha-enviada input.cell-input { color: var(--green) !important; border-color: transparent !important; pointer-events: none !important; }
@@ -529,7 +529,7 @@ tbody td { padding: 4px 6px; border-bottom: 1px solid var(--table-border); verti
 .linha-enviada .btn-action-sm.undo { display: flex !important; }
 
 /* ── INPUTS DE CÉLULA ── */
-.cell-input { width: 100%; padding: 7px 10px; border: 1px solid var(--input-border); border-radius: 8px; font-size: 0.88rem; background: var(--input-bg); color: var(--input-text); transition: all 0.2s; }
+.cell-input { width: 100%; padding: 10px 14px; border: 1px solid var(--input-border); border-radius: 8px; font-size: 0.9rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--input-bg); color: var(--input-text); transition: all 0.2s; }
 .cell-input:focus { border-color: var(--blue); outline: none; background: #252525; }
 .cell-input.price { text-align: right; color: var(--green); font-weight: 700; }
 .td-sacola { cursor: pointer; transition: background 0.2s; border-radius: 6px; }

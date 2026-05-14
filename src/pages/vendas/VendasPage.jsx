@@ -886,7 +886,7 @@ export default function VendasPage() {
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
                         onIsBlocked={handleIsBlocked}
-                        onNovoFromRow={isLastRow ? novoAbaixo : undefined}
+                        onNovoFromRow={isLastRow ? novo : undefined}
                         onAbrirModal={setModalEdicaoIdx}
                         onAbrirFila={setModalFilaIdx}
                         onEnviar={handleEnviar}
