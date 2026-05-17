@@ -177,18 +177,17 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     if (l.deleted || l.isDeleted) { if (l.id) toDelete.push(l.id); return }
     if (l.isSent) return
     
-    // Salva se houver QUALQUER dado preenchido
-    const temDados = !!(
-      (l.produto || '').trim() || 
-      (l.modelo || '').trim() || 
-      (l.cor || '').trim() || 
-      (l.marca || '').trim() || 
-      (l.tamanho || '').trim() || 
-      (l.preco || '').trim() || 
-      (l.codigo || '').trim() || 
-      (l.cliente_nome || '').trim()
+    // Exige pelo menos um campo de produto para salvar — linha com só cliente não é salva
+    const temProduto = !!(
+      (l.produto || '').trim() ||
+      (l.modelo || '').trim() ||
+      (l.cor || '').trim() ||
+      (l.marca || '').trim() ||
+      (l.tamanho || '').trim() ||
+      (l.preco || '').trim() ||
+      (l.codigo || '').trim()
     )
-    if (!temDados) return
+    if (!temProduto) return
 
     const row = {
       tenant_id: tid,
@@ -216,13 +215,13 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     const { data, error } = await supabase.from('vendas')
       .insert(toInsert).select('id')
     if (error) throw error
-    novosIds = data || []
+    novosIds = data || []   // apenas IDs de novas linhas inseridas
   }
   if (toUpdate.length > 0) {
-    const { data, error } = await supabase.from('vendas')
-      .upsert(toUpdate, { onConflict: 'id' }).select('id')
+    const { error } = await supabase.from('vendas')
+      .upsert(toUpdate, { onConflict: 'id' })
     if (error) throw error
-    novosIds = novosIds.concat(data || [])
+    // IDs do upsert NÃO são adicionados a novosIds — as linhas já têm seus IDs no state
   }
   if (toDelete.length > 0) {
     const { error } = await supabase.from('vendas').delete().in('id', toDelete)
