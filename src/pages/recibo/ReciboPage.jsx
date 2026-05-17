@@ -8,7 +8,7 @@ function fmtData(iso) {
   return `${d}/${m}/${y}`
 }
 
-const STATUS_LABEL = { PAGO: 'Pago ✅', BAIXADO: 'Pago ✅', CANCELADO: 'Cancelado ❌', PENDENTE: 'Aguardando Pagamento' }
+const STATUS_LABEL = { PAGO: 'Pago ✅', BAIXADO: 'Pago ✅', CANCELADO: 'Cancelado ❌', PENDENTE: 'Aguardando Pagamento', ENVIADO: 'Aguardando Pagamento', REENVIADO: 'Aguardando Pagamento', LEMBRETE: 'Aguardando Pagamento' }
 const STATUS_COR   = { PAGO: '#81c995', BAIXADO: '#81c995', CANCELADO: '#f28b82', PENDENTE: '#fbbc04' }
 
 export default function ReciboPage() {
@@ -60,7 +60,7 @@ export default function ReciboPage() {
 
         {/* Cabeçalho */}
         <div style={estilos.header}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#e8eaed' }}>VM Kids 🌸</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#e8eaed' }}>VM Kids</div>
           <div style={{ fontSize: 13, color: '#9aa0a6', marginTop: 2 }}>Pedido #{id?.slice(0, 8).toUpperCase()}</div>
         </div>
 

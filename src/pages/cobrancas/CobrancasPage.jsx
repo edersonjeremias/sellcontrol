@@ -157,6 +157,7 @@ export default function CobrancasPage() {
   const [showDividir,    setShowDividir]    = useState(false)
   const [divValorP1,     setDivValorP1]     = useState('')
   const [dividindo,      setDividindo]      = useState(false)
+  const [erroDivisao,    setErroDivisao]    = useState('')
 
   // ── Carga de dados ─────────────────────────────────────────
   const carregar = useCallback(async () => {
@@ -437,11 +438,13 @@ export default function CobrancasPage() {
 
   // ── Dividir pagamento ──────────────────────────────────────
   async function executarDivisao() {
-    if (!sel || !divValorP1) { showToast('Informe o valor da Parte 1', 'error'); return }
+    if (!sel || !divValorP1) { setErroDivisao('Informe o valor da Parte 1.'); return }
     const v1 = parseFloat(String(divValorP1).replace(',', '.'))
     if (isNaN(v1) || v1 <= 0 || v1 >= Number(sel.total)) {
-      showToast('Valor inválido. Deve ser maior que zero e menor que o total.', 'error'); return
+      setErroDivisao('Valor inválido. Deve ser maior que zero e menor que o total.')
+      return
     }
+    setErroDivisao('')
     setDividindo(true)
     try {
       const { dados_divisao } = await dividirPagamento(sel, v1, tenantId)
@@ -450,9 +453,10 @@ export default function CobrancasPage() {
       setCobrancas(prev => prev.map(c => c.id === sel.id ? at : c))
       setShowDividir(false)
       setDivValorP1('')
+      setErroDivisao('')
       showToast('Pagamento dividido! Dois links gerados.')
     } catch (e) {
-      showToast('Erro: ' + e.message, 'error')
+      setErroDivisao('Erro: ' + (e.message || 'Falha ao gerar links. Tente novamente.'))
     } finally {
       setDividindo(false)
     }
@@ -857,11 +861,11 @@ export default function CobrancasPage() {
           MODAL: DIVIDIR PAGAMENTO
       ══════════════════════════════════════════════════════ */}
       {showDividir && sel && (
-        <div className="modal-overlay" style={{ zIndex: 11000 }} onClick={() => setShowDividir(false)}>
+        <div className="modal-overlay" style={{ zIndex: 11000 }} onClick={() => { if (!dividindo) { setShowDividir(false); setErroDivisao('') } }}>
           <div className="modal-card" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'rgba(110,63,217,0.1)', borderBottom: '1px solid rgba(110,63,217,0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, color: '#a78bfa', fontSize: 15 }}>✂️ Dividir Pagamento</h3>
-              <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1 }} onClick={() => setShowDividir(false)}>✕</button>
+              <h3 style={{ margin: 0, color: '#a78bfa', fontSize: 15 }}>Dividir Pagamento</h3>
+              <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1 }} onClick={() => { setShowDividir(false); setErroDivisao('') }}>✕</button>
             </div>
             <div className="modal-body" style={{ paddingBottom: 20 }}>
               <div style={{ textAlign: 'center', padding: '10px 12px', background: '#1a1a1a', borderRadius: 6, marginBottom: 14 }}>
@@ -875,12 +879,13 @@ export default function CobrancasPage() {
                 <input
                   type="number"
                   value={divValorP1}
-                  onChange={e => setDivValorP1(e.target.value)}
+                  onChange={e => { setDivValorP1(e.target.value); setErroDivisao('') }}
                   onKeyDown={e => e.key === 'Enter' && executarDivisao()}
                   placeholder="Ex: 50.00"
                   step="0.01" min="0.01"
                   style={SI}
                   autoFocus
+                  disabled={dividindo}
                 />
               </div>
 
@@ -897,13 +902,20 @@ export default function CobrancasPage() {
                 </div>
               )}
 
+              {/* Mensagem de erro persistente dentro do modal */}
+              {erroDivisao && (
+                <div style={{ padding: '10px 12px', background: 'rgba(242,139,130,0.12)', border: '1px solid rgba(242,139,130,0.4)', borderRadius: 6, color: '#f28b82', fontSize: 13, marginBottom: 12, lineHeight: 1.4 }}>
+                  {erroDivisao}
+                </div>
+              )}
+
               <button
                 className="btn-acao"
-                style={{ width: '100%', minHeight: 46, fontSize: 14, background: '#6e3fd9', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}
+                style={{ width: '100%', minHeight: 46, fontSize: 14, background: dividindo ? '#4a2fa0' : '#6e3fd9', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, cursor: dividindo ? 'not-allowed' : 'pointer', opacity: dividindo ? 0.8 : 1 }}
                 onClick={executarDivisao}
                 disabled={dividindo}
               >
-                {dividindo ? 'Gerando links…' : '✂️ Gerar 2 Links de Pagamento'}
+                {dividindo ? 'Gerando links… (pode levar até 30s)' : 'Gerar 2 Links de Pagamento'}
               </button>
             </div>
           </div>

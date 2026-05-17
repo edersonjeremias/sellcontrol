@@ -237,7 +237,7 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
       }],
       payer: {
         name: cobranca.cliente,
-        email: `${clienteSlug}@vmkids.com.br`,
+        email: `${clienteSlug || 'cliente'}@vmkids.com.br`,
       },
       external_reference: `${cobranca.id}-P${parte}`,
       notification_url: WEBHOOK_URL,
@@ -248,17 +248,32 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
       },
       auto_return: 'approved',
     }
-    const resp = await fetch('/api/mercadopago/checkout/preferences', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${MP_TOKEN.trim()}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+
+    // Timeout de 25 segundos para não travar o modal indefinidamente
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 25000)
+
+    let resp
+    try {
+      resp = await fetch('/api/mercadopago/checkout/preferences', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${MP_TOKEN.trim()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: ctrl.signal,
+      })
+    } catch (err) {
+      if (err.name === 'AbortError') throw new Error('Tempo limite atingido (25s). Verifique sua conexão e tente novamente.')
+      throw err
+    } finally {
+      clearTimeout(timer)
+    }
+
     const text = await resp.text()
     let json = {}
     try { if (text) json = JSON.parse(text) } catch { /* ignore */ }
     if (!resp.ok) {
       if (resp.status === 403) throw new Error('Acesso Negado (403). Verifique seu Token no Mercado Pago.')
-      throw new Error(json.message || `Erro ${resp.status} no Mercado Pago`)
+      throw new Error(json.message || json.error || `Erro ${resp.status} no Mercado Pago`)
     }
     if (!json.init_point) throw new Error('Link não retornado pelo Mercado Pago')
     return { link: json.init_point, id_mp: String(json.id) }
