@@ -24,20 +24,19 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   const location = useLocation()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState({})
+  // Categorias fechadas por padrão — expanded só quando o usuário clicar
+  const [expanded, setExpanded] = useState({})
 
   const handleLogout = async () => {
     setMenuOpen(false)
-    await signOut()
+    try { await signOut() } catch (_) {}
     navigate('/login')
   }
 
   const close = () => setMenuOpen(false)
+  const toggleCat = (cat) => setExpanded(prev => ({ ...prev, [cat]: !prev[cat] }))
 
-  const toggleCat = (cat) =>
-    setCollapsed(prev => ({ ...prev, [cat]: !prev[cat] }))
-
-  // Build all nav links with category
+  // Monta links com categoria
   const allLinks = [
     ...menuItems.map(item => ({
       to: `/${item.slug}`,
@@ -53,7 +52,6 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
       : []),
   ]
 
-  // Deduplicate by path
   const seen = new Set()
   const navLinks = allLinks.filter(l => {
     if (seen.has(l.to)) return false
@@ -61,7 +59,6 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     return true
   })
 
-  // Group by category
   const grouped = {}
   navLinks.forEach(link => {
     const cat = link.category
@@ -76,7 +73,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
       <header className="app-header">
         <div className="app-brand">
           <span className="app-logo-dot" />
-          <span className="app-logo-text">sellControl</span>
+          <span className="app-logo-text">SellControl</span>
         </div>
 
         <button
@@ -88,24 +85,25 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
         </button>
       </header>
 
-      {/* Overlay */}
       {menuOpen && <div className="app-drawer-overlay" onClick={close} />}
 
-      {/* Side drawer */}
       <div className={`app-drawer${menuOpen ? ' app-drawer-open' : ''}`}>
+        {/* Cabeçalho do drawer */}
         <div className="app-drawer-top">
           <div className="app-drawer-brand">
             <span className="app-logo-dot" />
-            <span className="app-logo-text">sellControl</span>
+            <span className="app-logo-text">SellControl</span>
           </div>
           <button className="app-drawer-close" onClick={close}>✕</button>
         </div>
 
+        {/* Info do usuário */}
         <div className="app-drawer-user">
           <span className="app-drawer-name">{profile?.nome || 'Usuário'}</span>
           <span className="app-drawer-role">{profile?.role?.toUpperCase()}</span>
         </div>
 
+        {/* Menu por categorias */}
         <nav className="app-drawer-nav">
           {categories.map(cat => (
             <div key={cat} className="app-drawer-section">
@@ -114,10 +112,10 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
                 onClick={() => toggleCat(cat)}
               >
                 <span className="app-drawer-cat-label">{cat}</span>
-                <span className={`app-drawer-arrow${collapsed[cat] ? '' : ' open'}`}>▸</span>
+                <span className={`app-drawer-arrow${expanded[cat] ? ' open' : ''}`}>▸</span>
               </button>
 
-              {!collapsed[cat] && (
+              {expanded[cat] && (
                 <div className="app-drawer-items">
                   {grouped[cat].map(item => (
                     <Link
@@ -126,6 +124,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
                       className={`app-drawer-link${location.pathname === item.to ? ' active' : ''}`}
                       onClick={close}
                     >
+                      <span className="app-drawer-link-dot" />
                       {item.label}
                     </Link>
                   ))}

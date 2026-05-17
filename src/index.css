@@ -458,30 +458,35 @@ input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #252525 inset !important
 }
 
 .app-drawer-section {
-  margin-bottom: 2px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
+/* Botão de categoria — aparência de cabeçalho de seção */
 .app-drawer-cat-btn {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 9px 16px;
-  background: none;
+  padding: 11px 16px;
+  background: rgba(255,255,255,0.03);
   border: none;
   cursor: pointer;
   text-align: left;
+  transition: background 0.15s;
+}
+.app-drawer-cat-btn:hover {
+  background: rgba(255,255,255,0.07);
 }
 .app-drawer-cat-label {
   font-size: 11px;
   font-weight: 700;
-  color: var(--muted);
+  color: #8b8fa8;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
 }
 .app-drawer-arrow {
-  font-size: 10px;
-  color: var(--muted);
+  font-size: 11px;
+  color: #5a5d72;
   transition: transform 0.2s;
   display: inline-block;
 }
@@ -489,29 +494,45 @@ input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #252525 inset !important
   transform: rotate(90deg);
 }
 
+/* Itens expandidos — fundo ligeiramente diferente para destacar */
 .app-drawer-items {
   display: flex;
   flex-direction: column;
-  padding-bottom: 4px;
+  background: rgba(0,0,0,0.18);
+  padding: 4px 0;
 }
+
+/* Link de página dentro da categoria */
 .app-drawer-link {
-  display: block;
-  padding: 10px 16px 10px 24px;
-  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 20px;
+  color: var(--text-header);
   text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  border-left: 2px solid transparent;
+  font-size: 13.5px;
+  font-weight: 400;
+  border-left: 3px solid transparent;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .app-drawer-link:hover {
-  color: var(--text-header);
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.05);
+  color: #fff;
 }
 .app-drawer-link.active {
   color: var(--blue);
   border-left-color: var(--blue);
-  background: rgba(59,130,246,0.07);
+  background: rgba(59,130,246,0.1);
+  font-weight: 500;
+}
+/* Bolinha indicadora antes do nome da página */
+.app-drawer-link-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  opacity: 0.45;
 }
 
 .app-drawer-footer {
