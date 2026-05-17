@@ -1,7 +1,8 @@
 import { supabase, supabasePublic } from '../lib/supabase'
-import { getMpToken } from './configService'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+
+const WEBHOOK_URL = 'https://gtsdgkalolqzjmmwtvdv.supabase.co/functions/v1/mercadopago-webhook'
 
 // ── Formatação ─────────────────────────────────────────────────
 export function formatMoeda(val) {
@@ -114,10 +115,10 @@ export async function excluirCobranca(tenantId, cobranca) {
 
 export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
   console.log('Sincronizando cobrança:', cobranca.cliente);
-  
+
   const { data: vendas, error: eV } = await supabase.from('vendas').select('produto, modelo, cor, marca, tamanho, preco, codigo, live_nome, status').eq('tenant_id', tid(tenantId)).eq('data_live', cobranca.data).ilike('cliente_nome', cobranca.cliente.trim()).eq('live_nome', cobranca.live || '')
   if (eV) throw eV
-  
+
   const { data: outras } = await supabase.from('cobrancas').select('id, itens').eq('tenant_id', tid(tenantId)).eq('data', cobranca.data).ilike('cliente', cobranca.cliente.trim()).eq('live', cobranca.live || '').neq('id', cobranca.id).neq('status', 'CANCELADO')
 
   const jaCobrados = new Set()
@@ -147,7 +148,7 @@ export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
 
   if (novoTotal > 0 && (mudou || semLink)) {
     try {
-      const mp = await gerarPreferenciaMp({ cliente: cobranca.cliente, total: novoTotal, whatsapp: cobranca.whatsapp, data: cobranca.data, live: cobranca.live, idCobranca: cobranca.id })
+      const mp = await gerarPreferenciaMp({ cliente: cobranca.cliente, total: novoTotal, whatsapp: cobranca.whatsapp, data: cobranca.data, live: cobranca.live, idCobranca: cobranca.id, tenantId })
       link_mp = mp.link; id_mp = mp.id_mp
     } catch (err) {
       console.error('Erro ao gerar link:', err.message);
@@ -163,22 +164,34 @@ export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
 }
 
 // ── Mercado Pago ───────────────────────────────────────────────
+// Chama o endpoint Vercel que lê o token do banco server-side
+// (evita 403 por header stripping no rewrite do Vercel)
+
+async function chamarMpApi(tenant_id, payload, signal) {
+  const resp = await fetch('/api/criar-preferencia-mp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tenant_id, payload }),
+    ...(signal ? { signal } : {}),
+  })
+  const json = await resp.json().catch(() => ({}))
+  if (!resp.ok) {
+    if (resp.status === 422) throw new Error(json.error || 'Token do Mercado Pago não configurado. Acesse Configurações.')
+    if (resp.status === 403) throw new Error('Acesso Negado (403). Token inválido — verifique em Configurações.')
+    throw new Error(json.message || json.error || `Erro ${resp.status} no Mercado Pago`)
+  }
+  if (!json.init_point) throw new Error('Link não retornado pelo Mercado Pago.')
+  return { link: json.init_point, id_mp: String(json.id) }
+}
 
 export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live, idCobranca, tenantId }) {
-  const MP_TOKEN = await getMpToken(tenantId || import.meta.env.VITE_TENANT_ID)
-  if (!MP_TOKEN) throw new Error('Token do Mercado Pago não configurado. Acesse Configurações e informe sua chave.')
-
-  const titulo = `Pedido-${String(cliente).split(' ')[0]}-${String(data).replace(/\//g,'-')}`
-
-  // URL do webhook no Supabase Edge Function (recebe confirmação de pagamento do MP)
-  const WEBHOOK_URL = 'https://gtsdgkalolqzjmmwtvdv.supabase.co/functions/v1/mercadopago-webhook'
+  const tenant_id = tenantId || import.meta.env.VITE_TENANT_ID
+  const titulo = `Pedido-${String(cliente).split(' ')[0]}-${String(data).replace(/\//g, '-')}`
+  const emailSlug = String(cliente).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '') || 'cliente'
 
   const payload = {
     items: [{ title: titulo, quantity: 1, currency_id: 'BRL', unit_price: parseFloat(Number(total).toFixed(2)) }],
-    payer: {
-      name: cliente,
-      email: String(cliente).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '') + '@vmkids.com.br',
-    },
+    payer: { name: cliente, email: `${emailSlug}@vmkids.com.br` },
     external_reference: String(idCobranca),
     notification_url: WEBHOOK_URL,
     back_urls: {
@@ -189,30 +202,13 @@ export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live,
     auto_return: 'approved',
   }
 
-  // Chamada via proxy
-  const resp = await fetch('/api/mercadopago/checkout/preferences', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${MP_TOKEN.trim()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-
-  const text = await resp.text()
-  let json = {}
-  try { if (text) json = JSON.parse(text) } catch (e) { console.error('Erro JSON MP:', text) }
-
-  if (!resp.ok) {
-    console.error('Erro MP:', resp.status, json)
-    if (resp.status === 403) throw new Error('Acesso Negado (403). Verifique seu Token e se a conta está ativa no Mercado Pago.')
-    throw new Error(json.message || `Erro ${resp.status} no Mercado Pago`)
-  }
-
-  if (!json.init_point) throw new Error('Link não retornado pelo Mercado Pago.')
-  return { link: json.init_point, id_mp: json.id }
+  return chamarMpApi(tenant_id, payload)
 }
 
 // ── Dividir Pagamento ──────────────────────────────────────────
 
 export async function dividirPagamento(cobranca, valorParte1, tenantId) {
+  const tenant_id = tenantId || import.meta.env.VITE_TENANT_ID
   const total = Number(cobranca.total)
   const v1 = parseFloat(parseFloat(String(valorParte1).replace(',', '.')).toFixed(2))
   const v2 = parseFloat((total - v1).toFixed(2))
@@ -221,12 +217,7 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
     throw new Error('Valor inválido para divisão')
   }
 
-  const MP_TOKEN = await getMpToken(tenantId || import.meta.env.VITE_TENANT_ID)
-  if (!MP_TOKEN) throw new Error('Token do Mercado Pago não configurado. Acesse Configurações.')
-
-  const WEBHOOK_URL = 'https://gtsdgkalolqzjmmwtvdv.supabase.co/functions/v1/mercadopago-webhook'
-  const clienteSlug = String(cobranca.cliente).toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+  const emailSlug = String(cobranca.cliente).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '') || 'cliente'
 
   async function criarPref(valor, parte) {
     const payload = {
@@ -235,10 +226,7 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
         quantity: 1, currency_id: 'BRL',
         unit_price: parseFloat(Number(valor).toFixed(2)),
       }],
-      payer: {
-        name: cobranca.cliente,
-        email: `${clienteSlug || 'cliente'}@vmkids.com.br`,
-      },
+      payer: { name: cobranca.cliente, email: `${emailSlug}@vmkids.com.br` },
       external_reference: `${cobranca.id}-P${parte}`,
       notification_url: WEBHOOK_URL,
       back_urls: {
@@ -249,34 +237,17 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
       auto_return: 'approved',
     }
 
-    // Timeout de 25 segundos para não travar o modal indefinidamente
+    // Timeout de 25s para não travar o modal indefinidamente
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), 25000)
-
-    let resp
     try {
-      resp = await fetch('/api/mercadopago/checkout/preferences', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${MP_TOKEN.trim()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        signal: ctrl.signal,
-      })
+      return await chamarMpApi(tenant_id, payload, ctrl.signal)
     } catch (err) {
       if (err.name === 'AbortError') throw new Error('Tempo limite atingido (25s). Verifique sua conexão e tente novamente.')
       throw err
     } finally {
       clearTimeout(timer)
     }
-
-    const text = await resp.text()
-    let json = {}
-    try { if (text) json = JSON.parse(text) } catch { /* ignore */ }
-    if (!resp.ok) {
-      if (resp.status === 403) throw new Error('Acesso Negado (403). Verifique seu Token no Mercado Pago.')
-      throw new Error(json.message || json.error || `Erro ${resp.status} no Mercado Pago`)
-    }
-    if (!json.init_point) throw new Error('Link não retornado pelo Mercado Pago')
-    return { link: json.init_point, id_mp: String(json.id) }
   }
 
   const [pref1, pref2] = await Promise.all([criarPref(v1, 1), criarPref(v2, 2)])
@@ -291,7 +262,7 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idCobranca: cobranca.id, dados_divisao }),
   })
-  const result = await resp.json()
+  const result = await resp.json().catch(() => ({}))
   if (!resp.ok) throw new Error(result.error || 'Erro ao salvar divisão no banco')
   return { dados_divisao }
 }
