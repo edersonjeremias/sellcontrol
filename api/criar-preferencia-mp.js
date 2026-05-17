@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Lê o token MP do banco (service role) e cria a preferência server-side.
-// Elimina a dependência de VITE_MP_ACCESS_TOKEN nos env vars do Vercel.
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -23,11 +21,13 @@ export default async function handler(req, res) {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
-    const { data: config } = await supabase
+    const { data: config, error: dbErr } = await supabase
       .from('configuracoes')
       .select('mp_access_token')
       .eq('tenant_id', tenant_id)
       .maybeSingle()
+
+    if (dbErr) console.error('Supabase erro:', dbErr.message)
 
     const MP_TOKEN = config?.mp_access_token?.trim() || process.env.MP_ACCESS_TOKEN || ''
     if (!MP_TOKEN) {
@@ -43,12 +43,23 @@ export default async function handler(req, res) {
       body: JSON.stringify(payload),
     })
 
-    const data = await mpResp.json()
+    // Lê o body como texto primeiro para evitar crash em resposta não-JSON
+    const rawText = await mpResp.text()
+    let data = {}
+    try {
+      if (rawText) data = JSON.parse(rawText)
+    } catch {
+      console.error('MP API resposta não-JSON status', mpResp.status, ':', rawText.slice(0, 300))
+      return res.status(502).json({ error: `Mercado Pago retornou resposta inválida (status ${mpResp.status}). Verifique o token e tente novamente.` })
+    }
+
     if (!mpResp.ok) {
+      console.error('MP API erro:', mpResp.status, JSON.stringify(data).slice(0, 300))
       return res.status(mpResp.status).json(data)
     }
 
     return res.status(200).json(data)
+
   } catch (err) {
     console.error('Erro criar-preferencia-mp:', err.message)
     return res.status(500).json({ error: err.message })
