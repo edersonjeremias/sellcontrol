@@ -383,22 +383,22 @@ input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #252525 inset !important
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
-  z-index: 1000;
+  z-index: 9998;
 }
 
 /* ── SIDE DRAWER ── */
 .app-drawer {
   position: fixed;
   top: 0;
-  left: 0;
+  right: 0;
   width: 260px;
   height: 100vh;
   background: var(--header-bg);
-  border-right: 1px solid var(--border-header);
-  z-index: 1001;
+  border-left: 1px solid var(--border-header);
+  z-index: 9999;
   display: flex;
   flex-direction: column;
-  transform: translateX(-100%);
+  transform: translateX(100%);
   transition: transform 0.25s ease;
   overflow: hidden;
 }
