@@ -34,7 +34,9 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   }
 
   const close = () => setMenuOpen(false)
-  const toggleCat = (cat) => setExpanded(prev => ({ ...prev, [cat]: !prev[cat] }))
+  const toggleCat = (cat) => setExpanded(prev =>
+    prev[cat] ? { ...prev, [cat]: false } : { [cat]: true }
+  )
 
   // Monta links com categoria
   const allLinks = [
