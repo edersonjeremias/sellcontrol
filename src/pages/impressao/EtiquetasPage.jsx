@@ -15,7 +15,7 @@ const DEFAULT_LAYOUT = {
     { id: 'textoLivre',      label: 'Texto Livre',       show: false, text: '', top: 2,  left: 2, width: 56, height: 6,  fontSize: 7,  barWidth: 1.5, align: 'center' },
     { id: 'codigo',          label: 'Código',            show: true,  text: '', top: 2,  left: 2, width: 56, height: 5,  fontSize: 8,  barWidth: 1.5, align: 'center' },
     { id: 'produtoCompleto', label: 'Produto Completo',  show: true,  text: '', top: 8,  left: 2, width: 56, height: 14, fontSize: 7,  barWidth: 1.5, align: 'center' },
-    { id: 'barcode',         label: 'Código de Barras',  show: false, text: '', top: 22, left: 2, width: 56, height: 10, fontSize: 8,  barWidth: 1.5, barHeight: 35, align: 'center' },
+    { id: 'barcode',         label: 'Código de Barras',  show: false, text: '', top: 22, left: 2, width: 56, height: 10, fontSize: 8,  barWidth: 1.5, barHeight: 35, barcodeW: 50, align: 'center' },
     { id: 'preco',           label: 'Preço',             show: true,  text: '', top: 33, left: 2, width: 56, height: 6,  fontSize: 12, barWidth: 1.5, align: 'center' },
   ],
 }
@@ -33,8 +33,9 @@ function buildLabelHtml(item, layout, labelW) {
       if (!code) return ''
       // Div posicionado controla tamanho; SVG preenchimento 100% evita que JsBarcode
       // sobrescreva as dimensões em px e quebre o layout
+      const bW = f.barcodeW || f.width
       return `<div style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;overflow:hidden;display:flex;align-items:center;justify-content:center;">` +
-             `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" data-bh="${f.barHeight || 35}" style="width:100%;height:100%;display:block;"></svg>` +
+             `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" data-bh="${f.barHeight || 35}" style="width:${bW}mm;height:${f.height}mm;flex-shrink:0;display:block;"></svg>` +
              `</div>`
     }
     let text = ''
@@ -102,7 +103,12 @@ export default function EtiquetasPage() {
       const mergedFields = DEFAULT_LAYOUT.fields.map(df => {
         const sf = (saved.fields || []).find(f => f.id === df.id)
         if (!sf) return df
-        return { ...df, ...sf, height: sf.height > 0 ? sf.height : df.height }
+        return {
+          ...df, ...sf,
+          height:   sf.height   > 0 ? sf.height   : df.height,
+          barHeight: sf.barHeight > 0 ? sf.barHeight : df.barHeight ?? 35,
+          barcodeW:  sf.barcodeW  > 0 ? sf.barcodeW  : df.barcodeW  ?? 50,
+        }
       })
       return { ...DEFAULT_LAYOUT, ...saved, fields: mergedFields }
     } catch { return DEFAULT_LAYOUT }
@@ -320,6 +326,9 @@ export default function EtiquetasPage() {
                       <div className="eti-pi"><label>Alt barras (px)</label>
                         <input type="number" min={5} value={f.barHeight ?? 35}
                           onChange={e => updateField(i, 'barHeight', parseFloat(e.target.value) || 20)} /></div>
+                      <div className="eti-pi"><label>Larg cód (mm)</label>
+                        <input type="number" min={5} value={f.barcodeW ?? 50}
+                          onChange={e => updateField(i, 'barcodeW', parseFloat(e.target.value) || 20)} /></div>
                     </>)}
                   </div>
                   {f.id !== 'barcode' && (
