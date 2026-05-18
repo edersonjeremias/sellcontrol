@@ -234,7 +234,7 @@ export default function VendasPage() {
   useEffect(() => {
     if (!tenantId) return
     storageSave(tenantId, {
-      linhas: linhas.filter(l => !l.deleted),
+      linhas: linhas.filter(l => !l.deleted && !l.isSent),
       dataLive,
       liveNome,
     })
@@ -490,7 +490,7 @@ export default function VendasPage() {
       let res
       if (l.cliente_nome?.trim()) {
         res = await enviarVenda(tid, l, dl || null, ln || '')
-        setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r)))
+        setLinhas(prev => calcSacolas(prev.filter(r => r._key !== rowKey)))
       } else {
         res = await salvarVendas(tid, [l], { data_live: dl || null, live_nome: ln || '' })
         if (!l.id && res.novosIds?.length > 0) {
