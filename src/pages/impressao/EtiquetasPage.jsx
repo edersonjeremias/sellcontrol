@@ -31,9 +31,11 @@ function buildLabelHtml(item, layout, labelW) {
     if (f.id === 'barcode') {
       const code = item.codigo || ''
       if (!code) return ''
-      const bLeft = f.left
-      const bWidth = f.width
-      return `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" style="position:absolute;top:${f.top}mm;left:${bLeft}mm;width:${bWidth}mm;height:${f.height}mm;overflow:hidden;display:block;margin:0 auto;"></svg>`
+      // Div posicionado controla tamanho; SVG preenchimento 100% evita que JsBarcode
+      // sobrescreva as dimensões em px e quebre o layout
+      return `<div style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;overflow:hidden;display:flex;align-items:center;justify-content:center;">` +
+             `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" style="width:100%;height:100%;display:block;"></svg>` +
+             `</div>`
     }
     let text = ''
     if      (f.id === 'textoLivre')      text = f.text || ''
@@ -71,10 +73,15 @@ window.addEventListener('load', function() {
   try {
     document.querySelectorAll('[data-barcode]').forEach(function(el) {
       var code = el.getAttribute('data-barcode')
-      if (code && window.JsBarcode) {
-        JsBarcode(el, code, { format: 'CODE128', displayValue: false, width: parseFloat(el.getAttribute('data-bw')) || 1.5, margin: 4, textMargin: 0 })
-        el.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-      }
+      if (!code || !window.JsBarcode) return
+      JsBarcode(el, code, { format: 'CODE128', displayValue: false, width: parseFloat(el.getAttribute('data-bw')) || 1.5, margin: 2, textMargin: 0 })
+      // JsBarcode seta width/height em px — captura como viewBox e reseta para 100%
+      var w = el.width && el.width.baseVal ? el.width.baseVal.value : 200
+      var h = el.height && el.height.baseVal ? el.height.baseVal.value : 60
+      if (!el.getAttribute('viewBox')) el.setAttribute('viewBox', '0 0 ' + w + ' ' + h)
+      el.setAttribute('width', '100%')
+      el.setAttribute('height', '100%')
+      el.setAttribute('preserveAspectRatio', 'xMidYMid meet')
     })
   } catch(e) {}
   window.print()
