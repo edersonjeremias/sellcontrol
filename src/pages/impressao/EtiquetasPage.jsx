@@ -212,6 +212,26 @@ export default function EtiquetasPage() {
     setLayout(prev => ({ ...prev, [key]: parseFloat(val) || 0 }))
   }
 
+  function preconfigurar() {
+    const labelW = layout.cols === 2 ? layout.paperW / 2 : layout.paperW
+    const H = layout.paperH
+    const W = labelW
+    const m = Math.max(1, Math.round(W * 0.03))
+    const fw = Math.round(W - m * 2)
+    const r = v => Math.round(v * 10) / 10
+    setLayout(prev => ({
+      ...prev,
+      fields: prev.fields.map(f => {
+        if (f.id === 'textoLivre')      return { ...f, top: r(H*0.03), left: m, width: fw, height: r(H*0.13), fontSize: Math.max(7, Math.round(H*0.14)) }
+        if (f.id === 'codigo')          return { ...f, top: r(H*0.16), left: m, width: fw, height: r(H*0.11), fontSize: Math.max(7, Math.round(H*0.12)) }
+        if (f.id === 'produtoCompleto') return { ...f, top: r(H*0.27), left: m, width: fw, height: r(H*0.14), fontSize: Math.max(6, Math.round(H*0.08)) }
+        if (f.id === 'barcode')         return { ...f, top: r(H*0.41), left: m, width: fw, height: r(H*0.33), barHeight: Math.round(H*0.28), barcodeW: Math.round(W*0.82) }
+        if (f.id === 'preco')           return { ...f, top: r(H*0.76), left: m, width: fw, height: r(H*0.20), fontSize: Math.max(10, Math.round(H*0.17)) }
+        return f
+      })
+    }))
+  }
+
   function updateField(idx, key, val) {
     setLayout(prev => {
       const fields = [...prev.fields]
@@ -283,6 +303,13 @@ export default function EtiquetasPage() {
                 onClick={() => setLayout(p => ({ ...p, cols: 2 }))}>2 colunas</button>
             </div>
           </div>
+
+          <button
+            onClick={preconfigurar}
+            style={{ width: '100%', padding: '9px 0', marginBottom: 12, borderRadius: 7, border: '1px solid rgba(96,165,250,.5)', background: 'rgba(96,165,250,.12)', color: '#60a5fa', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+          >
+            ⚡ Pré-configurar campos automaticamente
+          </button>
 
           <div className="eti-section-label">CAMPOS</div>
 
