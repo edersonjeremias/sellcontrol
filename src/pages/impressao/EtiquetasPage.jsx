@@ -125,8 +125,9 @@ export default function EtiquetasPage() {
       })
   }, [tenantId, dataFiltro])
 
-  const puxarVendas = useCallback(async () => {
+  const puxarVendas = useCallback(async (fonteOverride) => {
     if (!dataFiltro || !liveNome) { setErr('Selecione data e live.'); return }
+    const fonteAtual = fonteOverride ?? fonte
     setLoading(true); setErr(null); setGerado(false); setRows([])
     try {
       const { data, error } = await supabase
@@ -144,7 +145,7 @@ export default function EtiquetasPage() {
         precoFmt:    fmtPreco(r.preco),
         clienteNome: r.cliente_nome || '',
       }))
-      const processed = fonte === 'nao_vendidas'
+      const processed = fonteAtual === 'nao_vendidas'
         ? allRows.filter(r => !r.clienteNome.trim())
         : allRows.filter(r => !!r.clienteNome.trim())
       setRows(processed)
@@ -322,14 +323,14 @@ export default function EtiquetasPage() {
               <div style={{ display: 'flex', gap: 4, height: 44 }}>
                 <button
                   className={`sacol-btn${fonte === 'nao_vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
-                  onClick={() => setFonte('nao_vendidas')}
+                  onClick={() => { setFonte('nao_vendidas'); if (dataFiltro && liveNome) puxarVendas('nao_vendidas') }}
                   style={{ fontSize: 13, padding: '0 12px' }}
                 >
                   Não Vendidas
                 </button>
                 <button
                   className={`sacol-btn${fonte === 'vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
-                  onClick={() => setFonte('vendidas')}
+                  onClick={() => { setFonte('vendidas'); if (dataFiltro && liveNome) puxarVendas('vendidas') }}
                   style={{ fontSize: 13, padding: '0 12px' }}
                 >
                   Vendidas
