@@ -11,24 +11,62 @@ function fmtData(iso) {
 const STATUS_LABEL = { PAGO: 'Pago ✅', BAIXADO: 'Pago ✅', CANCELADO: 'Cancelado ❌', PENDENTE: 'Aguardando Pagamento', ENVIADO: 'Aguardando Pagamento', REENVIADO: 'Aguardando Pagamento', LEMBRETE: 'Aguardando Pagamento' }
 const STATUS_COR   = { PAGO: '#81c995', BAIXADO: '#81c995', CANCELADO: '#f28b82', PENDENTE: '#fbbc04' }
 
+async function chamarConfirmacao(cobrancaId, paymentId, externalReference) {
+  try {
+    const resp = await fetch('/api/confirmar-pagamento', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cobrancaId, paymentId, externalReference }),
+    })
+    return await resp.json()
+  } catch {
+    return { ok: false }
+  }
+}
+
 export default function ReciboPage() {
   const { id }       = useParams()
   const [cob, setCob] = useState(null)
   const [erro, setErro] = useState(false)
+  const [verificando, setVerificando] = useState(false)
+  const [verificado,  setVerificado]  = useState(false)
 
-  useEffect(() => {
+  const carregarCob = () => {
     if (!id) { setErro(true); return }
-    setErro(false);
+    setErro(false)
     getCobrancaById(id)
-      .then(res => {
-        if (!res) setErro(true);
-        else setCob(res);
+      .then(res => { if (!res) setErro(true); else setCob(res) })
+      .catch(() => setErro(true))
+  }
+
+  // Carregamento inicial
+  useEffect(() => { carregarCob() }, [id])
+
+  // Auto-confirmação: MP redireciona de volta com params após pagamento
+  useEffect(() => {
+    if (!id) return
+    const params = new URLSearchParams(window.location.search)
+    const collectionStatus = params.get('collection_status') || params.get('status')
+    const paymentId        = params.get('collection_id') || params.get('payment_id')
+    const extRef           = params.get('external_reference')
+
+    if (collectionStatus === 'approved' && paymentId) {
+      setVerificando(true)
+      chamarConfirmacao(id, paymentId, extRef).then(() => {
+        setVerificando(false)
+        setVerificado(true)
+        carregarCob()
       })
-      .catch(err => {
-        console.error('Falha no recibo:', err);
-        setErro(true);
-      })
+    }
   }, [id])
+
+  const handleVerificar = async () => {
+    setVerificando(true)
+    await chamarConfirmacao(id)
+    setVerificando(false)
+    setVerificado(true)
+    carregarCob()
+  }
 
   if (erro) return (
     <div style={estilos.paginaErro}>
@@ -125,6 +163,18 @@ export default function ReciboPage() {
               <a href={div.link_p2} target="_blank" rel="noopener noreferrer" style={{ ...estilos.btnPagar, background: '#6e3fd9', marginBottom: 0 }}>
                 💳 Pagar Parte 2 — R$ {Number(div.valor_p2).toFixed(2).replace('.', ',')}
               </a>
+            )}
+
+            {/* Botão verificar pagamento */}
+            {!verificando && !verificado && (
+              <button onClick={handleVerificar} style={estilos.btnVerificar}>
+                🔄 Já paguei — Verificar Pagamento
+              </button>
+            )}
+            {verificando && (
+              <div style={{ textAlign: 'center', color: '#9aa0a6', fontSize: 13, padding: '8px 0' }}>
+                Verificando pagamento…
+              </div>
             )}
           </div>
         )}
@@ -245,5 +295,19 @@ const estilos = {
     textDecoration: 'none',
     marginBottom: 12,
     transition: 'filter 0.2s',
+  },
+  btnVerificar: {
+    display: 'block',
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#9aa0a6',
+    fontWeight: 600,
+    fontSize: 14,
+    textAlign: 'center',
+    borderRadius: 8,
+    border: '1px solid rgba(255,255,255,0.1)',
+    cursor: 'pointer',
+    marginTop: 4,
   },
 }

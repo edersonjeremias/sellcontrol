@@ -34,18 +34,44 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    let MP_TOKEN = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
-
-    const mpResp = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: { 'Authorization': `Bearer ${MP_TOKEN}` }
-    })
-
-    if (!mpResp.ok) {
-      console.error(`Erro ao consultar MP: ${mpResp.status}`)
-      return new Response(JSON.stringify({ received: true }), { status: 200, headers: CORS })
+    // Tenta obter o token: primeiro o env var, depois todos os tokens do banco
+    async function buscarPayment(tokenList: string[]): Promise<any | null> {
+      for (const token of tokenList) {
+        if (!token?.trim()) continue
+        const r = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          headers: { 'Authorization': `Bearer ${token.trim()}` }
+        })
+        if (r.ok) return await r.json()
+      }
+      return null
     }
 
-    const paymentData = await mpResp.json()
+    const envToken = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
+    let paymentData: any = null
+
+    // Tenta env var primeiro (rápido)
+    if (envToken) {
+      const r = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: { 'Authorization': `Bearer ${envToken}` }
+      })
+      if (r.ok) paymentData = await r.json()
+    }
+
+    // Fallback: tenta todos os tokens armazenados no banco
+    if (!paymentData) {
+      const { data: configs } = await supabase
+        .from('configuracoes')
+        .select('mp_access_token')
+        .not('mp_access_token', 'is', null)
+
+      const tokens = (configs || []).map((c: any) => c.mp_access_token).filter(Boolean)
+      paymentData = await buscarPayment(tokens)
+    }
+
+    if (!paymentData) {
+      console.error('Não foi possível consultar o pagamento com nenhum token disponível')
+      return new Response(JSON.stringify({ received: true }), { status: 200, headers: CORS })
+    }
 
     if (paymentData.status === 'approved' && paymentData.external_reference) {
       const extRef = paymentData.external_reference
@@ -78,24 +104,6 @@ serve(async (req) => {
         // Pagamento normal
         const cobrancaId = extRef
 
-        const { data: cobranca } = await supabase
-          .from('cobrancas')
-          .select('tenant_id')
-          .eq('id', cobrancaId)
-          .maybeSingle()
-
-        if (cobranca?.tenant_id) {
-          const { data: cfg } = await supabase
-            .from('configuracoes')
-            .select('mp_access_token')
-            .eq('tenant_id', cobranca.tenant_id)
-            .maybeSingle()
-
-          if (cfg?.mp_access_token?.trim()) {
-            MP_TOKEN = cfg.mp_access_token.trim()
-          }
-        }
-
         const { error } = await supabase
           .from('cobrancas')
           .update({
@@ -118,7 +126,7 @@ serve(async (req) => {
     })
 
   } catch (err) {
-    console.error('Erro Webhook:', err.message)
+    console.error('Erro Webhook:', (err as Error).message)
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { ...CORS, "Content-Type": "application/json" },
