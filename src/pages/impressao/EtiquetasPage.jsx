@@ -15,7 +15,7 @@ const DEFAULT_LAYOUT = {
     { id: 'textoLivre',      label: 'Texto Livre',       show: false, text: '', top: 2,  left: 2, width: 56, height: 6,  fontSize: 7,  barWidth: 1.5, align: 'center' },
     { id: 'codigo',          label: 'Código',            show: true,  text: '', top: 2,  left: 2, width: 56, height: 5,  fontSize: 8,  barWidth: 1.5, align: 'center' },
     { id: 'produtoCompleto', label: 'Produto Completo',  show: true,  text: '', top: 8,  left: 2, width: 56, height: 14, fontSize: 7,  barWidth: 1.5, align: 'center' },
-    { id: 'barcode',         label: 'Código de Barras',  show: false, text: '', top: 22, left: 2, width: 56, height: 10, fontSize: 8,  barWidth: 1.5, align: 'center' },
+    { id: 'barcode',         label: 'Código de Barras',  show: false, text: '', top: 22, left: 2, width: 56, height: 10, fontSize: 8,  barWidth: 1.5, barHeight: 35, align: 'center' },
     { id: 'preco',           label: 'Preço',             show: true,  text: '', top: 33, left: 2, width: 56, height: 6,  fontSize: 12, barWidth: 1.5, align: 'center' },
   ],
 }
@@ -34,7 +34,7 @@ function buildLabelHtml(item, layout, labelW) {
       // Div posicionado controla tamanho; SVG preenchimento 100% evita que JsBarcode
       // sobrescreva as dimensões em px e quebre o layout
       return `<div style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;overflow:hidden;display:flex;align-items:center;justify-content:center;">` +
-             `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" style="width:100%;height:100%;display:block;"></svg>` +
+             `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" data-bh="${f.barHeight || 35}" style="width:100%;height:100%;display:block;"></svg>` +
              `</div>`
     }
     let text = ''
@@ -74,7 +74,7 @@ window.addEventListener('load', function() {
     document.querySelectorAll('[data-barcode]').forEach(function(el) {
       var code = el.getAttribute('data-barcode')
       if (!code || !window.JsBarcode) return
-      JsBarcode(el, code, { format: 'CODE128', displayValue: false, width: parseFloat(el.getAttribute('data-bw')) || 1.5, margin: 2, textMargin: 0 })
+      JsBarcode(el, code, { format: 'CODE128', displayValue: false, width: parseFloat(el.getAttribute('data-bw')) || 1.5, height: parseFloat(el.getAttribute('data-bh')) || 35, margin: 2, textMargin: 0 })
       // JsBarcode seta width/height em px — captura como viewBox e reseta para 100%
       var w = el.width && el.width.baseVal ? el.width.baseVal.value : 200
       var h = el.height && el.height.baseVal ? el.height.baseVal.value : 60
@@ -313,11 +313,14 @@ export default function EtiquetasPage() {
                       <div className="eti-pi"><label>Fonte (pt)</label>
                         <input type="number" value={f.fontSize} onChange={e => updateField(i, 'fontSize', parseFloat(e.target.value) || 0)} /></div>
                     )}
-                    {f.id === 'barcode' && (
+                    {f.id === 'barcode' && (<>
                       <div className="eti-pi"><label>Esp. barra</label>
                         <input type="number" step="0.1" value={f.barWidth}
                           onChange={e => updateField(i, 'barWidth', parseFloat(e.target.value) || 1)} /></div>
-                    )}
+                      <div className="eti-pi"><label>Alt barras (px)</label>
+                        <input type="number" min={5} value={f.barHeight ?? 35}
+                          onChange={e => updateField(i, 'barHeight', parseFloat(e.target.value) || 20)} /></div>
+                    </>)}
                   </div>
                   {f.id !== 'barcode' && (
                     <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
