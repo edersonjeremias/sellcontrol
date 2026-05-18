@@ -12,11 +12,11 @@ const DEFAULT_LAYOUT = {
   paperH: 40,
   cols: 1,
   fields: [
-    { id: 'textoLivre',      label: 'Texto Livre',       show: false, text: '', top: 2,  left: 2, width: 56, height: 6,  fontSize: 7,  barWidth: 1.5 },
-    { id: 'codigo',          label: 'Código',            show: true,  text: '', top: 2,  left: 2, width: 56, height: 5,  fontSize: 8,  barWidth: 1.5 },
-    { id: 'produtoCompleto', label: 'Produto Completo',  show: true,  text: '', top: 8,  left: 2, width: 56, height: 14, fontSize: 7,  barWidth: 1.5 },
-    { id: 'barcode',         label: 'Código de Barras',  show: false, text: '', top: 22, left: 2, width: 56, height: 12, fontSize: 8,  barWidth: 1.5 },
-    { id: 'preco',           label: 'Preço',             show: true,  text: '', top: 33, left: 2, width: 56, height: 6,  fontSize: 12, barWidth: 1.5 },
+    { id: 'textoLivre',      label: 'Texto Livre',       show: false, text: '', top: 2,  left: 2, width: 56, height: 6,  fontSize: 7,  barWidth: 1.5, align: 'center' },
+    { id: 'codigo',          label: 'Código',            show: true,  text: '', top: 2,  left: 2, width: 56, height: 5,  fontSize: 8,  barWidth: 1.5, align: 'center' },
+    { id: 'produtoCompleto', label: 'Produto Completo',  show: true,  text: '', top: 8,  left: 2, width: 56, height: 14, fontSize: 7,  barWidth: 1.5, align: 'center' },
+    { id: 'barcode',         label: 'Código de Barras',  show: false, text: '', top: 22, left: 2, width: 56, height: 10, fontSize: 8,  barWidth: 1.5, align: 'center' },
+    { id: 'preco',           label: 'Preço',             show: true,  text: '', top: 33, left: 2, width: 56, height: 6,  fontSize: 12, barWidth: 1.5, align: 'center' },
   ],
 }
 
@@ -40,7 +40,9 @@ function buildLabelHtml(item, layout, labelW) {
     else if (f.id === 'codigo')          text = item.codigo || ''
     else if (f.id === 'produtoCompleto') text = item.desc || ''
     else if (f.id === 'preco')           text = item.precoFmt ? `R$ ${item.precoFmt}` : ''
-    return `<div style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;font-size:${f.fontSize}pt;line-height:1.2;overflow:hidden;word-wrap:break-word;display:flex;align-items:center;justify-content:center;text-align:center;">${text}</div>`
+    const align = f.align || 'center'
+    const jc    = align === 'center' ? 'center' : 'flex-start'
+    return `<div style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;font-size:${f.fontSize}pt;line-height:1.2;overflow:hidden;word-wrap:break-word;display:flex;align-items:center;justify-content:${jc};text-align:${align};">${text}</div>`
   }).join('')
   return `<div style="position:relative;width:${labelW}mm;height:${paperH}mm;overflow:hidden;box-sizing:border-box;display:inline-block;vertical-align:top;">${fieldDivs}</div>`
 }
@@ -86,8 +88,17 @@ export default function EtiquetasPage() {
   const tenantId = profile?.tenant_id
 
   const [layout, setLayout] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || DEFAULT_LAYOUT }
-    catch { return DEFAULT_LAYOUT }
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+      if (!saved) return DEFAULT_LAYOUT
+      // Merge: defaults first, then saved values override; garante height/align nos campos
+      const mergedFields = DEFAULT_LAYOUT.fields.map(df => {
+        const sf = (saved.fields || []).find(f => f.id === df.id)
+        if (!sf) return df
+        return { ...df, ...sf, height: sf.height > 0 ? sf.height : df.height }
+      })
+      return { ...DEFAULT_LAYOUT, ...saved, fields: mergedFields }
+    } catch { return DEFAULT_LAYOUT }
   })
 
   const [datasRaw,   setDatasRaw]   = useState([])
@@ -289,14 +300,34 @@ export default function EtiquetasPage() {
                       <input type="number" value={f.left} onChange={e => updateField(i, 'left', parseFloat(e.target.value) || 0)} /></div>
                     <div className="eti-pi"><label>Larg</label>
                       <input type="number" value={f.width} onChange={e => updateField(i, 'width', parseFloat(e.target.value) || 0)} /></div>
-                    <div className="eti-pi"><label>Fonte (pt)</label>
-                      <input type="number" value={f.fontSize} onChange={e => updateField(i, 'fontSize', parseFloat(e.target.value) || 0)} /></div>
+                    <div className="eti-pi"><label>Alt (mm)</label>
+                      <input type="number" value={f.height} onChange={e => updateField(i, 'height', parseFloat(e.target.value) || 0)} /></div>
+                    {f.id !== 'barcode' && (
+                      <div className="eti-pi"><label>Fonte (pt)</label>
+                        <input type="number" value={f.fontSize} onChange={e => updateField(i, 'fontSize', parseFloat(e.target.value) || 0)} /></div>
+                    )}
                     {f.id === 'barcode' && (
                       <div className="eti-pi"><label>Esp. barra</label>
                         <input type="number" step="0.1" value={f.barWidth}
                           onChange={e => updateField(i, 'barWidth', parseFloat(e.target.value) || 1)} /></div>
                     )}
                   </div>
+                  {f.id !== 'barcode' && (
+                    <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
+                      <button
+                        className={`eti-col-btn${(f.align || 'center') === 'left' ? ' active' : ''}`}
+                        onClick={() => updateField(i, 'align', 'left')}
+                        style={{ flex: 1 }}>
+                        ≡ Esquerda
+                      </button>
+                      <button
+                        className={`eti-col-btn${(f.align || 'center') === 'center' ? ' active' : ''}`}
+                        onClick={() => updateField(i, 'align', 'center')}
+                        style={{ flex: 1 }}>
+                        ⊙ Centro
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
