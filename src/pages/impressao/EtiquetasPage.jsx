@@ -31,14 +31,16 @@ function buildLabelHtml(item, layout, labelW) {
     if (f.id === 'barcode') {
       const code = item.codigo || ''
       if (!code) return ''
-      return `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;overflow:hidden;"></svg>`
+      const bLeft = f.left
+      const bWidth = f.width
+      return `<svg data-barcode="${code}" data-bw="${f.barWidth || 1.5}" style="position:absolute;top:${f.top}mm;left:${bLeft}mm;width:${bWidth}mm;height:${f.height}mm;overflow:hidden;display:block;margin:0 auto;"></svg>`
     }
     let text = ''
     if      (f.id === 'textoLivre')      text = f.text || ''
     else if (f.id === 'codigo')          text = item.codigo || ''
     else if (f.id === 'produtoCompleto') text = item.desc || ''
     else if (f.id === 'preco')           text = item.precoFmt ? `R$ ${item.precoFmt}` : ''
-    return `<div style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;font-size:${f.fontSize}pt;line-height:1.2;overflow:hidden;word-wrap:break-word;display:flex;align-items:center;">${text}</div>`
+    return `<div style="position:absolute;top:${f.top}mm;left:${f.left}mm;width:${f.width}mm;height:${f.height}mm;font-size:${f.fontSize}pt;line-height:1.2;overflow:hidden;word-wrap:break-word;display:flex;align-items:center;justify-content:center;text-align:center;">${text}</div>`
   }).join('')
   return `<div style="position:relative;width:${labelW}mm;height:${paperH}mm;overflow:hidden;box-sizing:border-box;display:inline-block;vertical-align:top;">${fieldDivs}</div>`
 }
@@ -68,7 +70,8 @@ window.addEventListener('load', function() {
     document.querySelectorAll('[data-barcode]').forEach(function(el) {
       var code = el.getAttribute('data-barcode')
       if (code && window.JsBarcode) {
-        JsBarcode(el, code, { format: 'CODE128', displayValue: false, width: parseFloat(el.getAttribute('data-bw')) || 1.5, margin: 0 })
+        JsBarcode(el, code, { format: 'CODE128', displayValue: false, width: parseFloat(el.getAttribute('data-bw')) || 1.5, margin: 4, textMargin: 0 })
+        el.setAttribute('preserveAspectRatio', 'xMidYMid meet')
       }
     })
   } catch(e) {}
@@ -282,7 +285,7 @@ export default function EtiquetasPage() {
                   <div className="eti-grid2">
                     <div className="eti-pi"><label>Topo</label>
                       <input type="number" value={f.top} onChange={e => updateField(i, 'top', parseFloat(e.target.value) || 0)} /></div>
-                    <div className="eti-pi"><label>Esq</label>
+                    <div className="eti-pi"><label>Marg.E</label>
                       <input type="number" value={f.left} onChange={e => updateField(i, 'left', parseFloat(e.target.value) || 0)} /></div>
                     <div className="eti-pi"><label>Larg</label>
                       <input type="number" value={f.width} onChange={e => updateField(i, 'width', parseFloat(e.target.value) || 0)} /></div>
