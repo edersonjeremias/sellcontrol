@@ -293,6 +293,7 @@ export default function VendasPage() {
     setBusy(true, 'Sincronizando...')
     try {
       const [db, lst] = await Promise.all([getDadosIniciais(tenantId), getListas(tenantId)])
+      globalDBRef.current = db
       setGlobalDB(db); setListas(lst)
       showToast('Sincronização concluída!', 'success')
     } catch { showToast('Erro ao sincronizar.', 'error') }
