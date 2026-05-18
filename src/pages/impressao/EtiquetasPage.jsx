@@ -95,6 +95,7 @@ export default function EtiquetasPage() {
   const [filtro,     setFiltro]     = useState('')
   const [selected,   setSelected]   = useState({})
   const [qtds,       setQtds]       = useState({})
+  const [fonte,      setFonte]      = useState('nao_vendidas')
   const [loading,    setLoading]    = useState(false)
   const [err,        setErr]        = useState(null)
   const [gerado,     setGerado]     = useState(false)
@@ -130,18 +131,22 @@ export default function EtiquetasPage() {
     try {
       const { data, error } = await supabase
         .from('vendas')
-        .select('id, produto, modelo, cor, marca, tamanho, preco, codigo')
+        .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome')
         .eq('tenant_id', tenantId)
         .eq('data_live', dataFiltro)
         .eq('live_nome', liveNome)
       if (error) throw error
-      const processed = (data || []).map(r => ({
-        uid:      r.id,
-        codigo:   r.codigo || '',
-        desc:     [r.produto, r.modelo, r.cor, r.marca, r.tamanho].filter(Boolean).join(' '),
-        preco:    r.preco,
-        precoFmt: fmtPreco(r.preco),
+      const allRows = (data || []).map(r => ({
+        uid:         r.id,
+        codigo:      r.codigo || '',
+        desc:        [r.produto, r.modelo, r.cor, r.marca, r.tamanho].filter(Boolean).join(' '),
+        preco:       r.preco,
+        precoFmt:    fmtPreco(r.preco),
+        clienteNome: r.cliente_nome || '',
       }))
+      const processed = fonte === 'nao_vendidas'
+        ? allRows.filter(r => !r.clienteNome.trim())
+        : allRows.filter(r => !!r.clienteNome.trim())
       setRows(processed)
       const sel = {}; const q = {}
       processed.forEach(r => { sel[r.uid] = true; q[r.uid] = 1 })
@@ -151,7 +156,7 @@ export default function EtiquetasPage() {
     } finally {
       setLoading(false)
     }
-  }, [tenantId, dataFiltro, liveNome])
+  }, [tenantId, dataFiltro, liveNome, fonte])
 
   const terms = filtro.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
   const filteredRows = rows.filter(r => {
@@ -171,9 +176,9 @@ export default function EtiquetasPage() {
     })
   }
 
-  function saveLayout() {
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
-  }
+  }, [layout])
 
   function updatePaper(key, val) {
     setLayout(prev => ({ ...prev, [key]: parseFloat(val) || 0 }))
@@ -280,8 +285,6 @@ export default function EtiquetasPage() {
                       <input type="number" value={f.left} onChange={e => updateField(i, 'left', parseFloat(e.target.value) || 0)} /></div>
                     <div className="eti-pi"><label>Larg</label>
                       <input type="number" value={f.width} onChange={e => updateField(i, 'width', parseFloat(e.target.value) || 0)} /></div>
-                    <div className="eti-pi"><label>Alt</label>
-                      <input type="number" value={f.height} onChange={e => updateField(i, 'height', parseFloat(e.target.value) || 0)} /></div>
                     <div className="eti-pi"><label>Fonte (pt)</label>
                       <input type="number" value={f.fontSize} onChange={e => updateField(i, 'fontSize', parseFloat(e.target.value) || 0)} /></div>
                     {f.id === 'barcode' && (
@@ -295,7 +298,6 @@ export default function EtiquetasPage() {
             </div>
           ))}
 
-          <button className="eti-btn-save" onClick={saveLayout}>Salvar Layout</button>
         </aside>
 
         {/* ── Content ── */}
@@ -315,10 +317,29 @@ export default function EtiquetasPage() {
                   options={liveOpts} emptyLabel="-- Selecione a live --" />
               </div>
             )}
+            <div className="sacol-field" style={{ flex: '0 0 auto' }}>
+              <label>PEÇAS</label>
+              <div style={{ display: 'flex', gap: 4, height: 44 }}>
+                <button
+                  className={`sacol-btn${fonte === 'nao_vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
+                  onClick={() => setFonte('nao_vendidas')}
+                  style={{ fontSize: 13, padding: '0 12px' }}
+                >
+                  Não Vendidas
+                </button>
+                <button
+                  className={`sacol-btn${fonte === 'vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
+                  onClick={() => setFonte('vendidas')}
+                  style={{ fontSize: 13, padding: '0 12px' }}
+                >
+                  Vendidas
+                </button>
+              </div>
+            </div>
             <div className="sacol-actions">
               <button className="sacol-btn sacol-btn-green" onClick={puxarVendas}
                 disabled={loading || !dataFiltro || !liveNome}>
-                {loading ? 'Carregando…' : 'Puxar Vendas'}
+                {loading ? 'Carregando…' : 'Puxar'}
               </button>
               <button className="sacol-btn sacol-btn-blue" onClick={imprimir} disabled={!gerado}>
                 Imprimir
