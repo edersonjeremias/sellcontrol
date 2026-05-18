@@ -234,7 +234,7 @@ export default function VendasPage() {
   useEffect(() => {
     if (!tenantId) return
     storageSave(tenantId, {
-      linhas: linhas.filter(l => !l.deleted && !l.isSent),
+      linhas: linhas.filter(l => !l.deleted),
       dataLive,
       liveNome,
     })
@@ -490,7 +490,7 @@ export default function VendasPage() {
       let res
       if (l.cliente_nome?.trim()) {
         res = await enviarVenda(tid, l, dl || null, ln || '')
-        setLinhas(prev => calcSacolas(prev.filter(r => r._key !== rowKey)))
+        setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r)))
       } else {
         res = await salvarVendas(tid, [l], { data_live: dl || null, live_nome: ln || '' })
         if (!l.id && res.novosIds?.length > 0) {
@@ -564,6 +564,27 @@ export default function VendasPage() {
   // ── FINALIZAR LIVE ──
   const iniciarFinalizacao = useCallback(() => {
     if (busy) return
+
+    const linhasComCliente = linhasRef.current.filter(l => !l.deleted && l.cliente_nome?.trim())
+    const todasJaEnviadas  = linhasComCliente.length > 0 && linhasComCliente.every(l => l.isSent)
+
+    // Todos os pedidos já foram enviados individualmente — só limpa a mesa
+    if (todasJaEnviadas) {
+      setConfirmacao({
+        titulo: 'Limpar Mesa?',
+        mensagem: `Todos os ${linhasComCliente.length} pedido(s) já foram enviados individualmente.<br><br>Deseja limpar a mesa para a próxima live?`,
+        onSim: () => {
+          setConfirmacao(null)
+          setLinhas([])
+          setHasUnsaved(false)
+          setTabelaMsg('Mesa limpa. Clique em + Novo para começar ou Buscar para carregar registros.')
+          showToast('Mesa limpa!', 'success')
+        },
+        onNao: () => setConfirmacao(null),
+      })
+      return
+    }
+
     if (!dataLive || !liveNome.trim()) {
       setAlerta({ titulo: 'Dados Faltando', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> antes de finalizar.' }); return
     }
