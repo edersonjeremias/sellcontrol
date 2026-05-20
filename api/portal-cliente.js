@@ -85,7 +85,8 @@ export default async function handler(req, res) {
     const tableMissing =
       profErr.message?.includes('does not exist') ||
       profErr.code === '42P01' ||
-      profErr.message?.includes('relation')
+      profErr.message?.includes('relation') ||
+      profErr.message?.includes('schema cache')
     return res.status(503).json({
       error: profErr.message,
       tableMissing,

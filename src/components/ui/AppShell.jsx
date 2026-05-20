@@ -74,6 +74,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     <div className="app-shell">
       <header className="app-header">
         <div className="app-brand">
+          <img src="/logo.svg" alt="" className="app-logo-img" />
           <span className="app-logo-text">SellControl</span>
         </div>
 
@@ -92,6 +93,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
         {/* Cabeçalho do drawer */}
         <div className="app-drawer-top">
           <div className="app-drawer-brand">
+            <img src="/logo.svg" alt="" className="app-logo-img" />
             <span className="app-logo-text">SellControl</span>
           </div>
           <button className="app-drawer-close" onClick={close}>✕</button>

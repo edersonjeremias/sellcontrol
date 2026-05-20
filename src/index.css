@@ -126,6 +126,13 @@ input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #252525 inset !important
   flex-shrink: 0;
 }
 
+.app-logo-img {
+  width: 28px;
+  height: 28px;
+  display: block;
+  flex-shrink: 0;
+}
+
 .app-logo-text {
   font-weight: 700;
   font-size: 15px;
