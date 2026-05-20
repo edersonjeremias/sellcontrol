@@ -27,6 +27,7 @@ function novaLinha() {
     tamanho: '', preco: '', codigo: '', cliente_nome: '',
     data_live: '', live_nome: '', sacolinha: null,
     status: '', fila1: '', fila2: '', fila3: '',
+    custo: '', qtde: '', condicao: '', genero: '',
     isNew: true, deleted: false, isSent: false, liberado: false,
   }
 }
@@ -51,6 +52,10 @@ function mapRow(row) {
     fila2:        row.fila2        || '',
     fila3:        row.fila3        || '',
     isNew: false, deleted: false,
+    custo:        row.custo        || '',
+    qtde:         row.qtde         || '',
+    condicao:     row.condicao     || '',
+    genero:       row.genero       || '',
     isSent: (row.status || '').toUpperCase() === 'ENVIADO',
     liberado: false,
   }
@@ -127,6 +132,12 @@ export default function VendasPage() {
   const lastRealtimeKeyRef = useRef('')
   const focusReturnRef = useRef(null)  // guarda o input de cliente que disparou o bloqueio
 
+  // ── Configurações de colunas ──
+  const [colsConfig,    setColsConfig]    = useState({ custo: false, qtde: false, condicao: false, genero: false })
+  const [showSettings,  setShowSettings]  = useState(false)
+  const [modalQt,       setModalQt]       = useState(false)
+  const [qtInput,       setQtInput]       = useState('2')
+
   // ── Modal state ──
   const [modalEdicaoIdx,    setModalEdicaoIdx]    = useState(null)
   const [modalFilaIdx,      setModalFilaIdx]      = useState(null)
@@ -160,6 +171,15 @@ export default function VendasPage() {
   useEffect(() => { liveNomeRef.current = liveNome },   [liveNome])
   useEffect(() => { tenantIdRef.current = tenantId },   [tenantId])
   useEffect(() => { hasUnsavedRef.current = hasUnsaved }, [hasUnsaved])
+
+  useEffect(() => {
+    if (!tenantId) return
+    try { const s = JSON.parse(localStorage.getItem(`sc_cols_${tenantId}`)); if (s) setColsConfig(s) } catch {}
+  }, [tenantId])
+  useEffect(() => {
+    if (!tenantId) return
+    localStorage.setItem(`sc_cols_${tenantId}`, JSON.stringify(colsConfig))
+  }, [colsConfig, tenantId])
 
   // ── setBusy helper ──
   const setBusy = useCallback((v, msg = '') => {
@@ -617,6 +637,31 @@ export default function VendasPage() {
     })
   }, [busy, dataLive, liveNome, buscar])
 
+  // ── MULTIPLICAR LINHAS ──
+  function multiplicarLinhas() {
+    const n = parseInt(qtInput)
+    if (!n || n < 2 || n > 99) return
+    setLinhas(prev => {
+      const novas = []
+      prev.forEach(l => {
+        if (l.deleted || l.isSent) { novas.push(l); return }
+        novas.push(l)
+        for (let i = 1; i < n; i++) {
+          const nl = novaLinha()
+          novas.push({
+            ...nl,
+            produto: l.produto, modelo: l.modelo, cor: l.cor, marca: l.marca,
+            tamanho: l.tamanho, preco: l.preco, codigo: l.codigo,
+            custo: l.custo, qtde: l.qtde, condicao: l.condicao, genero: l.genero,
+          })
+        }
+      })
+      return calcSacolas(novas)
+    })
+    setHasUnsaved(true)
+    setModalQt(false)
+  }
+
   // ── HISTÓRICO: handlers ──────────────────────────────────────
   const buscarHistorico = useCallback(async () => {
     if (busyRef.current || !tenantId) return
@@ -818,6 +863,18 @@ export default function VendasPage() {
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                 </svg>
               </button>
+              <button className="btn-acao btn-ghost" onClick={() => setShowSettings(true)}
+                style={{ minWidth:44, padding:'0 10px' }} title="Configurações de colunas">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </button>
+              {colsConfig.qtde && (
+                <button className="btn-acao btn-ghost" onClick={() => setModalQt(true)} disabled={busy}
+                  title="Multiplicar linhas pela quantidade">
+                  QT
+                </button>
+              )}
               <button className="btn-acao btn-ghost" style={{ color: 'var(--purple)', borderColor: 'rgba(197,138,249,0.3)' }}
                 onClick={() => { setModo('historico'); setFiltro('') }} disabled={busy} title="Buscar e editar registros já enviados">
                 Histórico
@@ -901,10 +958,14 @@ export default function VendasPage() {
                   <tr>
                     <th className="col-sacola">Sacola</th>
                     <th>Produto</th><th>Modelo</th>
+                    {colsConfig.genero   && <th className="col-tam">Gênero</th>}
                     <th className="col-cor">Cor</th><th>Marca</th>
                     <th className="col-tam">Tam.</th>
+                    {colsConfig.condicao && <th className="col-tam">Cond.</th>}
                     <th className="col-preco">Preço</th>
+                    {colsConfig.custo    && <th className="col-preco">Custo</th>}
                     <th className="col-cod">Cód.</th>
+                    {colsConfig.qtde     && <th className="col-tam">Qtde.</th>}
                     <th className="col-cliente">Cliente</th>
                     <th className="col-acoes">Ações</th>
                   </tr>
@@ -915,6 +976,7 @@ export default function VendasPage() {
                     return (
                       <TabelaRow key={l._key || l.id || idx}
                         linha={l} idx={idx} listas={listas}
+                        cols={colsConfig}
                         onFieldChange={handleFieldChange}
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
@@ -1006,6 +1068,64 @@ export default function VendasPage() {
       )}
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
       {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} hideConfirm={confirmacao.hideConfirm} />}
+
+      {/* MODAL CONFIGURAÇÕES DE COLUNAS */}
+      {showSettings && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:900, display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setShowSettings(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#1a2232', border:'1px solid rgba(255,255,255,.12)', borderRadius:12, padding:'24px 28px', width:320, boxShadow:'0 12px 40px rgba(0,0,0,.6)' }}>
+            <div style={{ fontSize:16, fontWeight:800, color:'#e6edf3', marginBottom:18 }}>⚙ Colunas Opcionais</div>
+            {[
+              { key:'custo',    label:'Coluna Custo' },
+              { key:'qtde',     label:'Coluna Qtde. (quantidade)' },
+              { key:'condicao', label:'Coluna Novo / Usado' },
+              { key:'genero',   label:'Coluna Masc. / Fem. / Unissex' },
+            ].map(({ key, label }) => (
+              <label key={key} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 0', borderBottom:'1px solid rgba(255,255,255,.07)', cursor:'pointer', color:'#c9d1d9', fontSize:14 }}>
+                <input type="checkbox" checked={!!colsConfig[key]}
+                  onChange={e => setColsConfig(p => ({ ...p, [key]: e.target.checked }))}
+                  style={{ width:16, height:16, accentColor:'#60a5fa', cursor:'pointer' }} />
+                {label}
+              </label>
+            ))}
+            <button onClick={() => setShowSettings(false)}
+              style={{ marginTop:18, width:'100%', padding:'9px 0', background:'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.12)', borderRadius:7, color:'#e6edf3', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL QT — MULTIPLICAR LINHAS */}
+      {modalQt && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:900, display:'flex', alignItems:'center', justifyContent:'center' }}
+          onClick={() => setModalQt(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background:'#1a2232', border:'1px solid rgba(255,255,255,.12)', borderRadius:12, padding:'24px 28px', width:300, boxShadow:'0 12px 40px rgba(0,0,0,.6)' }}>
+            <div style={{ fontSize:16, fontWeight:800, color:'#e6edf3', marginBottom:8 }}>QT — Multiplicar Linhas</div>
+            <div style={{ fontSize:13, color:'#8b949e', marginBottom:16 }}>
+              Cria N cópias de cada linha da tabela (sem cliente, sem enviadas).
+            </div>
+            <label style={{ fontSize:12, fontWeight:700, color:'#8b949e', textTransform:'uppercase', letterSpacing:'0.4px' }}>Quantidade de cópias</label>
+            <input
+              type="number" min={2} max={99} value={qtInput}
+              onChange={e => setQtInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && multiplicarLinhas()}
+              autoFocus
+              style={{ width:'100%', marginTop:6, marginBottom:16, background:'linear-gradient(180deg,#111b28,#0f1621)', border:'1px solid rgba(255,255,255,.15)', borderRadius:7, color:'#e6edf3', fontSize:22, fontWeight:800, textAlign:'center', padding:'8px 0', outline:'none' }}
+            />
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setModalQt(false)}
+                style={{ flex:1, padding:'9px 0', background:'transparent', border:'1px solid rgba(255,255,255,.12)', borderRadius:7, color:'#8b949e', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={multiplicarLinhas}
+                style={{ flex:2, padding:'9px 0', background:'#1d6f42', border:'1px solid rgba(34,197,94,.3)', borderRadius:7, color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer' }}>
+                Aplicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </AppShell>
   )
