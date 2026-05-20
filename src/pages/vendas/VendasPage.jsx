@@ -91,10 +91,13 @@ function ordenarLinhas(linhas) {
   })
 }
 
+const GENERO_TXT = { M: 'masculino masc', F: 'feminino fem', U: 'unissex' }
+
 function passaFiltro(l, filtro) {
   if (!filtro.trim()) return true
   const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
-  const txt = [l.produto, l.modelo, l.cor, l.marca, l.tamanho, l.codigo, l.cliente_nome, l.genero, l.condicao]
+  const generoTxt = GENERO_TXT[l.genero] || l.genero || ''
+  const txt = [l.produto, l.modelo, l.cor, l.marca, l.tamanho, l.codigo, l.cliente_nome, generoTxt, l.condicao]
     .join(' ').toLowerCase()
   return termos.every(t => txt.includes(t))
 }
