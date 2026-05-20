@@ -180,6 +180,38 @@ export default function ClientesPage() {
     window.open(`https://api.whatsapp.com/send?phone=${phone}`, '_blank')
   }
 
+  const enviarAcessoPortal = () => {
+    let phone = whatsapp.replace(/\D/g, '')
+    if (!phone) { showToast('Preencha o WhatsApp do cliente!', 'error'); return }
+    if (!nome.trim()) { showToast('Selecione um cliente!', 'error'); return }
+    if (!senha.trim()) { showToast('Preencha a Senha do Painel antes de enviar!', 'error'); return }
+    if (!phone.startsWith('55')) phone = '55' + phone
+
+    const primeiroNome = (detalhes.nomeCompleto || nome).split(' ')[0]
+    const login        = nome.startsWith('@') ? nome : '@' + nome
+    const urlPortal    = window.location.origin + '/portal'
+
+    const msg =
+`Olá, ${primeiroNome}! Tudo bem?
+
+Segue o link exclusivo para acessar a sua Sacolinha Virtual e o seu Painel de Cliente da VM Kids:
+
+🔗 Acesso: ${urlPortal}
+👤 Login: ${login}
+🔑 Senha: ${senha}
+
+Lá você pode completar o seu cadastro, visualizar as peças que já estão garantidas na sua sacolinha, acompanhar as entregas, verificar pagamentos em aberto e, claro, encerrar a sua sacolinha quando quiser receber suas peças!
+
+Lembrando que você pode alterar sua senha a qualquer momento diretamente no seu painel.
+
+Qualquer dúvida, estamos à disposição! 😊`
+
+    window.open(
+      `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`,
+      '_blank',
+    )
+  }
+
   const buscarCep = async () => {
     const cep = (detalhes.cep || '').replace(/\D/g, '')
     if (cep.length !== 8) return
@@ -434,6 +466,19 @@ export default function ClientesPage() {
                     }}
                   >
                     <span className="material-icons" style={{ fontSize: 18 }}>chat</span>
+                  </button>
+                  <button
+                    onClick={enviarAcessoPortal}
+                    title="Enviar link de acesso ao portal por WhatsApp"
+                    style={{
+                      background: 'transparent', border: '1px solid var(--border-light)',
+                      borderRadius: 6, cursor: 'pointer', color: 'var(--blue)',
+                      width: 36, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <span className="material-icons" style={{ fontSize: 18 }}>key</span>
                   </button>
                 </div>
               </div>
