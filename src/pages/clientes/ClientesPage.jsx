@@ -180,18 +180,43 @@ export default function ClientesPage() {
     window.open(`https://api.whatsapp.com/send?phone=${phone}`, '_blank')
   }
 
-  const enviarAcessoPortal = () => {
-    let phone = whatsapp.replace(/\D/g, '')
+  const enviarAcessoPortal = async () => {
+    const phone = whatsapp.replace(/\D/g, '')
     if (!phone) { showToast('Preencha o WhatsApp do cliente!', 'error'); return }
     if (!nome.trim()) { showToast('Selecione um cliente!', 'error'); return }
-    if (!senha.trim()) { showToast('Preencha a Senha do Painel antes de enviar!', 'error'); return }
-    if (!phone.startsWith('55')) phone = '55' + phone
 
-    const primeiroNome = (detalhes.nomeCompleto || nome).split(' ')[0]
-    const login        = nome.startsWith('@') ? nome : '@' + nome
-    const urlPortal    = window.location.origin + '/portal'
+    setPortalBtnLoading(true)
+    try {
+      const res = await fetch('/api/portal-cliente', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instagram:     nome,
+          whatsapp:      phone,
+          nome_completo: detalhes.nomeCompleto || '',
+        }),
+      })
+      const json = await res.json()
 
-    const msg =
+      if (!res.ok) {
+        if (json.tableMissing) {
+          setNeedsPortalSetup(true)
+          showToast('Tabelas do portal não criadas. Clique em "Configurar Portal" abaixo.', 'error')
+        } else {
+          showToast('Erro: ' + (json.error || 'Falhou'), 'error')
+        }
+        return
+      }
+
+      // Sucesso — abre WhatsApp com mensagem
+      const primeiroNome = (detalhes.nomeCompleto || nome).split(' ')[0]
+      const login        = json.login
+      const senha        = json.senha
+      const urlPortal    = window.location.origin + '/portal'
+      let   phoneWa      = phone
+      if (!phoneWa.startsWith('55')) phoneWa = '55' + phoneWa
+
+      const msg =
 `Olá, ${primeiroNome}! Tudo bem?
 
 Segue o link exclusivo para acessar a sua Sacolinha Virtual e o seu Painel de Cliente da VM Kids:
@@ -206,10 +231,35 @@ Lembrando que você pode alterar sua senha a qualquer momento diretamente no seu
 
 Qualquer dúvida, estamos à disposição! 😊`
 
-    window.open(
-      `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(msg)}`,
-      '_blank',
-    )
+      window.open(
+        `https://api.whatsapp.com/send?phone=${phoneWa}&text=${encodeURIComponent(msg)}`,
+        '_blank',
+      )
+      showToast('Conta criada e WhatsApp aberto!', 'success')
+    } catch (e) {
+      showToast('Erro de rede: ' + e.message, 'error')
+    } finally {
+      setPortalBtnLoading(false)
+    }
+  }
+
+  const executarPortalMigracao = async () => {
+    setPortalMigrating(true)
+    try {
+      const r = await fetch('/api/portal-migrar?secret=vmkids-migrate-2026')
+      const json = await r.json()
+      if (json.success) {
+        showToast('Portal configurado! Tente enviar o acesso novamente.', 'success')
+        setNeedsPortalSetup(false)
+      } else {
+        showToast('Erro: ' + (json.error || 'Falhou'), 'error')
+        if (json.instrucoes) showToast(json.instrucoes, 'error')
+      }
+    } catch (e) {
+      showToast('Erro de rede: ' + e.message, 'error')
+    } finally {
+      setPortalMigrating(false)
+    }
   }
 
   const buscarCep = async () => {
@@ -252,8 +302,11 @@ Qualquer dúvida, estamos à disposição! 😊`
   ADD COLUMN IF NOT EXISTS uf              text DEFAULT '',
   ADD COLUMN IF NOT EXISTS email           text DEFAULT '';`
 
-  const [migrating,  setMigrating]  = useState(false)
-  const [sqlCopied,  setSqlCopied]  = useState(false)
+  const [migrating,        setMigrating]        = useState(false)
+  const [sqlCopied,        setSqlCopied]        = useState(false)
+  const [portalBtnLoading, setPortalBtnLoading] = useState(false)
+  const [needsPortalSetup, setNeedsPortalSetup] = useState(false)
+  const [portalMigrating,  setPortalMigrating]  = useState(false)
 
   const copiarSQL = () => {
     navigator.clipboard.writeText(SQL_MIGRATION).then(() => {
@@ -346,6 +399,38 @@ Qualquer dúvida, estamos à disposição! 😊`
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Banner: configurar portal */}
+      {needsPortalSetup && (
+        <div style={{
+          background: 'rgba(138,180,248,0.08)', border: '1px solid rgba(138,180,248,0.35)',
+          borderRadius: 8, padding: '14px 18px', margin: '0 16px 16px',
+          maxWidth: 760, marginLeft: 'auto', marginRight: 'auto',
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, color:'var(--blue)', fontWeight:700, fontSize:'0.95rem' }}>
+            <span className="material-icons" style={{ fontSize:20 }}>cloud_off</span>
+            Tabelas do Portal do Cliente não encontradas
+          </div>
+          <div style={{ color:'var(--muted)', fontSize:'0.85rem' }}>
+            Clique no botão abaixo para criar as tabelas automaticamente. Requer <b>SUPABASE_DB_URL</b> nas variáveis de ambiente do Vercel.
+          </div>
+          <button
+            onClick={executarPortalMigracao}
+            disabled={portalMigrating}
+            style={{
+              background: 'rgba(138,180,248,.18)', color: 'var(--blue)',
+              border: '1px solid rgba(138,180,248,.35)', borderRadius: 6,
+              padding: '8px 16px', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.88rem',
+              width: 'fit-content',
+            }}
+          >
+            <span className="material-icons" style={{ fontSize:16 }}>settings</span>
+            {portalMigrating ? 'Configurando...' : 'Configurar Portal Agora'}
+          </button>
         </div>
       )}
 
@@ -469,16 +554,21 @@ Qualquer dúvida, estamos à disposição! 😊`
                   </button>
                   <button
                     onClick={enviarAcessoPortal}
-                    title="Enviar link de acesso ao portal por WhatsApp"
+                    disabled={portalBtnLoading}
+                    title="Criar conta no portal e enviar acesso por WhatsApp"
                     style={{
-                      background: 'transparent', border: '1px solid var(--border-light)',
-                      borderRadius: 6, cursor: 'pointer', color: 'var(--blue)',
+                      background: portalBtnLoading ? 'rgba(138,180,248,.15)' : 'transparent',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: 6, cursor: portalBtnLoading ? 'wait' : 'pointer',
+                      color: 'var(--blue)',
                       width: 36, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.2s',
                     }}
                   >
-                    <span className="material-icons" style={{ fontSize: 18 }}>key</span>
+                    <span className="material-icons" style={{ fontSize: 18 }}>
+                      {portalBtnLoading ? 'sync' : 'key'}
+                    </span>
                   </button>
                 </div>
               </div>
