@@ -75,23 +75,23 @@ const TabelaRow = memo(function TabelaRow({
       </td>
 
       {/* PRODUTO */}
-      <td>
+      <td className="col-produto">
         <AutocompleteInput className="cell-input" value={linha.produto}
           list={listas.produtos} onChange={v => upd('produto', v)} disabled={linha.isSent} />
       </td>
 
       {/* MODELO */}
-      <td>
+      <td className="col-modelo">
         <AutocompleteInput className="cell-input" value={linha.modelo}
           list={listas.modelos} onChange={v => upd('modelo', v)} disabled={linha.isSent} />
       </td>
 
       {/* GÊNERO (opcional) */}
       {cols.genero && (
-        <td className="col-tam">
-          <select className="cell-input" value={linha.genero || ''} disabled={linha.isSent}
+        <td className="col-genero">
+          <select className="cell-input cell-select" value={linha.genero || ''} disabled={linha.isSent}
             onChange={e => upd('genero', e.target.value)}>
-            <option value="">—</option>
+            <option value=""></option>
             <option value="M">Masc.</option>
             <option value="F">Fem.</option>
             <option value="U">Unissex</option>
@@ -121,9 +121,9 @@ const TabelaRow = memo(function TabelaRow({
       {/* CONDIÇÃO (opcional) */}
       {cols.condicao && (
         <td className="col-tam">
-          <select className="cell-input" value={linha.condicao || ''} disabled={linha.isSent}
+          <select className="cell-input cell-select" value={linha.condicao || ''} disabled={linha.isSent}
             onChange={e => upd('condicao', e.target.value)}>
-            <option value="">—</option>
+            <option value=""></option>
             <option value="Novo">Novo</option>
             <option value="Usado">Usado</option>
           </select>
@@ -153,16 +153,6 @@ const TabelaRow = memo(function TabelaRow({
           onChange={e => upd('codigo', e.target.value)}
           onKeyDown={onEnterNext} disabled={linha.isSent} />
       </td>
-
-      {/* QTDE (opcional) */}
-      {cols.qtde && (
-        <td className="col-tam">
-          <input className="cell-input" value={linha.qtde || ''}
-            onChange={e => upd('qtde', e.target.value.replace(/\D/g, ''))}
-            onKeyDown={onEnterNext} disabled={linha.isSent}
-            placeholder="1" style={{ textAlign:'center' }} />
-        </td>
-      )}
 
       {/* CLIENTE */}
       <td className="col-cliente">

@@ -94,7 +94,7 @@ function ordenarLinhas(linhas) {
 function passaFiltro(l, filtro) {
   if (!filtro.trim()) return true
   const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
-  const txt = [l.produto, l.modelo, l.cor, l.marca, l.tamanho, l.codigo, l.cliente_nome]
+  const txt = [l.produto, l.modelo, l.cor, l.marca, l.tamanho, l.codigo, l.cliente_nome, l.genero, l.condicao]
     .join(' ').toLowerCase()
   return termos.every(t => txt.includes(t))
 }
@@ -133,7 +133,7 @@ export default function VendasPage() {
   const focusReturnRef = useRef(null)  // guarda o input de cliente que disparou o bloqueio
 
   // ── Configurações de colunas ──
-  const [colsConfig,    setColsConfig]    = useState({ custo: false, qtde: false, condicao: false, genero: false })
+  const [colsConfig,    setColsConfig]    = useState({ custo: false, condicao: false, genero: false })
   const [showSettings,  setShowSettings]  = useState(false)
   const [modalQt,       setModalQt]       = useState(false)
   const [qtInput,       setQtInput]       = useState('2')
@@ -869,12 +869,6 @@ export default function VendasPage() {
                   <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
               </button>
-              {colsConfig.qtde && (
-                <button className="btn-acao btn-ghost" onClick={() => setModalQt(true)} disabled={busy}
-                  title="Multiplicar linhas pela quantidade">
-                  QT
-                </button>
-              )}
               <button className="btn-acao btn-ghost" style={{ color: 'var(--purple)', borderColor: 'rgba(197,138,249,0.3)' }}
                 onClick={() => { setModo('historico'); setFiltro('') }} disabled={busy} title="Buscar e editar registros já enviados">
                 Histórico
@@ -957,15 +951,15 @@ export default function VendasPage() {
                 <thead>
                   <tr>
                     <th className="col-sacola">Sacola</th>
-                    <th>Produto</th><th>Modelo</th>
-                    {colsConfig.genero   && <th className="col-tam">Gênero</th>}
+                    <th className="col-produto">Produto</th>
+                    <th className="col-modelo">Modelo</th>
+                    {colsConfig.genero   && <th className="col-genero">Gênero</th>}
                     <th className="col-cor">Cor</th><th>Marca</th>
                     <th className="col-tam">Tam.</th>
                     {colsConfig.condicao && <th className="col-tam">Cond.</th>}
                     {colsConfig.custo    && <th className="col-preco">Custo</th>}
                     <th className="col-preco">Preço</th>
                     <th className="col-cod">Cód.</th>
-                    {colsConfig.qtde     && <th className="col-tam">Qtde.</th>}
                     <th className="col-cliente">Cliente</th>
                     <th className="col-acoes">Ações</th>
                   </tr>
@@ -1077,7 +1071,6 @@ export default function VendasPage() {
             <div style={{ fontSize:16, fontWeight:800, color:'#e6edf3', marginBottom:18 }}>⚙ Colunas Opcionais</div>
             {[
               { key:'custo',    label:'Coluna Custo' },
-              { key:'qtde',     label:'Coluna Qtde. (quantidade)' },
               { key:'condicao', label:'Coluna Novo / Usado' },
               { key:'genero',   label:'Coluna Masc. / Fem. / Unissex' },
             ].map(({ key, label }) => (

@@ -686,11 +686,14 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
 .col-acoes { min-width: 160px; text-align: center; }
 .col-sacola { min-width: 46px; width: 46px; text-align: center; }
 .col-status { min-width: 90px; text-align: center; }
-.col-cor { min-width: 80px; } .col-tam { min-width: 64px; text-align: center; }
+.col-cor { min-width: 80px; } .col-tam { min-width: 72px; text-align: center; }
+.col-produto { min-width: 150px; } .col-modelo { min-width: 130px; }
+.col-genero { min-width: 80px; text-align: center; }
 .linha-cancelada td { opacity: 0.45; text-decoration: line-through; }
 .linha-cancelada .col-status td, .linha-cancelada td.col-status { text-decoration: none; opacity: 1; }
-.col-preco { min-width: 76px; } .col-cod { min-width: 62px; text-align: center; }
-.col-cliente { min-width: 150px; }
+.col-preco { min-width: 68px; } .col-cod { min-width: 58px; text-align: center; }
+.col-cliente { min-width: 170px; }
+.cell-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; }
 .acoes-wrapper { display: flex; gap: 5px; justify-content: center; align-items: center; }
 .btn-action-sm { background: rgba(255,255,255,0.03); border: 1px solid var(--border-light); border-radius: 6px; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; outline: none; }
 .btn-action-sm svg { width: 15px; height: 15px; }
