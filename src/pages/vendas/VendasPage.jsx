@@ -962,8 +962,8 @@ export default function VendasPage() {
                     <th className="col-cor">Cor</th><th>Marca</th>
                     <th className="col-tam">Tam.</th>
                     {colsConfig.condicao && <th className="col-tam">Cond.</th>}
-                    <th className="col-preco">Preço</th>
                     {colsConfig.custo    && <th className="col-preco">Custo</th>}
+                    <th className="col-preco">Preço</th>
                     <th className="col-cod">Cód.</th>
                     {colsConfig.qtde     && <th className="col-tam">Qtde.</th>}
                     <th className="col-cliente">Cliente</th>

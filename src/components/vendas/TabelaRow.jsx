@@ -90,8 +90,7 @@ const TabelaRow = memo(function TabelaRow({
       {cols.genero && (
         <td className="col-tam">
           <select className="cell-input" value={linha.genero || ''} disabled={linha.isSent}
-            onChange={e => upd('genero', e.target.value)}
-            style={{ padding:'0 4px', fontSize:12 }}>
+            onChange={e => upd('genero', e.target.value)}>
             <option value="">—</option>
             <option value="M">Masc.</option>
             <option value="F">Fem.</option>
@@ -123,12 +122,21 @@ const TabelaRow = memo(function TabelaRow({
       {cols.condicao && (
         <td className="col-tam">
           <select className="cell-input" value={linha.condicao || ''} disabled={linha.isSent}
-            onChange={e => upd('condicao', e.target.value)}
-            style={{ padding:'0 4px', fontSize:12 }}>
+            onChange={e => upd('condicao', e.target.value)}>
             <option value="">—</option>
             <option value="Novo">Novo</option>
             <option value="Usado">Usado</option>
           </select>
+        </td>
+      )}
+
+      {/* CUSTO (opcional) — antes do Preço */}
+      {cols.custo && (
+        <td className="col-preco">
+          <input className="cell-input price" value={linha.custo || ''}
+            onChange={e => upd('custo', e.target.value.replace(/[^\d,]/g, ''))}
+            onKeyDown={onEnterNext} disabled={linha.isSent}
+            placeholder="0,00" />
         </td>
       )}
 
@@ -138,16 +146,6 @@ const TabelaRow = memo(function TabelaRow({
           onChange={e => upd('preco', e.target.value.replace(/[^\d,]/g, ''))}
           onKeyDown={onEnterNext} disabled={linha.isSent} />
       </td>
-
-      {/* CUSTO (opcional) */}
-      {cols.custo && (
-        <td className="col-preco">
-          <input className="cell-input price" value={linha.custo || ''}
-            onChange={e => upd('custo', e.target.value.replace(/[^\d,]/g, ''))}
-            onKeyDown={onEnterNext} disabled={linha.isSent}
-            placeholder="0,00" />
-        </td>
-      )}
 
       {/* CÓDIGO */}
       <td className="col-cod">
