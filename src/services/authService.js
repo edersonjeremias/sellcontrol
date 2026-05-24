@@ -156,6 +156,26 @@ export async function getAllTenants() {
   return { data: data || [], error }
 }
 
+export async function getTenantAdmin(tenantId) {
+  const { data } = await supabase
+    .from('users_perfil')
+    .select('id, nome, email, role')
+    .eq('tenant_id', tenantId)
+    .in('role', ['admin', 'master'])
+    .order('role')
+    .limit(1)
+    .maybeSingle()
+  return data
+}
+
+export async function updateTenantAdmin(userId, fields) {
+  const { error } = await supabase
+    .from('users_perfil')
+    .update(fields)
+    .eq('id', userId)
+  if (error) throw error
+}
+
 export async function updateTenantInfo(tenantId, fields) {
   const { error } = await supabase
     .from('configuracoes')

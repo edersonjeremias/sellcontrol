@@ -5,16 +5,25 @@ import { createTenantAndAdmin } from '../services/masterService'
 import { getConfig } from '../services/configService'
 import {
   getAllTenants, getTenantPages, saveTenantPages, ALL_PAGES,
-  updateTenantInfo, deleteTenant,
+  updateTenantInfo, deleteTenant, getTenantAdmin, updateTenantAdmin,
 } from '../services/authService'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
   color: 'var(--text-body)', borderRadius: 6, padding: '8px 10px',
-  fontSize: 14, width: '100%', colorScheme: 'dark',
+  fontSize: 14, width: '100%', colorScheme: 'dark', boxSizing: 'border-box',
 }
 
-const LBL = { fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4, marginTop: 12 }
+const LBL = {
+  fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase',
+  letterSpacing: '.4px', display: 'block', marginBottom: 5, marginTop: 14,
+}
+
+const SECTION_TITLE = {
+  fontSize: 11, fontWeight: 700, color: 'var(--blue)', textTransform: 'uppercase',
+  letterSpacing: '.6px', marginBottom: 4, marginTop: 20, paddingBottom: 6,
+  borderBottom: '1px solid var(--border-light)',
+}
 
 function TabBtn({ label, active, onClick }) {
   return (
@@ -30,286 +39,322 @@ function TabBtn({ label, active, onClick }) {
   )
 }
 
-// ── Aba: Nova Empresa ──────────────────────────────────────────
-const INITIAL_FORM = {
-  empresaNome: '', empresaCnpj: '',
+// ── Form inicial vazio ──────────────────────────────────────────
+const EMPTY = {
+  nome_loja: '', cnpj: '', whatsapp: '', email_contato: '', link_frete: '',
   adminNome: '', adminEmail: '', adminCpf: '', adminCelular: '', adminSenha: '',
 }
 
-const EMPTY_EDIT = { nome_loja: '', whatsapp: '', email_contato: '', link_frete: '' }
-
-function AbaNova({ showToast }) {
-  // --- Criação ---
-  const [form, setForm]                 = useState(INITIAL_FORM)
-  const [saving, setSaving]             = useState(false)
-  const [created, setCreated]           = useState(null)
-  const [requestError, setRequestError] = useState('')
-
-  // --- Edição/exclusão ---
-  const [tenants, setTenants]           = useState([])
-  const [busca, setBusca]               = useState('')
-  const [dropOpen, setDropOpen]         = useState(false)
-  const [selected, setSelected]         = useState(null)   // tenant selecionado
-  const [editForm, setEditForm]         = useState(EMPTY_EDIT)
-  const [loadingEdit, setLoadingEdit]   = useState(false)
-  const [editSaving, setEditSaving]     = useState(false)
-  const [confirmDel, setConfirmDel]     = useState(false)
-  const [deleting, setDeleting]         = useState(false)
-  const buscaRef = useRef(null)
+// ── Aba: Empresa (criar / editar / excluir) ─────────────────────
+function AbaEmpresa({ showToast }) {
+  const [tenants, setTenants]       = useState([])
+  const [busca, setBusca]           = useState('')
+  const [dropOpen, setDropOpen]     = useState(false)
+  const [modo, setModo]             = useState('novo') // 'novo' | 'editar'
+  const [tenantSel, setTenantSel]   = useState(null)
+  const [adminId, setAdminId]       = useState(null)
+  const [form, setForm]             = useState(EMPTY)
+  const [loading, setLoading]       = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [deleting, setDeleting]     = useState(false)
+  const wrapRef = useRef(null)
 
   useEffect(() => { carregarTenants() }, [])
+
+  // fecha dropdown ao clicar fora
+  useEffect(() => {
+    function onClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setDropOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
 
   async function carregarTenants() {
     const { data } = await getAllTenants()
     setTenants(data)
   }
 
+  // ── Seleciona empresa existente para editar ──
   async function selecionarEmpresa(t) {
-    setSelected(t)
-    setBusca(t.nome_loja || t.tenant_id)
     setDropOpen(false)
+    setBusca(t.nome_loja || t.tenant_id)
+    setTenantSel(t)
     setConfirmDel(false)
-    setLoadingEdit(true)
+    setLoading(true)
     try {
-      const cfg = await getConfig(t.tenant_id)
-      setEditForm({
+      const [cfg, admin] = await Promise.all([
+        getConfig(t.tenant_id),
+        getTenantAdmin(t.tenant_id),
+      ])
+      setAdminId(admin?.id || null)
+      setForm({
         nome_loja:     cfg?.nome_loja     || '',
+        cnpj:          '',
         whatsapp:      cfg?.whatsapp      || '',
         email_contato: cfg?.email_contato || '',
         link_frete:    cfg?.link_frete    || '',
+        adminNome:     admin?.nome        || '',
+        adminEmail:    admin?.email       || '',
+        adminCpf:      '',
+        adminCelular:  '',
+        adminSenha:    '',
       })
+      setModo('editar')
     } finally {
-      setLoadingEdit(false)
+      setLoading(false)
     }
   }
 
-  function limparSelecao() {
-    setSelected(null)
+  // ── Volta para modo novo ──
+  function novaEmpresa() {
+    setModo('novo')
+    setTenantSel(null)
+    setAdminId(null)
     setBusca('')
-    setEditForm(EMPTY_EDIT)
+    setForm(EMPTY)
     setConfirmDel(false)
   }
+
+  const ch = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
   const filtrados = tenants.filter(t =>
     !busca || (t.nome_loja || '').toLowerCase().includes(busca.toLowerCase())
   )
 
-  // Criação
-  const handleChange = e => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setCreated(null); setRequestError('')
-    if (!form.empresaNome.trim() || !form.empresaCnpj.trim()) { showToast('Informe nome e CNPJ.', 'error'); return }
-    if (!form.adminNome.trim() || !form.adminEmail.trim() || !form.adminCpf.trim() || !form.adminCelular.trim()) { showToast('Preencha todos os dados do admin.', 'error'); return }
-    if (form.adminSenha.length < 6) { showToast('Senha mínima de 6 caracteres.', 'error'); return }
+  // ── Salvar (criar ou atualizar) ──
+  async function handleSalvar(e) {
+    e?.preventDefault()
     setSaving(true)
     try {
-      const payload = {
-        empresaNome: form.empresaNome.trim(), empresaCnpj: form.empresaCnpj.trim(),
-        adminNome: form.adminNome.trim(), adminEmail: form.adminEmail.trim().toLowerCase(),
-        adminCpf: form.adminCpf.trim(), adminCelular: form.adminCelular.trim(), adminSenha: form.adminSenha,
+      if (modo === 'novo') {
+        // Criação
+        if (!form.nome_loja.trim() || !form.cnpj.trim()) throw new Error('Informe nome e CNPJ.')
+        if (!form.adminNome.trim() || !form.adminEmail.trim() || !form.adminCpf.trim() || !form.adminCelular.trim()) throw new Error('Preencha todos os dados do admin.')
+        if (form.adminSenha.length < 6) throw new Error('Senha mínima de 6 caracteres.')
+        const { data, error } = await createTenantAndAdmin({
+          empresaNome: form.nome_loja.trim(), empresaCnpj: form.cnpj.trim(),
+          adminNome: form.adminNome.trim(), adminEmail: form.adminEmail.trim().toLowerCase(),
+          adminCpf: form.adminCpf.trim(), adminCelular: form.adminCelular.trim(), adminSenha: form.adminSenha,
+        })
+        if (error) throw error
+        if (!data?.ok) throw new Error(data?.message || 'Falha ao criar.')
+        showToast('Empresa e admin criados!', 'success')
+        novaEmpresa()
+        carregarTenants()
+      } else {
+        // Atualização
+        if (!form.nome_loja.trim()) throw new Error('Nome da empresa é obrigatório.')
+        await updateTenantInfo(tenantSel.tenant_id, {
+          nome_loja:     form.nome_loja.trim(),
+          whatsapp:      form.whatsapp.trim(),
+          email_contato: form.email_contato.trim(),
+          link_frete:    form.link_frete.trim(),
+        })
+        if (adminId) {
+          await updateTenantAdmin(adminId, {
+            nome:  form.adminNome.trim(),
+            email: form.adminEmail.trim().toLowerCase(),
+          })
+        }
+        showToast('Empresa atualizada!', 'success')
+        setBusca(form.nome_loja.trim())
+        carregarTenants()
       }
-      const { data, error } = await createTenantAndAdmin(payload)
-      if (error) throw error
-      if (!data?.ok) throw new Error(data?.message || 'Falha ao criar.')
-      setCreated({ tenantId: data.tenantId, adminEmail: payload.adminEmail })
-      setForm(INITIAL_FORM)
-      showToast('Empresa e admin criados!', 'success')
-      carregarTenants()
     } catch (err) {
-      const msg = err?.message || 'Erro ao criar.'
-      setRequestError(msg)
-      showToast(msg, 'error')
+      showToast(err.message || 'Erro ao salvar.', 'error')
     } finally {
       setSaving(false)
     }
   }
 
-  // Salvar edição
-  async function salvarEdicao() {
-    setEditSaving(true)
-    try {
-      await updateTenantInfo(selected.tenant_id, editForm)
-      showToast('Empresa salva!', 'success')
-      carregarTenants()
-      limparSelecao()
-    } catch (err) {
-      showToast('Erro: ' + err.message, 'error')
-    } finally {
-      setEditSaving(false)
-    }
-  }
-
-  // Excluir
+  // ── Excluir ──
   async function executarDelete() {
     setDeleting(true)
     try {
-      await deleteTenant(selected.tenant_id)
+      await deleteTenant(tenantSel.tenant_id)
       showToast('Empresa excluída.', 'success')
-      limparSelecao()
+      novaEmpresa()
       carregarTenants()
     } catch (err) {
-      showToast('Erro ao excluir: ' + err.message, 'error')
+      showToast('Erro: ' + err.message, 'error')
     } finally {
       setDeleting(false)
       setConfirmDel(false)
     }
   }
 
-  const ec = e => setEditForm(p => ({ ...p, [e.target.name]: e.target.value }))
-
   return (
     <div className="admin-card">
 
-      {/* ══ Criar nova empresa ══ */}
-      <h2>Novo cliente SaaS</h2>
-      <p style={{ color: 'var(--muted)', marginTop: 6 }}>
-        Somente o master pode cadastrar uma nova empresa e o administrador responsável.
-      </p>
-      <form className="login-form" onSubmit={handleSubmit} autoComplete="off">
-        <label>Nome da empresa</label>
-        <input name="empresaNome" type="text" value={form.empresaNome} onChange={handleChange} placeholder="Ex: VM Kids" autoComplete="off" />
-        <label>CNPJ</label>
-        <input name="empresaCnpj" type="text" value={form.empresaCnpj} onChange={handleChange} placeholder="00.000.000/0001-00" autoComplete="off" />
-        <label>Nome completo do admin</label>
-        <input name="adminNome" type="text" value={form.adminNome} onChange={handleChange} placeholder="Nome completo" autoComplete="off" />
-        <label>E-mail do admin</label>
-        <input name="adminEmail" type="text" value={form.adminEmail} onChange={handleChange} placeholder="admin@empresa.com" autoComplete="off" />
-        <label>CPF do admin</label>
-        <input name="adminCpf" type="text" value={form.adminCpf} onChange={handleChange} placeholder="000.000.000-00" autoComplete="off" />
-        <label>Celular do admin</label>
-        <input name="adminCelular" type="text" value={form.adminCelular} onChange={handleChange} placeholder="(00) 90000-0000" autoComplete="off" />
-        <label>Senha inicial do admin</label>
-        <input name="adminSenha" type="password" value={form.adminSenha} onChange={handleChange} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
-        <button type="submit" className="btn-acao btn-blue" disabled={saving}>
-          {saving ? 'Criando…' : 'Criar empresa + admin'}
-        </button>
-      </form>
-
-      {created && (
-        <div style={{ marginTop: 12, color: 'var(--green)', padding: '10px 12px', borderRadius: 8, background: 'rgba(74,222,128,.12)', fontWeight: 600 }}>
-          Cadastro concluído. Tenant: {created.tenantId} · Admin: {created.adminEmail}
+      {/* ── Badge de modo ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <h2 style={{ marginBottom: 4 }}>
+            {modo === 'novo' ? 'Nova empresa' : `Editando: ${tenantSel?.nome_loja || ''}`}
+          </h2>
+          <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+            {modo === 'novo'
+              ? 'Busque abaixo para editar uma existente, ou preencha os campos para criar.'
+              : 'Altere os campos necessários e salve.'}
+          </p>
         </div>
-      )}
-      {requestError && (
-        <div style={{ marginTop: 12, color: 'var(--red)', padding: '10px 12px', borderRadius: 8, background: 'rgba(242,139,130,.12)', fontWeight: 600 }}>
-          {requestError}
-        </div>
-      )}
+        {modo === 'editar' && (
+          <button onClick={novaEmpresa}
+            style={{ background: 'var(--border-light)', border: 'none', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', color: 'var(--text-body)', fontSize: 13, whiteSpace: 'nowrap' }}>
+            + Nova empresa
+          </button>
+        )}
+      </div>
 
-      {/* ══ Editar / Excluir empresa ══ */}
-      <div style={{ marginTop: 36, paddingTop: 24, borderTop: '1px solid var(--border-light)' }}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
-          Editar ou excluir empresa
-        </h3>
-        <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
-          Busque a empresa pelo nome para carregar e editar os dados.
-        </p>
+      <form onSubmit={handleSalvar} autoComplete="off">
 
-        {/* Busca com dropdown */}
-        <div style={{ position: 'relative' }} ref={buscaRef}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input
-              type="text"
-              placeholder="Digite o nome da empresa…"
-              value={busca}
-              onChange={e => { setBusca(e.target.value); setDropOpen(true); if (selected) setSelected(null) }}
-              onFocus={() => setDropOpen(true)}
-              style={{ ...SI }}
-            />
-            {selected && (
-              <button onClick={limparSelecao} title="Limpar seleção"
-                style={{ background: 'var(--border-light)', border: 'none', borderRadius: 6, padding: '0 10px', cursor: 'pointer', color: 'var(--muted)', fontSize: 18, lineHeight: 1 }}>
-                ✕
-              </button>
-            )}
-          </div>
+        {/* ── Campo empresa com autocomplete ── */}
+        <div style={SECTION_TITLE}>Empresa</div>
 
-          {dropOpen && !selected && filtrados.length > 0 && (
+        <div style={{ position: 'relative' }} ref={wrapRef}>
+          <label style={LBL}>Nome da empresa *</label>
+          <input
+            name="nome_loja"
+            value={modo === 'editar' ? form.nome_loja : busca}
+            onChange={e => {
+              if (modo === 'editar') {
+                ch(e)
+              } else {
+                setBusca(e.target.value)
+                setDropOpen(true)
+              }
+            }}
+            onFocus={() => { if (modo === 'novo') setDropOpen(true) }}
+            placeholder="Digite para buscar empresa existente ou criar nova…"
+            autoComplete="off"
+            style={SI}
+          />
+
+          {/* Dropdown de busca */}
+          {modo === 'novo' && dropOpen && filtrados.length > 0 && (
             <div style={{
-              position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-              background: 'var(--input-bg)', border: '1px solid var(--border-light)',
-              borderRadius: 8, zIndex: 20, boxShadow: '0 6px 24px rgba(0,0,0,.5)',
-              maxHeight: 220, overflowY: 'auto',
+              position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0,
+              background: '#1a2230', border: '1px solid var(--border-light)',
+              borderRadius: 8, zIndex: 30, boxShadow: '0 8px 28px rgba(0,0,0,.6)',
+              maxHeight: 240, overflowY: 'auto',
             }}>
               {filtrados.map(t => (
-                <button key={t.tenant_id}
+                <button type="button" key={t.tenant_id}
                   onClick={() => selecionarEmpresa(t)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    width: '100%', textAlign: 'left', padding: '10px 14px',
+                    width: '100%', textAlign: 'left', padding: '11px 14px',
                     background: 'none', border: 'none', color: 'var(--text-body)',
-                    cursor: 'pointer', fontSize: 14, borderBottom: '1px solid var(--border-light)',
+                    cursor: 'pointer', fontSize: 14,
+                    borderBottom: '1px solid var(--border-light)',
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'none'}>
                   <span style={{ fontWeight: 600 }}>{t.nome_loja || '(sem nome)'}</span>
-                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>{t.tenant_id.slice(0, 8)}…</span>
+                  <span style={{ fontSize: 11, color: 'var(--blue)' }}>Clique para editar</span>
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Formulário de edição */}
-        {loadingEdit && (
-          <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 16 }}>Carregando dados…</div>
-        )}
+        {loading && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 12 }}>Carregando dados da empresa…</div>}
 
-        {selected && !loadingEdit && (
-          <div style={{ marginTop: 20, padding: '20px', borderRadius: 10, border: '1px solid var(--blue)', background: 'rgba(59,130,246,.05)' }}>
-            <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 16 }}>
-              Editando: {selected.nome_loja || selected.tenant_id}
-            </div>
+        {!loading && (
+          <>
+            {modo === 'novo' && (
+              <>
+                <label style={LBL}>CNPJ *</label>
+                <input name="cnpj" value={form.cnpj} onChange={ch} placeholder="00.000.000/0001-00" autoComplete="off" style={SI} />
+              </>
+            )}
+
+            {modo === 'editar' && (
+              <>
+                <label style={LBL}>WhatsApp</label>
+                <input name="whatsapp" value={form.whatsapp} onChange={ch} placeholder="(00) 90000-0000" autoComplete="off" style={SI} />
+
+                <label style={LBL}>E-mail de contato</label>
+                <input name="email_contato" value={form.email_contato} onChange={ch} placeholder="contato@empresa.com" autoComplete="off" style={SI} />
+
+                <label style={LBL}>Link do frete</label>
+                <input name="link_frete" value={form.link_frete} onChange={ch} placeholder="https://…" autoComplete="off" style={SI} />
+              </>
+            )}
+
+            {/* ── Admin ── */}
+            <div style={SECTION_TITLE}>Administrador</div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
               <div>
-                <label style={LBL}>Nome da empresa</label>
-                <input name="nome_loja" value={editForm.nome_loja} onChange={ec} style={SI} placeholder="Nome da empresa" />
+                <label style={LBL}>Nome completo *</label>
+                <input name="adminNome" value={form.adminNome} onChange={ch} placeholder="Nome do admin" autoComplete="off" style={SI} />
               </div>
               <div>
-                <label style={LBL}>WhatsApp</label>
-                <input name="whatsapp" value={editForm.whatsapp} onChange={ec} style={SI} placeholder="(00) 90000-0000" />
+                <label style={LBL}>E-mail *</label>
+                <input name="adminEmail" value={form.adminEmail} onChange={ch} placeholder="admin@empresa.com" autoComplete="off" style={SI} />
               </div>
-              <div>
-                <label style={LBL}>E-mail de contato</label>
-                <input name="email_contato" value={editForm.email_contato} onChange={ec} style={SI} placeholder="contato@empresa.com" />
-              </div>
-              <div>
-                <label style={LBL}>Link do frete</label>
-                <input name="link_frete" value={editForm.link_frete} onChange={ec} style={SI} placeholder="https://…" />
+
+              {modo === 'novo' && (
+                <>
+                  <div>
+                    <label style={LBL}>CPF *</label>
+                    <input name="adminCpf" value={form.adminCpf} onChange={ch} placeholder="000.000.000-00" autoComplete="off" style={SI} />
+                  </div>
+                  <div>
+                    <label style={LBL}>Celular *</label>
+                    <input name="adminCelular" value={form.adminCelular} onChange={ch} placeholder="(00) 90000-0000" autoComplete="off" style={SI} />
+                  </div>
+                </>
+              )}
+
+              <div style={modo === 'editar' ? { gridColumn: '1 / -1' } : {}}>
+                <label style={LBL}>
+                  {modo === 'editar' ? 'Nova senha (deixe vazio para manter)' : 'Senha inicial *'}
+                </label>
+                <input name="adminSenha" type="password" value={form.adminSenha} onChange={ch}
+                  placeholder={modo === 'editar' ? 'Nova senha (opcional)' : 'Mínimo 6 caracteres'}
+                  autoComplete="new-password" style={SI} />
               </div>
             </div>
 
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>
-              ID: {selected.tenant_id}
-            </div>
+            {/* ── ID do tenant (só edição) ── */}
+            {modo === 'editar' && tenantSel && (
+              <div style={{ marginTop: 14, fontSize: 11, color: 'var(--muted)' }}>
+                ID: {tenantSel.tenant_id}
+              </div>
+            )}
 
-            {/* Botões */}
-            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-              <button onClick={salvarEdicao} disabled={editSaving}
+            {/* ── Botões ── */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
+              <button type="submit" disabled={saving}
                 className="btn-acao btn-blue"
-                style={{ flex: 1, minHeight: 40, fontWeight: 700, color: '#171717', fontSize: 14 }}>
-                {editSaving ? 'Salvando…' : 'Salvar alterações'}
+                style={{ flex: 1, minHeight: 42, fontWeight: 700, color: '#171717', fontSize: 14 }}>
+                {saving
+                  ? (modo === 'novo' ? 'Criando…' : 'Salvando…')
+                  : (modo === 'novo' ? 'Criar empresa + admin' : 'Salvar alterações')}
               </button>
 
-              {!confirmDel ? (
-                <button onClick={() => setConfirmDel(true)}
+              {modo === 'editar' && !confirmDel && (
+                <button type="button" onClick={() => setConfirmDel(true)}
                   className="btn-acao"
-                  style={{ minHeight: 40, padding: '0 20px', background: 'rgba(239,68,68,.15)', color: 'var(--red)', fontWeight: 600, fontSize: 14 }}>
+                  style={{ minHeight: 42, padding: '0 20px', background: 'rgba(239,68,68,.15)', color: 'var(--red)', fontWeight: 600, fontSize: 14 }}>
                   Excluir empresa
                 </button>
-              ) : (
+              )}
+
+              {modo === 'editar' && confirmDel && (
                 <>
-                  <button onClick={executarDelete} disabled={deleting}
+                  <button type="button" onClick={executarDelete} disabled={deleting}
                     className="btn-acao"
-                    style={{ minHeight: 40, padding: '0 16px', background: 'var(--red)', color: '#fff', fontWeight: 700, fontSize: 14 }}>
+                    style={{ minHeight: 42, padding: '0 16px', background: 'var(--red)', color: '#fff', fontWeight: 700, fontSize: 14 }}>
                     {deleting ? 'Excluindo…' : 'Confirmar exclusão'}
                   </button>
-                  <button onClick={() => setConfirmDel(false)}
+                  <button type="button" onClick={() => setConfirmDel(false)}
                     className="btn-acao"
-                    style={{ minHeight: 40, padding: '0 14px', background: 'var(--border-light)', color: 'var(--text-body)', fontSize: 14 }}>
+                    style={{ minHeight: 42, padding: '0 14px', background: 'var(--border-light)', color: 'var(--text-body)' }}>
                     Cancelar
                   </button>
                 </>
@@ -318,12 +363,12 @@ function AbaNova({ showToast }) {
 
             {confirmDel && (
               <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 6, background: 'rgba(239,68,68,.1)', color: 'var(--red)', fontSize: 13 }}>
-                Atenção: esta ação é irreversível e removerá todos os dados da empresa.
+                Atenção: esta ação é irreversível e remove todos os dados da empresa permanentemente.
               </div>
             )}
-          </div>
+          </>
         )}
-      </div>
+      </form>
     </div>
   )
 }
@@ -372,7 +417,7 @@ function AbaPaginas({ showToast }) {
     }
   }
 
-  const toggle = (slug) => setSelected(prev => ({ ...prev, [slug]: !prev[slug] }))
+  const toggle = slug => setSelected(prev => ({ ...prev, [slug]: !prev[slug] }))
 
   return (
     <div style={{ padding: '20px 0', maxWidth: 520 }}>
@@ -426,16 +471,16 @@ function AbaPaginas({ showToast }) {
 // ── Página principal ───────────────────────────────────────────
 export default function MasterEmpresasPage() {
   const { showToast } = useApp()
-  const [aba, setAba] = useState('nova')
+  const [aba, setAba] = useState('empresa')
 
   return (
     <AppShell title="Master — Empresas">
       <section className="admin-panel">
         <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 4 }}>
-          <TabBtn label="Nova Empresa"        active={aba === 'nova'}    onClick={() => setAba('nova')} />
+          <TabBtn label="Empresa"             active={aba === 'empresa'} onClick={() => setAba('empresa')} />
           <TabBtn label="Páginas por Empresa" active={aba === 'paginas'} onClick={() => setAba('paginas')} />
         </div>
-        {aba === 'nova'    && <AbaNova    showToast={showToast} />}
+        {aba === 'empresa' && <AbaEmpresa showToast={showToast} />}
         {aba === 'paginas' && <AbaPaginas showToast={showToast} />}
       </section>
     </AppShell>
