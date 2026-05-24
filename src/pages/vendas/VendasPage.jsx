@@ -167,12 +167,13 @@ export default function VendasPage() {
   const dataLiveRef  = useRef(dataLive)
   const liveNomeRef  = useRef(liveNome)
   const tenantIdRef  = useRef(tenantId)
-  useEffect(() => { linhasRef.current = linhas },       [linhas])
-  useEffect(() => { globalDBRef.current = globalDB },   [globalDB])
-  useEffect(() => { busyRef.current = busy },           [busy])
-  useEffect(() => { dataLiveRef.current = dataLive },   [dataLive])
-  useEffect(() => { liveNomeRef.current = liveNome },   [liveNome])
-  useEffect(() => { tenantIdRef.current = tenantId },   [tenantId])
+  // Atualização síncrona durante o render — sem lag de useEffect
+  dataLiveRef.current  = dataLive
+  liveNomeRef.current  = liveNome
+  tenantIdRef.current  = tenantId
+  useEffect(() => { linhasRef.current = linhas },         [linhas])
+  useEffect(() => { globalDBRef.current = globalDB },     [globalDB])
+  useEffect(() => { busyRef.current = busy },             [busy])
   useEffect(() => { hasUnsavedRef.current = hasUnsaved }, [hasUnsaved])
 
   useEffect(() => {
@@ -495,7 +496,7 @@ export default function VendasPage() {
   // ── SALVAR LINHA (aviãozinho) ──
   const handleEnviar = useCallback(async (rowKey) => {
     const l = linhasRef.current.find(r => r._key === rowKey)
-    if (!l) return
+    if (!l) { showToast('Linha não encontrada. Clique em Buscar e tente novamente.', 'error'); return }
     if (l.isSent) { showToast('Esta venda já foi finalizada!', 'info'); return }
     const dl = dataLiveRef.current
     const ln = liveNomeRef.current
