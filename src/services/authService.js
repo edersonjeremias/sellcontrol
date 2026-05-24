@@ -151,9 +151,30 @@ export async function createPage(tenantId, page) {
 export async function getAllTenants() {
   const { data, error } = await supabase
     .from('configuracoes')
-    .select('tenant_id, nome_loja')
+    .select('tenant_id, nome_loja, cnpj')
     .order('nome_loja')
   return { data: data || [], error }
+}
+
+export async function updateTenantInfo(tenantId, fields) {
+  const { error } = await supabase
+    .from('configuracoes')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
+  if (error) throw error
+}
+
+export async function deleteTenant(tenantId) {
+  // Ordem: pages_access → pages → users_perfil → configuracoes
+  const { data: pages } = await supabase.from('pages').select('id').eq('tenant_id', tenantId)
+  const pageIds = (pages || []).map(p => p.id)
+  if (pageIds.length) {
+    await supabase.from('pages_access').delete().in('page_id', pageIds)
+    await supabase.from('pages').delete().eq('tenant_id', tenantId)
+  }
+  await supabase.from('users_perfil').delete().eq('tenant_id', tenantId)
+  const { error } = await supabase.from('configuracoes').delete().eq('tenant_id', tenantId)
+  if (error) throw error
 }
 
 // Sincroniza quais páginas uma empresa pode usar (master)

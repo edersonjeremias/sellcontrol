@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext'
 import { createTenantAndAdmin } from '../services/masterService'
 import {
   getAllTenants, getTenantPages, saveTenantPages, ALL_PAGES,
+  updateTenantInfo, deleteTenant,
 } from '../services/authService'
 
 const SI = {
@@ -32,20 +33,110 @@ const INITIAL_FORM = {
   adminNome: '', adminEmail: '', adminCpf: '', adminCelular: '', adminSenha: '',
 }
 
+function TenantRow({ t, onEdit, onDelete }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '10px 12px', borderRadius: 8,
+      background: 'var(--table-row)', marginBottom: 4,
+      border: '1px solid var(--border-light)',
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {t.nome_loja || '(sem nome)'}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+          {t.cnpj ? `CNPJ: ${t.cnpj} · ` : ''}{t.tenant_id}
+        </div>
+      </div>
+      <button onClick={() => onEdit(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--blue)', padding: '4px 6px', borderRadius: 4 }}
+        title="Editar">
+        <span className="material-icons" style={{ fontSize: 18 }}>edit</span>
+      </button>
+      <button onClick={() => onDelete(t.tenant_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', padding: '4px 6px', borderRadius: 4 }}
+        title="Excluir">
+        <span className="material-icons" style={{ fontSize: 18 }}>delete</span>
+      </button>
+    </div>
+  )
+}
+
+function TenantEditRow({ t, onSave, onCancel, saving }) {
+  const [form, setForm] = useState({ nome_loja: t.nome_loja || '', cnpj: t.cnpj || '' })
+  const ch = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
+  return (
+    <div style={{
+      padding: '12px', borderRadius: 8, marginBottom: 4,
+      border: '1px solid var(--blue)', background: 'rgba(59,130,246,.06)',
+    }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <input name="nome_loja" value={form.nome_loja} onChange={ch} placeholder="Nome da empresa"
+          style={{ ...SI, width: '100%' }} />
+        <input name="cnpj" value={form.cnpj} onChange={ch} placeholder="CNPJ"
+          style={{ ...SI, width: 180, flexShrink: 0 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={() => onSave(t.tenant_id, form)} disabled={saving}
+          className="btn-acao btn-blue" style={{ fontSize: 13, minHeight: 34, color: '#171717', fontWeight: 700 }}>
+          {saving ? 'Salvando…' : 'Salvar'}
+        </button>
+        <button onClick={onCancel} className="btn-acao"
+          style={{ fontSize: 13, minHeight: 34, background: 'var(--border-light)', color: 'var(--text-body)' }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ConfirmDelete({ tenantId, tenants, onConfirm, onCancel }) {
+  const t = tenants.find(x => x.tenant_id === tenantId)
+  return (
+    <div style={{
+      padding: '14px 16px', borderRadius: 8, marginBottom: 8,
+      border: '1px solid var(--red)', background: 'rgba(239,68,68,.07)',
+    }}>
+      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--red)', marginBottom: 6 }}>
+        Excluir "{t?.nome_loja || tenantId}"?
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+        Esta ação é irreversível. Todos os dados da empresa (usuários, páginas) serão removidos.
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={onConfirm} className="btn-acao"
+          style={{ fontSize: 13, minHeight: 34, background: 'var(--red)', color: '#fff', fontWeight: 700 }}>
+          Confirmar exclusão
+        </button>
+        <button onClick={onCancel} className="btn-acao"
+          style={{ fontSize: 13, minHeight: 34, background: 'var(--border-light)', color: 'var(--text-body)' }}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function AbaNova({ showToast }) {
-  const [form, setForm]               = useState(INITIAL_FORM)
-  const [saving, setSaving]           = useState(false)
-  const [created, setCreated]         = useState(null)
+  const [form, setForm]                 = useState(INITIAL_FORM)
+  const [saving, setSaving]             = useState(false)
+  const [created, setCreated]           = useState(null)
   const [requestError, setRequestError] = useState('')
 
-  const getErrorMessage = (err) => {
-    if (!err) return 'Erro ao criar empresa e administrador.'
-    if (typeof err === 'string') return err
-    if (err.message) return err.message
-    return 'Erro ao criar empresa e administrador.'
+  const [tenants, setTenants]     = useState([])
+  const [filtro, setFiltro]       = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleting, setDeleting]   = useState(false)
+
+  useEffect(() => { carregarTenants() }, [])
+
+  async function carregarTenants() {
+    const { data } = await getAllTenants()
+    setTenants(data)
   }
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
   }
@@ -69,14 +160,48 @@ function AbaNova({ showToast }) {
       setCreated({ tenantId: data.tenantId, adminEmail: payload.adminEmail })
       setForm(INITIAL_FORM)
       showToast('Empresa e administrador criados com sucesso.', 'success')
+      carregarTenants()
     } catch (err) {
-      const msg = getErrorMessage(err)
+      const msg = err?.message || 'Erro ao criar empresa e administrador.'
       setRequestError(msg)
       showToast(msg, 'error')
     } finally {
       setSaving(false)
     }
   }
+
+  async function salvarEdicao(tenantId, fields) {
+    setEditSaving(true)
+    try {
+      await updateTenantInfo(tenantId, fields)
+      showToast('Empresa atualizada!', 'success')
+      setEditingId(null)
+      carregarTenants()
+    } catch (err) {
+      showToast('Erro: ' + err.message, 'error')
+    } finally {
+      setEditSaving(false)
+    }
+  }
+
+  async function executarDelete() {
+    setDeleting(true)
+    try {
+      await deleteTenant(deletingId)
+      showToast('Empresa excluída.', 'success')
+      setDeletingId(null)
+      carregarTenants()
+    } catch (err) {
+      showToast('Erro ao excluir: ' + err.message, 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const filtrados = tenants.filter(t =>
+    !filtro || (t.nome_loja || '').toLowerCase().includes(filtro.toLowerCase()) ||
+    (t.cnpj || '').includes(filtro)
+  )
 
   return (
     <div className="admin-card">
@@ -103,6 +228,7 @@ function AbaNova({ showToast }) {
           {saving ? 'Criando empresa...' : 'Criar empresa + admin'}
         </button>
       </form>
+
       {created && (
         <div style={{ marginTop: 16, color: 'var(--green)', padding: '10px 12px', borderRadius: 10, background: 'rgba(74,222,128,.12)', fontWeight: 600 }}>
           Cadastro concluído. Tenant: {created.tenantId}. Admin: {created.adminEmail}.
@@ -113,6 +239,56 @@ function AbaNova({ showToast }) {
           {requestError}
         </div>
       )}
+
+      {/* ── Empresas cadastradas ── */}
+      <div style={{ marginTop: 32, borderTop: '1px solid var(--border-light)', paddingTop: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-body)' }}>Empresas cadastradas</h3>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{filtrados.length} de {tenants.length}</span>
+        </div>
+
+        <input
+          type="text"
+          placeholder="Filtrar por nome ou CNPJ…"
+          value={filtro}
+          onChange={e => setFiltro(e.target.value)}
+          style={{ ...SI, marginBottom: 12 }}
+        />
+
+        {deletingId && (
+          <ConfirmDelete
+            tenantId={deletingId}
+            tenants={tenants}
+            onConfirm={executarDelete}
+            onCancel={() => setDeletingId(null)}
+          />
+        )}
+
+        {filtrados.length === 0 && (
+          <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 16 }}>
+            {tenants.length === 0 ? 'Nenhuma empresa cadastrada.' : 'Nenhuma empresa encontrada.'}
+          </div>
+        )}
+
+        {filtrados.map(t =>
+          editingId === t.tenant_id ? (
+            <TenantEditRow
+              key={t.tenant_id}
+              t={t}
+              saving={editSaving}
+              onSave={salvarEdicao}
+              onCancel={() => setEditingId(null)}
+            />
+          ) : (
+            <TenantRow
+              key={t.tenant_id}
+              t={t}
+              onEdit={x => { setEditingId(x.tenant_id); setDeletingId(null) }}
+              onDelete={id => { setDeletingId(id); setEditingId(null) }}
+            />
+          )
+        )}
+      </div>
     </div>
   )
 }
