@@ -151,7 +151,7 @@ export async function createPage(tenantId, page) {
 export async function getAllTenants() {
   const { data, error } = await supabase
     .from('configuracoes')
-    .select('tenant_id, nome_loja, cnpj')
+    .select('tenant_id, nome_loja, whatsapp')
     .order('nome_loja')
   return { data: data || [], error }
 }

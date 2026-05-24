@@ -46,7 +46,7 @@ function TenantRow({ t, onEdit, onDelete }) {
           {t.nome_loja || '(sem nome)'}
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-          {t.cnpj ? `CNPJ: ${t.cnpj} · ` : ''}{t.tenant_id}
+          {t.whatsapp ? `WhatsApp: ${t.whatsapp} · ` : ''}{t.tenant_id}
         </div>
       </div>
       <button onClick={() => onEdit(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--blue)', padding: '4px 6px', borderRadius: 4 }}
@@ -62,7 +62,7 @@ function TenantRow({ t, onEdit, onDelete }) {
 }
 
 function TenantEditRow({ t, onSave, onCancel, saving }) {
-  const [form, setForm] = useState({ nome_loja: t.nome_loja || '', cnpj: t.cnpj || '' })
+  const [form, setForm] = useState({ nome_loja: t.nome_loja || '', whatsapp: t.whatsapp || '' })
   const ch = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
   return (
     <div style={{
@@ -72,7 +72,7 @@ function TenantEditRow({ t, onSave, onCancel, saving }) {
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <input name="nome_loja" value={form.nome_loja} onChange={ch} placeholder="Nome da empresa"
           style={{ ...SI, width: '100%' }} />
-        <input name="cnpj" value={form.cnpj} onChange={ch} placeholder="CNPJ"
+        <input name="whatsapp" value={form.whatsapp} onChange={ch} placeholder="WhatsApp"
           style={{ ...SI, width: 180, flexShrink: 0 }} />
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
@@ -200,7 +200,7 @@ function AbaNova({ showToast }) {
 
   const filtrados = tenants.filter(t =>
     !filtro || (t.nome_loja || '').toLowerCase().includes(filtro.toLowerCase()) ||
-    (t.cnpj || '').includes(filtro)
+    (t.whatsapp || '').includes(filtro)
   )
 
   return (
