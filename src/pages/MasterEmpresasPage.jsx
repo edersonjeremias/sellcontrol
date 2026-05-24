@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import AppShell from '../components/ui/AppShell'
 import { useApp } from '../context/AppContext'
 import { createTenantAndAdmin } from '../services/masterService'
+import { getConfig } from '../services/configService'
 import {
   getAllTenants, getTenantPages, saveTenantPages, ALL_PAGES,
   updateTenantInfo, deleteTenant,
@@ -12,6 +13,8 @@ const SI = {
   color: 'var(--text-body)', borderRadius: 6, padding: '8px 10px',
   fontSize: 14, width: '100%', colorScheme: 'dark',
 }
+
+const LBL = { fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4, marginTop: 12 }
 
 function TabBtn({ label, active, onClick }) {
   return (
@@ -33,101 +36,26 @@ const INITIAL_FORM = {
   adminNome: '', adminEmail: '', adminCpf: '', adminCelular: '', adminSenha: '',
 }
 
-function TenantRow({ t, onEdit, onDelete }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '10px 12px', borderRadius: 8,
-      background: 'var(--table-row)', marginBottom: 4,
-      border: '1px solid var(--border-light)',
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-body)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {t.nome_loja || '(sem nome)'}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-          {t.whatsapp ? `WhatsApp: ${t.whatsapp} · ` : ''}{t.tenant_id}
-        </div>
-      </div>
-      <button onClick={() => onEdit(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--blue)', padding: '4px 6px', borderRadius: 4 }}
-        title="Editar">
-        <span className="material-icons" style={{ fontSize: 18 }}>edit</span>
-      </button>
-      <button onClick={() => onDelete(t.tenant_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', padding: '4px 6px', borderRadius: 4 }}
-        title="Excluir">
-        <span className="material-icons" style={{ fontSize: 18 }}>delete</span>
-      </button>
-    </div>
-  )
-}
-
-function TenantEditRow({ t, onSave, onCancel, saving }) {
-  const [form, setForm] = useState({ nome_loja: t.nome_loja || '', whatsapp: t.whatsapp || '' })
-  const ch = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
-  return (
-    <div style={{
-      padding: '12px', borderRadius: 8, marginBottom: 4,
-      border: '1px solid var(--blue)', background: 'rgba(59,130,246,.06)',
-    }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <input name="nome_loja" value={form.nome_loja} onChange={ch} placeholder="Nome da empresa"
-          style={{ ...SI, width: '100%' }} />
-        <input name="whatsapp" value={form.whatsapp} onChange={ch} placeholder="WhatsApp"
-          style={{ ...SI, width: 180, flexShrink: 0 }} />
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={() => onSave(t.tenant_id, form)} disabled={saving}
-          className="btn-acao btn-blue" style={{ fontSize: 13, minHeight: 34, color: '#171717', fontWeight: 700 }}>
-          {saving ? 'Salvando…' : 'Salvar'}
-        </button>
-        <button onClick={onCancel} className="btn-acao"
-          style={{ fontSize: 13, minHeight: 34, background: 'var(--border-light)', color: 'var(--text-body)' }}>
-          Cancelar
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function ConfirmDelete({ tenantId, tenants, onConfirm, onCancel }) {
-  const t = tenants.find(x => x.tenant_id === tenantId)
-  return (
-    <div style={{
-      padding: '14px 16px', borderRadius: 8, marginBottom: 8,
-      border: '1px solid var(--red)', background: 'rgba(239,68,68,.07)',
-    }}>
-      <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--red)', marginBottom: 6 }}>
-        Excluir "{t?.nome_loja || tenantId}"?
-      </div>
-      <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-        Esta ação é irreversível. Todos os dados da empresa (usuários, páginas) serão removidos.
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={onConfirm} className="btn-acao"
-          style={{ fontSize: 13, minHeight: 34, background: 'var(--red)', color: '#fff', fontWeight: 700 }}>
-          Confirmar exclusão
-        </button>
-        <button onClick={onCancel} className="btn-acao"
-          style={{ fontSize: 13, minHeight: 34, background: 'var(--border-light)', color: 'var(--text-body)' }}>
-          Cancelar
-        </button>
-      </div>
-    </div>
-  )
-}
+const EMPTY_EDIT = { nome_loja: '', whatsapp: '', email_contato: '', link_frete: '' }
 
 function AbaNova({ showToast }) {
+  // --- Criação ---
   const [form, setForm]                 = useState(INITIAL_FORM)
   const [saving, setSaving]             = useState(false)
   const [created, setCreated]           = useState(null)
   const [requestError, setRequestError] = useState('')
 
-  const [tenants, setTenants]     = useState([])
-  const [filtro, setFiltro]       = useState('')
-  const [editingId, setEditingId] = useState(null)
-  const [editSaving, setEditSaving] = useState(false)
-  const [deletingId, setDeletingId] = useState(null)
-  const [deleting, setDeleting]   = useState(false)
+  // --- Edição/exclusão ---
+  const [tenants, setTenants]           = useState([])
+  const [busca, setBusca]               = useState('')
+  const [dropOpen, setDropOpen]         = useState(false)
+  const [selected, setSelected]         = useState(null)   // tenant selecionado
+  const [editForm, setEditForm]         = useState(EMPTY_EDIT)
+  const [loadingEdit, setLoadingEdit]   = useState(false)
+  const [editSaving, setEditSaving]     = useState(false)
+  const [confirmDel, setConfirmDel]     = useState(false)
+  const [deleting, setDeleting]         = useState(false)
+  const buscaRef = useRef(null)
 
   useEffect(() => { carregarTenants() }, [])
 
@@ -136,17 +64,45 @@ function AbaNova({ showToast }) {
     setTenants(data)
   }
 
-  const handleChange = e => {
-    const { name, value } = e.target
-    setForm(prev => ({ ...prev, [name]: value }))
+  async function selecionarEmpresa(t) {
+    setSelected(t)
+    setBusca(t.nome_loja || t.tenant_id)
+    setDropOpen(false)
+    setConfirmDel(false)
+    setLoadingEdit(true)
+    try {
+      const cfg = await getConfig(t.tenant_id)
+      setEditForm({
+        nome_loja:     cfg?.nome_loja     || '',
+        whatsapp:      cfg?.whatsapp      || '',
+        email_contato: cfg?.email_contato || '',
+        link_frete:    cfg?.link_frete    || '',
+      })
+    } finally {
+      setLoadingEdit(false)
+    }
   }
+
+  function limparSelecao() {
+    setSelected(null)
+    setBusca('')
+    setEditForm(EMPTY_EDIT)
+    setConfirmDel(false)
+  }
+
+  const filtrados = tenants.filter(t =>
+    !busca || (t.nome_loja || '').toLowerCase().includes(busca.toLowerCase())
+  )
+
+  // Criação
+  const handleChange = e => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setCreated(null); setRequestError('')
-    if (!form.empresaNome.trim() || !form.empresaCnpj.trim()) { showToast('Informe nome e CNPJ da empresa.', 'error'); return }
-    if (!form.adminNome.trim() || !form.adminEmail.trim() || !form.adminCpf.trim() || !form.adminCelular.trim()) { showToast('Preencha todos os dados do administrador.', 'error'); return }
-    if (form.adminSenha.length < 6) { showToast('A senha inicial deve ter no mínimo 6 caracteres.', 'error'); return }
+    if (!form.empresaNome.trim() || !form.empresaCnpj.trim()) { showToast('Informe nome e CNPJ.', 'error'); return }
+    if (!form.adminNome.trim() || !form.adminEmail.trim() || !form.adminCpf.trim() || !form.adminCelular.trim()) { showToast('Preencha todos os dados do admin.', 'error'); return }
+    if (form.adminSenha.length < 6) { showToast('Senha mínima de 6 caracteres.', 'error'); return }
     setSaving(true)
     try {
       const payload = {
@@ -156,13 +112,13 @@ function AbaNova({ showToast }) {
       }
       const { data, error } = await createTenantAndAdmin(payload)
       if (error) throw error
-      if (!data?.ok) throw new Error(data?.message || 'Falha ao criar empresa e administrador.')
+      if (!data?.ok) throw new Error(data?.message || 'Falha ao criar.')
       setCreated({ tenantId: data.tenantId, adminEmail: payload.adminEmail })
       setForm(INITIAL_FORM)
-      showToast('Empresa e administrador criados com sucesso.', 'success')
+      showToast('Empresa e admin criados!', 'success')
       carregarTenants()
     } catch (err) {
-      const msg = err?.message || 'Erro ao criar empresa e administrador.'
+      const msg = err?.message || 'Erro ao criar.'
       setRequestError(msg)
       showToast(msg, 'error')
     } finally {
@@ -170,13 +126,14 @@ function AbaNova({ showToast }) {
     }
   }
 
-  async function salvarEdicao(tenantId, fields) {
+  // Salvar edição
+  async function salvarEdicao() {
     setEditSaving(true)
     try {
-      await updateTenantInfo(tenantId, fields)
-      showToast('Empresa atualizada!', 'success')
-      setEditingId(null)
+      await updateTenantInfo(selected.tenant_id, editForm)
+      showToast('Empresa salva!', 'success')
       carregarTenants()
+      limparSelecao()
     } catch (err) {
       showToast('Erro: ' + err.message, 'error')
     } finally {
@@ -184,27 +141,28 @@ function AbaNova({ showToast }) {
     }
   }
 
+  // Excluir
   async function executarDelete() {
     setDeleting(true)
     try {
-      await deleteTenant(deletingId)
+      await deleteTenant(selected.tenant_id)
       showToast('Empresa excluída.', 'success')
-      setDeletingId(null)
+      limparSelecao()
       carregarTenants()
     } catch (err) {
       showToast('Erro ao excluir: ' + err.message, 'error')
     } finally {
       setDeleting(false)
+      setConfirmDel(false)
     }
   }
 
-  const filtrados = tenants.filter(t =>
-    !filtro || (t.nome_loja || '').toLowerCase().includes(filtro.toLowerCase()) ||
-    (t.whatsapp || '').includes(filtro)
-  )
+  const ec = e => setEditForm(p => ({ ...p, [e.target.name]: e.target.value }))
 
   return (
     <div className="admin-card">
+
+      {/* ══ Criar nova empresa ══ */}
       <h2>Novo cliente SaaS</h2>
       <p style={{ color: 'var(--muted)', marginTop: 6 }}>
         Somente o master pode cadastrar uma nova empresa e o administrador responsável.
@@ -225,68 +183,145 @@ function AbaNova({ showToast }) {
         <label>Senha inicial do admin</label>
         <input name="adminSenha" type="password" value={form.adminSenha} onChange={handleChange} placeholder="Mínimo 6 caracteres" autoComplete="new-password" />
         <button type="submit" className="btn-acao btn-blue" disabled={saving}>
-          {saving ? 'Criando empresa...' : 'Criar empresa + admin'}
+          {saving ? 'Criando…' : 'Criar empresa + admin'}
         </button>
       </form>
 
       {created && (
-        <div style={{ marginTop: 16, color: 'var(--green)', padding: '10px 12px', borderRadius: 10, background: 'rgba(74,222,128,.12)', fontWeight: 600 }}>
-          Cadastro concluído. Tenant: {created.tenantId}. Admin: {created.adminEmail}.
+        <div style={{ marginTop: 12, color: 'var(--green)', padding: '10px 12px', borderRadius: 8, background: 'rgba(74,222,128,.12)', fontWeight: 600 }}>
+          Cadastro concluído. Tenant: {created.tenantId} · Admin: {created.adminEmail}
         </div>
       )}
       {requestError && (
-        <div style={{ marginTop: 16, color: 'var(--red)', padding: '10px 12px', borderRadius: 10, background: 'rgba(242,139,130,.12)', fontWeight: 600 }}>
+        <div style={{ marginTop: 12, color: 'var(--red)', padding: '10px 12px', borderRadius: 8, background: 'rgba(242,139,130,.12)', fontWeight: 600 }}>
           {requestError}
         </div>
       )}
 
-      {/* ── Empresas cadastradas ── */}
-      <div style={{ marginTop: 32, borderTop: '1px solid var(--border-light)', paddingTop: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-body)' }}>Empresas cadastradas</h3>
-          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{filtrados.length} de {tenants.length}</span>
+      {/* ══ Editar / Excluir empresa ══ */}
+      <div style={{ marginTop: 36, paddingTop: 24, borderTop: '1px solid var(--border-light)' }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-body)', marginBottom: 4 }}>
+          Editar ou excluir empresa
+        </h3>
+        <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
+          Busque a empresa pelo nome para carregar e editar os dados.
+        </p>
+
+        {/* Busca com dropdown */}
+        <div style={{ position: 'relative' }} ref={buscaRef}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              type="text"
+              placeholder="Digite o nome da empresa…"
+              value={busca}
+              onChange={e => { setBusca(e.target.value); setDropOpen(true); if (selected) setSelected(null) }}
+              onFocus={() => setDropOpen(true)}
+              style={{ ...SI }}
+            />
+            {selected && (
+              <button onClick={limparSelecao} title="Limpar seleção"
+                style={{ background: 'var(--border-light)', border: 'none', borderRadius: 6, padding: '0 10px', cursor: 'pointer', color: 'var(--muted)', fontSize: 18, lineHeight: 1 }}>
+                ✕
+              </button>
+            )}
+          </div>
+
+          {dropOpen && !selected && filtrados.length > 0 && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+              background: 'var(--input-bg)', border: '1px solid var(--border-light)',
+              borderRadius: 8, zIndex: 20, boxShadow: '0 6px 24px rgba(0,0,0,.5)',
+              maxHeight: 220, overflowY: 'auto',
+            }}>
+              {filtrados.map(t => (
+                <button key={t.tenant_id}
+                  onClick={() => selecionarEmpresa(t)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    width: '100%', textAlign: 'left', padding: '10px 14px',
+                    background: 'none', border: 'none', color: 'var(--text-body)',
+                    cursor: 'pointer', fontSize: 14, borderBottom: '1px solid var(--border-light)',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                  <span style={{ fontWeight: 600 }}>{t.nome_loja || '(sem nome)'}</span>
+                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>{t.tenant_id.slice(0, 8)}…</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        <input
-          type="text"
-          placeholder="Filtrar por nome ou CNPJ…"
-          value={filtro}
-          onChange={e => setFiltro(e.target.value)}
-          style={{ ...SI, marginBottom: 12 }}
-        />
-
-        {deletingId && (
-          <ConfirmDelete
-            tenantId={deletingId}
-            tenants={tenants}
-            onConfirm={executarDelete}
-            onCancel={() => setDeletingId(null)}
-          />
+        {/* Formulário de edição */}
+        {loadingEdit && (
+          <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 16 }}>Carregando dados…</div>
         )}
 
-        {filtrados.length === 0 && (
-          <div style={{ color: 'var(--muted)', fontSize: 13, textAlign: 'center', padding: 16 }}>
-            {tenants.length === 0 ? 'Nenhuma empresa cadastrada.' : 'Nenhuma empresa encontrada.'}
+        {selected && !loadingEdit && (
+          <div style={{ marginTop: 20, padding: '20px', borderRadius: 10, border: '1px solid var(--blue)', background: 'rgba(59,130,246,.05)' }}>
+            <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 16 }}>
+              Editando: {selected.nome_loja || selected.tenant_id}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              <div>
+                <label style={LBL}>Nome da empresa</label>
+                <input name="nome_loja" value={editForm.nome_loja} onChange={ec} style={SI} placeholder="Nome da empresa" />
+              </div>
+              <div>
+                <label style={LBL}>WhatsApp</label>
+                <input name="whatsapp" value={editForm.whatsapp} onChange={ec} style={SI} placeholder="(00) 90000-0000" />
+              </div>
+              <div>
+                <label style={LBL}>E-mail de contato</label>
+                <input name="email_contato" value={editForm.email_contato} onChange={ec} style={SI} placeholder="contato@empresa.com" />
+              </div>
+              <div>
+                <label style={LBL}>Link do frete</label>
+                <input name="link_frete" value={editForm.link_frete} onChange={ec} style={SI} placeholder="https://…" />
+              </div>
+            </div>
+
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 12 }}>
+              ID: {selected.tenant_id}
+            </div>
+
+            {/* Botões */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <button onClick={salvarEdicao} disabled={editSaving}
+                className="btn-acao btn-blue"
+                style={{ flex: 1, minHeight: 40, fontWeight: 700, color: '#171717', fontSize: 14 }}>
+                {editSaving ? 'Salvando…' : 'Salvar alterações'}
+              </button>
+
+              {!confirmDel ? (
+                <button onClick={() => setConfirmDel(true)}
+                  className="btn-acao"
+                  style={{ minHeight: 40, padding: '0 20px', background: 'rgba(239,68,68,.15)', color: 'var(--red)', fontWeight: 600, fontSize: 14 }}>
+                  Excluir empresa
+                </button>
+              ) : (
+                <>
+                  <button onClick={executarDelete} disabled={deleting}
+                    className="btn-acao"
+                    style={{ minHeight: 40, padding: '0 16px', background: 'var(--red)', color: '#fff', fontWeight: 700, fontSize: 14 }}>
+                    {deleting ? 'Excluindo…' : 'Confirmar exclusão'}
+                  </button>
+                  <button onClick={() => setConfirmDel(false)}
+                    className="btn-acao"
+                    style={{ minHeight: 40, padding: '0 14px', background: 'var(--border-light)', color: 'var(--text-body)', fontSize: 14 }}>
+                    Cancelar
+                  </button>
+                </>
+              )}
+            </div>
+
+            {confirmDel && (
+              <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 6, background: 'rgba(239,68,68,.1)', color: 'var(--red)', fontSize: 13 }}>
+                Atenção: esta ação é irreversível e removerá todos os dados da empresa.
+              </div>
+            )}
           </div>
-        )}
-
-        {filtrados.map(t =>
-          editingId === t.tenant_id ? (
-            <TenantEditRow
-              key={t.tenant_id}
-              t={t}
-              saving={editSaving}
-              onSave={salvarEdicao}
-              onCancel={() => setEditingId(null)}
-            />
-          ) : (
-            <TenantRow
-              key={t.tenant_id}
-              t={t}
-              onEdit={x => { setEditingId(x.tenant_id); setDeletingId(null) }}
-              onDelete={id => { setDeletingId(id); setEditingId(null) }}
-            />
-          )
         )}
       </div>
     </div>
@@ -301,11 +336,11 @@ const BY_CATEGORY = ALL_PAGES.reduce((acc, p) => {
 }, {})
 
 function AbaPaginas({ showToast }) {
-  const [tenants,   setTenants]   = useState([])
-  const [tenantId,  setTenantId]  = useState('')
-  const [selected,  setSelected]  = useState({})
-  const [loading,   setLoading]   = useState(false)
-  const [saving,    setSaving]    = useState(false)
+  const [tenants,  setTenants]  = useState([])
+  const [tenantId, setTenantId] = useState('')
+  const [selected, setSelected] = useState({})
+  const [loading,  setLoading]  = useState(false)
+  const [saving,   setSaving]   = useState(false)
 
   useEffect(() => {
     getAllTenants().then(({ data }) => setTenants(data))
@@ -329,7 +364,7 @@ function AbaPaginas({ showToast }) {
     try {
       const slugs = Object.entries(selected).filter(([, v]) => v).map(([k]) => k)
       await saveTenantPages(tenantId, slugs)
-      showToast('Páginas da empresa salvas!')
+      showToast('Páginas salvas!')
     } catch (e) {
       showToast('Erro: ' + e.message, 'error')
     } finally {
@@ -342,7 +377,7 @@ function AbaPaginas({ showToast }) {
   return (
     <div style={{ padding: '20px 0', maxWidth: 520 }}>
       <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
-        Selecione a empresa e marque quais páginas ela poderá usar. O admin da empresa poderá atribuir essas páginas aos seus usuários.
+        Selecione a empresa e marque quais páginas ela poderá usar.
       </p>
 
       <div style={{ marginBottom: 20 }}>
@@ -357,9 +392,7 @@ function AbaPaginas({ showToast }) {
         </select>
       </div>
 
-      {tenantId && loading && (
-        <div style={{ color: 'var(--muted)', fontSize: 13 }}>Carregando páginas...</div>
-      )}
+      {tenantId && loading && <div style={{ color: 'var(--muted)', fontSize: 13 }}>Carregando…</div>}
 
       {tenantId && !loading && (
         <>
@@ -380,7 +413,6 @@ function AbaPaginas({ showToast }) {
               ))}
             </div>
           ))}
-
           <button className="btn-acao btn-blue" onClick={salvar} disabled={saving}
             style={{ width: '100%', minHeight: 42, fontSize: 14, color: '#171717', fontWeight: 700, marginTop: 8 }}>
             {saving ? 'Salvando…' : 'Salvar Páginas da Empresa'}
