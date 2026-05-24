@@ -11,6 +11,7 @@ export const ALL_PAGES = [
   { slug: 'impressao-sacolinha-cliente', label: 'Impressão Sacol. Cliente',  category: 'Operações',  icon: 'shopping_bag',   order_index: 50 },
   { slug: 'etiquetas',                   label: 'Etiquetas',                 category: 'Operações',  icon: 'label',          order_index: 55 },
   { slug: 'cobrancas',                   label: 'Cobranças',                 category: 'Financeiro', icon: 'payments',       order_index: 60 },
+  { slug: 'relatorio',                   label: 'Relatório',                 category: 'Financeiro', icon: 'bar_chart',      order_index: 65 },
 ]
 
 function isMissingResource(error) {

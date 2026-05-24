@@ -54,6 +54,7 @@ import ImpressaoPedidosPage          from './pages/impressao/ImpressaoPedidosPag
 import ImpressaoSacolinhaClientePage from './pages/impressao/ImpressaoSacolinhaClientePage'
 import EtiquetasPage                 from './pages/impressao/EtiquetasPage'
 import PortalApp                     from './pages/portal/PortalApp'
+import RelatorioPage                  from './pages/relatorio/RelatorioPage'
 
 export default function App() {
   return (
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="/impressao-pedidos"          element={<RequireAuth><ImpressaoPedidosPage /></RequireAuth>} />
             <Route path="/impressao-sacolinha-cliente" element={<RequireAuth><ImpressaoSacolinhaClientePage /></RequireAuth>} />
             <Route path="/etiquetas" element={<RequireAuth><EtiquetasPage /></RequireAuth>} />
+            <Route path="/relatorio" element={<RequireAuth><RelatorioPage /></RequireAuth>} />
             <Route path="/portal" element={<PortalApp />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
