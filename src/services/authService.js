@@ -12,6 +12,9 @@ export const ALL_PAGES = [
   { slug: 'etiquetas',                   label: 'Etiquetas',                 category: 'Operações',  icon: 'label',          order_index: 55 },
   { slug: 'cobrancas',                   label: 'Cobranças',                 category: 'Financeiro', icon: 'payments',       order_index: 60 },
   { slug: 'relatorio',                   label: 'Relatório',                 category: 'Financeiro', icon: 'bar_chart',      order_index: 65 },
+  { slug: 'dashboard-financeiro',        label: 'Dashboard Financeiro',      category: 'Financeiro', icon: 'insights',       order_index: 70 },
+  { slug: 'contas-pagar',                label: 'Contas a Pagar',            category: 'Financeiro', icon: 'receipt',        order_index: 75 },
+  { slug: 'creditos-clientes',           label: 'Créditos de Clientes',      category: 'Financeiro', icon: 'loyalty',        order_index: 80 },
 ]
 
 function isMissingResource(error) {

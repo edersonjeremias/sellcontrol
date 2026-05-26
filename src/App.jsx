@@ -55,6 +55,9 @@ import ImpressaoSacolinhaClientePage from './pages/impressao/ImpressaoSacolinhaC
 import EtiquetasPage                 from './pages/impressao/EtiquetasPage'
 import PortalApp                     from './pages/portal/PortalApp'
 import RelatorioPage                  from './pages/relatorio/RelatorioPage'
+import DashboardFinanceiroPage        from './pages/relatorio/DashboardFinanceiroPage'
+import ContasPagarPage                from './pages/relatorio/ContasPagarPage'
+import CreditosPage                   from './pages/relatorio/CreditosPage'
 
 export default function App() {
   return (
@@ -83,7 +86,10 @@ export default function App() {
             <Route path="/impressao-pedidos"          element={<RequireAuth><ImpressaoPedidosPage /></RequireAuth>} />
             <Route path="/impressao-sacolinha-cliente" element={<RequireAuth><ImpressaoSacolinhaClientePage /></RequireAuth>} />
             <Route path="/etiquetas" element={<RequireAuth><EtiquetasPage /></RequireAuth>} />
-            <Route path="/relatorio" element={<RequireAuth><RelatorioPage /></RequireAuth>} />
+            <Route path="/relatorio"              element={<RequireAuth><RelatorioPage /></RequireAuth>} />
+            <Route path="/dashboard-financeiro"  element={<RequireAuth><DashboardFinanceiroPage /></RequireAuth>} />
+            <Route path="/contas-pagar"          element={<RequireAuth><ContasPagarPage /></RequireAuth>} />
+            <Route path="/creditos-clientes"     element={<RequireAuth><CreditosPage /></RequireAuth>} />
             <Route path="/portal" element={<PortalApp />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
