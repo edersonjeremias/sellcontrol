@@ -1,14 +1,14 @@
 import { portalSb } from '../lib/portalSupabase'
 
 const STATUS_ENCERRADO = ['Pronto', 'Enviado', 'Entregue', 'Retirou', 'Repetido']
+// Valores de status_entrega que indicam que o pedido já foi despachado
+const STATUS_ENTREGA_FINALIZADA = ['Enviado', 'Entregue', 'Retirou', 'Retirada']
+
 export const STATUS_ENVIADO_PECA = ['enviado', 'entregue', 'retirou', 'retirada']
 
+// Busca itens via RPC que lê diretamente da tabela vendas (SECURITY DEFINER)
 export async function getProdutos(instagram) {
-  const { data, error } = await portalSb
-    .from('portal_produtos')
-    .select('*')
-    .eq('cliente_instagram', instagram)
-    .order('data_insercao', { ascending: false })
+  const { data, error } = await portalSb.rpc('portal_get_minha_sacolinha')
   if (error) throw error
   return data || []
 }
@@ -33,9 +33,11 @@ export async function getUltimaProducao(instagram) {
   return data?.[0] || null
 }
 
-// Produção "ativa" = não está em nenhum dos status de encerrado
+// Produção "ativa" = ainda não foi despachada/encerrada
+// status_entrega "Enviado/Entregue/Retirou" = pedido despachado → libera nova sacolinha
 export function isProducaoAtiva(producao) {
   if (!producao) return false
+  if (STATUS_ENTREGA_FINALIZADA.includes(producao.status_entrega)) return false
   return !STATUS_ENCERRADO.includes(producao.status_producao)
 }
 
