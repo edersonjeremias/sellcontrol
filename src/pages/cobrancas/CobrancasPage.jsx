@@ -319,6 +319,12 @@ export default function CobrancasPage() {
     setShowDesc(true)
     const s = await getSaldoCliente(tenantId, sel.cliente)
     setSaldoCli(s)
+    if (s.saldo > 0) {
+      setDAbater(true)
+      setDMotivo(s.motivo || 'Crédito da Loja')
+      const sugerido = Math.min(s.saldo, Number(sel.total))
+      setDValor(sugerido.toFixed(2).replace('.', ','))
+    }
   }
 
   async function aplicarDesconto() {
@@ -864,8 +870,10 @@ export default function CobrancasPage() {
                 <input type="text" value={dValor} onChange={e => setDValor(e.target.value)} placeholder="Ex: 50.00 ou 10%" style={SI} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                <input type="checkbox" id="abater" checked={dAbater} onChange={e => setDAbater(e.target.checked)} style={{ width: 15, height: 15, cursor: 'pointer' }} />
-                <label htmlFor="abater" style={{ fontSize: 13, color: 'var(--text-body)', cursor: 'pointer' }}>Abater do saldo da cliente?</label>
+                <input type="checkbox" id="abater" checked={dAbater} onChange={e => setDAbater(e.target.checked)} style={{ width: 15, height: 15, cursor: 'pointer', accentColor: 'var(--green)' }} />
+                <label htmlFor="abater" style={{ fontSize: 13, color: dAbater ? 'var(--green)' : 'var(--text-body)', cursor: 'pointer', fontWeight: dAbater ? 600 : 400 }}>
+                  Abater do saldo de crédito{saldoCli.saldo > 0 ? ` (disponível: ${formatMoeda(saldoCli.saldo)})` : ''}
+                </label>
               </div>
               <button className="btn-acao btn-green" style={{ width: '100%', minHeight: 46, fontSize: 14, color: '#171717' }} onClick={aplicarDesconto} disabled={aplicandoDesc}>
                 {aplicandoDesc ? 'Aplicando…' : 'Aplicar e Recalcular'}
