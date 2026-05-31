@@ -81,7 +81,7 @@ function ClienteAutocomplete({ value, onChange, clientes }) {
       />
       {aberto && sugestoes.length > 0 && (
         <div style={{
-          position:'absolute', top:'calc(100% + 2px)', left:0, right:0, zIndex:50,
+          position:'absolute', top:'calc(100% + 2px)', left:0, right:0, zIndex:9999,
           background:'#1a2230', border:'1px solid var(--border-light)',
           borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.6)',
           maxHeight:220, overflowY:'auto',

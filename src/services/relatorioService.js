@@ -76,13 +76,12 @@ export async function getContasPagar(tenantId, { dataInicio, dataFim } = {}) {
 }
 
 export async function salvarContaPagar(tenantId, conta) {
-  const row = { ...conta, tenant_id: tid(tenantId) }
-  if (row.id) {
-    const { id, ...fields } = row
+  const { id, ...fields } = { ...conta, tenant_id: tid(tenantId) }
+  if (id) {
     const { error } = await supabase.from('contas_pagar').update(fields).eq('id', id)
     if (error) throw error
   } else {
-    const { error } = await supabase.from('contas_pagar').insert([row])
+    const { error } = await supabase.from('contas_pagar').insert([fields])
     if (error) throw error
   }
 }
@@ -111,13 +110,12 @@ export async function getCreditosClientes(tenantId, { dataInicio, dataFim } = {}
 }
 
 export async function salvarCredito(tenantId, credito) {
-  const row = { ...credito, tenant_id: tid(tenantId) }
-  if (row.id) {
-    const { id, ...fields } = row
+  const { id, ...fields } = { ...credito, tenant_id: tid(tenantId) }
+  if (id) {
     const { error } = await supabase.from('creditos_clientes').update(fields).eq('id', id)
     if (error) throw error
   } else {
-    const { error } = await supabase.from('creditos_clientes').insert([row])
+    const { error } = await supabase.from('creditos_clientes').insert([fields])
     if (error) throw error
   }
 }
