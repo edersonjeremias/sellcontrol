@@ -91,37 +91,57 @@ export async function excluirContaPagar(id) {
   if (error) throw error
 }
 
-// ── Créditos de clientes ───────────────────────────────────────
+// ── Créditos de clientes ──────────────────────────────────────
+// Usa a mesma tabela `creditos` que a página Cobranças,
+// para que o saldo apareça automaticamente no abatimento de cobranças.
 
 export async function getCreditosClientes(tenantId, { dataInicio, dataFim } = {}) {
   let q = supabase
-    .from('creditos_clientes')
-    .select('*')
+    .from('creditos')
+    .select('id, cliente, valor_original, saldo_restante, valor_utilizado, motivo, created_at')
     .eq('tenant_id', tid(tenantId))
-    .order('data', { ascending: false })
+    .order('created_at', { ascending: false })
 
-  if (dataInicio) q = q.gte('data', dataInicio)
-  if (dataFim)    q = q.lte('data', dataFim)
+  if (dataInicio) q = q.gte('created_at', dataInicio + 'T00:00:00')
+  if (dataFim)    q = q.lte('created_at', dataFim   + 'T23:59:59')
 
   const { data, error } = await q
   if (tabelaFalta(error)) return []
   if (error) throw error
-  return data || []
+
+  return (data || []).map(c => ({
+    id:         c.id,
+    data:       (c.created_at || '').slice(0, 10),
+    cliente:    c.cliente,
+    valor:      c.valor_original,
+    saldo:      c.saldo_restante,
+    utilizado:  c.valor_utilizado,
+    observacao: c.motivo,
+  }))
 }
 
 export async function salvarCredito(tenantId, credito) {
-  const { id, ...fields } = { ...credito, tenant_id: tid(tenantId) }
-  if (id) {
-    const { error } = await supabase.from('creditos_clientes').update(fields).eq('id', id)
+  const valor = Number(credito.valor) || 0
+  if (credito.id) {
+    const { error } = await supabase.from('creditos')
+      .update({ cliente: credito.cliente || '', valor_original: valor, motivo: credito.observacao || 'Crédito da Loja' })
+      .eq('id', credito.id)
     if (error) throw error
   } else {
-    const { error } = await supabase.from('creditos_clientes').insert([fields])
+    const { error } = await supabase.from('creditos').insert([{
+      tenant_id:      tid(tenantId),
+      cliente:        credito.cliente || '',
+      valor_original: valor,
+      saldo_restante: valor,
+      valor_utilizado: 0,
+      motivo:         credito.observacao || 'Crédito da Loja',
+    }])
     if (error) throw error
   }
 }
 
 export async function excluirCredito(id) {
-  const { error } = await supabase.from('creditos_clientes').delete().eq('id', id)
+  const { error } = await supabase.from('creditos').delete().eq('id', id)
   if (error) throw error
 }
 

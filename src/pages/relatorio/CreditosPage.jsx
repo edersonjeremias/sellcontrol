@@ -41,16 +41,13 @@ function Campo({ label, children }) {
   )
 }
 
-// ── Autocomplete de clientes ───────────────────────────────────
 function ClienteAutocomplete({ value, onChange, clientes }) {
-  const [aberto, setAberto]     = useState(false)
-  const [filtro, setFiltro]     = useState(value)
-  const wrapRef                 = useRef(null)
+  const [aberto, setAberto] = useState(false)
+  const [filtro, setFiltro] = useState(value)
+  const wrapRef             = useRef(null)
 
-  // Sincroniza se o valor externo mudar (ex: ao editar um registro)
   useEffect(() => { setFiltro(value) }, [value])
 
-  // Fecha ao clicar fora
   useEffect(() => {
     function handler(e) {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) setAberto(false)
@@ -63,11 +60,7 @@ function ClienteAutocomplete({ value, onChange, clientes }) {
     ? clientes.filter(c => c.toLowerCase().includes(filtro.toLowerCase())).slice(0, 10)
     : clientes.slice(0, 10)
 
-  function selecionar(c) {
-    setFiltro(c)
-    onChange(c)
-    setAberto(false)
-  }
+  function selecionar(c) { setFiltro(c); onChange(c); setAberto(false) }
 
   return (
     <div ref={wrapRef} style={{ position:'relative' }}>
@@ -87,21 +80,14 @@ function ClienteAutocomplete({ value, onChange, clientes }) {
           maxHeight:220, overflowY:'auto',
         }}>
           {sugestoes.map(c => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => selecionar(c)}
-              style={{
-                display:'block', width:'100%', textAlign:'left',
-                padding:'9px 14px', background:'none', border:'none',
-                color:'var(--text-body)', fontSize:13, cursor:'pointer',
-                borderBottom:'1px solid var(--border-light)',
-              }}
+            <button key={c} type="button" onClick={() => selecionar(c)} style={{
+              display:'block', width:'100%', textAlign:'left', padding:'9px 14px',
+              background:'none', border:'none', color:'var(--text-body)', fontSize:13,
+              cursor:'pointer', borderBottom:'1px solid var(--border-light)',
+            }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >
-              {c}
-            </button>
+            >{c}</button>
           ))}
         </div>
       )}
@@ -109,7 +95,7 @@ function ClienteAutocomplete({ value, onChange, clientes }) {
   )
 }
 
-const VAZIO = { data:'', cliente:'', valor:'', observacao:'' }
+const VAZIO = { cliente:'', valor:'', observacao:'' }
 
 export default function CreditosPage() {
   const { profile }   = useAuth()
@@ -124,20 +110,14 @@ export default function CreditosPage() {
   const [form, setForm]             = useState(VAZIO)
   const [editId, setEditId]         = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
-  const [tabelaOk, setTabelaOk]     = useState(true)
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
     setCarregando(true)
-    try {
-      const dados = await getCreditosClientes(tenantId, { dataInicio: dataIni, dataFim })
-      setCreditos(dados)
-      setTabelaOk(true)
-    } catch {
-      setTabelaOk(false)
-    }
+    try { setCreditos(await getCreditosClientes(tenantId, { dataInicio: dataIni, dataFim })) }
+    catch { showToast('Erro ao carregar créditos.', 'error') }
     setCarregando(false)
-  }, [tenantId, dataIni, dataFim])
+  }, [tenantId, dataIni, dataFim, showToast])
 
   useEffect(() => {
     if (!tenantId) return
@@ -148,19 +128,18 @@ export default function CreditosPage() {
   const ch = (campo, val) => setForm(f => ({ ...f, [campo]: val }))
 
   async function handleSalvar() {
-    if (!tabelaOk) return showToast('Execute o SQL de criação das tabelas no Supabase primeiro.', 'error')
-    if (!form.data) return showToast('Informe a data.', 'error')
+    if (!form.cliente?.trim()) return showToast('Informe o cliente.', 'error')
     if (!form.valor) return showToast('Informe o valor.', 'error')
     try {
-      await salvarCredito(tenantId, { ...form, id: editId })
-      showToast(editId ? 'Crédito atualizado!' : 'Crédito salvo!', 'success')
+      await salvarCredito(tenantId, { ...form, id: editId || undefined })
+      showToast(editId ? 'Crédito atualizado!' : 'Crédito lançado!', 'success')
       setForm(VAZIO); setEditId(null)
       carregar()
-    } catch { showToast('Erro ao salvar.', 'error') }
+    } catch (e) { showToast('Erro ao salvar: ' + (e.message || ''), 'error') }
   }
 
   function editar(c) {
-    setForm({ data:c.data||'', cliente:c.cliente||'', valor:c.valor||'', observacao:c.observacao||'' })
+    setForm({ cliente: c.cliente || '', valor: c.valor || '', observacao: c.observacao || '' })
     setEditId(c.id)
     window.scrollTo({ top:0, behavior:'smooth' })
   }
@@ -171,7 +150,8 @@ export default function CreditosPage() {
     setConfirmDel(null)
   }
 
-  const total = creditos.reduce((s, c) => s + (Number(c.valor)||0), 0)
+  const totalSaldo    = creditos.reduce((s, c) => s + (Number(c.saldo)||0), 0)
+  const totalOriginal = creditos.reduce((s, c) => s + (Number(c.valor)||0), 0)
 
   return (
     <AppShell title="Créditos de Clientes" hideTitle>
@@ -187,63 +167,44 @@ export default function CreditosPage() {
       </div>
 
       <div style={{ padding:16, display:'grid', gap:16 }}>
-
-        {/* Aviso de tabela faltando */}
-        {!tabelaOk && (
-          <div style={{ background:'rgba(251,188,4,0.1)', border:'1px solid var(--yellow)', borderRadius:8, padding:'12px 16px', fontSize:13, color:'var(--yellow)' }}>
-            <strong>Tabela não encontrada.</strong> Execute o SQL abaixo no Supabase SQL Editor para criar as tabelas necessárias:
-            <pre style={{ marginTop:8, fontSize:11, color:'var(--muted)', whiteSpace:'pre-wrap' }}>
-              {`-- Cole e execute em Supabase > SQL Editor
-CREATE TABLE IF NOT EXISTS creditos_clientes (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  tenant_id TEXT NOT NULL,
-  data DATE,
-  cliente TEXT,
-  valor NUMERIC(12,2) DEFAULT 0,
-  observacao TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE creditos_clientes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "tenant isolado" ON creditos_clientes
-  USING (tenant_id = (SELECT tenant_id FROM users_perfil WHERE id = auth.uid()));`}
-            </pre>
-          </div>
-        )}
+        {/* Info integração */}
+        <div style={{ background:'rgba(138,180,248,0.08)', border:'1px solid rgba(138,180,248,0.3)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--blue)' }}>
+          Os créditos lançados aqui aparecem automaticamente na página <strong>Cobranças</strong> ao aplicar desconto para o cliente.
+        </div>
 
         {/* Formulário */}
         <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:16 }}>
           <h4 style={{ margin:'0 0 14px', color:'var(--text-header)', fontSize:14 }}>
-            {editId ? 'Editar Crédito' : 'Novo Crédito'}
+            {editId ? 'Editar Crédito' : 'Lançar Crédito'}
           </h4>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:10 }}>
-            <Campo label="Data *">
-              <input type="date" value={form.data} onChange={e => ch('data', e.target.value)} style={S.inp} />
-            </Campo>
-            <Campo label="Cliente">
-              <ClienteAutocomplete
-                value={form.cliente}
-                onChange={v => ch('cliente', v)}
-                clientes={clientes}
-              />
+            <Campo label="Cliente *">
+              <ClienteAutocomplete value={form.cliente} onChange={v => ch('cliente', v)} clientes={clientes} />
             </Campo>
             <Campo label="Valor *">
               <input type="number" step="0.01" value={form.valor} onChange={e => ch('valor', e.target.value)} style={S.inp} placeholder="0,00" />
             </Campo>
-            <Campo label="Observação">
-              <input value={form.observacao} onChange={e => ch('observacao', e.target.value)} style={S.inp} placeholder="motivo do crédito…" />
+            <Campo label="Motivo / Observação">
+              <input value={form.observacao} onChange={e => ch('observacao', e.target.value)} style={S.inp} placeholder="ex: Devolução, Presente…" />
             </Campo>
           </div>
           <div style={{ display:'flex', gap:8, marginTop:14 }}>
-            <button onClick={handleSalvar} style={S.btn}>{editId ? 'Atualizar' : 'Salvar'}</button>
+            <button onClick={handleSalvar} style={S.btn}>{editId ? 'Atualizar' : 'Lançar Crédito'}</button>
             {editId && <button onClick={() => { setForm(VAZIO); setEditId(null) }} style={S.sec}>Cancelar</button>}
           </div>
         </div>
 
-        {/* Totalizador */}
+        {/* Totalizadores */}
         {!carregando && creditos.length > 0 && (
-          <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'10px 16px', display:'inline-flex', flexDirection:'column', alignSelf:'start' }}>
-            <div style={{ fontSize:11, color:'var(--muted)' }}>Total de Créditos no Período</div>
-            <div style={{ fontSize:20, fontWeight:800, color:'var(--yellow)' }}>{fmtR(total)}</div>
+          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+            <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'10px 16px' }}>
+              <div style={{ fontSize:11, color:'var(--muted)' }}>Total Lançado</div>
+              <div style={{ fontSize:18, fontWeight:800, color:'var(--blue)' }}>{fmtR(totalOriginal)}</div>
+            </div>
+            <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'10px 16px' }}>
+              <div style={{ fontSize:11, color:'var(--muted)' }}>Saldo Disponível</div>
+              <div style={{ fontSize:18, fontWeight:800, color:'var(--green)' }}>{fmtR(totalSaldo)}</div>
+            </div>
           </div>
         )}
 
@@ -253,7 +214,7 @@ CREATE POLICY "tenant isolado" ON creditos_clientes
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead>
                 <tr>
-                  {['Data','Cliente','Valor','Observação',''].map(h => (
+                  {['Data','Cliente','Valor Original','Saldo','Utilizado','Motivo',''].map(h => (
                     <th key={h} style={S.th}>{h}</th>
                   ))}
                 </tr>
@@ -265,20 +226,20 @@ CREATE POLICY "tenant isolado" ON creditos_clientes
                     onMouseLeave={e => e.currentTarget.style.background = ''}>
                     <td style={S.td}>{fmtData(c.data)}</td>
                     <td style={S.td}>{c.cliente}</td>
-                    <td style={{ ...S.td, color:'var(--yellow)', fontWeight:600 }}>{fmtR(c.valor)}</td>
+                    <td style={{ ...S.td, color:'var(--blue)', fontWeight:600 }}>{fmtR(c.valor)}</td>
+                    <td style={{ ...S.td, color: Number(c.saldo) > 0 ? 'var(--green)' : 'var(--muted)', fontWeight:600 }}>{fmtR(c.saldo)}</td>
+                    <td style={{ ...S.td, color:'var(--muted)' }}>{fmtR(c.utilizado)}</td>
                     <td style={{ ...S.td, color:'var(--muted)' }}>{c.observacao}</td>
                     <td style={S.td}>
                       <div style={{ display:'flex', gap:4 }}>
                         <button onClick={() => editar(c)} style={S.ico} title="Editar">✏️</button>
-                        <button onClick={() => setConfirmDel({ id:c.id, label:c.cliente || fmtData(c.data) })} style={S.ico} title="Excluir">🗑️</button>
+                        <button onClick={() => setConfirmDel({ id:c.id, label:c.cliente })} style={S.ico} title="Excluir">🗑️</button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {!creditos.length && (
-                  <tr><td colSpan={5} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>
-                    {tabelaOk ? 'Nenhum crédito cadastrado no período.' : 'Execute o SQL acima para criar a tabela.'}
-                  </td></tr>
+                  <tr><td colSpan={7} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito no período.</td></tr>
                 )}
               </tbody>
             </table>
@@ -286,13 +247,14 @@ CREATE POLICY "tenant isolado" ON creditos_clientes
         )}
       </div>
 
-      {/* Modal confirmação exclusão */}
+      {/* Modal exclusão */}
       {confirmDel && (
         <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
           <div className="modal-card mini" onClick={e => e.stopPropagation()} style={{ maxWidth:360 }}>
             <div className="modal-header"><h3>Confirmar exclusão</h3></div>
             <div className="modal-body" style={{ paddingBottom:20 }}>
-              <p style={{ margin:0 }}>Excluir crédito de <strong>{confirmDel.label}</strong>? Esta ação não pode ser desfeita.</p>
+              <p style={{ margin:0 }}>Excluir crédito de <strong>{confirmDel.label}</strong>?</p>
+              <p style={{ marginTop:8, fontSize:12, color:'var(--yellow)' }}>Se o crédito já foi utilizado em uma cobrança, o abatimento não será revertido automaticamente.</p>
             </div>
             <div className="modal-footer">
               <button onClick={() => setConfirmDel(null)} style={{ ...S.sec, flex:1 }}>Cancelar</button>
