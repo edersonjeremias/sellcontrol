@@ -59,6 +59,27 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, busca 
 
 // ── Contas a pagar ─────────────────────────────────────────────
 
+export async function getCategoriasContasPagar(tenantId) {
+  const { data } = await supabase
+    .from('contas_pagar').select('categoria').eq('tenant_id', tid(tenantId))
+  const unique = [...new Set((data || []).map(r => r.categoria).filter(Boolean))].sort()
+  return unique.length
+    ? unique
+    : ['Embalagens', 'Fornecedores', 'Impostos', 'Logística / Fretes', 'Pro Labore', 'Outros']
+}
+
+export async function pagarContaPagar(id, dataPagamento) {
+  const { error } = await supabase.from('contas_pagar')
+    .update({ status: 'PAGO', data_pagamento: dataPagamento }).eq('id', id)
+  if (error) throw error
+}
+
+export async function inserirContasPagarLote(tenantId, linhas) {
+  const rows = linhas.map(({ id: _id, ...l }) => ({ ...l, tenant_id: tid(tenantId) }))
+  const { error } = await supabase.from('contas_pagar').insert(rows)
+  if (error) throw error
+}
+
 export async function getContasPagar(tenantId, { dataInicio, dataFim } = {}) {
   let q = supabase
     .from('contas_pagar')
