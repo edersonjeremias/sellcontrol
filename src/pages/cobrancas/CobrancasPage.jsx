@@ -6,7 +6,7 @@ import {
   formatMoeda, parseMoeda,
   getCobrancas, criarCobranca, atualizarCobranca, excluirCobranca,
   getLivesParaCobranca, getClientesParaCobranca,
-  getSaldoCliente, abaterCredito,
+  getSaldoCliente, abaterCredito, getMapaCreditosClientes,
   buscarVendasParaCobranca, gerarPreferenciaMp,
   sincronizarCobrancaComVendas, dividirPagamento,
 } from '../../services/cobrancasService'
@@ -50,7 +50,7 @@ function vlrStr(val) {
 }
 
 // ── Card de cobrança ───────────────────────────────────────────
-function CardCobranca({ c, onClick }) {
+function CardCobranca({ c, onClick, saldoCredito = 0 }) {
   const cor = COR_STATUS[c.status] || 'var(--muted)'
   return (
     <div
@@ -59,9 +59,18 @@ function CardCobranca({ c, onClick }) {
       style={{ borderLeft: `4px solid ${cor}` }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-header)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {c.cliente}
-          {c.live && <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 12, marginLeft: 6 }}>· {c.live}</span>}
+        <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-header)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.cliente}</span>
+          {saldoCredito > 0 && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: '#0f0f0f',
+              background: '#fbbc04', borderRadius: 4,
+              padding: '1px 6px', whiteSpace: 'nowrap', flexShrink: 0,
+            }}>
+              🪙 R$ {saldoCredito.toFixed(2).replace('.', ',')}
+            </span>
+          )}
+          {c.live && <span style={{ color: 'var(--muted)', fontWeight: 400, fontSize: 12 }}>· {c.live}</span>}
         </div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>
           {fmtData(c.data)}
@@ -105,6 +114,7 @@ export default function CobrancasPage() {
   const [listaLives,    setListaLives]    = useState([])
   const [listaClientes, setListaClientes] = useState([])
   const [carregando,    setCarregando]    = useState(false)
+  const [creditosMap,   setCreditosMap]   = useState({})
 
   // Filtros barra superior (período para o resumo)
   const [dataInicio, setDataInicio] = useState('')
@@ -181,6 +191,7 @@ export default function CobrancasPage() {
     if (!tenantId) return
     getLivesParaCobranca(tenantId).then(setListaLives)
     getClientesParaCobranca(tenantId).then(setListaClientes)
+    getMapaCreditosClientes(tenantId).then(setCreditosMap).catch(() => {})
     carregar()
   }, [tenantId])
 
@@ -562,7 +573,14 @@ export default function CobrancasPage() {
           {!carregando && cobrancas.length === 0 && (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>Nenhuma cobrança encontrada</div>
           )}
-          {cobrancas.map(c => <CardCobranca key={c.id} c={c} onClick={() => abrirAcao(c)} />)}
+          {cobrancas.map(c => (
+            <CardCobranca
+              key={c.id}
+              c={c}
+              onClick={() => abrirAcao(c)}
+              saldoCredito={creditosMap[(c.cliente || '').toLowerCase().trim()] || 0}
+            />
+          ))}
         </div>
       </div>
 

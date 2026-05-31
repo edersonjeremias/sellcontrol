@@ -283,6 +283,23 @@ export async function getClientesParaCobranca(tenantId) {
 }
 
 // ── Créditos ───────────────────────────────────────────────────
+
+// Retorna Map { 'nomeCliente' -> saldo } para todos com saldo > 0
+export async function getMapaCreditosClientes(tenantId) {
+  const { data } = await supabase
+    .from('creditos')
+    .select('cliente, saldo_restante')
+    .eq('tenant_id', tid(tenantId))
+    .gt('saldo_restante', 0)
+  const mapa = {}
+  ;(data || []).forEach(c => {
+    const key = (c.cliente || '').toLowerCase().trim()
+    if (!key) return
+    mapa[key] = (mapa[key] || 0) + (Number(c.saldo_restante) || 0)
+  })
+  return mapa
+}
+
 export async function getSaldoCliente(tenantId, cliente) {
   const { data } = await supabase.from('creditos').select('*').eq('tenant_id', tid(tenantId)).ilike('cliente', cliente.trim())
   if (!data?.length) return { saldo: 0, motivo: '' }
