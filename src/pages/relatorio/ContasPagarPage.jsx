@@ -54,14 +54,18 @@ export default function ContasPagarPage() {
   const [form, setForm]             = useState(VAZIO)
   const [editId, setEditId]         = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+  const [tabelaOk, setTabelaOk]     = useState(true)
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
     setCarregando(true)
-    try { setContas(await getContasPagar(tenantId, { dataInicio: dataIni, dataFim })) }
-    catch { showToast('Erro ao carregar contas.', 'error') }
+    try {
+      const dados = await getContasPagar(tenantId, { dataInicio: dataIni, dataFim })
+      setContas(dados)
+      setTabelaOk(true)
+    } catch { setTabelaOk(false) }
     setCarregando(false)
-  }, [tenantId, dataIni, dataFim, showToast])
+  }, [tenantId, dataIni, dataFim])
 
   useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
 

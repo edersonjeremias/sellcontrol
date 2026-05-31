@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
-import { fmtR, getCreditosClientes, salvarCredito, excluirCredito } from '../../services/relatorioService'
+import {
+  fmtR, getCreditosClientes, salvarCredito, excluirCredito, getClientesRelatorio,
+} from '../../services/relatorioService'
 
 const S = {
   inp: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'7px 10px', fontSize:13, outline:'none' },
@@ -39,6 +41,74 @@ function Campo({ label, children }) {
   )
 }
 
+// ── Autocomplete de clientes ───────────────────────────────────
+function ClienteAutocomplete({ value, onChange, clientes }) {
+  const [aberto, setAberto]     = useState(false)
+  const [filtro, setFiltro]     = useState(value)
+  const wrapRef                 = useRef(null)
+
+  // Sincroniza se o valor externo mudar (ex: ao editar um registro)
+  useEffect(() => { setFiltro(value) }, [value])
+
+  // Fecha ao clicar fora
+  useEffect(() => {
+    function handler(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setAberto(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const sugestoes = filtro.trim()
+    ? clientes.filter(c => c.toLowerCase().includes(filtro.toLowerCase())).slice(0, 10)
+    : clientes.slice(0, 10)
+
+  function selecionar(c) {
+    setFiltro(c)
+    onChange(c)
+    setAberto(false)
+  }
+
+  return (
+    <div ref={wrapRef} style={{ position:'relative' }}>
+      <input
+        value={filtro}
+        onChange={e => { setFiltro(e.target.value); onChange(e.target.value); setAberto(true) }}
+        onFocus={() => setAberto(true)}
+        placeholder="@instagram ou nome"
+        style={{ ...S.inp, width:'100%' }}
+        autoComplete="off"
+      />
+      {aberto && sugestoes.length > 0 && (
+        <div style={{
+          position:'absolute', top:'calc(100% + 2px)', left:0, right:0, zIndex:50,
+          background:'#1a2230', border:'1px solid var(--border-light)',
+          borderRadius:8, boxShadow:'0 8px 24px rgba(0,0,0,.6)',
+          maxHeight:220, overflowY:'auto',
+        }}>
+          {sugestoes.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => selecionar(c)}
+              style={{
+                display:'block', width:'100%', textAlign:'left',
+                padding:'9px 14px', background:'none', border:'none',
+                color:'var(--text-body)', fontSize:13, cursor:'pointer',
+                borderBottom:'1px solid var(--border-light)',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const VAZIO = { data:'', cliente:'', valor:'', observacao:'' }
 
 export default function CreditosPage() {
@@ -49,24 +119,36 @@ export default function CreditosPage() {
   const [dataIni, setDataIni]       = useState(primeiroDiaMes)
   const [dataFim, setDataFim]       = useState(ultimoDiaMes)
   const [creditos, setCreditos]     = useState([])
+  const [clientes, setClientes]     = useState([])
   const [carregando, setCarregando] = useState(false)
   const [form, setForm]             = useState(VAZIO)
   const [editId, setEditId]         = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+  const [tabelaOk, setTabelaOk]     = useState(true)
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
     setCarregando(true)
-    try { setCreditos(await getCreditosClientes(tenantId, { dataInicio: dataIni, dataFim })) }
-    catch { showToast('Erro ao carregar créditos.', 'error') }
+    try {
+      const dados = await getCreditosClientes(tenantId, { dataInicio: dataIni, dataFim })
+      setCreditos(dados)
+      setTabelaOk(true)
+    } catch {
+      setTabelaOk(false)
+    }
     setCarregando(false)
-  }, [tenantId, dataIni, dataFim, showToast])
+  }, [tenantId, dataIni, dataFim])
 
-  useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
+  useEffect(() => {
+    if (!tenantId) return
+    getClientesRelatorio(tenantId).then(setClientes).catch(() => {})
+    carregar()
+  }, [tenantId]) // eslint-disable-line
 
   const ch = (campo, val) => setForm(f => ({ ...f, [campo]: val }))
 
   async function handleSalvar() {
+    if (!tabelaOk) return showToast('Execute o SQL de criação das tabelas no Supabase primeiro.', 'error')
     if (!form.data) return showToast('Informe a data.', 'error')
     if (!form.valor) return showToast('Informe o valor.', 'error')
     try {
@@ -105,6 +187,29 @@ export default function CreditosPage() {
       </div>
 
       <div style={{ padding:16, display:'grid', gap:16 }}>
+
+        {/* Aviso de tabela faltando */}
+        {!tabelaOk && (
+          <div style={{ background:'rgba(251,188,4,0.1)', border:'1px solid var(--yellow)', borderRadius:8, padding:'12px 16px', fontSize:13, color:'var(--yellow)' }}>
+            <strong>Tabela não encontrada.</strong> Execute o SQL abaixo no Supabase SQL Editor para criar as tabelas necessárias:
+            <pre style={{ marginTop:8, fontSize:11, color:'var(--muted)', whiteSpace:'pre-wrap' }}>
+              {`-- Cole e execute em Supabase > SQL Editor
+CREATE TABLE IF NOT EXISTS creditos_clientes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  data DATE,
+  cliente TEXT,
+  valor NUMERIC(12,2) DEFAULT 0,
+  observacao TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE creditos_clientes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "tenant isolado" ON creditos_clientes
+  USING (tenant_id = (SELECT tenant_id FROM users_perfil WHERE id = auth.uid()));`}
+            </pre>
+          </div>
+        )}
+
         {/* Formulário */}
         <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:16 }}>
           <h4 style={{ margin:'0 0 14px', color:'var(--text-header)', fontSize:14 }}>
@@ -115,7 +220,11 @@ export default function CreditosPage() {
               <input type="date" value={form.data} onChange={e => ch('data', e.target.value)} style={S.inp} />
             </Campo>
             <Campo label="Cliente">
-              <input value={form.cliente} onChange={e => ch('cliente', e.target.value)} style={S.inp} placeholder="@instagram ou nome" />
+              <ClienteAutocomplete
+                value={form.cliente}
+                onChange={v => ch('cliente', v)}
+                clientes={clientes}
+              />
             </Campo>
             <Campo label="Valor *">
               <input type="number" step="0.01" value={form.valor} onChange={e => ch('valor', e.target.value)} style={S.inp} placeholder="0,00" />
@@ -167,7 +276,9 @@ export default function CreditosPage() {
                   </tr>
                 ))}
                 {!creditos.length && (
-                  <tr><td colSpan={5} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito cadastrado no período.</td></tr>
+                  <tr><td colSpan={5} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>
+                    {tabelaOk ? 'Nenhum crédito cadastrado no período.' : 'Execute o SQL acima para criar a tabela.'}
+                  </td></tr>
                 )}
               </tbody>
             </table>

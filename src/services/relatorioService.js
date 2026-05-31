@@ -13,6 +13,22 @@ export function fmtR(val) {
 
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
+function tabelaFalta(error) {
+  if (!error) return false
+  return error.code === '42P01' || error.code === 'PGRST205' ||
+    error.message?.includes('does not exist') || error.message?.includes('schema cache')
+}
+
+// Clientes para autocomplete
+export async function getClientesRelatorio(tenantId) {
+  const { data } = await supabase
+    .from('clientes')
+    .select('instagram')
+    .eq('tenant_id', tid(tenantId))
+    .order('instagram')
+  return (data || []).map(c => c.instagram)
+}
+
 // ── Relatório: vendas ──────────────────────────────────────────
 
 export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, busca } = {}) {
@@ -54,6 +70,7 @@ export async function getContasPagar(tenantId, { dataInicio, dataFim } = {}) {
   if (dataFim)    q = q.lte('data_vencimento', dataFim)
 
   const { data, error } = await q
+  if (tabelaFalta(error)) return []
   if (error) throw error
   return data || []
 }
@@ -88,6 +105,7 @@ export async function getCreditosClientes(tenantId, { dataInicio, dataFim } = {}
   if (dataFim)    q = q.lte('data', dataFim)
 
   const { data, error } = await q
+  if (tabelaFalta(error)) return []
   if (error) throw error
   return data || []
 }
