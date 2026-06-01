@@ -65,7 +65,8 @@ export async function getCategoriasContasPagar(tenantId) {
   const unique = [...new Set((data || []).map(r => r.categoria).filter(Boolean))].sort()
   return unique.length
     ? unique
-    : ['Embalagens', 'Fornecedores', 'Impostos', 'Logística / Fretes', 'Pro Labore', 'Outros']
+    : ['Impulsionamento','Pro labore','Funcionario','Manutenção','Compras revenda','Compras',
+       'Emprestimo','Despesas/Viagem','Despesas','Mercado','Imposto','Devolução cliente','Investimento']
 }
 
 export async function pagarContaPagar(id, dataPagamento) {

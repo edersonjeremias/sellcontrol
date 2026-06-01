@@ -49,17 +49,34 @@ function gerarDatas(venc, freq, parcelas) {
   })
 }
 
-const TIPOS = ['Fixa', 'Variável', 'Pro Labore', 'Compra/Revenda']
+const TIPOS = ['Fixa', 'Variável', 'Compra/Revenda']
+
+const CATS_DEFAULT = [
+  'Impulsionamento', 'Pro labore', 'Funcionario', 'Manutenção',
+  'Compras revenda', 'Compras', 'Emprestimo', 'Despesas/Viagem',
+  'Despesas', 'Mercado', 'Imposto', 'Devolução cliente', 'Investimento',
+]
+
+const SUBCATS_PROLABORE = [
+  'Mercado', 'Moradia', 'Transporte', 'Saude', 'Filhos', 'Lazer',
+  'Emprestimos / Financiamento', 'Compras Diversas', 'Investimento',
+  'Alimentação', 'Pet', 'Presente',
+]
+
+function isProLabore(cat) {
+  const c = (cat || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  return c.includes('pro') && c.includes('labore')
+}
 
 const S = {
-  inp:  { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'7px 10px', fontSize:13, outline:'none', width:'100%' },
-  inpS: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'5px 8px', fontSize:12, outline:'none' },
-  th:   { background:'var(--table-header-bg)', color:'var(--table-header-text)', fontSize:11, fontWeight:700, textAlign:'left', padding:'8px 10px', textTransform:'uppercase', letterSpacing:'0.4px', whiteSpace:'nowrap' },
-  td:   { padding:'8px 10px', color:'var(--text-body)', fontSize:13 },
-  btn:  { background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:700, cursor:'pointer', fontSize:13 },
-  sec:  { background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:600, cursor:'pointer', fontSize:13 },
-  del:  { background:'var(--red)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:700, cursor:'pointer', fontSize:13 },
-  ok:   { background:'var(--green)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:700, cursor:'pointer', fontSize:13 },
+  inp:  { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'8px 11px', fontSize:14, outline:'none', width:'100%' },
+  inpS: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'6px 9px', fontSize:14, outline:'none' },
+  th:   { background:'var(--table-header-bg)', color:'var(--table-header-text)', fontSize:12, fontWeight:700, textAlign:'left', padding:'8px 10px', textTransform:'uppercase', letterSpacing:'0.4px', whiteSpace:'nowrap' },
+  td:   { padding:'9px 10px', color:'var(--text-body)', fontSize:14 },
+  btn:  { background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:700, cursor:'pointer', fontSize:14 },
+  sec:  { background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:600, cursor:'pointer', fontSize:14 },
+  del:  { background:'var(--red)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:700, cursor:'pointer', fontSize:14 },
+  ok:   { background:'var(--green)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'7px 14px', fontWeight:700, cursor:'pointer', fontSize:14 },
 }
 
 function Campo({ label, children }) {
@@ -91,7 +108,7 @@ function FreqRadios({ value, onChange, name }) {
 }
 
 // Formulário base (compartilhado entre Quick Add e Modal Avançado)
-const FORM_VAZIO = { observacao:'', categoria:'', tipo_despesa:'Fixa', valor:'', data_vencimento:HOJE, status:'A PAGAR', data_pagamento:'' }
+const FORM_VAZIO = { observacao:'', categoria:'', tipo_despesa:'Fixa', subcat:'', valor:'', data_vencimento:HOJE, status:'A PAGAR', data_pagamento:'' }
 
 // ════════════════════════════════════════════════════════════════
 export default function ContasPagarPage() {
@@ -129,7 +146,7 @@ export default function ContasPagarPage() {
   const [freqNova, setFreqNova] = useState('unica')
 
   // ── Quick Add bar ──────────────────────────────────────────
-  const [qa, setQa] = useState({ observacao:'', categoria:'', tipo_despesa:'Fixa', valor:'', data_vencimento:HOJE, pago:false })
+  const [qa, setQa] = useState({ observacao:'', categoria:'', tipo_despesa:'Fixa', subcat:'', valor:'', data_vencimento:HOJE, pago:false })
   const [qaFreq, setQaFreq] = useState('unica')
   const qaDescRef = useRef(null)
 
@@ -146,7 +163,11 @@ export default function ContasPagarPage() {
 
   useEffect(() => {
     if (!tenantId) return
-    getCategoriasContasPagar(tenantId).then(setCategorias).catch(() => {})
+    getCategoriasContasPagar(tenantId).then(data => {
+      // Mescla categorias do banco com as defaults, sem duplicatas
+      const merged = [...new Set([...CATS_DEFAULT, ...data])].sort()
+      setCategorias(merged)
+    }).catch(() => setCategorias(CATS_DEFAULT))
     carregar()
   }, [tenantId]) // eslint-disable-line
 
@@ -185,10 +206,11 @@ export default function ContasPagarPage() {
     if (!qa.valor) return showToast('Informe o valor.', 'error')
     const parcelas = qaFreq === 'mensal' ? 12 : qaFreq === 'quin' ? 2 : qaFreq === 'sem' ? 4 : 1
     const datas = gerarDatas(qa.data_vencimento || HOJE, qaFreq, parcelas)
+    const tipoQA = isProLabore(qa.categoria) ? (qa.subcat || 'Pro labore') : (qa.tipo_despesa || 'Fixa')
     const linhas = datas.map((d, i) => ({
       observacao:      parcelas > 1 ? `${qa.observacao} (${i+1}/${parcelas})` : qa.observacao,
       categoria:       qa.categoria,
-      tipo_despesa:    qa.tipo_despesa || 'Fixa',
+      tipo_despesa:    tipoQA,
       valor:           parseValor(qa.valor),
       data_vencimento: d,
       status:          qa.pago ? 'PAGO' : 'A PAGAR',
@@ -198,7 +220,7 @@ export default function ContasPagarPage() {
     try {
       await inserirContasPagarLote(tenantId, linhas)
       showToast(parcelas > 1 ? `${parcelas} lançamentos salvos!` : 'Lançamento salvo!', 'success')
-      setQa({ observacao:'', categoria:'', tipo_despesa:'Fixa', valor:'', data_vencimento:HOJE, pago:false })
+      setQa({ observacao:'', categoria:'', tipo_despesa:'Fixa', subcat:'', valor:'', data_vencimento:HOJE, pago:false })
       setQaFreq('unica')
       qaDescRef.current?.focus()
       // Atualiza categorias se nova
@@ -215,10 +237,11 @@ export default function ContasPagarPage() {
     if (!form.valor) return showToast('Informe o valor.', 'error')
     const parcelas = freqNova === 'mensal' ? 12 : freqNova === 'quin' ? 2 : freqNova === 'sem' ? 4 : 1
     const datas = gerarDatas(form.data_vencimento || HOJE, freqNova, parcelas)
+    const tipoForm = isProLabore(form.categoria) ? (form.subcat || 'Pro labore') : form.tipo_despesa
     const linhas = datas.map((d, i) => ({
       observacao:      parcelas > 1 ? `${form.observacao} (${i+1}/${parcelas})` : form.observacao,
       categoria:       form.categoria,
-      tipo_despesa:    form.tipo_despesa,
+      tipo_despesa:    tipoForm,
       valor:           parseValor(form.valor),
       data_vencimento: d,
       status:          form.status,
@@ -365,13 +388,21 @@ export default function ContasPagarPage() {
         <input ref={qaDescRef} value={qa.observacao} onChange={e => setQa(p=>({...p,observacao:e.target.value}))}
           placeholder="Descrição" style={{ ...S.inpS, flex:2, minWidth:100 }}
           onKeyDown={e => e.key==='Enter' && salvarQA()} />
-        <input value={qa.categoria} onChange={e => setQa(p=>({...p,categoria:e.target.value}))}
-          list="lista-cats-qa" placeholder="Categoria" style={{ ...S.inpS, flex:1, minWidth:80 }}
+        <input value={qa.categoria} onChange={e => setQa(p=>({...p,categoria:e.target.value,subcat:''}))}
+          list="lista-cats-qa" placeholder="Categoria" style={{ ...S.inpS, flex:1, minWidth:100 }}
           onKeyDown={e => e.key==='Enter' && salvarQA()} />
         <datalist id="lista-cats-qa">{categorias.map(c=><option key={c} value={c}/>)}</datalist>
-        <select value={qa.tipo_despesa} onChange={e => setQa(p=>({...p,tipo_despesa:e.target.value}))} style={{ ...S.inpS, minWidth:70 }}>
-          {TIPOS.map(t=><option key={t} value={t}>{t}</option>)}
-        </select>
+        {isProLabore(qa.categoria) ? (
+          <select value={qa.subcat} onChange={e => setQa(p=>({...p,subcat:e.target.value}))}
+            style={{ ...S.inpS, minWidth:130, color:'var(--blue)' }}>
+            <option value="">Subcategoria…</option>
+            {SUBCATS_PROLABORE.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+        ) : (
+          <select value={qa.tipo_despesa} onChange={e => setQa(p=>({...p,tipo_despesa:e.target.value}))} style={{ ...S.inpS, minWidth:80 }}>
+            {TIPOS.map(t=><option key={t} value={t}>{t}</option>)}
+          </select>
+        )}
         <input value={qa.valor} onChange={e => setQa(p=>({...p,valor:mascaraValor(e.target.value.replace(/\D/g,''))}))}
           placeholder="0,00" style={{ ...S.inpS, width:70 }}
           onKeyDown={e => e.key==='Enter' && salvarQA()} />
@@ -437,10 +468,10 @@ export default function ContasPagarPage() {
                             onMouseLeave={e=>e.currentTarget.style.background='var(--body-bg)'}
                           >
                             <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ fontSize:13, color:'var(--text-header)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                              <div style={{ fontSize:14, color:'var(--text-header)', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                                 {c.observacao || c.categoria}
                               </div>
-                              <div style={{ fontSize:11, color:'var(--muted)', marginTop:1 }}>
+                              <div style={{ fontSize:12, color:'var(--muted)', marginTop:1 }}>
                                 {c.categoria}{c.tipo_despesa ? ` • ${c.tipo_despesa}` : ''}
                                 {c.status==='PAGO' && c.data_pagamento && <span style={{ color:'var(--green)', marginLeft:6 }}>✓ pago {fmtData(c.data_pagamento)}</span>}
                               </div>
@@ -519,19 +550,28 @@ export default function ContasPagarPage() {
               <Campo label="Descrição">
                 <input value={form.observacao} onChange={e => setForm(p=>({...p,observacao:e.target.value}))} style={S.inp} placeholder="Ex: Conta de luz, Aluguel…" />
               </Campo>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8, alignItems:'flex-end' }}>
-                <Campo label="Categoria *">
-                  <input value={form.categoria} onChange={e => setForm(p=>({...p,categoria:e.target.value}))}
-                    list="lista-cats-modal" style={S.inp} placeholder="Selecione ou digite" />
-                  <datalist id="lista-cats-modal">{categorias.map(c=><option key={c} value={c}/>)}</datalist>
+              <Campo label="Categoria *">
+                <input value={form.categoria} onChange={e => setForm(p=>({...p,categoria:e.target.value,subcat:''}))}
+                  list="lista-cats-modal" style={S.inp} placeholder="Selecione ou digite" />
+                <datalist id="lista-cats-modal">{categorias.map(c=><option key={c} value={c}/>)}</datalist>
+              </Campo>
+              {isProLabore(form.categoria) && (
+                <Campo label="Subcategoria (Pro Labore)">
+                  <select value={form.subcat} onChange={e => setForm(p=>({...p,subcat:e.target.value}))}
+                    style={{ ...S.inp, color:'var(--blue)' }}>
+                    <option value="">Selecione…</option>
+                    {SUBCATS_PROLABORE.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
                 </Campo>
-              </div>
+              )}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                {!isProLabore(form.categoria) && (
                 <Campo label="Tipo">
                   <select value={form.tipo_despesa} onChange={e => setForm(p=>({...p,tipo_despesa:e.target.value}))} style={S.inp}>
                     {TIPOS.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
                 </Campo>
+                )}
                 <Campo label="Valor *">
                   <input value={form.valor}
                     onChange={e => setForm(p=>({...p,valor:mascaraValor(e.target.value.replace(/\D/g,''))}))}
@@ -583,16 +623,27 @@ export default function ContasPagarPage() {
                 <input value={form.observacao} onChange={e => setForm(p=>({...p,observacao:e.target.value}))} style={S.inp} />
               </Campo>
               <Campo label="Categoria *">
-                <input value={form.categoria} onChange={e => setForm(p=>({...p,categoria:e.target.value}))}
+                <input value={form.categoria} onChange={e => setForm(p=>({...p,categoria:e.target.value,subcat:''}))}
                   list="lista-cats-edit" style={S.inp} />
                 <datalist id="lista-cats-edit">{categorias.map(c=><option key={c} value={c}/>)}</datalist>
               </Campo>
+              {isProLabore(form.categoria) && (
+                <Campo label="Subcategoria (Pro Labore)">
+                  <select value={form.subcat || form.tipo_despesa} onChange={e => setForm(p=>({...p,subcat:e.target.value}))}
+                    style={{ ...S.inp, color:'var(--blue)' }}>
+                    <option value="">Selecione…</option>
+                    {SUBCATS_PROLABORE.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                </Campo>
+              )}
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                {!isProLabore(form.categoria) && (
                 <Campo label="Tipo">
                   <select value={form.tipo_despesa} onChange={e => setForm(p=>({...p,tipo_despesa:e.target.value}))} style={S.inp}>
                     {TIPOS.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
                 </Campo>
+                )}
                 <Campo label="Valor *">
                   <input value={form.valor}
                     onChange={e => setForm(p=>({...p,valor:mascaraValor(e.target.value.replace(/\D/g,''))}))}
