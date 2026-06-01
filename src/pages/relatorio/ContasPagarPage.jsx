@@ -125,7 +125,7 @@ export default function ContasPagarPage() {
   const [dataIni,    setDataIni]    = useState(primeiroDiaMes)
   const [dataFim,    setDataFim]    = useState(ultimoDiaMes)
   const [busca,      setBusca]      = useState('')
-  const [filtroSt,   setFiltroSt]   = useState('A PAGAR')
+  const [filtroSt,   setFiltroSt]   = useState('Todos')
 
   // ── Abas ───────────────────────────────────────────────────
   const [aba,        setAba]        = useState('lancamentos')
@@ -223,6 +223,9 @@ export default function ContasPagarPage() {
       // Auto-abre os grupos das datas recém inseridas
       const novasDatas = new Set(linhas.map(l => l.data_vencimento))
       setAbertos(prev => new Set([...prev, ...novasDatas]))
+      // Ajusta filtro de status para mostrar o item recém salvo
+      const statusSalvo = qa.pago ? 'PAGO' : 'A PAGAR'
+      if (filtroSt !== 'Todos' && filtroSt !== statusSalvo) setFiltroSt('Todos')
       setQa({ observacao:'', categoria:'', tipo_despesa:'Fixa', subcat:'', valor:'', data_vencimento:HOJE, pago:false })
       setQaFreq('unica')
       qaDescRef.current?.focus()
@@ -255,6 +258,8 @@ export default function ContasPagarPage() {
       showToast(parcelas > 1 ? `${parcelas} lançamentos salvos!` : 'Conta salva!', 'success')
       const novasDatas = new Set(linhas.map(l => l.data_vencimento))
       setAbertos(prev => new Set([...prev, ...novasDatas]))
+      const statusSalvoModal = form.status
+      if (filtroSt !== 'Todos' && filtroSt !== statusSalvoModal) setFiltroSt('Todos')
       setModalNova(false)
       setForm(FORM_VAZIO)
       if (form.categoria && !categorias.includes(form.categoria))
