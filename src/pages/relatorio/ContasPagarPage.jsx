@@ -220,10 +220,12 @@ export default function ContasPagarPage() {
     try {
       await inserirContasPagarLote(tenantId, linhas)
       showToast(parcelas > 1 ? `${parcelas} lançamentos salvos!` : 'Lançamento salvo!', 'success')
+      // Auto-abre os grupos das datas recém inseridas
+      const novasDatas = new Set(linhas.map(l => l.data_vencimento))
+      setAbertos(prev => new Set([...prev, ...novasDatas]))
       setQa({ observacao:'', categoria:'', tipo_despesa:'Fixa', subcat:'', valor:'', data_vencimento:HOJE, pago:false })
       setQaFreq('unica')
       qaDescRef.current?.focus()
-      // Atualiza categorias se nova
       if (qa.categoria && !categorias.includes(qa.categoria))
         setCategorias(prev => [...prev, qa.categoria].sort())
       carregar()
@@ -251,6 +253,8 @@ export default function ContasPagarPage() {
     try {
       await inserirContasPagarLote(tenantId, linhas)
       showToast(parcelas > 1 ? `${parcelas} lançamentos salvos!` : 'Conta salva!', 'success')
+      const novasDatas = new Set(linhas.map(l => l.data_vencimento))
+      setAbertos(prev => new Set([...prev, ...novasDatas]))
       setModalNova(false)
       setForm(FORM_VAZIO)
       if (form.categoria && !categorias.includes(form.categoria))
