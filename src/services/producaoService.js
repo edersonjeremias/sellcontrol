@@ -168,6 +168,21 @@ export async function saveProducaoField(tenantId, id, fields) {
     .eq('tenant_id', tenantId)
     .eq('id', id)
   if (error) throw error
+
+  // Sincroniza portal_producao quando status_entrega muda para Enviado/Retirou/Entregue
+  const novoStatusEntrega = fields.status_entrega
+  if (novoStatusEntrega && ['Enviado', 'Retirou', 'Entregue'].includes(novoStatusEntrega)) {
+    const { data: pedido } = await supabase
+      .from('producao_pedidos').select('cliente_nome').eq('id', id).single()
+    if (pedido?.cliente_nome) {
+      const slug = pedido.cliente_nome.replace(/^@/, '').toLowerCase()
+      await supabase
+        .from('portal_producao')
+        .update({ status_entrega: novoStatusEntrega })
+        .ilike('cliente_instagram', `%${slug}%`)
+        .not('status_entrega', 'in', '("Enviado","Retirou","Entregue")')
+    }
+  }
 }
 
 export async function createProducaoPedido(tenantId = null, clienteNome) {
