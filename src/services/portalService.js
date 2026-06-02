@@ -22,6 +22,13 @@ export async function getCobrancas(instagram) {
   return data || []
 }
 
+// Busca débitos pendentes do cliente da tabela principal de cobranças (SECURITY DEFINER)
+export async function getMeusDebitos() {
+  const { data, error } = await portalSb.rpc('portal_get_meus_debitos')
+  if (error) throw error
+  return data || []
+}
+
 export async function getUltimaProducao(instagram) {
   const { data, error } = await portalSb
     .from('portal_producao')
