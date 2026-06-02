@@ -174,7 +174,7 @@ function NovaConversa({ onEnviada, onCancelar }) {
 }
 
 // ════════════════════════════════════════════════════════════════
-export default function MeuContato() {
+export default function MeuContato({ onAtualizar }) {
   const toast = usePortalToast()
   const [conversas,   setConversas]   = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -183,7 +183,15 @@ export default function MeuContato() {
 
   async function carregar() {
     setLoading(true)
-    try { setConversas(await portalGetConversas()) }
+    try {
+      const convs = await portalGetConversas()
+      setConversas(convs)
+      // Notifica o pai sobre o total de não lidas
+      if (onAtualizar) {
+        const total = convs.reduce((s, c) => s + (c.nao_lidas_cliente || 0), 0)
+        if (total === 0) onAtualizar()
+      }
+    }
     catch { toast('Erro ao carregar conversas.', 'error') }
     setLoading(false)
   }
