@@ -9,6 +9,7 @@ const SLUG_TO_CATEGORY = {
   'vendas':                      'Vendas',
   'cobrancas':                   'Financeiro',
   'relatorio':                   'Financeiro',
+  'contatos':                    'Operações',
   'dashboard-financeiro':        'Financeiro',
   'contas-pagar':                'Financeiro',
   'creditos-clientes':           'Financeiro',

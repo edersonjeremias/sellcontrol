@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import MinhaSacolinha from './MinhaSacolinha'
 import MeuCadastro    from './MeuCadastro'
+import MeuContato     from './MeuContato'
 
 const TABS = [
-  { id: 'sacola',   label: '🛍 Minha Sacolinha' },
-  { id: 'cadastro', label: '👤 Meu Cadastro'     },
+  { id: 'sacola',   label: '🛍 Sacolinha' },
+  { id: 'contato',  label: '✉ Contato'    },
+  { id: 'cadastro', label: '👤 Cadastro'  },
 ]
 
 export default function PortalDashboard() {
@@ -42,6 +44,7 @@ export default function PortalDashboard() {
 
       {/* Conteúdo */}
       {aba === 'sacola'   && <MinhaSacolinha />}
+      {aba === 'contato'  && <MeuContato />}
       {aba === 'cadastro' && <MeuCadastro />}
     </div>
   )
