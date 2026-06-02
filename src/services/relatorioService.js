@@ -34,7 +34,7 @@ export async function getClientesRelatorio(tenantId) {
 export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {}) {
   let q = supabase
     .from('vendas')
-    .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, data_live, live_nome, status, created_at')
+    .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
     .eq('tenant_id', tid(tenantId))
     .order('data_live', { ascending: false })
     .order('created_at', { ascending: false })

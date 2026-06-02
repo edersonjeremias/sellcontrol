@@ -109,7 +109,7 @@ export default function RelatorioPage() {
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                 <thead>
                   <tr>
-                    {['Data','Live','Cliente','Produto','Modelo','Cor','Tam','Cód.','Preço','Status'].map(h => (
+                    {['Data','Live','Cliente','Produto','Modelo','Cor','Tam','Cód.','Sacolinha','Preço','Status'].map(h => (
                       <th key={h} style={S.th}>{h}</th>
                     ))}
                   </tr>
@@ -127,6 +127,9 @@ export default function RelatorioPage() {
                       <td style={S.td}>{v.cor}</td>
                       <td style={S.td}>{v.tamanho}</td>
                       <td style={S.td}>{v.codigo}</td>
+                      <td style={{ ...S.td, color: v.sacolinha ? 'var(--blue)' : 'var(--muted)' }}>
+                        {v.sacolinha ?? '—'}
+                      </td>
                       <td style={{ ...S.td, color:'var(--green)', fontWeight:600 }}>{fmtR(v.preco)}</td>
                       <td style={{ ...S.td, color: STATUS_COR[(v.status||'').toUpperCase()] || 'var(--muted)', fontSize:11 }}>
                         {v.status || '—'}
