@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import {
   portalCriarConversa, portalGetConversas,
-  portalGetMensagens, portalResponder,
+  portalGetMensagens, portalResponder, portalMarcarLida,
 } from '../../services/conversasService'
 
 function fmtHora(iso) {
@@ -35,7 +35,11 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
 
   useEffect(() => {
     portalGetMensagens(conversa.id).then(setMsgs).catch(() => {})
-  }, [conversa.id])
+    // Marca como lida ao abrir
+    if (conversa.nao_lidas_cliente > 0) {
+      portalMarcarLida(conversa.id).catch(() => {})
+    }
+  }, [conversa.id, conversa.nao_lidas_cliente])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior:'smooth' })
@@ -222,21 +226,35 @@ export default function MeuContato() {
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {conversas.map(c => {
                 const cor = STATUS_COR[c.coluna] || '#8ab4f8'
+                const temNovas = (c.nao_lidas_cliente || 0) > 0
                 return (
                   <div key={c.id}
                     onClick={() => { setSelConv(c); setTela('thread') }}
                     style={{
-                      background:'var(--p-card)', border:'1px solid var(--p-border)', borderRadius:12,
+                      background:'var(--p-card)',
+                      border: temNovas ? '1px solid var(--p-blue)' : '1px solid var(--p-border)',
+                      borderRadius:12,
                       padding:'14px 16px', cursor:'pointer', transition:'background 0.15s',
+                      borderLeft: temNovas ? '3px solid var(--p-blue)' : '3px solid transparent',
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--p-card2)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'var(--p-card)'}
                   >
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                      <span style={{ fontSize:14, fontWeight:700, color:'var(--p-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1, marginRight:8 }}>
-                        {c.assunto}
-                      </span>
-                      <span style={{ fontSize:11, fontWeight:700, color:cor, background:`${cor}22`, padding:'3px 10px', borderRadius:20, whiteSpace:'nowrap', flexShrink:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:0 }}>
+                        <span style={{ fontSize:14, fontWeight:700, color:'var(--p-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1 }}>
+                          {c.assunto}
+                        </span>
+                        {temNovas && (
+                          <span style={{
+                            background:'var(--p-blue)', color:'#0f0f0f', borderRadius:10,
+                            fontSize:11, fontWeight:700, padding:'2px 8px', flexShrink:0,
+                          }}>
+                            {c.nao_lidas_cliente} nova{c.nao_lidas_cliente > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize:11, fontWeight:700, color:cor, background:`${cor}22`, padding:'3px 10px', borderRadius:20, whiteSpace:'nowrap', flexShrink:0, marginLeft:8 }}>
                         {STATUS_LABEL[c.coluna] || c.coluna}
                       </span>
                     </div>

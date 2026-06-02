@@ -104,3 +104,8 @@ export async function portalResponder(conversaId, texto) {
   })
   if (error) throw error
 }
+
+export async function portalMarcarLida(conversaId) {
+  const { error } = await portalSb.rpc('portal_marcar_lida', { p_conversa_id: conversaId })
+  if (error) throw error
+}
