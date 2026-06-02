@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
@@ -31,26 +31,41 @@ function ultimoDiaMes() {
 }
 
 export default function RelatorioPage() {
-  const { profile }    = useAuth()
-  const { showToast }  = useApp()
-  const tenantId       = profile?.tenant_id
+  const { profile }   = useAuth()
+  const { showToast } = useApp()
+  const tenantId      = profile?.tenant_id
 
-  const [dataIni, setDataIni]     = useState(primeiroDiaMes)
-  const [dataFim, setDataFim]     = useState(ultimoDiaMes)
-  const [busca, setBusca]         = useState('')
-  const [vendas, setVendas]       = useState([])
+  const [dataIni, setDataIni]       = useState(primeiroDiaMes)
+  const [dataFim, setDataFim]       = useState(ultimoDiaMes)
+  const [busca, setBusca]           = useState('')
+  const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
   const [carregando, setCarregando] = useState(false)
 
+  // Carrega do servidor apenas por período (sem busca — busca é client-side)
   const carregar = useCallback(async () => {
     if (!tenantId) return
     setCarregando(true)
     try {
-      setVendas(await getVendasRelatorio(tenantId, { dataInicio: dataIni, dataFim, busca }))
+      const rows = await getVendasRelatorio(tenantId, { dataInicio: dataIni, dataFim })
+      setVendasBase(rows)
     } catch { showToast('Erro ao carregar vendas.', 'error') }
     setCarregando(false)
-  }, [tenantId, dataIni, dataFim, busca, showToast])
+  }, [tenantId, dataIni, dataFim, showToast])
 
   useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
+
+  // Filtro de busca aplicado CLIENT-SIDE em tempo real (sem chamada ao servidor)
+  const vendas = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
+    if (!termo) return vendasBase
+    // Suporta múltiplos termos separados por vírgula OU espaço
+    const termos = termo.split(/[,\s]+/).filter(Boolean)
+    return vendasBase.filter(v => {
+      const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.cliente_nome, v.live_nome, v.codigo]
+        .join(' ').toLowerCase()
+      return termos.every(t => txt.includes(t))
+    })
+  }, [vendasBase, busca])
 
   const totalLiquido = vendas.reduce((s, v) => {
     const st = (v.status || '').toUpperCase()
@@ -59,7 +74,7 @@ export default function RelatorioPage() {
 
   return (
     <AppShell title="Relatório" hideTitle>
-      {/* Filtros */}
+      {/* Filtros de período */}
       <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8, padding:'12px 16px', borderBottom:'1px solid var(--border-light)', background:'var(--header-bg)' }}>
         <span style={{ fontSize:14, fontWeight:700, color:'var(--text-header)' }}>Relatório de Vendas</span>
         <div style={{ flex:1 }} />
@@ -71,15 +86,14 @@ export default function RelatorioPage() {
       </div>
 
       <div style={{ padding:16 }}>
-        {/* Busca */}
-        <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+        {/* Busca inteligente em tempo real */}
+        <div style={{ marginBottom:12 }}>
           <input
-            placeholder="Buscar produto, cliente, live, código…"
-            value={busca} onChange={e => setBusca(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && carregar()}
-            style={{ ...S.inp, flex:1 }}
+            placeholder="Busca inteligente: produto, cliente, live, código… (separe termos por vírgula ou espaço)"
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            style={{ ...S.inp, width:'100%', fontSize:13 }}
           />
-          <button onClick={carregar} style={S.btn}>Buscar</button>
         </div>
 
         {carregando ? (
@@ -87,7 +101,9 @@ export default function RelatorioPage() {
         ) : (
           <>
             <p style={{ fontSize:12, color:'var(--muted)', marginBottom:8 }}>
-              {vendas.length} registro(s) · Total líquido: <strong style={{ color:'var(--green)' }}>{fmtR(totalLiquido)}</strong>
+              {vendas.length} de {vendasBase.length} registro(s)
+              {busca.trim() && <span style={{ color:'var(--blue)', marginLeft:6 }}>· filtrado por "{busca.trim()}"</span>}
+              {' · '}Total líquido: <strong style={{ color:'var(--green)' }}>{fmtR(totalLiquido)}</strong>
             </p>
             <div style={{ overflowX:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
@@ -118,7 +134,13 @@ export default function RelatorioPage() {
                     </tr>
                   ))}
                   {!vendas.length && (
-                    <tr><td colSpan={10} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum registro encontrado.</td></tr>
+                    <tr>
+                      <td colSpan={10} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>
+                        {busca.trim()
+                          ? `Nenhum resultado para "${busca.trim()}"`
+                          : 'Nenhum registro encontrado no período.'}
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>

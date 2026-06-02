@@ -31,7 +31,7 @@ export async function getClientesRelatorio(tenantId) {
 
 // ── Relatório: vendas ──────────────────────────────────────────
 
-export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, busca } = {}) {
+export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {}) {
   let q = supabase
     .from('vendas')
     .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, data_live, live_nome, status, created_at')
@@ -44,17 +44,7 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, busca 
 
   const { data, error } = await q
   if (error) throw error
-
-  let rows = data || []
-  if (busca?.trim()) {
-    const termos = busca.trim().toLowerCase().split(/\s+/)
-    rows = rows.filter(r => {
-      const txt = [r.produto, r.modelo, r.cor, r.marca, r.cliente_nome, r.live_nome, r.codigo]
-        .join(' ').toLowerCase()
-      return termos.every(t => txt.includes(t))
-    })
-  }
-  return rows
+  return data || []
 }
 
 // ── Contas a pagar ─────────────────────────────────────────────
