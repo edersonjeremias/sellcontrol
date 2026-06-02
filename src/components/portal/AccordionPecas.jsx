@@ -64,9 +64,6 @@ function AccordionGroup({ data, pecas, getStatusOverride }) {
           </div>
         </div>
         <div className="portal-accordion-right">
-          <div className="portal-accordion-total">
-            R$ {total.toFixed(2).replace('.', ',')}
-          </div>
           <span className={`portal-accordion-arrow${open ? ' open' : ''}`}>▼</span>
         </div>
       </div>
