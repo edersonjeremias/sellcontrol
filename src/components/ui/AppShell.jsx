@@ -2,14 +2,14 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
-const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impressão', 'Cadastro', 'Admin']
+const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impressão', 'Cadastro', 'Admin', 'Outros']
 
 const SLUG_TO_CATEGORY = {
   'dashboard':                   'Principal',
   'vendas':                      'Vendas',
   'cobrancas':                   'Financeiro',
   'relatorio':                   'Financeiro',
-  'contatos':                    'Operações',
+  'contatos':                    'Vendas',
   'dashboard-financeiro':        'Financeiro',
   'contas-pagar':                'Financeiro',
   'creditos-clientes':           'Financeiro',
