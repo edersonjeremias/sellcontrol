@@ -113,9 +113,17 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
   const endRef = useRef(null)
 
   useEffect(() => {
-    getMensagens(conversa.id).then(setMensagens)
+    getMensagens(conversa.id)
+      .then(msgs => {
+        console.log('Mensagens carregadas:', msgs)
+        setMensagens(msgs)
+      })
+      .catch(err => {
+        console.error('Erro ao carregar mensagens:', err)
+        showToast('Erro ao carregar mensagens: ' + err.message, 'error')
+      })
     marcarLida(conversa.id)
-  }, [conversa.id])
+  }, [conversa.id, showToast])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior:'smooth' })

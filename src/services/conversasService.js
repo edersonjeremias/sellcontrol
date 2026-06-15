@@ -46,7 +46,11 @@ export async function getMensagens(conversaId) {
     .select('id, remetente, texto, created_at')
     .eq('conversa_id', conversaId)
     .order('created_at')
-  if (error) throw error
+  if (error) {
+    console.error('Erro getMensagens:', error)
+    throw error
+  }
+  console.log('getMensagens retornou:', data?.length || 0, 'mensagens')
   return data || []
 }
 
@@ -74,6 +78,28 @@ export async function encerrarConversa(id, encerrado = true) {
   const { error } = await supabase
     .from('conversas').update({ encerrado, coluna: encerrado ? 'Encerrado' : 'Novo' }).eq('id', id)
   if (error) throw error
+}
+
+export async function criarConversaAdmin(tenantId, clienteInstagram, assunto, mensagemInicial) {
+  const { data: conv, error: e1 } = await supabase
+    .from('conversas')
+    .insert([{
+      tenant_id: tid(tenantId),
+      cliente_instagram: clienteInstagram,
+      assunto,
+      coluna: 'Novo',
+      nao_lidas_cliente: 1,
+    }])
+    .select('id')
+    .single()
+  if (e1) throw e1
+
+  const { error: e2 } = await supabase
+    .from('mensagens_contato')
+    .insert([{ conversa_id: conv.id, remetente: 'admin', texto: mensagemInicial }])
+  if (e2) throw e2
+
+  return conv.id
 }
 
 // ── Portal: RPCs (SECURITY DEFINER) ────────────────────────────
