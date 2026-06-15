@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
+import AutocompleteInput from '../../components/ui/AutocompleteInput'
 import {
   getColunas, salvarColunas, COLUNAS_DEFAULT,
   getConversas, getMensagens, responderAdmin,
@@ -241,13 +242,12 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
 
 // ── Modal de nova conversa com cliente ────────────────────────
 function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
-  const [clientes, setClientes]   = useState([])
+  const [listaClientes, setListaClientes] = useState([])
   const [carregando, setCarregando] = useState(true)
-  const [selecionado, setSelecionado] = useState('')
-  const [assunto, setAssunto]     = useState('')
-  const [mensagem, setMensagem]   = useState('')
-  const [enviando, setEnviando]   = useState(false)
-  const [busca, setBusca]         = useState('')
+  const [clienteNome, setClienteNome] = useState('')
+  const [assunto, setAssunto] = useState('')
+  const [mensagem, setMensagem] = useState('')
+  const [enviando, setEnviando] = useState(false)
 
   useEffect(() => {
     getClientes(tenantId).then(({ data, error }) => {
@@ -255,8 +255,9 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
         console.error('Erro ao carregar clientes:', error)
         showToast('Erro ao carregar clientes', 'error')
       } else {
-        console.log('Clientes carregados:', data?.length || 0)
-        setClientes(data || [])
+        // Formata lista para AutocompleteInput: array de strings com instagram
+        const lista = (data || []).map(c => c.instagram?.replace('@', '') || '')
+        setListaClientes(lista)
       }
       setCarregando(false)
     }).catch((err) => {
@@ -267,12 +268,12 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
   }, [tenantId, showToast])
 
   async function criar() {
-    if (!selecionado || !assunto.trim() || !mensagem.trim()) {
+    if (!clienteNome.trim() || !assunto.trim() || !mensagem.trim()) {
       return showToast('Preencha todos os campos', 'error')
     }
     setEnviando(true)
     try {
-      await criarConversaAdmin(tenantId, selecionado, assunto.trim(), mensagem.trim())
+      await criarConversaAdmin(tenantId, clienteNome.trim(), assunto.trim(), mensagem.trim())
       showToast('Conversa criada!', 'success')
       onCriada()
     } catch {
@@ -280,10 +281,6 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
     }
     setEnviando(false)
   }
-
-  const clientesFiltrados = busca.trim()
-    ? clientes.filter(c => c.instagram?.toLowerCase().includes(busca.toLowerCase()) || c.nome?.toLowerCase().includes(busca.toLowerCase()))
-    : clientes
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -298,25 +295,16 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
             <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
               Cliente *
             </label>
-            <input
-              placeholder="Buscar cliente…"
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', marginBottom:6, boxSizing:'border-box' }}
-            />
-            <select
-              value={selecionado}
-              onChange={e => setSelecionado(e.target.value)}
+            <AutocompleteInput
+              value={clienteNome}
+              onChange={setClienteNome}
+              onSelect={setClienteNome}
+              list={listaClientes}
+              placeholder="Digite para buscar cliente…"
               disabled={carregando}
+              showOnFocus
               style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
-            >
-              <option value="">-- Selecione --</option>
-              {clientesFiltrados.map(c => (
-                <option key={c.instagram} value={c.instagram}>
-                  @{c.instagram?.replace('@','')} {c.nome ? `— ${c.nome}` : ''}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Assunto */}
@@ -350,8 +338,8 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
           <button onClick={onClose} style={{ flex:1, background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'10px', fontWeight:600, cursor:'pointer' }}>
             Cancelar
           </button>
-          <button onClick={criar} disabled={enviando || !selecionado || !assunto.trim() || !mensagem.trim()}
-            style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer', opacity: (enviando || !selecionado || !assunto.trim() || !mensagem.trim()) ? 0.5 : 1 }}>
+          <button onClick={criar} disabled={enviando || !clienteNome.trim() || !assunto.trim() || !mensagem.trim()}
+            style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer', opacity: (enviando || !clienteNome.trim() || !assunto.trim() || !mensagem.trim()) ? 0.5 : 1 }}>
             {enviando ? 'Criando…' : '✉ Criar Conversa'}
           </button>
         </div>
