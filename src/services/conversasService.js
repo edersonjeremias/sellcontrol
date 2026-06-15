@@ -81,11 +81,14 @@ export async function encerrarConversa(id, encerrado = true) {
 }
 
 export async function criarConversaAdmin(tenantId, clienteInstagram, assunto, mensagemInicial) {
+  // Normaliza instagram (remove @ se tiver)
+  const igNormalizado = clienteInstagram?.replace('@', '') || clienteInstagram
+
   const { data: conv, error: e1 } = await supabase
     .from('conversas')
     .insert([{
       tenant_id: tid(tenantId),
-      cliente_instagram: clienteInstagram,
+      cliente_instagram: igNormalizado,
       assunto,
       coluna: 'Novo',
       nao_lidas_cliente: 1,
