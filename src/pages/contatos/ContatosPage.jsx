@@ -5,8 +5,9 @@ import AppShell from '../../components/ui/AppShell'
 import {
   getColunas, salvarColunas, COLUNAS_DEFAULT,
   getConversas, getMensagens, responderAdmin,
-  moverConversa, marcarLida, encerrarConversa,
+  moverConversa, marcarLida, encerrarConversa, criarConversaAdmin,
 } from '../../services/conversasService'
+import { getClientes } from '../../services/clientesService'
 
 function fmtTempo(iso) {
   if (!iso) return ''
@@ -238,6 +239,120 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
   )
 }
 
+// ── Modal de nova conversa com cliente ────────────────────────
+function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
+  const [clientes, setClientes]   = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [selecionado, setSelecionado] = useState('')
+  const [assunto, setAssunto]     = useState('')
+  const [mensagem, setMensagem]   = useState('')
+  const [enviando, setEnviando]   = useState(false)
+  const [busca, setBusca]         = useState('')
+
+  useEffect(() => {
+    getClientes(tenantId).then(data => {
+      setClientes(data || [])
+      setCarregando(false)
+    }).catch(() => {
+      showToast('Erro ao carregar clientes', 'error')
+      setCarregando(false)
+    })
+  }, [tenantId, showToast])
+
+  async function criar() {
+    if (!selecionado || !assunto.trim() || !mensagem.trim()) {
+      return showToast('Preencha todos os campos', 'error')
+    }
+    setEnviando(true)
+    try {
+      await criarConversaAdmin(tenantId, selecionado, assunto.trim(), mensagem.trim())
+      showToast('Conversa criada!', 'success')
+      onCriada()
+    } catch {
+      showToast('Erro ao criar conversa', 'error')
+    }
+    setEnviando(false)
+  }
+
+  const clientesFiltrados = busca.trim()
+    ? clientes.filter(c => c.instagram?.toLowerCase().includes(busca.toLowerCase()) || c.nome?.toLowerCase().includes(busca.toLowerCase()))
+    : clientes
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth:500 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ margin:0, fontSize:16 }}>✉ Nova Conversa</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer' }}>✕</button>
+        </div>
+        <div className="modal-body" style={{ padding:20, paddingBottom:20, display:'grid', gap:14 }}>
+          {/* Selecionar cliente */}
+          <div>
+            <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
+              Cliente *
+            </label>
+            <input
+              placeholder="Buscar cliente…"
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', marginBottom:6, boxSizing:'border-box' }}
+            />
+            <select
+              value={selecionado}
+              onChange={e => setSelecionado(e.target.value)}
+              disabled={carregando}
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+            >
+              <option value="">-- Selecione --</option>
+              {clientesFiltrados.map(c => (
+                <option key={c.instagram} value={c.instagram}>
+                  @{c.instagram?.replace('@','')} {c.nome ? `— ${c.nome}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Assunto */}
+          <div>
+            <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
+              Assunto *
+            </label>
+            <input
+              value={assunto}
+              onChange={e => setAssunto(e.target.value)}
+              placeholder="Ex: Orçamento, Follow-up, Dúvida…"
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+
+          {/* Mensagem */}
+          <div>
+            <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
+              Mensagem *
+            </label>
+            <textarea
+              value={mensagem}
+              onChange={e => setMensagem(e.target.value)}
+              rows={4}
+              placeholder="Escreva a mensagem inicial…"
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, resize:'none', outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={onClose} style={{ flex:1, background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'10px', fontWeight:600, cursor:'pointer' }}>
+            Cancelar
+          </button>
+          <button onClick={criar} disabled={enviando || !selecionado || !assunto.trim() || !mensagem.trim()}
+            style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer', opacity: (enviando || !selecionado || !assunto.trim() || !mensagem.trim()) ? 0.5 : 1 }}>
+            {enviando ? 'Criando…' : '✉ Criar Conversa'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal de configuração de colunas ──────────────────────────
 function ModalColunas({ colunas, onSalvar, onClose }) {
   const [cols, setCols] = useState(colunas.map(c => ({ ...c })))
@@ -295,6 +410,7 @@ export default function ContatosPage() {
   const [carregando,    setCarregando]    = useState(false)
   const [selConversa,   setSelConversa]   = useState(null)
   const [modalColunas,  setModalColunas]  = useState(false)
+  const [modalNova,     setModalNova]     = useState(false)
   const [busca,         setBusca]         = useState('')
 
   const carregar = useCallback(async () => {
@@ -366,6 +482,10 @@ export default function ContatosPage() {
           style={{ background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'6px 10px', fontSize:13, outline:'none', width:220 }}
         />
         <div style={{ marginLeft:'auto', display:'flex', gap:8 }}>
+          <button onClick={() => setModalNova(true)}
+            style={{ background:'var(--green)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'6px 14px', fontWeight:700, cursor:'pointer', fontSize:13 }}>
+            + Nova Conversa
+          </button>
           <button onClick={() => setModalColunas(true)}
             style={{ background:'none', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--muted)', padding:'6px 14px', cursor:'pointer', fontSize:13 }}>
             ⚙ Colunas
@@ -418,6 +538,16 @@ export default function ContatosPage() {
           tenantId={tenantId}
           onClose={() => setSelConversa(null)}
           onAtualizar={carregar}
+        />
+      )}
+
+      {/* Modal nova conversa */}
+      {modalNova && (
+        <ModalNovaConversa
+          tenantId={tenantId}
+          onCriada={() => { setModalNova(false); carregar() }}
+          onClose={() => setModalNova(false)}
+          showToast={showToast}
         />
       )}
 
