@@ -349,6 +349,66 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
   )
 }
 
+// ── Modal de conversas encerradas ──────────────────────────────
+function ModalEncerrados({ conversas, onAbrir, onClose }) {
+  const [filtro, setFiltro] = useState('')
+
+  const encerradas = conversas.filter(c => c.encerrado)
+  const filtradas = filtro.trim()
+    ? encerradas.filter(c => {
+        const t = filtro.toLowerCase()
+        return c.cliente_instagram?.toLowerCase().includes(t) || c.assunto?.toLowerCase().includes(t)
+      })
+    : encerradas
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth:700, maxHeight:'90vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ margin:0, fontSize:16 }}>📁 Conversas Encerradas ({encerradas.length})</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer' }}>✕</button>
+        </div>
+        <div style={{ padding:'0 20px 12px', borderBottom:'1px solid var(--border-light)' }}>
+          <input
+            type="text"
+            placeholder="Buscar por cliente ou assunto…"
+            value={filtro}
+            onChange={e => setFiltro(e.target.value)}
+            style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+          />
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:20, display:'flex', flexDirection:'column', gap:8 }}>
+          {filtradas.length === 0 ? (
+            <div style={{ textAlign:'center', color:'var(--muted)', padding:'40px 20px', fontSize:13 }}>
+              {filtro.trim() ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa encerrada'}
+            </div>
+          ) : (
+            filtradas.map(c => (
+              <div
+                key={c.id}
+                onClick={() => { onAbrir(c); onClose() }}
+                style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'12px 14px', cursor:'pointer', transition:'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#252525'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--card-bg)'}
+              >
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:'var(--blue)' }}>
+                    @{(c.cliente_instagram||'').replace('@','')}
+                  </span>
+                  <span style={{ fontSize:11, color:'var(--muted)' }}>{fmtTempo(c.updated_at)}</span>
+                </div>
+                <div style={{ fontSize:12, color:'var(--text-body)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {c.assunto}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Modal de configuração de colunas ──────────────────────────
 function ModalColunas({ colunas, onSalvar, onClose }) {
   const [cols, setCols] = useState(colunas.map(c => ({ ...c })))
@@ -407,6 +467,7 @@ export default function ContatosPage() {
   const [selConversa,   setSelConversa]   = useState(null)
   const [modalColunas,  setModalColunas]  = useState(false)
   const [modalNova,     setModalNova]     = useState(false)
+  const [modalEncerrados, setModalEncerrados] = useState(false)
   const [busca,         setBusca]         = useState('')
 
   const carregar = useCallback(async () => {
@@ -441,13 +502,13 @@ export default function ContatosPage() {
     } catch { showToast('Erro ao salvar colunas.', 'error') }
   }
 
-  // Filtro de busca
+  // Filtro de busca + Remove encerrados do Kanban
   const convFiltradas = busca.trim()
     ? conversas.filter(c => {
         const t = busca.toLowerCase()
-        return c.cliente_instagram?.toLowerCase().includes(t) || c.assunto?.toLowerCase().includes(t)
+        return !c.encerrado && (c.cliente_instagram?.toLowerCase().includes(t) || c.assunto?.toLowerCase().includes(t))
       })
-    : conversas
+    : conversas.filter(c => !c.encerrado)
 
   // Agrupar por coluna
   const porColuna = {}
@@ -459,6 +520,7 @@ export default function ContatosPage() {
   })
 
   const totalNaoLidas = conversas.reduce((s, c) => s + (c.nao_lidas || 0), 0)
+  const totalEncerrados = conversas.filter(c => c.encerrado).length
 
   return (
     <AppShell title="CRM — Contatos" hideTitle flush>
@@ -478,6 +540,10 @@ export default function ContatosPage() {
           style={{ background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'6px 10px', fontSize:13, outline:'none', width:220 }}
         />
         <div style={{ marginLeft:'auto', display:'flex', gap:8 }}>
+          <button onClick={() => setModalEncerrados(true)}
+            style={{ background:'none', border:'1px solid var(--purple)', borderRadius:6, color:'var(--purple)', padding:'6px 14px', cursor:'pointer', fontSize:13, position:'relative' }}>
+            📁 Encerrados {totalEncerrados > 0 && `(${totalEncerrados})`}
+          </button>
           <button onClick={() => setModalNova(true)}
             style={{ background:'var(--green)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'6px 14px', fontWeight:700, cursor:'pointer', fontSize:13 }}>
             + Nova Conversa
@@ -544,6 +610,15 @@ export default function ContatosPage() {
           onCriada={() => { setModalNova(false); carregar() }}
           onClose={() => setModalNova(false)}
           showToast={showToast}
+        />
+      )}
+
+      {/* Modal encerrados */}
+      {modalEncerrados && (
+        <ModalEncerrados
+          conversas={conversas}
+          onAbrir={c => { setSelConversa(c); marcarLida(c.id); setConversas(prev => prev.map(x => x.id===c.id ? {...x,nao_lidas:0} : x)) }}
+          onClose={() => setModalEncerrados(false)}
         />
       )}
 
