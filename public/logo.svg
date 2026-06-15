@@ -22,7 +22,7 @@
 
   <!-- Seta em zigue-zague (traço bem grosso) - maior e corrigida -->
   <polyline
-    points="15,75 28,50 40,63 60,28 70,18"
+    points="15,75 28,50 40,63 60,28 69,19"
     fill="none"
     stroke="#00d4ff"
     stroke-width="7"
@@ -31,9 +31,9 @@
     filter="url(#glow)"
   />
 
-  <!-- Ponta da seta - reta e proporcional -->
+  <!-- Ponta da seta - ângulo reto perfeito 90° -->
   <polyline
-    points="62,18 70,18 70,26"
+    points="60,19 69,19 69,28"
     fill="none"
     stroke="#00d4ff"
     stroke-width="7"
