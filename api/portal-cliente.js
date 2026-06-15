@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     .from('portal_clientes')
     .upsert(
       { user_id: userId, instagram: instaHandle, nome_completo: nome_completo || '' },
-      { onConflict: 'instagram' }
+      { onConflict: 'user_id' }
     )
 
   if (profErr) {
