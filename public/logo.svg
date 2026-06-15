@@ -20,25 +20,15 @@
   <!-- Anel único bold -->
   <circle cx="50" cy="50" r="43" fill="none" stroke="#00d4ff" stroke-width="4" filter="url(#glow)"/>
 
-  <!-- Seta em zigue-zague (traço mais grosso) - ajustada -->
-  <polyline
-    points="20,68 32,46 44,58 64,24 68,20"
-    fill="none"
-    stroke="#00d4ff"
-    stroke-width="8.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
+  <!-- Letra S estilizada -->
+  <text
+    x="50"
+    y="72"
+    font-family="Arial, sans-serif"
+    font-size="60"
+    font-weight="900"
+    text-anchor="middle"
+    fill="#00d4ff"
     filter="url(#glow)"
-  />
-
-  <!-- Ponta da seta - dentro do círculo e reta -->
-  <polyline
-    points="58,20 68,20 68,30"
-    fill="none"
-    stroke="#00d4ff"
-    stroke-width="8.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    filter="url(#glow)"
-  />
+  >S</text>
 </svg>
