@@ -20,23 +20,23 @@
   <!-- Anel único bold -->
   <circle cx="50" cy="50" r="43" fill="none" stroke="#00d4ff" stroke-width="4" filter="url(#glow)"/>
 
-  <!-- Seta em zigue-zague (traço bem grosso) - ajustado -->
+  <!-- Seta em zigue-zague (traço bem grosso) - maior e corrigida -->
   <polyline
-    points="18,72 32,52 42,62 58,35 68,24"
+    points="15,75 28,50 40,63 60,28 70,18"
     fill="none"
     stroke="#00d4ff"
-    stroke-width="6.5"
+    stroke-width="7"
     stroke-linecap="round"
     stroke-linejoin="round"
     filter="url(#glow)"
   />
 
-  <!-- Ponta da seta - recuada e centralizada -->
+  <!-- Ponta da seta - reta e proporcional -->
   <polyline
-    points="58,24 68,24 68,34"
+    points="62,18 70,18 70,26"
     fill="none"
     stroke="#00d4ff"
-    stroke-width="6.5"
+    stroke-width="7"
     stroke-linecap="round"
     stroke-linejoin="round"
     filter="url(#glow)"
