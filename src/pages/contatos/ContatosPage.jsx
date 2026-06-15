@@ -250,10 +250,17 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
   const [busca, setBusca]         = useState('')
 
   useEffect(() => {
-    getClientes(tenantId).then(data => {
-      setClientes(data || [])
+    getClientes(tenantId).then(({ data, error }) => {
+      if (error) {
+        console.error('Erro ao carregar clientes:', error)
+        showToast('Erro ao carregar clientes', 'error')
+      } else {
+        console.log('Clientes carregados:', data?.length || 0)
+        setClientes(data || [])
+      }
       setCarregando(false)
-    }).catch(() => {
+    }).catch((err) => {
+      console.error('Erro getClientes:', err)
       showToast('Erro ao carregar clientes', 'error')
       setCarregando(false)
     })
