@@ -499,7 +499,11 @@ export default function ContatosPage() {
     try {
       await moverConversa(id, novaColuna)
       setConversas(prev => prev.map(c => c.id === id ? { ...c, coluna: novaColuna } : c))
-    } catch { showToast('Erro ao mover.', 'error') }
+      showToast(`Movido para "${novaColuna}"`, 'success')
+    } catch (err) {
+      console.error('Erro ao mover:', err)
+      showToast('Erro ao mover: ' + err.message, 'error')
+    }
   }
 
   async function handleSalvarColunas(novasCols) {
