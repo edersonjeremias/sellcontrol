@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { supabase } from './lib/supabase'
 
@@ -8,6 +8,15 @@ const _RECOVERY_HASH =
   typeof window !== 'undefined' && window.location.hash.includes('type=recovery')
     ? window.location.hash
     : ''
+
+// Força scroll to top quando a rota muda
+function ScrollToTop() {
+  const location = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
+  return null
+}
 
 // Redireciona para /reset-password quando o Supabase confirma fluxo de recovery,
 // preservando o hash com os tokens para que ResetPasswordPage possa processá-los.
@@ -65,6 +74,7 @@ export default function App() {
     <AuthProvider>
       <AppProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <RecoveryGuard />
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
