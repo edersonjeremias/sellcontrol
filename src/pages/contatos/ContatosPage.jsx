@@ -486,6 +486,15 @@ export default function ContatosPage() {
 
   useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
 
+  // Polling automático a cada 30s para detectar novas mensagens
+  useEffect(() => {
+    if (!tenantId) return
+    const interval = setInterval(() => {
+      carregar()
+    }, 30000) // 30 segundos
+    return () => clearInterval(interval)
+  }, [tenantId, carregar])
+
   async function handleMover(id, novaColuna) {
     try {
       await moverConversa(id, novaColuna)
