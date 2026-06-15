@@ -60,9 +60,9 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   const cor = STATUS_COR[conversa.coluna] || '#8ab4f8'
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 200px)', minHeight:400, maxHeight:700 }}>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid var(--p-border)', marginBottom:12 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid var(--p-border)', marginBottom:12, flexShrink:0 }}>
         <button onClick={onVoltar} style={{ background:'none', border:'none', color:'var(--p-blue)', cursor:'pointer', fontSize:18, lineHeight:1, padding:0 }}>←</button>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:14, fontWeight:700, color:'var(--p-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -74,8 +74,8 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
         </span>
       </div>
 
-      {/* Mensagens */}
-      <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:10, paddingBottom:8 }}>
+      {/* Mensagens com scroll */}
+      <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:10, paddingBottom:8, minHeight:0 }}>
         {msgs.map(m => {
           const isCliente = m.remetente === 'cliente'
           return (
@@ -101,13 +101,13 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
         <div ref={endRef} />
       </div>
 
-      {/* Input resposta */}
+      {/* Input resposta - sempre visível */}
       {conversa.encerrado ? (
-        <div style={{ padding:'12px 0', textAlign:'center', fontSize:12, color:'var(--p-muted)', borderTop:'1px solid var(--p-border)' }}>
+        <div style={{ padding:'12px 0', textAlign:'center', fontSize:12, color:'var(--p-muted)', borderTop:'1px solid var(--p-border)', flexShrink:0 }}>
           Esta conversa foi encerrada.
         </div>
       ) : (
-        <div style={{ display:'flex', gap:8, paddingTop:12, borderTop:'1px solid var(--p-border)' }}>
+        <div style={{ display:'flex', gap:8, paddingTop:12, borderTop:'1px solid var(--p-border)', flexShrink:0 }}>
           <textarea
             value={texto}
             onChange={e => setTexto(e.target.value)}
