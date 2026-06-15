@@ -303,7 +303,8 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
               placeholder="Digite para buscar cliente…"
               disabled={carregando}
               showOnFocus
-              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+              className="cell-input"
+              style={{ width:'100%', height:40 }}
             />
           </div>
 
