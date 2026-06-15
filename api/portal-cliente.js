@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
   const instaSlug   = instagram.trim().replace(/^@/, '').toLowerCase()
   const email       = `${instaSlug}@portal.vmkids.com.br`
-  const instaHandle = `@${instaSlug}`
+  const instaHandle = instaSlug // SEM @ - normalizado
 
   // Tenta criar o usuário no Auth
   let userId
