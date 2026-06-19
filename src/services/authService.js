@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
 
 // Catálogo completo de páginas disponíveis no sistema
+// Lista completa de páginas disponíveis no sistema
 export const ALL_PAGES = [
   { slug: 'dashboard',                   label: 'Dashboard',                 category: 'Principal',  icon: 'dashboard',      order_index: 10 },
   { slug: 'notificacoes',                label: 'Notificações',              category: 'Principal',  icon: 'notifications',  order_index: 15 },
