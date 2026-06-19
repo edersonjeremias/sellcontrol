@@ -12,3 +12,4 @@ supabase/.temp/
 # Arquivos de migração (dados pessoais — não subir para o Git)
 scripts/dados/*.csv
 scripts/dados/*.xlsx
+.claude/settings.local.json

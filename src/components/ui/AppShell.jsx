@@ -6,6 +6,7 @@ const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impr
 
 const SLUG_TO_CATEGORY = {
   'dashboard':                   'Principal',
+  'notificacoes':                'Principal',
   'vendas':                      'Vendas',
   'cobrancas':                   'Financeiro',
   'relatorio':                   'Financeiro',
