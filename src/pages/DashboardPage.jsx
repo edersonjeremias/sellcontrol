@@ -3,9 +3,10 @@ import AppShell from '../components/ui/AppShell'
 import { useAuth } from '../context/AuthContext'
 import { getInformativos, addInformativo, markInformativoRead } from '../services/appService'
 import { useApp } from '../context/AppContext'
+import { supabase } from '../lib/supabase'
 
 export default function DashboardPage() {
-  const { profile } = useAuth()
+  const { profile, menuItems } = useAuth()
   const { showToast } = useApp()
   const [informativos, setInformativos] = useState([])
   const [loading, setLoading] = useState(false)
@@ -58,6 +59,31 @@ export default function DashboardPage() {
     loadInformativos()
   }
 
+  const showDebugInfo = async () => {
+    const { data: pages } = await supabase.from('pages').select('*').eq('tenant_id', tenantId)
+    const { data: access } = await supabase.from('pages_access').select('*, pages(slug)').eq('user_id', profile.id)
+
+    const info = {
+      usuario: {
+        id: profile.id,
+        nome: profile.nome,
+        role: profile.role,
+        tenant_id: profile.tenant_id
+      },
+      menu_items: menuItems.map(m => m.slug),
+      pages_no_banco: pages?.map(p => p.slug) || [],
+      acessos: access?.map(a => a.pages?.slug) || [],
+      tem_notificacoes: {
+        no_menu: menuItems.some(m => m.slug === 'notificacoes'),
+        no_banco: pages?.some(p => p.slug === 'notificacoes'),
+        com_acesso: access?.some(a => a.pages?.slug === 'notificacoes')
+      }
+    }
+
+    console.log('🔍 DEBUG INFO:', info)
+    alert('Informações enviadas para o Console! Pressione F12 e veja a aba Console.')
+  }
+
   const filtered = informativos.filter((item) => {
     if (filter === 'Pendente') return item.status === 'Pendente'
     if (filter === 'Lido') return item.status === 'Lido'
@@ -86,6 +112,9 @@ export default function DashboardPage() {
           <div className="dashboard-card">
             <div className="card-title">Seus Dados</div>
             <div className="card-value">{profile?.nome || 'Usuário'}</div>
+            <button onClick={showDebugInfo} style={{ marginTop: 10, padding: '8px 16px', background: '#00d4ff', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
+              🔍 Debug Info
+            </button>
           </div>
         </div>
 
