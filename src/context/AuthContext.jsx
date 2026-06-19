@@ -63,6 +63,9 @@ export function AuthProvider({ children }) {
       setMenuItems(DEFAULT_PAGES)
     } else {
       const fetched = pagesRes.data || []
+      console.log('🔍 DEBUG - Páginas retornadas do banco:', fetched)
+      console.log('🔍 DEBUG - Total de páginas:', fetched.length)
+      console.log('🔍 DEBUG - Slugs:', fetched.map(p => p.slug))
       if (data.role === 'master') {
         const bySlug = new Map(DEFAULT_PAGES.map((item) => [item.slug, item]))
         fetched.forEach((item) => bySlug.set(item.slug, item))
