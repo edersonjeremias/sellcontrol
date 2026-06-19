@@ -7,6 +7,7 @@ import {
   atribuirRomaneio, adicionarSeparadosAoRomaneio,
 } from '../../services/pedidosService'
 import { getClientes } from '../../services/clientesService'
+import { criarNotificacaoCancelamento } from '../../services/notificacoesService'
 
 const STATUS_COR = {
   'Separado':      '#81c995',
@@ -233,12 +234,38 @@ export default function PedidosPage() {
     if (!tenantId || !dirty.size) return
     // merge dirty fields with full item data
     const dirtyWithFull = new Map()
+    const itemsCancelados = []
+
     itens.forEach(i => {
-      if (dirty.has(i.id)) dirtyWithFull.set(i.id, { ...i, ...dirty.get(i.id) })
+      if (dirty.has(i.id)) {
+        const updated = { ...i, ...dirty.get(i.id) }
+        dirtyWithFull.set(i.id, updated)
+
+        // Detecta mudança para Cancelado
+        if (dirty.get(i.id).status === 'Cancelado' && i.status !== 'Cancelado') {
+          itemsCancelados.push(updated)
+        }
+      }
     })
+
     setLoading(true)
     try {
       await salvarItens(tenantId, dirtyWithFull)
+
+      // Cria notificações para itens cancelados
+      for (const item of itemsCancelados) {
+        try {
+          await criarNotificacaoCancelamento(
+            tenantId,
+            item.pedido_id,
+            item.codigo || 'Sem código',
+            `${item.produto || ''} ${item.modelo || ''} ${item.cor || ''}`.trim() || 'Sem descrição'
+          )
+        } catch (err) {
+          console.error('Erro ao criar notificação:', err)
+        }
+      }
+
       setDirty(new Map())
       showMsg('Salvo!')
     } catch (e) {

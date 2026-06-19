@@ -7,6 +7,7 @@ const AuthContext = createContext(null)
 
 const DEFAULT_PAGES = [
   { slug: 'dashboard',           label: 'Dashboard',           category: 'Principal', icon: 'dashboard',      order_index: 10 },
+  { slug: 'notificacoes',        label: 'Notificações',        category: 'Principal', icon: 'notifications',  order_index: 15 },
   { slug: 'vendas',              label: 'Vendas',              category: 'Operações', icon: 'sell',           order_index: 20 },
   { slug: 'producao',            label: 'Produção',            category: 'Operações', icon: 'factory',        order_index: 30 },
   { slug: 'expedicao',           label: 'Expedição',           category: 'Operações', icon: 'local_shipping', order_index: 35 },

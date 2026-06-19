@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --body-bg: #121212; --header-bg: #292a2d; --card-bg: #1e1e1e;
+      --input-bg: #2b2b2b; --text-header: #e8eaed; --text-body: #e8eaed; 
+      --input-text: #e8eaed; --muted: #9aa0a6; --border-light: #333333;  
+      --green: #81c995; --blue: #8ab4f8; --red: #f28b82;           
+      --btn-blue-grad: linear-gradient(180deg, #60a5fa, #3b82f6);
+      --focus: rgba(138, 180, 248, 0.25); --shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+
+    body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background-color: var(--body-bg); color: var(--text-body); display: flex; justify-content: center; height: 100vh; overflow: hidden; }
+    .app-container { width: 100%; max-width: 550px; background-color: var(--card-bg); height: 100vh; display: flex; flex-direction: column; box-shadow: var(--shadow); position: relative; }
+    
+    .header { background: var(--header-bg); padding: 15px 20px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-header); letter-spacing: 0.5px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+
+    .content { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+    .footer { padding: 15px 20px; background-color: var(--card-bg); border-top: 1px solid var(--border-light); flex-shrink: 0; }
+
+    .row { display: flex; gap: 12px; }
+    @media (max-width: 480px) { .row { flex-direction: column; gap: 10px; } .app-container { max-width: 100%; box-shadow: none; } }
+    .col { flex: 1; display: flex; flex-direction: column; }
+
+    label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 5px; font-weight: 600; }
+    input, textarea { width: 100%; background: var(--input-bg); border: 1px solid var(--border-light); color: var(--input-text); padding: 10px 12px; border-radius: 6px; font-family: inherit; font-size: 0.95rem; box-sizing: border-box; transition: all 0.2s; }
+    input:focus, textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 5px var(--focus); }
+    textarea { resize: vertical; min-height: 42px; }
+
+    .dropdown-container { position: relative; width: 100%; }
+    .dropdown-list { position: absolute; top: 100%; left: 0; right: 0; background-color: var(--card-bg); border: 1px solid var(--border-light); border-radius: 6px; max-height: 200px; overflow-y: auto; z-index: 100; margin: 4px 0 0 0; padding: 0; list-style: none; box-shadow: var(--shadow); }
+    .dropdown-item { padding: 12px; cursor: pointer; color: var(--text-body); font-size: 0.95rem; border-bottom: 1px solid var(--border-light); }
+    .dropdown-item:hover, .dropdown-item-active { background-color: var(--blue); color: #171717; font-weight: 600; }
+    .dropdown-badge { font-size: 0.65rem; background: var(--red); color: #171717; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; }
+
+    .btn-row { display: flex; gap: 10px; }
+    button { border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s, transform 0.1s; height: 42px; color: white;}
+    button:active { transform: scale(0.98); }
+    .btn-new { background: var(--border-light); color: var(--text-body); font-size: 0.75rem; padding: 0 12px; height: 32px; }
+    .btn-save { background: var(--btn-blue-grad); width: 100%; flex: 2; }
+    .btn-edit { background: var(--card-bg); border: 1px solid var(--blue); color: var(--blue); flex: 1; }
+    .btn-block { background-color: #fbbc04; color: #171717; flex: 1; }
+    .btn-unlock { background: var(--green); color: #171717; flex: 1; }
+    .btn-del { background: rgba(242, 139, 130, 0.1); border: 1px solid var(--red); color: var(--red); flex: 1;}
+
+    .input-group { display: flex; gap: 8px; }
+    .btn-whatsapp { background-color: transparent; border: 1px solid var(--border-light); color: #25D366; width: 42px; flex-shrink: 0; padding: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .btn-whatsapp:hover { background-color: rgba(37, 211, 102, 0.1); border-color: #25D366; }
+
+    .modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--card-bg); display: flex; justify-content: center; align-items: flex-start; z-index: 1000; padding: 0; }
+    .modal-content { background: var(--card-bg); padding: 15px 20px; border-radius: 0; width: 100%; max-width: 100%; border: none; box-shadow: none; text-align: left; height: 100%; overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+    .modal-content::-webkit-scrollbar { display: none; }
+    
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-light); margin-bottom: 15px; padding-bottom: 10px; }
+    .modal-header h3 { margin: 0; font-size: 1.05rem; color: var(--text-header); font-weight: bold; text-align: center; flex: 1;}
+    .btn-close { background: transparent; border: none; color: var(--muted); width: 30px; height: 30px; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;}
+    .btn-close:hover { color: white; }
+    
+    .btn-modal-save { background: var(--btn-blue-grad); color: white; width: 100%; padding: 12px; height: auto; font-size: 1rem; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; margin-top: 10px; transition: opacity 0.2s; }
+    .btn-modal-save:active { opacity: 0.8; }
+
+    #custom-toast { visibility: hidden; min-width: 250px; background-color: var(--input-bg); color: var(--text-body); border-radius: 6px; padding: 12px 20px; position: fixed; z-index: 9999; right: 20px; bottom: 20px; box-shadow: var(--shadow); opacity: 0; transition: all 0.3s; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border-light); }
+    #custom-toast.show { visibility: visible; opacity: 1; bottom: 30px; }
+    
+    .loader-line { height: 3px; width: 100%; position: absolute; top: 60px; left: 0; background-color: transparent; overflow: hidden; display: none; z-index: 50; }
+    .loader-line::before { content: ''; display: block; position: absolute; left: -200px; width: 200px; height: 100%; background-color: var(--blue); animation: loading 1.5s linear infinite; }
+    @keyframes loading { 0% { left: -200px; width: 30%; } 100% { left: 100%; } }
+    .hidden { display: none !important; }
+    .status-badge { font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; margin-right: 10px; font-weight: bold; text-transform: uppercase; }
+    .st-active { color: var(--green); border: 1px solid var(--green); background: rgba(129, 201, 149, 0.1); }
+    .st-blocked { color: var(--red); border: 1px solid var(--red); background: rgba(242, 139, 130, 0.1); }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <div style="display:flex; align-items:center;"><h2>Cadastro de Cliente</h2></div>
+      <div class="header-actions"><span id="headerBadge" class="status-badge hidden"></span><button class="btn-new" onclick="fullReset()"><i class="material-icons" style="font-size:16px">add</i> Novo</button></div>
+    </div>
+    <div class="loader-line" id="loader"></div>
+    <div id="custom-toast"><i class="material-icons" id="toast-icon">info</i><span id="toast-msg"></span></div>
+    <div class="content">
+      <div class="row"><div class="col dropdown-container" id="dropdownContainer"><label>Buscar / Selecionar Cliente</label><input type="text" id="customClientInput" placeholder="Digite para buscar..." autocomplete="off"></div></div>
+      <div style="border-top: 1px solid var(--border-light); margin: 5px 0;"></div>
+      <div class="row">
+        <div class="col"><label>Nome / Instagram</label><input type="text" id="nome" placeholder="Ex: maria_loja"></div>
+        <div class="col"><label>WhatsApp</label><div class="input-group"><input type="text" id="whatsapp" placeholder="Ex: 11999999999" oninput="this.value = this.value.replace(/\D/g, '')"><button class="btn-whatsapp" id="btnZap" onclick="enviarWhatsApp()" title="Enviar acesso"><i class="material-icons" style="font-size: 20px;">chat</i></button></div></div>
+      </div>
+      <div class="row">
+        <div class="col"><label>Observação</label><textarea id="observacao" placeholder="Detalhes..."></textarea></div>
+        <div class="col"><label>Senha do Painel</label><input type="text" id="senha" placeholder="Senha do cliente"></div>
+      </div>
+    </div>
+    <div class="footer"><div class="btn-row"><button class="btn-save" onclick="saveData()"><i class="material-icons">save</i> SALVAR</button><button id="btnEdit" class="btn-edit hidden" onclick="abrirModalEditar()"><i class="material-icons">edit_document</i> DADOS</button><button id="btnBlock" class="btn-block hidden" onclick="toggleBlock(true)"><i class="material-icons">block</i> BLOQ</button><button id="btnUnlock" class="btn-unlock hidden" onclick="toggleBlock(false)"><i class="material-icons">check</i> LIBERAR</button><button id="btnDel" class="btn-del hidden" onclick="confirmDelete()"><i class="material-icons">delete</i> EXCLUIR</button></div></div>
+    
+    <div id="modalEditar" class="modal-overlay hidden" onclick="fecharAoClicarFora(event)">
+      <div class="modal-content">
+        <div class="modal-header"><h3>Meus Dados para Envio</h3><button class="btn-close" onclick="fecharModalEditar()"><i class="material-icons">close</i></button></div>
+        
+        <div style="display:flex; flex-direction:column; gap:8px; padding-bottom: 25px;">
+          <input type="text" id="editInstaFake" readonly style="opacity: 0.6; cursor: not-allowed;" placeholder="Instagram">
+          <input type="text" id="editNomeCompleto" placeholder="Nome Completo">
+          <div class="row">
+            <div class="col"><input type="text" id="editCpf" placeholder="CPF" maxlength="14" oninput="mascaraCpf(this)"></div>
+            <div class="col"><input type="date" id="editNasc" title="Data Nascimento"></div>
+          </div>
+          <div class="row"><div class="col"><input type="text" id="editCep" placeholder="CEP" onblur="buscarCep()"></div></div>
+          <input type="text" id="editRua" placeholder="Rua">
+          <div class="row">
+            <div class="col"><input type="text" id="editNum" placeholder="Número"></div>
+            <div class="col"><input type="text" id="editComp" placeholder="Complemento"></div>
+          </div>
+          <input type="text" id="editBairro" placeholder="Bairro">
+          <div class="row">
+            <div class="col"><input type="text" id="editCidade" placeholder="Cidade"></div>
+            <div class="col"><input type="text" id="editEstado" placeholder="Estado (UF)"></div>
+          </div>
+          <input type="email" id="editEmail" placeholder="E-mail" oninput="this.value = this.value.replace(/\s/g, '').toLowerCase()">
+          <button class="btn-modal-save" onclick="salvarDetalhes()">Salvar Alterações</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+<script>
+let allClients=[];let currentOriginalName=null;let currentFocus=-1;let clienteSelecionadoDetalhes=null;
+function enviarWhatsApp(){let whats=document.getElementById('whatsapp').value.replace(/\D/g,'');let nome=document.getElementById('nome').value.trim();let senha=document.getElementById('senha').value.trim();if(!whats){showToast('Preencha o WhatsApp!',true);return;}if(!nome){showToast('Preencha o Nome!',true);return;}let phoneLink=whats;if((whats.length===10||whats.length===11)&&!whats.startsWith('55')){phoneLink='55'+whats;}const LINK_PAINEL="https://script.google.com/macros/s/AKfycbyfd9DwRoLPop81jfZEyi-VNenjwVcIAwy6HZaH02-VzCjxWM_KaGxGe1I-hD8sdis_/exec";let txtSenha=senha?senha:"Não cadastrada";let msg="Olá, *"+nome+"*! Tudo bem?\n\n"+"Segue o link exclusivo para acessar a sua *Sacolinha Virtual* e o seu Painel de Cliente da VM Kids:\n\n"+"Acesso: "+LINK_PAINEL+"\n"+"Senha Temporária: "+txtSenha+"\n\n"+"Lá você pode completar o seu cadastro, visualizar as peças que já estão garantidas na sua sacolinha, acompanhar as entregas, verificar pagamentos em aberto e, claro, encerrar a sua sacolinha quando quiser receber suas peças!\n\n"+"_Lembrando que você pode alterar sua senha a qualquer momento diretamente no seu painel._\n\n"+"Qualquer dúvida, estamos à disposição!";window.open("https://api.whatsapp.com/send?phone="+phoneLink+"&text="+encodeURIComponent(msg),'_blank');}
+function showToast(msg,isError=false){let t=document.getElementById("custom-toast");document.getElementById("toast-msg").innerText=msg;let i=document.getElementById("toast-icon");i.innerText=isError?"error":"check_circle";i.style.color=isError?"var(--red)":"var(--green)";t.style.borderLeft=isError?"4px solid var(--red)":"4px solid var(--green)";t.className="show";setTimeout(()=>{t.className=t.className.replace("show","");},3000);}
+function showLoader(s){document.getElementById('loader').style.display=s?'block':'none';}
+function mascaraCpf(c){let v=c.value.replace(/\D/g,"");if(v.length>11)v=v.slice(0,11);v=v.replace(/(\d{3})(\d)/,"$1.$2");v=v.replace(/(\d{3})(\d)/,"$1.$2");v=v.replace(/(\d{3})(\d{1,2})$/,"$1-$2");c.value=v;}
+function buscarCep(){let cep=document.getElementById('editCep').value.replace(/\D/g,'');if(cep.length===8){showLoader(true);fetch('https://viacep.com.br/ws/'+cep+'/json/').then(r=>r.json()).then(d=>{showLoader(false);if(!d.erro){document.getElementById('editRua').value=d.logradouro;document.getElementById('editBairro').value=d.bairro;document.getElementById('editCidade').value=d.localidade;document.getElementById('editEstado').value=d.uf;document.getElementById('editNum').focus();showToast("CEP preenchido.");}else{showToast("CEP não encontrado.",true);}}).catch(e=>{showLoader(false);showToast("Erro no CEP",true);});}}
+const searchInput=document.getElementById('customClientInput');
+searchInput.addEventListener('input',function(){closeAllLists();let v=this.value;if(!v){renderDropdown(allClients);return;}renderDropdown(allClients.filter(c=>c.nome.toLowerCase().includes(v.toLowerCase())));});
+searchInput.addEventListener('click',function(){if(!document.getElementById('dropdown-list')){let v=this.value;renderDropdown(v?allClients.filter(c=>c.nome.toLowerCase().includes(v.toLowerCase())):allClients);}});
+searchInput.addEventListener('keydown',function(e){let l=document.getElementById("dropdown-list");let i=l?l.getElementsByTagName("li"):[];if(e.key==="ArrowDown"){currentFocus++;addActive(i);}else if(e.key==="ArrowUp"){currentFocus--;addActive(i);}else if(e.key==="Enter"||e.key==="Tab"){if(currentFocus>-1&&i.length>0){e.preventDefault();i[currentFocus].click();document.getElementById('nome').focus();}}else if(e.key==="Escape"){closeAllLists();}});
+function renderDropdown(d){closeAllLists();currentFocus=-1;if(d.length===0)return;let l=document.createElement("ul");l.setAttribute("id","dropdown-list");l.setAttribute("class","dropdown-list");document.getElementById('dropdownContainer').appendChild(l);d.forEach(c=>{let li=document.createElement("li");li.className="dropdown-item";li.innerHTML=c.nome+(c.bloqueado?"<span class='dropdown-badge'>BLOQ</span>":"");li.addEventListener("click",function(e){searchInput.value=c.nome;closeAllLists();loadClientInfo(c.nome);});l.appendChild(li);});}
+function addActive(i){if(!i)return false;removeActive(i);if(currentFocus>=i.length)currentFocus=0;if(currentFocus<0)currentFocus=(i.length-1);i[currentFocus].classList.add("dropdown-item-active");i[currentFocus].scrollIntoView({block:'nearest'});}
+function removeActive(i){for(let x=0;x<i.length;x++)i[x].classList.remove("dropdown-item-active");}
+function closeAllLists(e){let x=document.getElementsByClassName("dropdown-list");for(let i=0;i<x.length;i++){if(e!=x[i]&&e!=searchInput)x[i].parentNode.removeChild(x[i]);}}
+document.addEventListener("click",function(e){closeAllLists(e.target);});
+document.getElementById('senha').addEventListener('keydown',function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();saveData();}});
+
+function refreshData(){showLoader(true);google.script.run.withSuccessHandler(r=>{if(!r){showLoader(false);showToast("Erro de leitura.",true);return;}allClients=r.data;showLoader(false);if(currentOriginalName){let ex=allClients.find(c=>c.nome===currentOriginalName);if(ex){searchInput.value=currentOriginalName;loadClientInfo(currentOriginalName);}else{fullReset();}}}).withFailureHandler(e=>{showLoader(false);showToast("Erro no servidor",true);}).getClientsData();}
+function loadClientInfo(n){let b=document.getElementById('headerBadge');let btnB=document.getElementById('btnBlock');let btnU=document.getElementById('btnUnlock');let btnD=document.getElementById('btnDel');let btnE=document.getElementById('btnEdit');let btnZ=document.getElementById('btnZap');let c=allClients.find(x=>x.nome===n);if(c){currentOriginalName=c.nome;clienteSelecionadoDetalhes=c.detalhes;document.getElementById('nome').value=c.nome;document.getElementById('whatsapp').value=c.whatsapp;document.getElementById('senha').value=c.senha||"";document.getElementById('observacao').value=c.motivo;btnD.classList.remove('hidden');btnE.classList.remove('hidden');b.classList.remove('hidden');btnZ.classList.remove('hidden');if(c.bloqueado){b.innerText="BLOQUEADO";b.className="status-badge st-blocked";btnB.classList.add('hidden');btnU.classList.remove('hidden');}else{b.innerText="ATIVO";b.className="status-badge st-active";btnB.classList.remove('hidden');btnU.classList.add('hidden');}}}
+function fullReset(){searchInput.value="";document.getElementById('nome').value="";document.getElementById('whatsapp').value="";document.getElementById('senha').value="";document.getElementById('observacao').value="";document.getElementById('headerBadge').classList.add('hidden');document.getElementById('btnBlock').classList.add('hidden');document.getElementById('btnUnlock').classList.add('hidden');document.getElementById('btnDel').classList.add('hidden');document.getElementById('btnEdit').classList.add('hidden');currentOriginalName=null;clienteSelecionadoDetalhes=null;document.getElementById('nome').focus();}
+function abrirModalEditar(){if(!currentOriginalName||!clienteSelecionadoDetalhes)return;let d=clienteSelecionadoDetalhes;document.getElementById('editInstaFake').value=currentOriginalName;document.getElementById('editNomeCompleto').value=d.nomeCompleto||"";document.getElementById('editCpf').value=d.cpf||"";document.getElementById('editNasc').value=d.nasc||"";document.getElementById('editCep').value=d.cep||"";document.getElementById('editRua').value=d.rua||"";document.getElementById('editNum').value=d.num||"";document.getElementById('editComp').value=d.comp||"";document.getElementById('editBairro').value=d.bairro||"";document.getElementById('editCidade').value=d.cidade||"";document.getElementById('editEstado').value=d.estado||"";document.getElementById('editEmail').value=d.email||"";document.getElementById('modalEditar').classList.remove('hidden');}
+function fecharModalEditar(){document.getElementById('modalEditar').classList.add('hidden');}
+function fecharAoClicarFora(e){if(e.target.id==='modalEditar')fecharModalEditar();}
+function salvarDetalhes(){if(!currentOriginalName)return;let em=document.getElementById('editEmail').value;if(em&&!em.includes('@')){showToast("E-mail inválido.",true);return;}let det={nomeCompleto:document.getElementById('editNomeCompleto').value,cpf:document.getElementById('editCpf').value,nasc:document.getElementById('editNasc').value,cep:document.getElementById('editCep').value,rua:document.getElementById('editRua').value,num:document.getElementById('editNum').value,comp:document.getElementById('editComp').value,bairro:document.getElementById('editBairro').value,cidade:document.getElementById('editCidade').value,estado:document.getElementById('editEstado').value,email:em};fecharModalEditar();showLoader(true);google.script.run.withSuccessHandler(m=>{showToast(m);refreshData();}).withFailureHandler(e=>{showLoader(false);showToast(e.message,true);}).saveClientDetails(currentOriginalName,det);}
+function saveData(){let n=document.getElementById('nome').value;let w=document.getElementById('whatsapp').value.replace(/\D/g,'');let s=document.getElementById('senha').value;let o=document.getElementById('observacao').value;if(!n.trim()){showToast('Nome obrigatório!',true);return;}showLoader(true);google.script.run.withSuccessHandler(m=>{showToast(m);if(!currentOriginalName)currentOriginalName=n.trim();refreshData();fullReset();}).withFailureHandler(e=>{showLoader(false);showToast('Erro: '+e.message,true);}).saveClientData(currentOriginalName,n,w,o,s);}
+function toggleBlock(sb){if(!currentOriginalName)return;showLoader(true);google.script.run.withSuccessHandler(m=>{showToast(m);refreshData();}).toggleBlockStatus(currentOriginalName,sb);}
+function confirmDelete(){if(!currentOriginalName)return;if(confirm("Excluir "+currentOriginalName+"?")){showLoader(true);google.script.run.withSuccessHandler(m=>{showToast(m);currentOriginalName=null;fullReset();refreshData();}).deleteClient(currentOriginalName);}}
+window.onload=refreshData;
+</script>
+</body>
+</html>

@@ -68,6 +68,7 @@ import ContatosPage                   from './pages/contatos/ContatosPage'
 import DashboardFinanceiroPage        from './pages/relatorio/DashboardFinanceiroPage'
 import ContasPagarPage                from './pages/relatorio/ContasPagarPage'
 import CreditosPage                   from './pages/relatorio/CreditosPage'
+import NotificacoesPage               from './pages/notificacoes/NotificacoesPage'
 
 export default function App() {
   return (
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="/etiquetas" element={<RequireAuth><EtiquetasPage /></RequireAuth>} />
             <Route path="/relatorio"              element={<RequireAuth><RelatorioPage /></RequireAuth>} />
             <Route path="/contatos"              element={<RequireAuth><ContatosPage /></RequireAuth>} />
+            <Route path="/notificacoes"          element={<RequireAuth><NotificacoesPage /></RequireAuth>} />
             <Route path="/dashboard-financeiro"  element={<RequireAuth><DashboardFinanceiroPage /></RequireAuth>} />
             <Route path="/contas-pagar"          element={<RequireAuth><ContasPagarPage /></RequireAuth>} />
             <Route path="/creditos-clientes"     element={<RequireAuth><CreditosPage /></RequireAuth>} />

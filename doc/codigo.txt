@@ -1,0 +1,157 @@
+const SQL_SHEET_ID = '1Mqklox3RL4CrC_z0xfOTUntKZ0786X6ypsK-_Co-fes';
+const SHEET_NAME = 'cliente'; 
+
+function doGet() { 
+  return HtmlService.createHtmlOutputFromFile('Modal')
+    .setTitle('Gestão VM Kids')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL); 
+}
+
+function onOpen() { 
+  SpreadsheetApp.getUi()
+    .createMenu('Gerenciamento')
+    .addItem('Abrir Painel', 'showClientModal')
+    .addToUi(); 
+}
+
+function showClientModal() { 
+  SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutputFromFile('Modal').setWidth(500).setHeight(650), 'Gestão de Clientes'); 
+}
+
+// === BACKEND ===
+function getClientsData() {
+  try {
+    const ss = SpreadsheetApp.openById(SQL_SHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) throw new Error("Aba 'cliente' não encontrada.");
+    
+    const lastRow = sheet.getLastRow();
+    const maxCols = sheet.getMaxColumns();
+    if (maxCols < 19) sheet.insertColumnsAfter(maxCols, 19 - maxCols);
+    
+    if (lastRow < 2) return { data: [] };
+    
+    const range = sheet.getRange(2, 1, lastRow - 1, 19);
+    const data = range.getValues();
+    
+    const mappedData = data.map(r => {
+      let dtNasc = "";
+      if (r[10]) {
+        if (r[10] instanceof Date) dtNasc = Utilities.formatDate(r[10], Session.getScriptTimeZone(), "yyyy-MM-dd");
+        else dtNasc = String(r[10]).trim();
+      }
+      return { 
+        whatsapp: r[0] ? String(r[0]).trim() : "", 
+        nome: r[1] ? String(r[1]).trim() : "", 
+        bloqueado: r[3] === true || String(r[3]).toUpperCase() === "TRUE", 
+        motivo: r[4] ? String(r[4]).trim() : "", 
+        senha: r[7] ? String(r[7]).trim() : "", 
+        detalhes: { 
+          nomeCompleto: r[8] ? String(r[8]).trim() : "", 
+          cpf: r[9] ? String(r[9]).trim() : "", 
+          nasc: dtNasc, 
+          cep: r[11] ? String(r[11]).trim() : "", 
+          rua: r[12] ? String(r[12]).trim() : "", 
+          num: r[13] ? String(r[13]).trim() : "", 
+          comp: r[14] ? String(r[14]).trim() : "", 
+          bairro: r[15] ? String(r[15]).trim() : "", 
+          cidade: r[16] ? String(r[16]).trim() : "", 
+          estado: r[17] ? String(r[17]).trim() : "", 
+          email: r[18] ? String(r[18]).trim() : "" 
+        } 
+      };
+    }).filter(r => r.nome !== "");
+    
+    return { data: mappedData };
+  } catch (e) { throw new Error(e.message); }
+}
+
+function saveClientData(oldName, newName, whatsapp, obs, senha) {
+  const sheet = SpreadsheetApp.openById(SQL_SHEET_ID).getSheetByName(SHEET_NAME);
+  
+  newName = newName.toString().trim(); 
+  whatsapp = whatsapp.toString().trim(); 
+  obs = obs ? obs.toString().trim() : ""; 
+  senha = senha ? senha.toString().trim() : "";
+  
+  if (newName === "") throw new Error("Nome obrigatório.");
+  
+  const data = sheet.getRange("B:B").getValues(); 
+  let rowIndex = -1;
+  
+  if (oldName) { 
+    for (let i = 0; i < data.length; i++) { 
+      if (data[i][0].toString().trim() === oldName) { rowIndex = i + 1; break; } 
+    } 
+  }
+  
+  if (!oldName || oldName !== newName) { 
+    for (let i = 0; i < data.length; i++) { 
+      if (data[i][0].toString().trim() === newName) throw new Error("Cliente já existe."); 
+    } 
+  }
+  
+  if (rowIndex !== -1) { 
+    sheet.getRange(rowIndex, 1).setValue(whatsapp); 
+    sheet.getRange(rowIndex, 2).setValue(newName); 
+    sheet.getRange(rowIndex, 5).setValue(obs); 
+    sheet.getRange(rowIndex, 8).setValue(senha); 
+    return "Atualizado com sucesso!"; 
+  } else { 
+    const lastRow = sheet.getLastRow() + 1; 
+    const hoje = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy"); 
+    sheet.getRange(lastRow, 1).setValue(whatsapp); 
+    sheet.getRange(lastRow, 2).setValue(newName); 
+    sheet.getRange(lastRow, 3).setValue(hoje); 
+    sheet.getRange(lastRow, 4).setValue(false).insertCheckboxes(); 
+    sheet.getRange(lastRow, 5).setValue(obs); 
+    sheet.getRange(lastRow, 8).setValue(senha); 
+    return "Cadastrado com sucesso!"; 
+  }
+}
+
+function saveClientDetails(clientName, details) {
+  const sheet = SpreadsheetApp.openById(SQL_SHEET_ID).getSheetByName(SHEET_NAME);
+  const maxCols = sheet.getMaxColumns(); 
+  if (maxCols < 19) sheet.insertColumnsAfter(maxCols, 19 - maxCols);
+  
+  const data = sheet.getRange("B:B").getValues(); 
+  let rowIndex = -1;
+  for (let i = 0; i < data.length; i++) { 
+    if (data[i][0].toString().trim() === clientName) { rowIndex = i + 1; break; } 
+  }
+  if (rowIndex === -1) throw new Error("Cliente não encontrado.");
+  
+  const valores = [[
+    details.nomeCompleto || "", details.cpf || "", details.nasc || "", 
+    details.cep || "", details.rua || "", details.num || "", 
+    details.comp || "", details.bairro || "", details.cidade || "", 
+    details.estado || "", details.email || ""
+  ]];
+  
+  sheet.getRange(rowIndex, 9, 1, 11).setValues(valores); 
+  return "Dados salvos.";
+}
+
+function toggleBlockStatus(clientName, isBlocked) { 
+  const sheet = SpreadsheetApp.openById(SQL_SHEET_ID).getSheetByName(SHEET_NAME); 
+  const data = sheet.getRange("B:B").getValues(); 
+  for (let i = 0; i < data.length; i++) { 
+    if (data[i][0].toString().trim() === clientName) { 
+      sheet.getRange(i + 1, 4).setValue(isBlocked); 
+      return isBlocked ? "BLOQUEADO" : "LIBERADO"; 
+    } 
+  } 
+}
+
+function deleteClient(clientName) { 
+  const sheet = SpreadsheetApp.openById(SQL_SHEET_ID).getSheetByName(SHEET_NAME); 
+  const data = sheet.getRange("B:B").getValues(); 
+  for (let i = 0; i < data.length; i++) { 
+    if (data[i][0].toString().trim() === clientName) { 
+      sheet.deleteRow(i + 1); 
+      return "Excluído permanentemente."; 
+    } 
+  } 
+}
