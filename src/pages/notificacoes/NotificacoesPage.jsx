@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useApp } from '../../context/AppContext'
-import Layout from '../../components/Layout'
+import AppShell from '../../components/ui/AppShell'
 import {
   getNotificacoes,
   marcarComoLida,
@@ -97,7 +97,7 @@ export default function NotificacoesPage() {
   const totalNaoLidas = notificacoes.filter((n) => !n.lida).length
 
   return (
-    <Layout>
+    <AppShell title="Notificações">
       <div style={{ padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ margin: 0, color: 'var(--text)' }}>
@@ -309,6 +309,6 @@ export default function NotificacoesPage() {
           </div>
         </div>
       )}
-    </Layout>
+    </AppShell>
   )
 }
