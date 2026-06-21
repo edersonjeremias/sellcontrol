@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import {
   getColunas, salvarColunas, COLUNAS_DEFAULT,
@@ -23,18 +24,7 @@ function fmtHora(iso) {
   return new Date(iso).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })
 }
 
-function fmtDataHora(iso) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-// ── Card de notificação no Kanban ─────────────────────────────────
+// ── Card no Kanban ─────────────────────────────────────────────
 function KanbanCard({ notif, onAbrir, onMover, colunas }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const ref = useRef(null)
@@ -58,56 +48,368 @@ function KanbanCard({ notif, onAbrir, onMover, colunas }) {
       onMouseEnter={e => e.currentTarget.style.background = '#252525'}
       onMouseLeave={e => e.currentTarget.style.background = 'var(--card-bg)'}
     >
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'start', marginBottom:4}}>
-        <span style={{fontSize:11, fontWeight:700, color:'var(--text)'}}>
+      {/* Remetente + tempo */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+        <span style={{ fontSize:13, fontWeight:700, color:'var(--blue)' }}>
           {notif.remetente || 'SISTEMA'}
         </span>
-        <span style={{fontSize:10, color:'var(--text-muted)'}}>
-          {fmtTempo(notif.created_at)}
-        </span>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          {notif.nao_lidas > 0 && (
+            <span style={{ background:'var(--blue)', color:'#0f0f0f', borderRadius:10, fontSize:10, fontWeight:700, padding:'1px 6px' }}>
+              {notif.nao_lidas}
+            </span>
+          )}
+          <span style={{ fontSize:11, color:'var(--muted)' }}>{fmtTempo(notif.created_at)}</span>
+        </div>
       </div>
-      <div style={{fontSize:12, color:'var(--text)', marginBottom:4, fontWeight:600}}>
+      {/* Assunto */}
+      <div style={{ fontSize:12, color:'var(--text-body)', marginBottom:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
         {notif.assunto || notif.titulo}
       </div>
-      <div style={{fontSize:11, color:'var(--text-muted)', marginBottom:6, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
-        {notif.mensagem?.substring(0, 60)}...
+      {/* Botão mover */}
+      <div ref={ref} style={{ position:'relative' }} onClick={e => e.stopPropagation()}>
+        <button
+          onClick={() => setMenuOpen(o => !o)}
+          style={{ background:'none', border:'1px solid var(--border-light)', borderRadius:4, fontSize:11, color:'var(--muted)', padding:'2px 8px', cursor:'pointer' }}
+        >
+          Mover ▾
+        </button>
+        {menuOpen && (
+          <div style={{
+            position:'absolute', top:'calc(100% + 4px)', left:0, zIndex:50,
+            background:'var(--card-bg)', border:'1px solid var(--border-light)',
+            borderRadius:6, minWidth:160, boxShadow:'0 4px 16px rgba(0,0,0,0.4)',
+          }}>
+            {colunas.map(col => (
+              <button
+                key={col.titulo}
+                onClick={() => { onMover(notif.id, col.titulo); setMenuOpen(false) }}
+                style={{
+                  display:'block', width:'100%', textAlign:'left', padding:'8px 12px',
+                  background: col.titulo === notif.coluna ? 'rgba(138,180,248,0.1)' : 'none',
+                  border:'none', color: col.titulo === notif.coluna ? 'var(--blue)' : 'var(--text-body)',
+                  cursor:'pointer', fontSize:13, borderBottom:'1px solid var(--border-light)',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = col.titulo === notif.coluna ? 'rgba(138,180,248,0.1)' : 'none'}
+              >
+                {col.titulo}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <span style={{fontSize:10, color:'var(--text-muted)'}}>
-          Para: {notif.destinatario || 'TODOS'}
-        </span>
-        <div ref={ref} style={{position:'relative'}}>
-          <button
-            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen) }}
-            style={{
-              background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer',
-              fontSize:16, padding:4, lineHeight:1,
-            }}
-          >
-            ⋮
-          </button>
-          {menuOpen && (
-            <div style={{
-              position:'absolute', right:0, top:'100%', zIndex:10,
-              background:'var(--bg-card)', border:'1px solid var(--border)',
-              borderRadius:6, boxShadow:'0 4px 12px rgba(0,0,0,0.3)', minWidth:150,
-            }}>
-              {colunas.map(col => (
-                <button
-                  key={col}
-                  onClick={(e) => { e.stopPropagation(); onMover(notif.id, col); setMenuOpen(false) }}
-                  style={{
-                    display:'block', width:'100%', textAlign:'left',
-                    background:'none', border:'none', color:'var(--text)',
-                    padding:'8px 12px', cursor:'pointer', fontSize:12,
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#252525'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  Mover → {col}
-                </button>
-              ))}
+    </div>
+  )
+}
+
+// ── Modal de notificação ───────────────────────────────────────
+function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId }) {
+  const { showToast } = useApp()
+  const [mensagens, setMensagens] = useState([])
+  const [resposta, setResposta] = useState('')
+  const [remetente, setRemetente] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [editColuna, setEditColuna] = useState(false)
+  const endRef = useRef(null)
+
+  useEffect(() => {
+    getMensagensNotificacao(notif.id)
+      .then(msgs => {
+        console.log('Mensagens carregadas:', msgs)
+        setMensagens(msgs)
+      })
+      .catch(err => {
+        console.error('Erro ao carregar mensagens:', err)
+        showToast('Erro ao carregar mensagens: ' + err.message, 'error')
+      })
+    marcarNotificacaoLida(notif.id)
+  }, [notif.id, showToast])
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior:'smooth' })
+  }, [mensagens])
+
+  async function enviar() {
+    if (!resposta.trim() || !remetente.trim()) return
+    setEnviando(true)
+    try {
+      await responderNotificacao(notif.id, tenantId, remetente.trim(), resposta.trim())
+      setResposta('')
+      const msgs = await getMensagensNotificacao(notif.id)
+      setMensagens(msgs)
+      onAtualizar()
+    } catch { showToast('Erro ao enviar.', 'error') }
+    setEnviando(false)
+  }
+
+  async function toggleEncerrar() {
+    try {
+      if (notif.encerrado) {
+        await moverNotificacao(notif.id, 'Novo')
+        notif.encerrado = false
+      } else {
+        await encerrarNotificacao(notif.id)
+        notif.encerrado = true
+      }
+      onAtualizar()
+      onClose()
+    } catch { showToast('Erro.', 'error') }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth:560, width:'95vw', maxHeight:'90vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
+          <div style={{ minWidth:0 }}>
+            <div style={{ fontSize:15, fontWeight:700, color:'var(--blue)' }}>
+              {notif.remetente || 'SISTEMA'}
             </div>
+            <div style={{ fontSize:13, color:'var(--text-body)', marginTop:2 }}>{notif.assunto || notif.titulo}</div>
+          </div>
+          <div style={{ display:'flex', gap:6, flexShrink:0, alignItems:'center' }}>
+            {/* Coluna dropdown */}
+            <div style={{ position:'relative' }}>
+              <button onClick={() => setEditColuna(o => !o)}
+                style={{ background:'rgba(138,180,248,0.15)', border:'1px solid var(--blue)', borderRadius:4, color:'var(--blue)', fontSize:11, fontWeight:700, padding:'4px 10px', cursor:'pointer' }}>
+                {notif.coluna} ▾
+              </button>
+              {editColuna && (
+                <div style={{ position:'absolute', top:'calc(100% + 4px)', right:0, zIndex:100, background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:6, minWidth:160, boxShadow:'0 4px 16px rgba(0,0,0,0.4)' }}>
+                  {colunas.map(col => (
+                    <button key={col.titulo} onClick={async () => { await moverNotificacao(notif.id, col.titulo); setEditColuna(false); onAtualizar(); notif.coluna = col.titulo }}
+                      style={{ display:'block', width:'100%', textAlign:'left', padding:'8px 12px', background:'none', border:'none', color:'var(--text-body)', cursor:'pointer', fontSize:13, borderBottom:'1px solid var(--border-light)' }}
+                      onMouseEnter={e=>e.currentTarget.style.background='var(--table-row-hover)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='none'}
+                    >{col.titulo}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={toggleEncerrar}
+              style={{ background: notif.encerrado ? 'rgba(129,201,149,0.15)' : 'rgba(242,139,130,0.15)', border:'none', borderRadius:4, color: notif.encerrado ? 'var(--green)' : 'var(--red)', fontSize:11, fontWeight:700, padding:'4px 10px', cursor:'pointer' }}>
+              {notif.encerrado ? '↩ Reabrir' : '✓ Encerrar'}
+            </button>
+            <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer', lineHeight:1 }}>✕</button>
+          </div>
+        </div>
+
+        {/* Mensagem inicial */}
+        <div style={{ padding:'16px', borderBottom:'1px solid var(--border-light)' }}>
+          <div style={{ fontSize:12, color:'var(--muted)', marginBottom:8 }}>
+            <strong>De:</strong> {notif.remetente || 'SISTEMA'} · <strong>Para:</strong> {notif.destinatario || 'TODOS'}
+          </div>
+          <div style={{ background:'var(--header-bg)', padding:'10px 14px', borderRadius:8, color:'var(--text-body)', fontSize:13, lineHeight:1.5, whiteSpace:'pre-line' }}>
+            {notif.mensagem}
+          </div>
+        </div>
+
+        {/* Mensagens */}
+        <div style={{ flex:1, overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:10 }}>
+          {mensagens.map(m => {
+            const isAdmin = m.remetente !== (notif.remetente || 'SISTEMA')
+            return (
+              <div key={m.id} style={{ display:'flex', flexDirection:'column', alignItems: isAdmin ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth:'80%', padding:'10px 14px', borderRadius: isAdmin ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                  background: isAdmin ? 'rgba(138,180,248,0.2)' : 'var(--header-bg)',
+                  color:'var(--text-body)', fontSize:13, lineHeight:1.5,
+                }}>
+                  {m.mensagem}
+                </div>
+                <span style={{ fontSize:10, color:'var(--muted)', marginTop:3 }}>
+                  {m.remetente} · {fmtHora(m.created_at)}
+                </span>
+              </div>
+            )
+          })}
+          {mensagens.length === 0 && <p style={{ color:'var(--muted)', textAlign:'center', fontSize:13 }}>Nenhuma resposta ainda.</p>}
+          <div ref={endRef} />
+        </div>
+
+        {/* Resposta */}
+        {!notif.encerrado && (
+          <>
+            <div style={{ padding:'0 16px 8px' }}>
+              <input
+                type="text"
+                value={remetente}
+                onChange={e => setRemetente(e.target.value)}
+                placeholder="Seu nome..."
+                style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'6px 10px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+              />
+            </div>
+            <div style={{ padding:'0 16px 12px', borderTop:'1px solid var(--border-light)', paddingTop:12, display:'flex', gap:8 }}>
+              <textarea
+                value={resposta}
+                onChange={e => setResposta(e.target.value)}
+                onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
+                placeholder="Digite sua resposta… (Enter para enviar, Shift+Enter nova linha)"
+                rows={2}
+                style={{ flex:1, background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:8, color:'var(--text-body)', padding:'8px 12px', fontSize:13, resize:'none', outline:'none', lineHeight:1.4 }}
+              />
+              <button onClick={enviar} disabled={enviando || !resposta.trim() || !remetente.trim()}
+                style={{ background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:8, padding:'0 16px', fontWeight:700, cursor:'pointer', fontSize:13, alignSelf:'stretch', minWidth:70, opacity: (!resposta.trim()||!remetente.trim()||enviando) ? 0.5 : 1 }}>
+                {enviando ? '…' : 'Enviar'}
+              </button>
+            </div>
+          </>
+        )}
+        {notif.encerrado && (
+          <div style={{ padding:'10px 16px', borderTop:'1px solid var(--border-light)', textAlign:'center', fontSize:12, color:'var(--muted)' }}>
+            Conversa encerrada · clique em "↩ Reabrir" para continuar
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Modal nova conversa ────────────────────────────────────────
+function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
+  const [remetente, setRemetente] = useState('')
+  const [destinatario, setDestinatario] = useState('TODOS')
+  const [assunto, setAssunto] = useState('')
+  const [mensagem, setMensagem] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  async function criar() {
+    if (!remetente.trim() || !assunto.trim() || !mensagem.trim()) {
+      return showToast('Preencha todos os campos', 'error')
+    }
+    setEnviando(true)
+    try {
+      await criarNotificacaoManual(tenantId, remetente.trim(), destinatario.trim(), assunto.trim(), mensagem.trim())
+      showToast('Conversa criada!', 'success')
+      onCriada()
+    } catch {
+      showToast('Erro ao criar conversa', 'error')
+    }
+    setEnviando(false)
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth:500 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ margin:0, fontSize:16 }}>✉ Nova Conversa</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer' }}>✕</button>
+        </div>
+        <div className="modal-body" style={{ padding:20, paddingBottom:20, display:'grid', gap:14 }}>
+          <div>
+            <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
+              Seu Nome *
+            </label>
+            <input
+              value={remetente}
+              onChange={e => setRemetente(e.target.value)}
+              placeholder="Ex: João, Financeiro, Produção..."
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
+              Destinatário *
+            </label>
+            <input
+              value={destinatario}
+              onChange={e => setDestinatario(e.target.value)}
+              placeholder="Ex: TODOS, Maria, Comercial..."
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
+              Assunto *
+            </label>
+            <input
+              value={assunto}
+              onChange={e => setAssunto(e.target.value)}
+              placeholder="Ex: Orçamento, Dúvida, Follow-up..."
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
+              Mensagem *
+            </label>
+            <textarea
+              value={mensagem}
+              onChange={e => setMensagem(e.target.value)}
+              rows={4}
+              placeholder="Escreva a mensagem..."
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, resize:'none', outline:'none', boxSizing:'border-box' }}
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={onClose} style={{ flex:1, background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'10px', fontWeight:600, cursor:'pointer' }}>
+            Cancelar
+          </button>
+          <button onClick={criar} disabled={enviando || !remetente.trim() || !assunto.trim() || !mensagem.trim()}
+            style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer', opacity: (enviando || !remetente.trim() || !assunto.trim() || !mensagem.trim()) ? 0.5 : 1 }}>
+            {enviando ? 'Criando…' : '✉ Criar Conversa'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Modal encerrados ───────────────────────────────────────────
+function ModalEncerrados({ notificacoes, onAbrir, onClose }) {
+  const [filtro, setFiltro] = useState('')
+
+  const encerradas = notificacoes.filter(n => n.encerrado)
+  const filtradas = filtro.trim()
+    ? encerradas.filter(n => {
+        const t = filtro.toLowerCase()
+        return n.remetente?.toLowerCase().includes(t) || n.assunto?.toLowerCase().includes(t) || n.mensagem?.toLowerCase().includes(t)
+      })
+    : encerradas
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth:700, maxHeight:'90vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ margin:0, fontSize:16 }}>📁 Conversas Encerradas ({encerradas.length})</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer' }}>✕</button>
+        </div>
+        <div style={{ padding:'0 20px 12px', borderBottom:'1px solid var(--border-light)' }}>
+          <input
+            type="text"
+            placeholder="Buscar por remetente ou assunto..."
+            value={filtro}
+            onChange={e => setFiltro(e.target.value)}
+            style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+          />
+        </div>
+        <div style={{ flex:1, overflowY:'auto', padding:20, display:'flex', flexDirection:'column', gap:8 }}>
+          {filtradas.length === 0 ? (
+            <div style={{ textAlign:'center', color:'var(--muted)', padding:'40px 20px', fontSize:13 }}>
+              {filtro.trim() ? 'Nenhuma conversa encontrada' : 'Nenhuma conversa encerrada'}
+            </div>
+          ) : (
+            filtradas.map(n => (
+              <div
+                key={n.id}
+                onClick={() => { onAbrir(n); onClose() }}
+                style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'12px 14px', cursor:'pointer', transition:'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#252525'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--card-bg)'}
+              >
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:'var(--blue)' }}>
+                    {n.remetente || 'SISTEMA'}
+                  </span>
+                  <span style={{ fontSize:11, color:'var(--muted)' }}>{fmtTempo(n.created_at)}</span>
+                </div>
+                <div style={{ fontSize:12, color:'var(--text-body)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {n.assunto || n.titulo}
+                </div>
+              </div>
+            ))
           )}
         </div>
       </div>
@@ -115,419 +417,201 @@ function KanbanCard({ notif, onAbrir, onMover, colunas }) {
   )
 }
 
-// ── Modal de detalhes ─────────────────────────────────────────────
-function ModalDetalhes({ notif, onFechar, onResponder, onEncerrar }) {
-  const [mensagens, setMensagens] = useState([])
-  const [resposta, setResposta] = useState('')
-  const [remetente, setRemetente] = useState('')
-  const [loading, setLoading] = useState(false)
-  const chatRef = useRef(null)
+// ── Modal configurar colunas ───────────────────────────────────
+function ModalColunas({ colunas, onSalvar, onClose }) {
+  const [cols, setCols] = useState(colunas.map(c => ({ ...c })))
 
-  useEffect(() => {
-    async function carregar() {
-      try {
-        const msgs = await getMensagensNotificacao(notif.id)
-        setMensagens(msgs)
-        setTimeout(() => {
-          if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
-        }, 100)
-      } catch (err) {
-        console.error('Erro ao carregar mensagens:', err)
-      }
-    }
-    carregar()
-  }, [notif.id])
-
-  async function handleEnviar() {
-    if (!resposta.trim() || !remetente.trim()) return
-    setLoading(true)
-    try {
-      await onResponder(resposta, remetente)
-      setResposta('')
-      // Recarrega mensagens
-      const msgs = await getMensagensNotificacao(notif.id)
-      setMensagens(msgs)
-      setTimeout(() => {
-        if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
-      }, 100)
-    } catch (err) {
-      console.error('Erro ao enviar:', err)
-    }
-    setLoading(false)
+  function add() {
+    setCols(prev => [...prev, { titulo: 'Nova Coluna', cor: '#9aa0a6' }])
+  }
+  function remove(i) {
+    setCols(prev => prev.filter((_, idx) => idx !== i))
+  }
+  function upd(i, field, val) {
+    setCols(prev => prev.map((c, idx) => idx === i ? { ...c, [field]: val } : c))
   }
 
   return (
-    <div
-      onClick={onFechar}
-      style={{
-        position:'fixed', top:0, left:0, right:0, bottom:0,
-        background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center',
-        zIndex:9999,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background:'var(--bg-card)', border:'1px solid var(--border)',
-          borderRadius:16, padding:24, maxWidth:700, width:'90%',
-          maxHeight:'85vh', display:'flex', flexDirection:'column',
-        }}
-      >
-        {/* Cabeçalho */}
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'start', marginBottom:16}}>
-          <div style={{flex:1}}>
-            <h3 style={{margin:0, marginBottom:8, color:'var(--text)', fontSize:18}}>
-              {notif.tipo === 'cancelamento' ? '❌' : '📩'} {notif.assunto || notif.titulo}
-            </h3>
-            <div style={{fontSize:12, color:'var(--text-muted)'}}>
-              <div><strong>De:</strong> {notif.remetente || 'SISTEMA'}</div>
-              <div><strong>Para:</strong> {notif.destinatario || 'TODOS'}</div>
-              <div><strong>Criado:</strong> {fmtDataHora(notif.created_at)}</div>
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth:400 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <h3 style={{ margin:0, fontSize:16 }}>Configurar Colunas</h3>
+          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer' }}>✕</button>
+        </div>
+        <div className="modal-body" style={{ padding:20, paddingBottom:20, display:'grid', gap:10 }}>
+          {cols.map((c, i) => (
+            <div key={i} style={{ display:'flex', gap:8, alignItems:'center' }}>
+              <input type="color" value={c.cor} onChange={e => upd(i,'cor',e.target.value)}
+                style={{ width:32, height:32, padding:2, borderRadius:4, border:'1px solid var(--border-light)', background:'none', cursor:'pointer' }} />
+              <input value={c.titulo} onChange={e => upd(i,'titulo',e.target.value)}
+                style={{ flex:1, background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'6px 10px', fontSize:14, outline:'none' }} />
+              {cols.length > 1 && (
+                <button onClick={() => remove(i)} style={{ background:'none', border:'none', color:'var(--red)', cursor:'pointer', fontSize:16, lineHeight:1 }}>✕</button>
+              )}
             </div>
-          </div>
-          <button
-            onClick={onFechar}
-            style={{
-              background:'none', border:'none', color:'var(--text-muted)',
-              fontSize:24, cursor:'pointer', padding:0, lineHeight:1,
-            }}
-          >
-            ×
+          ))}
+          <button onClick={add} style={{ background:'none', border:'1px dashed var(--border-light)', borderRadius:6, color:'var(--muted)', padding:'8px', cursor:'pointer', fontSize:13 }}>
+            + Adicionar coluna
           </button>
         </div>
-
-        {/* Linha separadora */}
-        <div style={{borderTop:'1px dashed var(--border)', margin:'16px 0'}} />
-
-        {/* Mensagem inicial */}
-        <div
-          style={{
-            background:'var(--bg)', padding:12, borderRadius:8,
-            marginBottom:16, lineHeight:1.6, color:'var(--text)',
-            whiteSpace:'pre-line', fontSize:13,
-          }}
-        >
-          {notif.mensagem}
-        </div>
-
-        {/* Chat de respostas */}
-        {mensagens.length > 0 && (
-          <>
-            <div style={{borderTop:'1px solid var(--border)', margin:'16px 0'}} />
-            <div
-              ref={chatRef}
-              style={{
-                flex:1, overflowY:'auto', marginBottom:16,
-                maxHeight:300, display:'flex', flexDirection:'column', gap:8,
-              }}
-            >
-              {mensagens.map(msg => (
-                <div key={msg.id} style={{
-                  background:'var(--bg)', padding:10, borderRadius:8,
-                  borderLeft:'3px solid var(--primary)',
-                }}>
-                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
-                    <span style={{fontSize:11, fontWeight:700, color:'var(--text)'}}>
-                      {msg.remetente}
-                    </span>
-                    <span style={{fontSize:10, color:'var(--text-muted)'}}>
-                      {fmtHora(msg.created_at)}
-                    </span>
-                  </div>
-                  <div style={{fontSize:13, color:'var(--text)', whiteSpace:'pre-line'}}>
-                    {msg.mensagem}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Formulário de resposta */}
-        <div style={{marginTop:'auto'}}>
-          <input
-            type="text"
-            placeholder="Seu nome..."
-            value={remetente}
-            onChange={(e) => setRemetente(e.target.value)}
-            style={{
-              width:'100%', padding:'8px 12px', marginBottom:8,
-              background:'var(--input-bg)', border:'1px solid var(--input-border)',
-              borderRadius:6, color:'var(--input-text)', fontSize:13,
-            }}
-          />
-          <textarea
-            rows={3}
-            placeholder="Digite sua resposta..."
-            value={resposta}
-            onChange={(e) => setResposta(e.target.value)}
-            style={{
-              width:'100%', padding:'8px 12px', marginBottom:8,
-              background:'var(--input-bg)', border:'1px solid var(--input-border)',
-              borderRadius:6, color:'var(--input-text)', fontSize:13, resize:'vertical',
-            }}
-          />
-          <div style={{display:'flex', gap:8}}>
-            <button
-              onClick={handleEnviar}
-              disabled={loading || !resposta.trim() || !remetente.trim()}
-              className="btn-primary"
-              style={{flex:1}}
-            >
-              {loading ? 'Enviando...' : 'Enviar Resposta'}
-            </button>
-            <button onClick={onEncerrar} className="btn-secondary">
-              Encerrar
-            </button>
-          </div>
+        <div className="modal-footer">
+          <button onClick={onClose} style={{ flex:1, background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'10px', fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+          <button onClick={() => onSalvar(cols)} style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer' }}>Salvar</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── Página principal ──────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
 export default function NotificacoesPageKanban() {
   const { profile } = useAuth()
+  const { showToast } = useApp()
   const tenantId = profile?.tenant_id
 
-  const [colunas, setColunas] = useState(COLUNAS_DEFAULT)
   const [notificacoes, setNotificacoes] = useState([])
-  const [notifSelecionada, setNotifSelecionada] = useState(null)
-  const [showNova, setShowNova] = useState(false)
+  const [colunas, setColunas] = useState(COLUNAS_DEFAULT)
+  const [carregando, setCarregando] = useState(false)
+  const [selNotif, setSelNotif] = useState(null)
+  const [modalColunas, setModalColunas] = useState(false)
+  const [modalNova, setModalNova] = useState(false)
+  const [modalEncerrados, setModalEncerrados] = useState(false)
   const [busca, setBusca] = useState('')
-
-  // Form nova conversa
-  const [novaRemetente, setNovaRemetente] = useState('')
-  const [novaDestinatario, setNovaDestinatario] = useState('TODOS')
-  const [novaAssunto, setNovaAssunto] = useState('')
-  const [novaMensagem, setNovaMensagem] = useState('')
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
+    setCarregando(true)
     try {
-      const [cols, notifs] = await Promise.all([
-        getColunas(tenantId),
+      const [notifs, cols] = await Promise.all([
         getNotificacoesConversas(tenantId),
+        getColunas(tenantId),
       ])
-      setColunas(cols)
       setNotificacoes(notifs)
-    } catch (err) {
-      console.error('Erro ao carregar:', err)
-    }
-  }, [tenantId])
+      setColunas(cols || COLUNAS_DEFAULT)
+    } catch { showToast('Erro ao carregar.', 'error') }
+    setCarregando(false)
+  }, [tenantId, showToast])
+
+  useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
 
   useEffect(() => {
-    carregar()
-    const interval = setInterval(carregar, 30000)
-    return () => clearInterval(interval)
-  }, [carregar])
-
-  async function handleMover(notifId, novaColuna) {
-    try {
-      await moverNotificacao(notifId, novaColuna)
+    if (!tenantId) return
+    const interval = setInterval(() => {
       carregar()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [tenantId, carregar])
+
+  async function handleMover(id, novaColuna) {
+    try {
+      await moverNotificacao(id, novaColuna)
+      setNotificacoes(prev => prev.map(n => n.id === id ? { ...n, coluna: novaColuna } : n))
+      showToast(`Movido para "${novaColuna}"`, 'success')
     } catch (err) {
       console.error('Erro ao mover:', err)
+      showToast('Erro ao mover: ' + err.message, 'error')
     }
   }
 
-  async function handleResponder(mensagem, remetente) {
-    if (!notifSelecionada) return
+  async function handleSalvarColunas(novasCols) {
     try {
-      await responderNotificacao(notifSelecionada.id, tenantId, remetente, mensagem)
-      await marcarNotificacaoLida(notifSelecionada.id)
-      carregar()
-    } catch (err) {
-      console.error('Erro ao responder:', err)
-      throw err
-    }
+      await salvarColunas(tenantId, novasCols)
+      setColunas(novasCols)
+      setModalColunas(false)
+      showToast('Colunas salvas!', 'success')
+    } catch { showToast('Erro ao salvar colunas.', 'error') }
   }
 
-  async function handleEncerrar() {
-    if (!notifSelecionada) return
-    try {
-      await encerrarNotificacao(notifSelecionada.id)
-      setNotifSelecionada(null)
-      carregar()
-    } catch (err) {
-      console.error('Erro ao encerrar:', err)
-    }
-  }
+  // Filtro de busca + Remove encerrados do Kanban
+  const notifsFiltradas = busca.trim()
+    ? notificacoes.filter(n => {
+        const t = busca.toLowerCase()
+        return !n.encerrado && (n.remetente?.toLowerCase().includes(t) || n.assunto?.toLowerCase().includes(t) || n.mensagem?.toLowerCase().includes(t))
+      })
+    : notificacoes.filter(n => !n.encerrado)
 
-  async function handleCriarNova() {
-    if (!novaRemetente.trim() || !novaAssunto.trim() || !novaMensagem.trim()) return
-    try {
-      await criarNotificacaoManual(tenantId, novaRemetente, novaDestinatario, novaAssunto, novaMensagem)
-      setShowNova(false)
-      setNovaRemetente('')
-      setNovaDestinatario('TODOS')
-      setNovaAssunto('')
-      setNovaMensagem('')
-      carregar()
-    } catch (err) {
-      console.error('Erro ao criar:', err)
-    }
-  }
+  // Agrupar por coluna
+  const porColuna = {}
+  colunas.forEach(col => { porColuna[col.titulo] = [] })
+  notifsFiltradas.forEach(n => {
+    const col = n.coluna || 'Novo'
+    if (!porColuna[col]) porColuna[col] = []
+    porColuna[col].push(n)
+  })
 
-  const notifsFiltradas = notificacoes.filter(n =>
-    !busca || n.assunto?.toLowerCase().includes(busca.toLowerCase()) ||
-    n.mensagem?.toLowerCase().includes(busca.toLowerCase()) ||
-    n.remetente?.toLowerCase().includes(busca.toLowerCase())
-  )
+  const totalNaoLidas = notificacoes.reduce((s, n) => s + (n.nao_lidas || 0), 0)
+  const totalEncerrados = notificacoes.filter(n => n.encerrado).length
 
   return (
-    <AppShell title="Notificações">
-      <div style={{padding:20}}>
-        {/* Header */}
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
-          <h2 style={{margin:0, color:'var(--text)'}}>📩 Notificações</h2>
-          <div style={{display:'flex', gap:10}}>
-            <input
-              type="text"
-              placeholder="🔍 Buscar..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              style={{
-                padding:'8px 12px', background:'var(--input-bg)',
-                border:'1px solid var(--input-border)', borderRadius:6,
-                color:'var(--input-text)', fontSize:13, minWidth:200,
-              }}
-            />
-            <button onClick={carregar} className="btn-secondary">
-              🔄 Atualizar
-            </button>
-            <button onClick={() => setShowNova(true)} className="btn-primary">
-              + Nova Conversa
-            </button>
-          </div>
-        </div>
-
-        {/* Kanban */}
-        <div style={{display:'flex', gap:12, overflowX:'auto', paddingBottom:16}}>
-          {colunas.map(col => {
-            const notifsColuna = notifsFiltradas.filter(n => n.coluna === col)
-            const totalNaoLidas = notifsColuna.filter(n => n.nao_lidas > 0).length
-
-            return (
-              <div key={col} style={{
-                minWidth:280, background:'var(--bg)', borderRadius:12,
-                border:'1px solid var(--border)', padding:12,
-              }}>
-                <div style={{
-                  display:'flex', justifyContent:'space-between', alignItems:'center',
-                  marginBottom:12, paddingBottom:8, borderBottom:'1px solid var(--border)',
-                }}>
-                  <span style={{fontSize:13, fontWeight:700, color:'var(--text)'}}>
-                    {col}
-                  </span>
-                  <span style={{
-                    fontSize:11, background:'var(--primary)', color:'#000',
-                    padding:'2px 8px', borderRadius:10, fontWeight:700,
-                  }}>
-                    {notifsColuna.length} {totalNaoLidas > 0 && `(${totalNaoLidas})`}
-                  </span>
-                </div>
-                <div style={{minHeight:400}}>
-                  {notifsColuna.map(notif => (
-                    <KanbanCard
-                      key={notif.id}
-                      notif={notif}
-                      onAbrir={setNotifSelecionada}
-                      onMover={handleMover}
-                      colunas={colunas}
-                    />
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Modal detalhes */}
-        {notifSelecionada && (
-          <ModalDetalhes
-            notif={notifSelecionada}
-            onFechar={() => setNotifSelecionada(null)}
-            onResponder={handleResponder}
-            onEncerrar={handleEncerrar}
+    <AppShell title="Notificações" hideTitle flush>
+      {/* Toolbar */}
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid var(--border-light)', background:'var(--header-bg)', flexWrap:'wrap' }}>
+        <span style={{ fontSize:14, fontWeight:700, color:'var(--text-header)' }}>
+          📩 Notificações
+          {totalNaoLidas > 0 && (
+            <span style={{ marginLeft:8, background:'var(--blue)', color:'#0f0f0f', borderRadius:12, fontSize:11, fontWeight:700, padding:'1px 8px' }}>
+              {totalNaoLidas} nova{totalNaoLidas>1?'s':''}
+            </span>
+          )}
+        </span>
+        <div style={{ marginLeft:'auto', display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+          <input
+            type="text"
+            placeholder="🔍 Buscar…"
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            style={{ background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'5px 10px', fontSize:13, outline:'none', minWidth:140 }}
           />
-        )}
+          <button onClick={() => setModalEncerrados(true)} style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', fontSize:12, padding:'5px 12px', cursor:'pointer', fontWeight:600 }}>
+            📁 Encerrados ({totalEncerrados})
+          </button>
+          <button onClick={() => setModalColunas(true)} style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', fontSize:12, padding:'5px 12px', cursor:'pointer', fontWeight:600 }}>
+            ⚙ Colunas
+          </button>
+          <button onClick={() => setModalNova(true)} style={{ background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, fontSize:12, fontWeight:700, padding:'5px 14px', cursor:'pointer' }}>
+            + Nova Conversa
+          </button>
+        </div>
+      </div>
 
-        {/* Modal nova conversa */}
-        {showNova && (
-          <div
-            onClick={() => setShowNova(false)}
-            style={{
-              position:'fixed', top:0, left:0, right:0, bottom:0,
-              background:'rgba(0,0,0,0.7)', display:'flex', alignItems:'center', justifyContent:'center',
-              zIndex:9999,
-            }}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background:'var(--bg-card)', border:'1px solid var(--border)',
-                borderRadius:16, padding:24, maxWidth:500, width:'90%',
-              }}
-            >
-              <h3 style={{margin:0, marginBottom:16, color:'var(--text)'}}>Nova Conversa</h3>
-              <input
-                type="text"
-                placeholder="Seu nome..."
-                value={novaRemetente}
-                onChange={(e) => setNovaRemetente(e.target.value)}
-                style={{
-                  width:'100%', padding:'8px 12px', marginBottom:8,
-                  background:'var(--input-bg)', border:'1px solid var(--input-border)',
-                  borderRadius:6, color:'var(--input-text)', fontSize:13,
-                }}
-              />
-              <input
-                type="text"
-                placeholder="Destinatário (ex: TODOS, João, Financeiro...)"
-                value={novaDestinatario}
-                onChange={(e) => setNovaDestinatario(e.target.value)}
-                style={{
-                  width:'100%', padding:'8px 12px', marginBottom:8,
-                  background:'var(--input-bg)', border:'1px solid var(--input-border)',
-                  borderRadius:6, color:'var(--input-text)', fontSize:13,
-                }}
-              />
-              <input
-                type="text"
-                placeholder="Assunto..."
-                value={novaAssunto}
-                onChange={(e) => setNovaAssunto(e.target.value)}
-                style={{
-                  width:'100%', padding:'8px 12px', marginBottom:8,
-                  background:'var(--input-bg)', border:'1px solid var(--input-border)',
-                  borderRadius:6, color:'var(--input-text)', fontSize:13,
-                }}
-              />
-              <textarea
-                rows={5}
-                placeholder="Mensagem..."
-                value={novaMensagem}
-                onChange={(e) => setNovaMensagem(e.target.value)}
-                style={{
-                  width:'100%', padding:'8px 12px', marginBottom:16,
-                  background:'var(--input-bg)', border:'1px solid var(--input-border)',
-                  borderRadius:6, color:'var(--input-text)', fontSize:13, resize:'vertical',
-                }}
-              />
-              <div style={{display:'flex', gap:8}}>
-                <button onClick={handleCriarNova} className="btn-primary" style={{flex:1}}>
-                  Criar Conversa
-                </button>
-                <button onClick={() => setShowNova(false)} className="btn-secondary">
-                  Cancelar
-                </button>
+      {/* Kanban */}
+      <div style={{ display:'flex', gap:12, padding:16, overflowX:'auto', height:'calc(100vh - 120px)' }}>
+        {colunas.map(col => {
+          const notifsCol = porColuna[col.titulo] || []
+          const naoLidasCol = notifsCol.filter(n => n.nao_lidas > 0).length
+
+          return (
+            <div key={col.titulo} style={{ minWidth:280, maxWidth:280, display:'flex', flexDirection:'column', background:'var(--table-bg)', borderRadius:8, border:'1px solid var(--border-light)' }}>
+              <div style={{ padding:12, borderBottom:'1px solid var(--border-light)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <div style={{ width:12, height:12, borderRadius:3, background:col.cor }} />
+                  <span style={{ fontSize:13, fontWeight:700, color:'var(--text-header)' }}>{col.titulo}</span>
+                </div>
+                <span style={{ background:'var(--card-bg)', borderRadius:12, fontSize:11, fontWeight:700, padding:'2px 8px', color:'var(--text-muted)' }}>
+                  {notifsCol.length} {naoLidasCol > 0 && `(${naoLidasCol})`}
+                </span>
+              </div>
+              <div style={{ flex:1, overflowY:'auto', padding:8 }}>
+                {notifsCol.map(n => (
+                  <KanbanCard
+                    key={n.id}
+                    notif={n}
+                    onAbrir={setSelNotif}
+                    onMover={handleMover}
+                    colunas={colunas}
+                  />
+                ))}
               </div>
             </div>
-          </div>
-        )}
+          )
+        })}
       </div>
+
+      {/* Modals */}
+      {selNotif && <ModalNotificacao notif={selNotif} onClose={() => setSelNotif(null)} onAtualizar={carregar} colunas={colunas} tenantId={tenantId} />}
+      {modalNova && <ModalNovaConversa tenantId={tenantId} onCriada={() => { setModalNova(false); carregar() }} onClose={() => setModalNova(false)} showToast={showToast} />}
+      {modalEncerrados && <ModalEncerrados notificacoes={notificacoes} onAbrir={setSelNotif} onClose={() => setModalEncerrados(false)} />}
+      {modalColunas && <ModalColunas colunas={colunas} onSalvar={handleSalvarColunas} onClose={() => setModalColunas(false)} />}
     </AppShell>
   )
 }

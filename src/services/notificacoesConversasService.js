@@ -4,7 +4,13 @@ import { supabase } from '../lib/supabase'
 // COLUNAS DO KANBAN
 // ══════════════════════════════════════════════════════════════
 
-export const COLUNAS_DEFAULT = ['Novo', 'Orçamento', 'Negociação', 'Aguardando Resposta', 'Encerrado']
+export const COLUNAS_DEFAULT = [
+  { titulo: 'Novo', cor: '#fbbc04' },
+  { titulo: 'Orçamento', cor: '#8ab4f8' },
+  { titulo: 'Negociação', cor: '#c58af9' },
+  { titulo: 'Aguardando Resposta', cor: '#f28b82' },
+  { titulo: 'Encerrado', cor: '#9aa0a6' },
+]
 
 export async function getColunas(tenantId) {
   const { data } = await supabase
