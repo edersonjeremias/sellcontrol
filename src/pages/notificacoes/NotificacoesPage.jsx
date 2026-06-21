@@ -41,12 +41,19 @@ export default function NotificacoesPage() {
   const [notifSelecionada, setNotifSelecionada] = useState(null)
 
   const carregar = useCallback(async () => {
-    if (!tenantId) return
+    console.log('🔍 Carregando notificações, tenantId:', tenantId)
+    if (!tenantId) {
+      console.warn('⚠️ tenantId não definido, abortando carregamento')
+      return
+    }
     setLoading(true)
     try {
+      console.log('📡 Buscando notificações do banco...')
       const data = await getNotificacoes(tenantId)
+      console.log('✅ Notificações recebidas:', data?.length || 0, data)
       setNotificacoes(data)
     } catch (err) {
+      console.error('❌ Erro ao carregar notificações:', err)
       showToast('Erro ao carregar notificações', 'error')
     }
     setLoading(false)
