@@ -236,33 +236,50 @@ export default function PedidosPage() {
     const dirtyWithFull = new Map()
     const itemsCancelados = []
 
+    console.log('🔍 DEBUG - Total de itens modificados:', dirty.size)
+
     itens.forEach(i => {
       if (dirty.has(i.id)) {
         const updated = { ...i, ...dirty.get(i.id) }
         dirtyWithFull.set(i.id, updated)
 
+        const statusAntigo = i.status
+        const statusNovo = dirty.get(i.id).status
+
+        console.log(`🔍 Item ${i.id}:`, {
+          statusAntigo,
+          statusNovo,
+          mudouParaCancelado: statusNovo === 'Cancelado' && statusAntigo !== 'Cancelado'
+        })
+
         // Detecta mudança para Cancelado
         if (dirty.get(i.id).status === 'Cancelado' && i.status !== 'Cancelado') {
+          console.log('✅ Item CANCELADO detectado:', i.id)
           itemsCancelados.push(updated)
         }
       }
     })
+
+    console.log('🔍 Total de itens cancelados detectados:', itemsCancelados.length)
 
     setLoading(true)
     try {
       await salvarItens(tenantId, dirtyWithFull)
 
       // Cria notificações para itens cancelados
+      console.log('🔔 Iniciando criação de notificações para', itemsCancelados.length, 'itens')
       for (const item of itemsCancelados) {
         try {
+          console.log('🔔 Criando notificação para item:', item.codigo)
           await criarNotificacaoCancelamento(
             tenantId,
             item.pedido_id,
             item.codigo || 'Sem código',
             `${item.produto || ''} ${item.modelo || ''} ${item.cor || ''}`.trim() || 'Sem descrição'
           )
+          console.log('✅ Notificação criada com sucesso!')
         } catch (err) {
-          console.error('Erro ao criar notificação:', err)
+          console.error('❌ Erro ao criar notificação:', err)
         }
       }
 
