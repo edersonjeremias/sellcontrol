@@ -295,12 +295,17 @@ export default function PedidosPage() {
       for (const item of itemsCancelados) {
         try {
           console.log('🔔 Criando notificação para item:', item.codigo)
-          await criarNotificacaoCancelamento(
-            tenantId,
-            item.pedido_id,
-            item.codigo || 'Sem código',
-            `${item.produto || ''} ${item.modelo || ''} ${item.cor || ''}`.trim() || 'Sem descrição'
-          )
+          await criarNotificacaoCancelamento(tenantId, {
+            codigo: item.codigo || 'Sem código',
+            produto: item.produto || '',
+            modelo: item.modelo || '',
+            cor: item.cor || '',
+            marca: item.marca || '',
+            tamanho: item.tamanho || '',
+            cliente_nome: item.cliente_nome || 'Cliente',
+            data_live: item.data_live || '',
+            preco: item.preco || 0,
+          })
           console.log('✅ Notificação criada com sucesso!')
         } catch (err) {
           console.error('❌ Erro ao criar notificação:', err)

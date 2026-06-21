@@ -268,27 +268,37 @@ export default function NotificacoesPage() {
               </button>
             </div>
 
+            {/* Cabeçalho: De/Para/Criado */}
+            <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-muted)' }}>
+              <div><strong>De:</strong> SISTEMA</div>
+              <div><strong>Para:</strong> TODOS</div>
+              <div><strong>Criado:</strong> {formatDataHora(notifSelecionada.created_at)}</div>
+            </div>
+
+            {/* Linha separadora */}
+            <div style={{ borderTop: '1px dashed var(--border)', margin: '16px 0' }} />
+
+            {/* Mensagem */}
             <div
               style={{
                 background: 'var(--bg)',
                 padding: 16,
                 borderRadius: 8,
                 marginBottom: 16,
-                lineHeight: 1.6,
+                lineHeight: 1.8,
                 color: 'var(--text)',
+                whiteSpace: 'pre-line',
+                fontSize: 14,
               }}
             >
               {notifSelecionada.mensagem}
             </div>
 
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
-              📅 {formatDataHora(notifSelecionada.created_at)}
-              {notifSelecionada.lida && notifSelecionada.lida_em && (
-                <span style={{ marginLeft: 16 }}>
-                  ✓ Lida em {formatDataHora(notifSelecionada.lida_em)}
-                </span>
-              )}
-            </div>
+            {notifSelecionada.lida && notifSelecionada.lida_em && (
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
+                ✓ Lida em {formatDataHora(notifSelecionada.lida_em)}
+              </div>
+            )}
 
             {notifSelecionada.metadata && Object.keys(notifSelecionada.metadata).length > 0 && (
               <details style={{ marginTop: 16 }}>

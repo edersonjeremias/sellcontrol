@@ -56,7 +56,35 @@ export async function marcarTodasComoLidas(tenantId) {
 /**
  * Cria notificação de cancelamento de peça (broadcast para todos do tenant)
  */
-export async function criarNotificacaoCancelamento(tenantId, pedidoId, codigoPeca, descricao) {
+export async function criarNotificacaoCancelamento(tenantId, itemData) {
+  const {
+    codigo,
+    produto,
+    modelo,
+    cor,
+    marca,
+    tamanho,
+    cliente_nome,
+    data_live,
+    preco
+  } = itemData
+
+  // Formata data da live
+  const dataLiveFormatada = data_live
+    ? new Date(data_live).toLocaleDateString('pt-BR')
+    : 'Sem data'
+
+  // Descrição completa da peça
+  const descricaoPeca = [produto, modelo, cor, marca, tamanho]
+    .filter(Boolean)
+    .join(' ')
+
+  // Mensagem detalhada
+  const mensagem = `Pedido cancelado:
+${cliente_nome} | ${dataLiveFormatada}
+Código: ${codigo} - ${descricaoPeca}
+Preço: R$ ${(preco || 0).toFixed(2)}`
+
   // Cria notificação broadcast (user_id = null, todos veem)
   const { data, error } = await supabase
     .from('notificacoes')
@@ -65,10 +93,17 @@ export async function criarNotificacaoCancelamento(tenantId, pedidoId, codigoPec
       user_id: null, // Broadcast - todos do tenant veem
       tipo: 'cancelamento',
       titulo: '❌ Peça Cancelada',
-      mensagem: `A peça "${codigoPeca} - ${descricao}" foi cancelada na expedição.`,
+      mensagem,
       metadata: {
-        pedido_id: pedidoId,
-        codigo_peca: codigoPeca,
+        codigo,
+        produto,
+        modelo,
+        cor,
+        marca,
+        tamanho,
+        cliente_nome,
+        data_live,
+        preco
       }
     })
     .select()
