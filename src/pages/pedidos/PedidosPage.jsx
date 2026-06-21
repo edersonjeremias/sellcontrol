@@ -7,7 +7,7 @@ import {
   atribuirRomaneio, adicionarSeparadosAoRomaneio,
 } from '../../services/pedidosService'
 import { getClientes } from '../../services/clientesService'
-import { criarNotificacaoCancelamento } from '../../services/notificacoesService'
+import { criarNotificacaoCancelamentoConversa } from '../../services/notificacoesConversasService'
 
 const STATUS_COR = {
   'Separado':      '#81c995',
@@ -295,7 +295,7 @@ export default function PedidosPage() {
       for (const item of itemsCancelados) {
         try {
           console.log('🔔 Criando notificação para item:', item.codigo)
-          await criarNotificacaoCancelamento(tenantId, {
+          await criarNotificacaoCancelamentoConversa(tenantId, {
             codigo: item.codigo || 'Sem código',
             produto: item.produto || '',
             modelo: item.modelo || '',

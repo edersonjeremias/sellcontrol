@@ -68,7 +68,7 @@ import ContatosPage                   from './pages/contatos/ContatosPage'
 import DashboardFinanceiroPage        from './pages/relatorio/DashboardFinanceiroPage'
 import ContasPagarPage                from './pages/relatorio/ContasPagarPage'
 import CreditosPage                   from './pages/relatorio/CreditosPage'
-import NotificacoesPage               from './pages/notificacoes/NotificacoesPage'
+import NotificacoesPage               from './pages/notificacoes/NotificacoesPageKanban'
 import DebugPage                      from './pages/DebugPage'
 
 export default function App() {
