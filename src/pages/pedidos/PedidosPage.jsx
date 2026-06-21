@@ -182,6 +182,7 @@ export default function PedidosPage() {
   const [itens, setItens]       = useState([])
   const [clientes, setClientes] = useState([])
   const [dirty, setDirty]       = useState(new Map())
+  const [originalStatus, setOriginalStatus] = useState(new Map()) // Rastreia status original
   const [loading, setLoading]   = useState(false)
   const [err, setErr]           = useState(null)
   const [msg, setMsg]           = useState(null)
@@ -213,6 +214,7 @@ export default function PedidosPage() {
       })
       setItens(data)
       setDirty(new Map())
+      setOriginalStatus(new Map()) // Reset status originais
     } catch (e) {
       setErr(e.message || 'Erro ao buscar')
     } finally {
@@ -221,6 +223,25 @@ export default function PedidosPage() {
   }, [tenantId, filtros])
 
   const handleChange = useCallback((id, field, value) => {
+    // Salva o status original na primeira modificação
+    if (field === 'status') {
+      setOriginalStatus(prev => {
+        if (!prev.has(id)) {
+          const next = new Map(prev)
+          // Busca o status atual do item antes da modificação
+          setItens(currItens => {
+            const item = currItens.find(i => i.id === id)
+            if (item) {
+              next.set(id, item.status)
+            }
+            return currItens
+          })
+          return next
+        }
+        return prev
+      })
+    }
+
     setItens(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
     setDirty(prev => {
       const next = new Map(prev)
@@ -243,17 +264,19 @@ export default function PedidosPage() {
         const updated = { ...i, ...dirty.get(i.id) }
         dirtyWithFull.set(i.id, updated)
 
-        const statusAntigo = i.status
+        // Usa o status original salvo no handleChange
+        const statusAntigo = originalStatus.get(i.id) || i.status
         const statusNovo = dirty.get(i.id).status
 
         console.log(`🔍 Item ${i.id}:`, {
           statusAntigo,
           statusNovo,
+          statusOriginalSalvo: originalStatus.get(i.id),
           mudouParaCancelado: statusNovo === 'Cancelado' && statusAntigo !== 'Cancelado'
         })
 
         // Detecta mudança para Cancelado
-        if (dirty.get(i.id).status === 'Cancelado' && i.status !== 'Cancelado') {
+        if (dirty.get(i.id).status === 'Cancelado' && statusAntigo !== 'Cancelado') {
           console.log('✅ Item CANCELADO detectado:', i.id)
           itemsCancelados.push(updated)
         }
@@ -284,13 +307,14 @@ export default function PedidosPage() {
       }
 
       setDirty(new Map())
+      setOriginalStatus(new Map()) // Limpa status originais após salvar
       showMsg('Salvo!')
     } catch (e) {
       setErr(e.message || 'Erro ao salvar')
     } finally {
       setLoading(false)
     }
-  }, [tenantId, dirty, itens, showMsg])
+  }, [tenantId, dirty, itens, originalStatus, showMsg])
 
   const handleGerarPedido = useCallback(async () => {
     if (!tenantId) return
