@@ -113,7 +113,7 @@ export async function criarNotificacaoManual(tenantId, remetente, destinatario, 
     .insert({
       tenant_id: tenantId,
       user_id: user?.user?.id || null,
-      tipo: 'mensagem',
+      tipo: 'info',
       titulo: assunto,
       mensagem,
       remetente,
