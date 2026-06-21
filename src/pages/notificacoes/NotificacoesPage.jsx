@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import {
   getNotificacoes,
@@ -34,7 +34,9 @@ const TIPO_COR = {
 }
 
 export default function NotificacoesPage() {
-  const { tenantId, showToast } = useApp()
+  const { profile } = useAuth()
+  const tenantId = profile?.tenant_id
+
   const [notificacoes, setNotificacoes] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('todas') // 'todas' | 'nao_lidas' | 'lidas'
@@ -54,10 +56,9 @@ export default function NotificacoesPage() {
       setNotificacoes(data)
     } catch (err) {
       console.error('❌ Erro ao carregar notificações:', err)
-      showToast('Erro ao carregar notificações', 'error')
     }
     setLoading(false)
-  }, [tenantId, showToast])
+  }, [tenantId])
 
   useEffect(() => {
     carregar()
@@ -75,18 +76,18 @@ export default function NotificacoesPage() {
     try {
       await marcarComoLida(notif.id)
       carregar()
-    } catch {
-      showToast('Erro ao marcar como lida', 'error')
+    } catch (err) {
+      console.error('Erro ao marcar como lida:', err)
     }
   }
 
   async function handleMarcarTodasLidas() {
     try {
       await marcarTodasComoLidas(tenantId)
-      showToast('Todas marcadas como lidas!', 'success')
+      console.log('✅ Todas marcadas como lidas!')
       carregar()
-    } catch {
-      showToast('Erro ao marcar todas', 'error')
+    } catch (err) {
+      console.error('Erro ao marcar todas:', err)
     }
   }
 
