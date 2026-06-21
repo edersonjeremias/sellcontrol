@@ -143,7 +143,8 @@ export async function criarNotificacaoCancelamentoConversa(tenantId, itemData) {
     tamanho,
     cliente_nome,
     data_live,
-    preco
+    preco,
+    observacao
   } = itemData
 
   // Formata data da live
@@ -160,7 +161,7 @@ export async function criarNotificacaoCancelamentoConversa(tenantId, itemData) {
   const mensagem = `Pedido cancelado:
 ${cliente_nome} | ${dataLiveFormatada}
 Código: ${codigo} - ${descricaoPeca}
-Preço: R$ ${(preco || 0).toFixed(2)}`
+Preço: R$ ${(preco || 0).toFixed(2)}${observacao ? '\nMotivo: ' + observacao : ''}`
 
   // Cria notificação como conversa
   const { data, error } = await supabase
@@ -185,7 +186,8 @@ Preço: R$ ${(preco || 0).toFixed(2)}`
         tamanho,
         cliente_nome,
         data_live,
-        preco
+        preco,
+        observacao
       }
     })
     .select()

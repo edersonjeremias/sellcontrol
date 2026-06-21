@@ -158,7 +158,7 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-card" style={{ maxWidth:560, width:'95vw', maxHeight:'90vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
@@ -290,7 +290,7 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-card" style={{ maxWidth:500 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <h3 style={{ margin:0, fontSize:16 }}>✉ Nova Conversa</h3>
@@ -370,7 +370,7 @@ function ModalEncerrados({ notificacoes, onAbrir, onClose }) {
     : encerradas
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-card" style={{ maxWidth:700, maxHeight:'90vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
         <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <h3 style={{ margin:0, fontSize:16 }}>📁 Conversas Encerradas ({encerradas.length})</h3>
@@ -432,7 +432,7 @@ function ModalColunas({ colunas, onSalvar, onClose }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-card" style={{ maxWidth:400 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
           <h3 style={{ margin:0, fontSize:16 }}>Configurar Colunas</h3>

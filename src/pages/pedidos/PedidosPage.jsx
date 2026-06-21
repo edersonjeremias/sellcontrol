@@ -305,6 +305,7 @@ export default function PedidosPage() {
             cliente_nome: item.cliente_nome || 'Cliente',
             data_live: item.data_live || '',
             preco: item.preco || 0,
+            observacao: item.observacao || '',
           })
           console.log('✅ Notificação criada com sucesso!')
         } catch (err) {
