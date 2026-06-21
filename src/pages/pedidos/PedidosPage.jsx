@@ -223,29 +223,30 @@ export default function PedidosPage() {
   }, [tenantId, filtros])
 
   const handleChange = useCallback((id, field, value) => {
-    // Salva o status original na primeira modificação
+    // Salva o status original ANTES de modificar (síncrono)
     if (field === 'status') {
-      setOriginalStatus(prev => {
-        if (!prev.has(id)) {
-          const next = new Map(prev)
-          // Busca o status atual do item antes da modificação
-          setItens(currItens => {
-            const item = currItens.find(i => i.id === id)
-            if (item) {
+      setItens(currItens => {
+        const item = currItens.find(i => i.id === id)
+        if (item) {
+          setOriginalStatus(prevOriginal => {
+            if (!prevOriginal.has(id)) {
+              const next = new Map(prevOriginal)
               next.set(id, item.status)
+              console.log('💾 Salvando status original:', id, '→', item.status)
+              return next
             }
-            return currItens
+            return prevOriginal
           })
-          return next
         }
-        return prev
+        // Retorna o array modificado
+        return currItens.map(i => i.id === id ? { ...i, [field]: value } : i)
       })
+    } else {
+      setItens(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
     }
 
-    setItens(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
     setDirty(prev => {
       const next = new Map(prev)
-      // find the current item from itens to merge
       next.set(id, { ...(next.get(id) || {}), id, [field]: value })
       return next
     })
