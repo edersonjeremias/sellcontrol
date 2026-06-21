@@ -121,11 +121,17 @@ export async function criarNotificacaoManual(tenantId, remetente, destinatario, 
       assunto,
       coluna: 'Novo',
       nao_lidas: 1,
+      lida: false,
+      encerrado: false,
+      metadata: {},
     })
     .select()
     .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Erro ao criar notificação manual:', error)
+    throw error
+  }
   return data
 }
 
@@ -162,8 +168,7 @@ export async function criarNotificacaoCancelamentoConversa(tenantId, itemData) {
 
 Cliente: ${cliente_nome}
 Data da live: ${dataLiveFormatada}
-Código: ${codigo} - ${descricaoPeca}
-Preço: R$ ${(preco || 0).toFixed(2)}${observacao ? '\nObservação (motivo): ' + observacao : ''}`
+Código: ${codigo} - ${descricaoPeca}${observacao ? '\nObservação (motivo): ' + observacao : ''}`
 
   // Cria notificação como conversa
   const { data, error } = await supabase
