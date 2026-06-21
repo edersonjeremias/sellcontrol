@@ -54,53 +54,31 @@ export async function marcarTodasComoLidas(tenantId) {
 }
 
 /**
- * Cria notificação de cancelamento de peça (direto via INSERT)
+ * Cria notificação de cancelamento de peça (broadcast para todos do tenant)
  */
 export async function criarNotificacaoCancelamento(tenantId, pedidoId, codigoPeca, descricao) {
-  const { data: user } = await supabase.auth.getUser()
-
-  // Busca o nome do cliente do pedido
-  const { data: pedido } = await supabase
-    .from('pedidos_itens')
-    .select('cliente_nome')
-    .eq('id', pedidoId)
-    .single()
-
-  const clienteNome = pedido?.cliente_nome || 'Cliente'
-
-  // Busca todos os admins/master do tenant (exceto quem cancelou)
-  const { data: admins } = await supabase
-    .from('users_perfil')
-    .select('id')
-    .eq('tenant_id', tenantId)
-    .in('role', ['admin', 'master'])
-    .neq('id', user?.user?.id || '')
-
-  if (!admins || admins.length === 0) {
-    console.warn('Nenhum admin encontrado para criar notificação')
-    return null
-  }
-
-  // Cria notificação para cada admin
-  const notificacoes = admins.map(admin => ({
-    tenant_id: tenantId,
-    user_id: admin.id,
-    tipo: 'cancelamento',
-    titulo: '❌ Peça Cancelada',
-    mensagem: `A peça "${codigoPeca} - ${descricao}" do cliente "${clienteNome}" foi cancelada na expedição.`,
-    metadata: {
-      pedido_id: pedidoId,
-      codigo_peca: codigoPeca,
-      cliente: clienteNome
-    }
-  }))
-
+  // Cria notificação broadcast (user_id = null, todos veem)
   const { data, error } = await supabase
     .from('notificacoes')
-    .insert(notificacoes)
+    .insert({
+      tenant_id: tenantId,
+      user_id: null, // Broadcast - todos do tenant veem
+      tipo: 'cancelamento',
+      titulo: '❌ Peça Cancelada',
+      mensagem: `A peça "${codigoPeca} - ${descricao}" foi cancelada na expedição.`,
+      metadata: {
+        pedido_id: pedidoId,
+        codigo_peca: codigoPeca,
+      }
+    })
     .select()
+    .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Erro RLS ao criar notificação:', error)
+    throw error
+  }
+
   return data
 }
 
