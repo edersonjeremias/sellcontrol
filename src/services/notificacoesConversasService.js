@@ -9,7 +9,6 @@ export const COLUNAS_DEFAULT = [
   { titulo: 'Orçamento', cor: '#8ab4f8' },
   { titulo: 'Negociação', cor: '#c58af9' },
   { titulo: 'Aguardando Resposta', cor: '#f28b82' },
-  { titulo: 'Encerrado', cor: '#9aa0a6' },
 ]
 
 export async function getColunas(tenantId) {
@@ -99,7 +98,7 @@ export async function marcarNotificacaoLida(notificacaoId) {
 export async function encerrarNotificacao(notificacaoId) {
   const { error } = await supabase
     .from('notificacoes')
-    .update({ encerrado: true, coluna: 'Encerrado' })
+    .update({ encerrado: true })
     .eq('id', notificacaoId)
 
   if (error) throw error
