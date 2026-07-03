@@ -252,6 +252,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
   const [showForm,     setShowForm]     = useState(false)
   const [criando,      setCriando]      = useState(false)
   const [form,         setForm]         = useState({ nome: '', username: '', email: '', password: '', role: 'vendedor' })
+  const [formPageIds,  setFormPageIds]  = useState([])   // páginas selecionadas no formulário de criação
   const [tenantPages,  setTenantPages]  = useState([])   // páginas disponíveis na empresa
   const [paginasOpen,  setPaginasOpen]  = useState(null) // userId com painel de páginas aberto
   const [userPageIds,  setUserPageIds]  = useState([])
@@ -331,6 +332,16 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
       })
       const json = await resp.json()
       if (!resp.ok) throw new Error(json.error || 'Erro ao criar usuário')
+
+      // Salva as páginas selecionadas para o novo usuário
+      if (formPageIds.length > 0) {
+        try {
+          await saveUserPageAccess(json.userId, tenantId, formPageIds)
+        } catch (e) {
+          console.error('Erro ao salvar páginas do usuário:', e)
+        }
+      }
+
       setUsuarios(prev => [...prev, {
         id: json.userId,
         nome: form.nome,
@@ -339,6 +350,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
         role: form.role
       }])
       setForm({ nome: '', username: '', email: '', password: '', role: 'vendedor' })
+      setFormPageIds([])
       setShowForm(false)
       showToast(`Usuário ${form.nome} (${form.username}) criado com sucesso!`)
     } catch (e) {
@@ -395,7 +407,10 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>E-mail (opcional)</label>
-              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Deixe vazio para usar email fictício" style={SI} />
+              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="" style={SI} />
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                Deixe vazio para gerar automaticamente
+              </div>
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Senha * (mín. 6 caracteres)</label>
@@ -408,6 +423,38 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
               </select>
             </div>
           </div>
+
+          {/* Seleção de páginas */}
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
+            <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 8, fontWeight: 600 }}>
+              Páginas que o usuário poderá acessar:
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '6px 12px' }}>
+              {tenantPages.map(p => (
+                <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                  <input
+                    type="checkbox"
+                    checked={formPageIds.includes(p.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setFormPageIds(prev => [...prev, p.id])
+                      } else {
+                        setFormPageIds(prev => prev.filter(id => id !== p.id))
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span style={{ color: 'var(--text-body)' }}>{p.nome}</span>
+                </label>
+              ))}
+            </div>
+            {formPageIds.length === 0 && (
+              <div style={{ fontSize: 11, color: 'var(--yellow)', marginTop: 6 }}>
+                ⚠️ Nenhuma página selecionada - usuário não terá acesso a nada
+              </div>
+            )}
+          </div>
+
           <button className="btn-acao btn-green"
             style={{ width: '100%', minHeight: 40, fontSize: 14, color: '#171717', fontWeight: 700 }}
             onClick={criarUsuario} disabled={criando}>
