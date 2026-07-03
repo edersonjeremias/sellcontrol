@@ -337,9 +337,11 @@ export async function devolverCredito(tenantId, cliente, valor) {
 
 // ── Importação ───────────────────────────────────────────────
 export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
-  let qV = supabase.from('vendas').select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, codigo, live_nome, status').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO)
+  console.log('🔍 Buscando vendas para cobrança:', { dataISO, live, tenantId: tid(tenantId) })
+  let qV = supabase.from('vendas').select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO)
   if (live) qV = qV.eq('live_nome', live)
   const { data: vendas } = await qV
+  console.log('📦 Vendas encontradas:', vendas?.length || 0, vendas)
   if (!vendas?.length) return []
   const { data: cobs } = await supabase.from('cobrancas').select('cliente, itens').eq('tenant_id', tid(tenantId)).eq('data', dataISO).neq('status', 'CANCELADO')
   const ja = new Set()
@@ -350,13 +352,21 @@ export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   const agrup = {}
   vendas.forEach(v => {
     const n = String(v.cliente_nome || '').trim().toLowerCase()
-    if (!n || n.includes('cancelado')) return
+    if (!n || n.includes('cancelado')) {
+      console.log('❌ Venda ignorada (sem cliente ou cancelado):', v)
+      return
+    }
     const d = [v.codigo, v.produto, v.modelo, v.cor, v.marca, v.tamanho ? `(${v.tamanho})` : ''].filter(Boolean).join(' ')
-    if (ja.has(`${n}|${d.toLowerCase().trim()}`)) return
+    if (ja.has(`${n}|${d.toLowerCase().trim()}`)) {
+      console.log('⚠️ Venda ignorada (já cobrada):', v)
+      return
+    }
     if (!agrup[n]) agrup[n] = { cliente: v.cliente_nome.trim(), whatsapp: mapZ[n] || '', total: 0, data: dataISO, live: v.live_nome || live || '', itens: [] }
     const canc = String(v.status || '').toUpperCase().includes('CANCELADO')
     agrup[n].itens.push({ descricao: d, valor: Number(v.preco) || 0, cancelado: canc })
     if (!canc) agrup[n].total += Number(v.preco) || 0
   })
-  return Object.values(agrup)
+  const resultado = Object.values(agrup)
+  console.log('✅ Resultado final:', resultado.length, 'clientes', resultado)
+  return resultado
 }
