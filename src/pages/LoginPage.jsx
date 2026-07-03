@@ -31,19 +31,23 @@ export default function LoginPage() {
     event.preventDefault()
     setError('')
     if (!email || !password) {
-      setError('Preencha email e senha')
+      setError('Preencha username/email e senha')
       return
     }
     setSubmitting(true)
     try {
-      await signIn(email.trim(), password)
+      const loginValue = email.trim()
+      // Se não tem @, é username - adiciona @vmkids.local
+      const emailToUse = loginValue.includes('@') ? loginValue : `${loginValue}@vmkids.local`
+
+      await signIn(emailToUse, password)
       navigate('/dashboard', { replace: true })
     } catch (err) {
       const message = (err.message || 'Erro ao efetuar login').toLowerCase()
       if (message.includes('email not confirmed') || message.includes('not confirmed')) {
         setError('Email não confirmado. Verifique sua caixa de entrada e clique no link enviado pelo sistema.')
       } else if (message.includes('invalid login credentials') || message.includes('invalid credentials')) {
-        setError('Email ou senha incorretos. Se você entrou pelo Google antes, use o botão "Entrar com Google" abaixo.')
+        setError('Username/email ou senha incorretos. Se você entrou pelo Google antes, use o botão "Entrar com Google" abaixo.')
       } else if (message.includes('perfil não existe')) {
         setError('Usuário sem perfil no sistema. Entre pelo Google ou contate o administrador.')
       } else {
@@ -74,11 +78,11 @@ export default function LoginPage() {
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">Username ou Email</label>
           <input
             id="email"
-            type="email"
-            placeholder="email@exemplo.com"
+            type="text"
+            placeholder="vendedor1 ou email@exemplo.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
