@@ -224,21 +224,29 @@ export default function VendasPage() {
 
   // ── BUSCA DE PRODUTOS (quando digita no filtro) ──
   useEffect(() => {
+    console.log('🔄 useEffect busca ativado. Filtro:', filtro)
     if (!filtro.trim()) {
+      console.log('⚪ Filtro vazio, limpando busca')
       setProdutosBusca([])
       return
     }
 
+    console.log('⏱️ Iniciando debounce de 300ms...')
     const timer = setTimeout(async () => {
+      console.log('🚀 Executando busca após debounce')
       try {
         const resultados = await buscarProdutosPorTermos(tenantId, filtro)
+        console.log('📥 Resultados recebidos:', resultados.length)
         setProdutosBusca(resultados)
       } catch (err) {
-        console.error('Erro ao buscar produtos:', err)
+        console.error('❌ Erro ao buscar produtos:', err)
       }
     }, 300) // Debounce de 300ms
 
-    return () => clearTimeout(timer)
+    return () => {
+      console.log('🧹 Limpando timer do debounce')
+      clearTimeout(timer)
+    }
   }, [filtro, tenantId])
 
   // ── INIT ──

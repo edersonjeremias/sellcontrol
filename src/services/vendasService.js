@@ -172,9 +172,11 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
 // Retorna produtos SEM cliente (para adicionar à venda)
 export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
   const tid = TENANT_ID(tenantId)
+  console.log('🔍 buscarProdutosPorTermos chamada:', { termosStr, tid })
   if (!termosStr?.trim()) return []
 
   const termos = termosStr.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+  console.log('📝 Termos de busca:', termos)
   if (termos.length === 0) return []
 
   // Busca todas as vendas e filtra por termos
@@ -185,7 +187,8 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
     .order('created_at', { ascending: false })
     .limit(500)
 
-  if (error) throw error
+  console.log('📦 Vendas retornadas do banco:', vendas?.length || 0)
+  if (error) { console.error('❌ Erro ao buscar:', error); throw error }
   if (!vendas?.length) return []
 
   // Filtra produtos que correspondem a TODOS os termos
@@ -193,8 +196,12 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
     const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo]
       .join(' ')
       .toLowerCase()
-    return termos.every(termo => txt.includes(termo))
+    const match = termos.every(termo => txt.includes(termo))
+    if (match) console.log('✅ Match encontrado:', v)
+    return match
   })
+
+  console.log('🎯 Produtos após filtro:', produtos.length)
 
   // Agrupa por combinação única (remove duplicados)
   const unicos = new Map()
@@ -226,7 +233,9 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
     }
   })
 
-  return Array.from(unicos.values())
+  const resultado = Array.from(unicos.values())
+  console.log('✨ Resultado final da busca:', resultado.length, 'produtos únicos')
+  return resultado
 }
 
 // ── salvarVendas ───────────────────────────────────────────────
