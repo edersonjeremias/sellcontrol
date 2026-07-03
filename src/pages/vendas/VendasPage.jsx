@@ -804,17 +804,11 @@ export default function VendasPage() {
   }, [tenantId])
 
   // ── RENDER ──
-  // Se tem filtro e produtos da busca, mostra busca + vendas que correspondem ao filtro
-  // Se não tem filtro, mostra vendas com cliente + linhas vazias (novas)
+  // Se tem filtro: mostra busca + linhas que correspondem
+  // Se não tem filtro: mostra TODAS as linhas não deletadas/vendidas
   const visivel = filtro.trim()
     ? [...produtosBusca, ...linhas.filter(l => !l.deleted && l.status !== 'Vendido' && passaFiltro(l, filtro))]
-    : linhas.filter(l => {
-        if (l.deleted || l.status === 'Vendido') return false
-        // Mostra se tem cliente OU se é linha vazia (nova)
-        const temCliente = l.cliente_nome?.trim()
-        const estaVazia = !l.produto && !l.modelo && !l.cor && !l.marca && !l.preco
-        return temCliente || estaVazia
-      })
+    : linhas.filter(l => !l.deleted && l.status !== 'Vendido')
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
 
   return (
