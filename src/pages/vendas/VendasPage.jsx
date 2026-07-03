@@ -1017,8 +1017,8 @@ export default function VendasPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {linhas.map((l, idx) => {
-                    if (l.deleted || l.status === 'Vendido' || !passaFiltro(l, filtro)) return null
+                  {visivel.map((l, idx) => {
+                    if (l.deleted || l.status === 'Vendido') return null
                     return (
                       <TabelaRow key={l._key || l.id || idx}
                         linha={l} idx={idx} listas={listas}
