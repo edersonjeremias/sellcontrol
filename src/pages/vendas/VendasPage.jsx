@@ -537,7 +537,7 @@ export default function VendasPage() {
           const l = linhasRef.current.find(r => r._key === rowKey)
           if (!l?.id) return
           await estornarVenda(l.id)
-          setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, isSent: false, status: '' } : r))
+          setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, isSent: false, status: '' } : r)))
           showToast('Venda estornada!', 'success')
         } catch { showToast('Erro ao estornar.', 'error') }
         finally { setBusy(false) }
