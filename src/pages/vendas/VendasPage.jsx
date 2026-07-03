@@ -457,35 +457,16 @@ export default function VendasPage() {
 
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((idx, field, value) => {
-    // Verifica se está editando um produto da busca
-    const itemVisivel = visivel[idx]
-    if (itemVisivel?._isBuscaResult) {
-      // Remove da busca e adiciona às linhas
-      const novoProduto = { ...itemVisivel, [field]: value, _isBuscaResult: false, _key: `new-${Date.now()}-${Math.random()}` }
-      if (field === 'cliente_nome') { novoProduto.liberado = false; novoProduto.sacolinha = null }
-      if (field === 'preco') novoProduto.preco = value.replace(/[^\d,]/g, '')
-
-      setProdutosBusca(prev => prev.filter(p => p._key !== itemVisivel._key))
-      setLinhas(prev => calcSacolas([novoProduto, ...prev]))
-      setHasUnsaved(true)
-      triggerAutoSave()
-      return
-    }
-
-    // Edita item normal das vendas - encontra pelo _key
     setLinhas(prev => {
       const n = [...prev]
-      const idxReal = n.findIndex(l => l._key === itemVisivel._key)
-      if (idxReal === -1) return n
-
-      const l = { ...n[idxReal], [field]: value }
-      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idxReal] = l; return calcSacolas(n) }
+      const l = { ...n[idx], [field]: value }
+      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
       if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
-      n[idxReal] = l
+      n[idx] = l
       return n
     })
     triggerAutoSave()
-  }, [triggerAutoSave, visivel])
+  }, [triggerAutoSave])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
   function showBloqueioModal(idx, nomeExibido, inputEl) {
