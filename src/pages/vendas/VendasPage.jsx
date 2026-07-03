@@ -212,7 +212,7 @@ export default function VendasPage() {
   const totalInfo = useMemo(() => {
     let total = 0, qtd = 0
     linhas.forEach(l => {
-      if (l.deleted || !l.cliente_nome?.trim() || !passaFiltro(l, filtro)) return
+      if (l.deleted || l.status === 'Vendido' || !l.cliente_nome?.trim() || !passaFiltro(l, filtro)) return
       qtd++
       const n = parseFloat((l.preco || '').replace(/\./g, '').replace(',', '.'))
       if (!isNaN(n)) total += n
@@ -586,7 +586,7 @@ export default function VendasPage() {
   }, [])
 
   // ── FINALIZAR LIVE ──
-  const iniciarFinalizacao = useCallback(() => {
+  const iniciarFinalizacao = useCallback(async () => {
     if (busy) return
 
     const linhasComCliente = linhasRef.current.filter(l => !l.deleted && l.cliente_nome?.trim())
@@ -609,37 +609,40 @@ export default function VendasPage() {
       return
     }
 
-    if (!dataLive || !liveNome.trim()) {
-      setAlerta({ titulo: 'Dados Faltando', mensagem: 'Preencha a <b>Data</b> e a <b>Live</b> antes de finalizar.' }); return
+    // NOVO: Marca itens com cliente + data da live como "Vendido" automaticamente
+    setBusy(true, 'Salvando...')
+    try {
+      const linhasAtualizadas = linhasRef.current.map(l => {
+        // Se tem cliente_nome E data_live preenchidos, marca como Vendido
+        if (!l.deleted && !l.isSent && l.cliente_nome?.trim() && dataLive) {
+          return { ...l, status: 'Vendido' }
+        }
+        return l
+      })
+
+      // Salva as vendas com os status atualizados
+      await salvarVendas(tenantId, linhasAtualizadas, dataLive, liveNome)
+
+      // Remove itens vendidos da visualização
+      const itensVendidos = linhasAtualizadas.filter(l => l.status === 'Vendido').length
+      const linhasRestantes = linhasAtualizadas.filter(l => l.status !== 'Vendido')
+
+      setLinhas(linhasRestantes)
+      setHasUnsaved(false)
+
+      if (itensVendidos > 0) {
+        showToast(`✅ ${itensVendidos} item(ns) marcado(s) como Vendido e removido(s) da tela!`, 'success')
+      } else {
+        showToast('Vendas salvas!', 'success')
+      }
+    } catch (err) {
+      console.error('Erro ao salvar vendas:', err)
+      const msg = err?.message || String(err) || 'Tente novamente.'
+      setAlerta({ titulo: 'Erro', mensagem: `Erro ao salvar vendas. ${msg}` })
+    } finally {
+      setBusy(false)
     }
-    const semPreco = linhasRef.current.some(l => {
-      if (l.deleted || l.isSent || !l.cliente_nome?.trim()) return false
-      const p = (l.preco||'').replace(/\./g,'').replace(',','.')
-      return !p || parseFloat(p) === 0
-    })
-    if (semPreco) {
-      setAlerta({ titulo: 'Preço Ausente', mensagem: 'Há itens com cliente mas <b>sem preço</b>. Corrija antes de finalizar.' }); return
-    }
-    setConfirmacao({
-      titulo: 'Finalizar a Live?',
-      mensagem: 'Todos os itens com cliente serão marcados como <b>ENVIADO</b> no banco.<br><br>Deseja continuar?',
-      onSim: async () => {
-        setConfirmacao(null); setBusy(true, 'Finalizando live...')
-        try {
-          const res = await finalizarLive(tenantId, linhasRef.current, dataLive, liveNome)
-          showToast(`✅ ${res.movidos} vendas confirmadas! Mesa limpa para a próxima live.`, 'success')
-          setHasUnsaved(false)
-          setLinhas([])
-          setTabelaMsg('Live finalizada. Clique em + Novo para começar ou Buscar para carregar registros.')
-        } catch (err) {
-          console.error('Erro ao finalizar live:', err)
-          const msg = err?.message || String(err) || 'Tente novamente.'
-          setAlerta({ titulo: 'Erro', mensagem: `Erro ao finalizar a live. ${msg}` })
-        } finally { setBusy(false) }
-      },
-      onNao: () => setConfirmacao(null),
-    })
-  }, [busy, dataLive, liveNome, buscar])
+  }, [busy, dataLive, liveNome, tenantId])
 
   // ── MULTIPLICAR LINHAS ──
   function multiplicarLinhas() {
@@ -760,7 +763,7 @@ export default function VendasPage() {
   }, [tenantId])
 
   // ── RENDER ──
-  const visivel = linhas.filter(l => !l.deleted && passaFiltro(l, filtro))
+  const visivel = linhas.filter(l => !l.deleted && l.status !== 'Vendido' && passaFiltro(l, filtro))
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
 
   return (
@@ -970,7 +973,7 @@ export default function VendasPage() {
                 </thead>
                 <tbody>
                   {linhas.map((l, idx) => {
-                    if (l.deleted || !passaFiltro(l, filtro)) return null
+                    if (l.deleted || l.status === 'Vendido' || !passaFiltro(l, filtro)) return null
                     return (
                       <TabelaRow key={l._key || l.id || idx}
                         linha={l} idx={idx} listas={listas}
