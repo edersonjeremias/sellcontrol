@@ -251,7 +251,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
   const [salvando,     setSalvando]     = useState(null)
   const [showForm,     setShowForm]     = useState(false)
   const [criando,      setCriando]      = useState(false)
-  const [form,         setForm]         = useState({ nome: '', email: '', password: '', role: 'vendedor' })
+  const [form,         setForm]         = useState({ nome: '', username: '', email: '', password: '', role: 'vendedor' })
   const [tenantPages,  setTenantPages]  = useState([])   // páginas disponíveis na empresa
   const [paginasOpen,  setPaginasOpen]  = useState(null) // userId com painel de páginas aberto
   const [userPageIds,  setUserPageIds]  = useState([])
@@ -306,22 +306,41 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
   }
 
   async function criarUsuario() {
-    if (!form.nome || !form.email || !form.password) {
-      showToast('Preencha nome, e-mail e senha', 'error'); return
+    if (!form.nome || !form.username || !form.password) {
+      showToast('Preencha nome, username e senha', 'error'); return
+    }
+    if (form.password.length < 6) {
+      showToast('Senha deve ter no mínimo 6 caracteres', 'error'); return
     }
     setCriando(true)
     try {
+      // Gera email fictício se não fornecido
+      const emailFinal = form.email?.trim() || `${form.username}@vmkids.local`
+
       const resp = await fetch('/api/criar-usuario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, tenant_id: tenantId }),
+        body: JSON.stringify({
+          nome: form.nome,
+          username: form.username,
+          email: emailFinal,
+          password: form.password,
+          role: form.role,
+          tenant_id: tenantId
+        }),
       })
       const json = await resp.json()
       if (!resp.ok) throw new Error(json.error || 'Erro ao criar usuário')
-      setUsuarios(prev => [...prev, { id: json.userId, nome: form.nome, email: form.email, role: form.role }])
-      setForm({ nome: '', email: '', password: '', role: 'vendedor' })
+      setUsuarios(prev => [...prev, {
+        id: json.userId,
+        nome: form.nome,
+        username: form.username,
+        email: emailFinal,
+        role: form.role
+      }])
+      setForm({ nome: '', username: '', email: '', password: '', role: 'vendedor' })
       setShowForm(false)
-      showToast(`Usuário ${form.nome} criado com sucesso!`)
+      showToast(`Usuário ${form.nome} (${form.username}) criado com sucesso!`)
     } catch (e) {
       showToast('Erro: ' + e.message, 'error')
     } finally {
@@ -360,8 +379,23 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
               <input type="text" value={form.nome} onChange={e => setForm(p => ({ ...p, nome: e.target.value }))} placeholder="Ex: Ana Paula" style={SI} />
             </div>
             <div>
-              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>E-mail *</label>
-              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="ana@email.com" style={SI} />
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Username * (para login)</label>
+              <input
+                type="text"
+                value={form.username}
+                onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '') }))}
+                placeholder="Ex: vendedor1"
+                style={SI}
+              />
+              {form.username && (
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                  Email gerado: {form.username}@vmkids.local
+                </div>
+              )}
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>E-mail (opcional)</label>
+              <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="Deixe vazio para usar email fictício" style={SI} />
             </div>
             <div>
               <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Senha * (mín. 6 caracteres)</label>
@@ -402,9 +436,10 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
             }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {u.nome || u.email}
+                  {u.nome || u.username || u.email}
                   {u.id === profileAtual?.id && <span style={{ fontSize: 11, color: 'var(--blue)', marginLeft: 8 }}>(você)</span>}
                 </div>
+                {u.username && <div style={{ fontSize: 12, color: 'var(--green)' }}>@{u.username}</div>}
                 {u.email && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</div>}
               </div>
 
