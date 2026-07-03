@@ -614,7 +614,7 @@ export default function VendasPage() {
     try {
       const linhasAtualizadas = linhasRef.current.map(l => {
         // Se tem cliente_nome E data_live preenchidos, marca como Vendido
-        if (!l.deleted && !l.isSent && l.cliente_nome?.trim() && dataLive) {
+        if (!l.deleted && l.cliente_nome?.trim() && dataLive) {
           return { ...l, status: 'Vendido' }
         }
         return l
