@@ -235,7 +235,20 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
   const tid = TENANT_ID(tenantId)
   if (linha.id) {
     const { error } = await supabase.from('vendas')
-      .update({ status: 'ENVIADO', tipo_envio: 'individual', data_live: dataLive, live_nome: liveNome })
+      .update({
+        status: 'ENVIADO',
+        tipo_envio: 'individual',
+        data_live: dataLive,
+        live_nome: liveNome,
+        cliente_nome: linha.cliente_nome || '',
+        preco: parseMoney(linha.preco),
+        produto: linha.produto || '',
+        modelo: linha.modelo || '',
+        cor: linha.cor || '',
+        marca: linha.marca || '',
+        tamanho: linha.tamanho || '',
+        codigo: linha.codigo || ''
+      })
       .eq('id', linha.id)
     if (error) throw error
     return { ok: true, id: linha.id }
