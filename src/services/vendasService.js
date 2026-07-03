@@ -134,6 +134,15 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
   if (opts?.semCliente) {
     rows = rows.filter(row => !row.cliente_nome?.trim())
   }
+  // apenasComCliente: retorna apenas itens COM cliente e não enviados/vendidos
+  if (opts?.apenasComCliente) {
+    rows = rows.filter(row => {
+      const temCliente = row.cliente_nome?.trim()
+      const naoEnviado = String(row.status || '').trim().toUpperCase() !== 'ENVIADO'
+      const naoVendido = String(row.status || '').trim() !== 'Vendido'
+      return temCliente && naoEnviado && naoVendido
+    })
+  }
 
   return rows.map(row => ({
     _key: row.id, id: row.id,
@@ -156,6 +165,68 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
     isSent: (row.status || '').toUpperCase() === 'ENVIADO',
     liberado: false,
   }))
+}
+
+// ── buscarProdutosPorTermos ────────────────────────────────────
+// Busca produtos únicos na tabela vendas baseado em termos de busca
+// Retorna produtos SEM cliente (para adicionar à venda)
+export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
+  const tid = TENANT_ID(tenantId)
+  if (!termosStr?.trim()) return []
+
+  const termos = termosStr.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+  if (termos.length === 0) return []
+
+  // Busca todas as vendas e filtra por termos
+  const { data: vendas, error } = await supabase
+    .from('vendas')
+    .select('produto, modelo, cor, marca, tamanho, preco, codigo')
+    .eq('tenant_id', tid)
+    .order('created_at', { ascending: false })
+    .limit(500)
+
+  if (error) throw error
+  if (!vendas?.length) return []
+
+  // Filtra produtos que correspondem a TODOS os termos
+  const produtos = vendas.filter(v => {
+    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo]
+      .join(' ')
+      .toLowerCase()
+    return termos.every(termo => txt.includes(termo))
+  })
+
+  // Agrupa por combinação única (remove duplicados)
+  const unicos = new Map()
+  produtos.forEach(p => {
+    const chave = `${p.produto}|${p.modelo}|${p.cor}|${p.marca}|${p.tamanho}|${p.codigo}`
+    if (!unicos.has(chave)) {
+      unicos.set(chave, {
+        _key: `busca-${Date.now()}-${Math.random()}`,
+        id: null,
+        produto: p.produto || '',
+        modelo: p.modelo || '',
+        cor: p.cor || '',
+        marca: p.marca || '',
+        tamanho: p.tamanho || '',
+        preco: p.preco != null ? formatMoney(p.preco) : '',
+        codigo: p.codigo || '',
+        cliente_nome: '',
+        data_live: '',
+        live_nome: '',
+        sacolinha: null,
+        status: '',
+        fila1: '', fila2: '', fila3: '',
+        isNew: true,
+        deleted: false,
+        isSent: false,
+        liberado: false,
+        _isBuscaResult: true, // Flag para identificar que é resultado de busca
+      })
+    }
+  })
+
+  return Array.from(unicos.values())
 }
 
 // ── salvarVendas ───────────────────────────────────────────────

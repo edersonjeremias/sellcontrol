@@ -5,6 +5,7 @@ import {
   finalizarLive, formatMoney,
   getVendasEnviadas, updateVendaEnviada,
   enviarVenda,
+  buscarProdutosPorTermos,
 } from '../../services/vendasService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -126,6 +127,7 @@ export default function VendasPage() {
   const [busyMsg,     setBusyMsg]     = useState('')
   const [hasUnsaved,  setHasUnsaved]  = useState(false)
   const [filtro,      setFiltro]      = useState('')
+  const [produtosBusca, setProdutosBusca] = useState([]) // Produtos encontrados na busca
   const [tabelaMsg,   setTabelaMsg]   = useState('Iniciando sistema...')
   const [pronto,      setPronto]      = useState(false)
   const [scrollTop,   setScrollTop]   = useState(false)
@@ -219,6 +221,25 @@ export default function VendasPage() {
     })
     return { total, qtd }
   }, [linhas, filtro])
+
+  // ── BUSCA DE PRODUTOS (quando digita no filtro) ──
+  useEffect(() => {
+    if (!filtro.trim()) {
+      setProdutosBusca([])
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const resultados = await buscarProdutosPorTermos(tenantId, filtro)
+        setProdutosBusca(resultados)
+      } catch (err) {
+        console.error('Erro ao buscar produtos:', err)
+      }
+    }, 300) // Debounce de 300ms
+
+    return () => clearTimeout(timer)
+  }, [filtro, tenantId])
 
   // ── INIT ──
   useEffect(() => {
@@ -329,14 +350,17 @@ export default function VendasPage() {
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      const rows = await getVendas(tenantId, null, null, { somentePendentes: true })
+      // Busca apenas itens COM cliente e não enviados/vendidos
+      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
+      setProdutosBusca([]) // Limpa busca ao carregar vendas
+      setFiltro('') // Limpa filtro
       setHasUnsaved(false)
-      if (!novas.length) setTabelaMsg('Nenhum registro pendente encontrado.')
+      if (!novas.length) setTabelaMsg('Nenhum item com cliente encontrado. Use o campo de busca para encontrar produtos ou clique em + Novo.')
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
     finally { setBusy(false) }
-  }, [tenantId])
+  }, [tenantId, dataLive, liveNome])
 
   const novo = useCallback(() => {
     if (busy) return
@@ -369,6 +393,15 @@ export default function VendasPage() {
       const input = lastRow?.querySelector('td:nth-child(2) .cell-input')
       input?.focus()
     }, 80)
+    triggerAutoSave()
+  }, [triggerAutoSave])
+
+  // Adiciona produto da busca às vendas
+  const adicionarProdutoBusca = useCallback((produto) => {
+    // Remove da lista de busca e adiciona às linhas
+    setProdutosBusca(prev => prev.filter(p => p._key !== produto._key))
+    setLinhas(prev => [{ ...produto, _key: `new-${Date.now()}-${Math.random()}`, _isBuscaResult: false }, ...prev])
+    setHasUnsaved(true)
     triggerAutoSave()
   }, [triggerAutoSave])
 
@@ -424,16 +457,35 @@ export default function VendasPage() {
 
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((idx, field, value) => {
+    // Verifica se está editando um produto da busca
+    const itemVisivel = visivel[idx]
+    if (itemVisivel?._isBuscaResult) {
+      // Remove da busca e adiciona às linhas
+      const novoProduto = { ...itemVisivel, [field]: value, _isBuscaResult: false, _key: `new-${Date.now()}-${Math.random()}` }
+      if (field === 'cliente_nome') { novoProduto.liberado = false; novoProduto.sacolinha = null }
+      if (field === 'preco') novoProduto.preco = value.replace(/[^\d,]/g, '')
+
+      setProdutosBusca(prev => prev.filter(p => p._key !== itemVisivel._key))
+      setLinhas(prev => calcSacolas([novoProduto, ...prev]))
+      setHasUnsaved(true)
+      triggerAutoSave()
+      return
+    }
+
+    // Edita item normal das vendas - encontra pelo _key
     setLinhas(prev => {
       const n = [...prev]
-      const l = { ...n[idx], [field]: value }
-      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
+      const idxReal = n.findIndex(l => l._key === itemVisivel._key)
+      if (idxReal === -1) return n
+
+      const l = { ...n[idxReal], [field]: value }
+      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idxReal] = l; return calcSacolas(n) }
       if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
-      n[idx] = l
+      n[idxReal] = l
       return n
     })
     triggerAutoSave()
-  }, [triggerAutoSave])
+  }, [triggerAutoSave, visivel])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
   function showBloqueioModal(idx, nomeExibido, inputEl) {
@@ -763,7 +815,11 @@ export default function VendasPage() {
   }, [tenantId])
 
   // ── RENDER ──
-  const visivel = linhas.filter(l => !l.deleted && l.status !== 'Vendido' && passaFiltro(l, filtro))
+  // Se tem filtro e produtos da busca, mostra busca + vendas que correspondem ao filtro
+  // Se não tem filtro, mostra apenas vendas com cliente
+  const visivel = filtro.trim()
+    ? [...produtosBusca, ...linhas.filter(l => !l.deleted && l.status !== 'Vendido' && passaFiltro(l, filtro))]
+    : linhas.filter(l => !l.deleted && l.status !== 'Vendido' && l.cliente_nome?.trim())
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
 
   return (
