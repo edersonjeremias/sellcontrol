@@ -4,6 +4,8 @@ const STATUS_ENCERRADO = ['Pronto', 'Enviado', 'Entregue', 'Retirou', 'Repetido'
 // Valores de status_entrega que indicam que o pedido já foi despachado
 const STATUS_ENTREGA_FINALIZADA = ['Enviado', 'Entregue', 'Retirou', 'Retirada']
 
+// Status que marcam peça como ENVIADA (finalizada)
+// Deve corresponder aos status da página Expedição que indicam conclusão
 export const STATUS_ENVIADO_PECA = ['enviado', 'entregue', 'retirou', 'retirada']
 
 // Busca itens via RPC que lê diretamente da tabela vendas (SECURITY DEFINER)
