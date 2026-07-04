@@ -127,7 +127,6 @@ export default function VendasPage() {
   const [busyMsg,     setBusyMsg]     = useState('')
   const [hasUnsaved,  setHasUnsaved]  = useState(false)
   const [filtro,      setFiltro]      = useState('')
-  const [produtosBusca, setProdutosBusca] = useState([]) // Produtos encontrados na busca
   const [tabelaMsg,   setTabelaMsg]   = useState('Iniciando sistema...')
   const [pronto,      setPronto]      = useState(false)
   const [scrollTop,   setScrollTop]   = useState(false)
@@ -225,9 +224,16 @@ export default function VendasPage() {
   // ── BUSCA DE PRODUTOS (quando digita no filtro) ──
   useEffect(() => {
     console.log('🔄 useEffect busca ativado. Filtro:', filtro)
+
+    // Se limpar filtro, remove produtos da busca que não foram editados
     if (!filtro.trim()) {
-      console.log('⚪ Filtro vazio, limpando busca')
-      setProdutosBusca([])
+      console.log('⚪ Filtro vazio, removendo produtos não editados da busca')
+      setLinhas(prev => prev.filter(l => {
+        // Mantém se NÃO for da busca, OU se foi editado (tem cliente ou outros dados)
+        if (!l._fromSearch) return true
+        const foiEditado = l.cliente_nome?.trim() || l.produto?.trim() || l.modelo?.trim()
+        return foiEditado
+      }))
       return
     }
 
@@ -237,7 +243,17 @@ export default function VendasPage() {
       try {
         const resultados = await buscarProdutosPorTermos(tenantId, filtro)
         console.log('📥 Resultados recebidos:', resultados.length)
-        setProdutosBusca(resultados)
+
+        // Adiciona resultados no início de linhas com flag _fromSearch
+        if (resultados.length > 0) {
+          setLinhas(prev => {
+            // Remove produtos antigos da busca
+            const semBusca = prev.filter(l => !l._fromSearch)
+            // Adiciona novos resultados no início
+            const novosResultados = resultados.map(r => ({ ...r, _fromSearch: true }))
+            return [...novosResultados, ...semBusca]
+          })
+        }
       } catch (err) {
         console.error('❌ Erro ao buscar produtos:', err)
       }
@@ -362,8 +378,7 @@ export default function VendasPage() {
       const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
-      setProdutosBusca([]) // Limpa busca ao carregar vendas
-      setFiltro('') // Limpa filtro
+      setFiltro('') // Limpa filtro (produtos da busca serão removidos pelo useEffect)
       setHasUnsaved(false)
       if (!novas.length) setTabelaMsg('Nenhum item com cliente encontrado. Use o campo de busca para encontrar produtos ou clique em + Novo.')
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
