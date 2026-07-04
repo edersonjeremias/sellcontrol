@@ -492,8 +492,38 @@ export default function VendasPage() {
   useEffect(() => {
     if (!pronto || !tenantId) return
 
+    const atualizarBloqueados = async () => {
+      try {
+        const db = await getDadosIniciais(tenantId)
+        globalDBRef.current = db
+        setGlobalDB(db)
+      } catch (err) {
+        console.error('Erro ao atualizar bloqueios:', err)
+      }
+    }
+
     const channelCob = supabase
       .channel(`cobrancas-live-${tenantId}`)
+      // Escuta INSERT (nova cobrança criada = novo bloqueio)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'cobrancas',
+          filter: `tenant_id=eq.${tenantId}`,
+        },
+        async (payload) => {
+          const status = payload.new?.status?.toUpperCase()
+          const statusBloqueio = ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE']
+
+          if (statusBloqueio.includes(status)) {
+            await atualizarBloqueados()
+            showToast('⚠️ Nova cobrança pendente. Cliente bloqueado.', 'warning')
+          }
+        }
+      )
+      // Escuta UPDATE (mudança de status)
       .on(
         'postgres_changes',
         {
@@ -506,18 +536,31 @@ export default function VendasPage() {
           const statusNovo = payload.new?.status?.toUpperCase()
           const statusAntigo = payload.old?.status?.toUpperCase()
 
-          // Se mudou para PAGO, BAIXADO ou CANCELADO, recarrega bloqueados
+          if (statusNovo === statusAntigo) return
+
           const statusLiberado = ['PAGO', 'BAIXADO', 'CANCELADO']
-          if (statusLiberado.includes(statusNovo) && statusNovo !== statusAntigo) {
-            try {
-              const db = await getDadosIniciais(tenantId)
-              globalDBRef.current = db
-              setGlobalDB(db)
-              showToast('✅ Pagamento confirmado! Cliente liberado.', 'success')
-            } catch (err) {
-              console.error('Erro ao atualizar bloqueios:', err)
-            }
+          const statusBloqueio = ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE']
+
+          if (statusLiberado.includes(statusNovo)) {
+            await atualizarBloqueados()
+            showToast('✅ Pagamento confirmado! Cliente liberado.', 'success')
+          } else if (statusBloqueio.includes(statusNovo)) {
+            await atualizarBloqueados()
+            showToast('⚠️ Cliente bloqueado por pendência.', 'warning')
           }
+        }
+      )
+      // Escuta DELETE (cobrança deletada = pode liberar)
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'cobrancas',
+          filter: `tenant_id=eq.${tenantId}`,
+        },
+        async () => {
+          await atualizarBloqueados()
         }
       )
       .subscribe()
