@@ -465,36 +465,20 @@ export default function VendasPage() {
 
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((idx, field, value) => {
-    // idx é índice em visivel, precisa encontrar em linhas pela _key
-    const itemAtual = visivel[idx]
+    // Usa refs para evitar dependência circular
+    const itemAtual = linhasRef.current[idx]
     if (!itemAtual) return
 
-    // Se for item da busca, adiciona às linhas
-    if (itemAtual._isBuscaResult) {
-      const novaLinha = { ...itemAtual, [field]: value, _isBuscaResult: false }
-      if (field === 'preco') novaLinha.preco = value.replace(/[^\d,]/g, '')
-      if (field === 'cliente_nome') { novaLinha.liberado = false; novaLinha.sacolinha = null }
-
-      setProdutosBusca(prev => prev.filter(p => p._key !== itemAtual._key))
-      setLinhas(prev => calcSacolas([novaLinha, ...prev]))
-      triggerAutoSave()
-      return
-    }
-
-    // Item normal: encontra em linhas pela _key
     setLinhas(prev => {
       const n = [...prev]
-      const realIdx = n.findIndex(l => l._key === itemAtual._key)
-      if (realIdx === -1) return n
-
-      const l = { ...n[realIdx], [field]: value }
-      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[realIdx] = l; return calcSacolas(n) }
+      const l = { ...n[idx], [field]: value }
+      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
       if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
-      n[realIdx] = l
+      n[idx] = l
       return n
     })
     triggerAutoSave()
-  }, [triggerAutoSave, visivel, setProdutosBusca])
+  }, [triggerAutoSave])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
   function showBloqueioModal(idx, nomeExibido, inputEl) {
