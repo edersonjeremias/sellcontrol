@@ -53,6 +53,48 @@ export async function encerrarSacolinha(instagram, tipoEntrega, obs) {
     ? `[${tipoEntrega}] ${obs.trim()}`
     : `[${tipoEntrega}]`
 
+  // Busca tenant_id do cliente
+  const slug = instagram.replace(/^@/, '').toLowerCase()
+  const { data: clienteData } = await portalSb
+    .from('clientes')
+    .select('tenant_id')
+    .ilike('instagram', `%${slug}%`)
+    .limit(1)
+    .single()
+
+  let tenantId = clienteData?.tenant_id
+
+  // Se não achou tenant_id em clientes, tenta buscar de vendas
+  if (!tenantId) {
+    const { data: vendaData } = await portalSb
+      .from('vendas')
+      .select('tenant_id')
+      .ilike('cliente_nome', `%${slug}%`)
+      .limit(1)
+      .single()
+
+    if (!vendaData?.tenant_id) {
+      throw new Error('Cliente não encontrado no sistema')
+    }
+    tenantId = vendaData.tenant_id
+  }
+
+  // Cria registro em producao_pedidos (tabela oficial da página Produção)
+  const dataHoje = new Date().toISOString().split('T')[0]
+  const { error: errPedido } = await portalSb
+    .from('producao_pedidos')
+    .insert({
+      tenant_id: tenantId,
+      cliente_nome: instagram,
+      data_solicitado: dataHoje,
+      status_prod: 'Em fila',
+      status_entrega: 'Aguardando',
+      obs_cliente: obsTexto,
+    })
+
+  if (errPedido) throw errPedido
+
+  // Cria registro em portal_producao (para o portal visualizar)
   const { data, error } = await portalSb
     .from('portal_producao')
     .insert({
