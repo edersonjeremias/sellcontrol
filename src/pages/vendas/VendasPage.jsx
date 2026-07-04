@@ -488,6 +488,43 @@ export default function VendasPage() {
     return () => { supabase.removeChannel(channel) }
   }, [pronto, tenantId])
 
+  // ── LISTENER REALTIME COBRANÇAS (atualiza bloqueios em tempo real) ──
+  useEffect(() => {
+    if (!pronto || !tenantId) return
+
+    const channelCob = supabase
+      .channel(`cobrancas-live-${tenantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'cobrancas',
+          filter: `tenant_id=eq.${tenantId}`,
+        },
+        async (payload) => {
+          const statusNovo = payload.new?.status?.toUpperCase()
+          const statusAntigo = payload.old?.status?.toUpperCase()
+
+          // Se mudou para PAGO, BAIXADO ou CANCELADO, recarrega bloqueados
+          const statusLiberado = ['PAGO', 'BAIXADO', 'CANCELADO']
+          if (statusLiberado.includes(statusNovo) && statusNovo !== statusAntigo) {
+            try {
+              const db = await getDadosIniciais(tenantId)
+              globalDBRef.current = db
+              setGlobalDB(db)
+              showToast('✅ Pagamento confirmado! Cliente liberado.', 'success')
+            } catch (err) {
+              console.error('Erro ao atualizar bloqueios:', err)
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channelCob) }
+  }, [pronto, tenantId])
+
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((idx, field, value) => {
     // Usa refs para evitar dependência circular
