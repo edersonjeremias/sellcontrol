@@ -808,11 +808,6 @@ export default function VendasPage() {
   }, [tenantId])
 
   // ── RENDER ──
-  // Se tem filtro: mostra busca + linhas que correspondem
-  // Se não tem filtro: mostra TODAS as linhas não deletadas/vendidas
-  const visivel = filtro.trim()
-    ? [...produtosBusca, ...linhas.filter(l => !l.deleted && l.status !== 'Vendido' && passaFiltro(l, filtro))]
-    : linhas.filter(l => !l.deleted && l.status !== 'Vendido')
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
 
   return (
@@ -1021,8 +1016,8 @@ export default function VendasPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visivel.map((l, idx) => {
-                    if (l.deleted || l.status === 'Vendido') return null
+                  {linhas.map((l, idx) => {
+                    if (l.deleted || l.status === 'Vendido' || !passaFiltro(l, filtro)) return null
                     return (
                       <TabelaRow key={l._key || l.id || idx}
                         linha={l} idx={idx} listas={listas}
