@@ -1009,10 +1009,10 @@ export default function VendasPage() {
         <div id="tabela-container" style={flash ? { backgroundColor: 'rgba(255, 249, 196, 0.45)', transition: 'background-color 0.25s ease' } : undefined}>
           <div className="table-responsive" ref={scrollRef}
             onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
-            {!pronto || visivel.length === 0 ? (
+            {!pronto || linhas.filter(l => !l.deleted && l.status !== 'Vendido').length === 0 ? (
               <div id="tabela-msg">{tabelaMsg}</div>
             ) : null}
-            {pronto && visivel.length > 0 && (
+            {pronto && linhas.filter(l => !l.deleted && l.status !== 'Vendido').length > 0 && (
               <table id="tabela">
                 <thead>
                   <tr>
