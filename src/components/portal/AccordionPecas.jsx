@@ -86,10 +86,10 @@ export default function AccordionPecas({ pecas, getStatusOverride }) {
     return <div className="portal-empty">Nenhuma peça encontrada.</div>
   }
 
-  // Agrupar por data (parte date da data_insercao)
+  // Agrupar por data_envio (se tiver) ou data_insercao (para peças na sacolinha)
   const grupos = {}
   pecas.forEach(p => {
-    const d = (p.data_insercao || '').slice(0, 10) || '0000-00-00'
+    const d = (p.data_envio || p.data_insercao || '').slice(0, 10) || '0000-00-00'
     if (!grupos[d]) grupos[d] = []
     grupos[d].push(p)
   })
