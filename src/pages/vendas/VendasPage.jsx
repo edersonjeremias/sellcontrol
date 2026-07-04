@@ -393,12 +393,22 @@ export default function VendasPage() {
         const vazia = !primeira.produto && !primeira.modelo && !primeira.cor &&
           !primeira.marca && !primeira.preco && !primeira.cliente_nome
         if (vazia) {
-          setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
+          setTimeout(() => {
+            scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+            // Foca no primeiro input (produto) da primeira linha
+            const input = document.querySelector('#tabela tbody tr:first-child td:nth-child(2) .cell-input')
+            input?.focus()
+          }, 50)
           return prev
         }
       }
       novoProdutoFocus.current = true
-      setTimeout(() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 50)
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+        // Foca no primeiro input (produto) da primeira linha
+        const input = document.querySelector('#tabela tbody tr:first-child td:nth-child(2) .cell-input')
+        input?.focus()
+      }, 50)
       return [novaLinha(), ...prev]
     })
     setPronto(true)
