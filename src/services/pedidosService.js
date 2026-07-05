@@ -1,11 +1,11 @@
 import { supabase } from '../lib/supabase'
 
 export const STATUS_PEDIDO_OPTS = [
-  '', 'Separado', 'Enviado', 'Comprar',
+  '', 'Separado', 'Enviado',
   'Devolução', 'Gerar Crédito', 'Cancelado', 'Pendente',
 ]
 
-const EXCLUIR_DO_TOTAL   = new Set(['Cancelado', 'Pendente', 'Devolução', 'Comprar'])
+const EXCLUIR_DO_TOTAL   = new Set(['Cancelado', 'Pendente', 'Devolução'])
 const EXCLUIR_DO_PADRAO  = new Set(['Enviado', 'Cancelado', 'Devolução', 'Gerar Crédito'])
 
 export function calcTotal(itens) {
