@@ -9,6 +9,7 @@ import {
 import {
   getTenantPages, getUserPageIds, saveUserPageAccess,
 } from '../../services/authService'
+import ConfigAssuntos from './ConfigAssuntos'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -588,7 +589,10 @@ export default function ConfiguracoesPage() {
         <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 4 }}>
           <TabBtn label="Configurações da Empresa" active={aba === 'config'} onClick={() => setAba('config')} />
           {['admin', 'master'].includes(profile?.role) && (
-            <TabBtn label="Usuários e Permissões" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
+            <>
+              <TabBtn label="Usuários e Permissões" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
+              <TabBtn label="Assuntos" active={aba === 'assuntos'} onClick={() => setAba('assuntos')} />
+            </>
           )}
         </div>
 
@@ -597,6 +601,9 @@ export default function ConfiguracoesPage() {
         )}
         {aba === 'usuarios' && (
           <AbaUsuarios tenantId={tenantId} profileAtual={profile} showToast={showToast} />
+        )}
+        {aba === 'assuntos' && (
+          <ConfigAssuntos />
         )}
       </div>
     </AppShell>

@@ -4,6 +4,7 @@ import {
   portalCriarConversa, portalGetConversas,
   portalGetMensagens, portalResponder, portalMarcarLida,
 } from '../../services/conversasService'
+import { ASSUNTOS_DISPONIVEIS } from '../../services/assuntosService'
 
 function fmtHora(iso) {
   if (!iso) return ''
@@ -154,8 +155,13 @@ function NovaConversa({ onEnviada, onCancelar }) {
       <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
         <div>
           <label style={{ fontSize:11, fontWeight:700, color:'var(--p-muted)', textTransform:'uppercase', display:'block', marginBottom:6 }}>Assunto *</label>
-          <input value={assunto} onChange={e => setAssunto(e.target.value)} placeholder="Ex: Orçamento bolsa infantil, Dúvida sobre pedido…"
-            style={{ width:'100%', background:'var(--p-input)', border:'1px solid var(--p-border)', borderRadius:10, color:'var(--p-text)', padding:'12px 14px', fontSize:14, outline:'none', boxSizing:'border-box' }} />
+          <select value={assunto} onChange={e => setAssunto(e.target.value)}
+            style={{ width:'100%', background:'var(--p-input)', border:'1px solid var(--p-border)', borderRadius:10, color:'var(--p-text)', padding:'12px 14px', fontSize:14, outline:'none', boxSizing:'border-box', cursor:'pointer' }}>
+            <option value="">Selecione o assunto...</option>
+            {ASSUNTOS_DISPONIVEIS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label style={{ fontSize:11, fontWeight:700, color:'var(--p-muted)', textTransform:'uppercase', display:'block', marginBottom:6 }}>Mensagem *</label>
