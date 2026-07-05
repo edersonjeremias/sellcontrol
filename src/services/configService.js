@@ -53,7 +53,7 @@ export const ROLES = [
 export async function getUsuarios(tenantId) {
   const { data, error } = await supabase
     .from('users_perfil')
-    .select('id, nome, email, role, created_at')
+    .select('id, nome, email, username, role, ativo, created_at')
     .eq('tenant_id', tenantId)
     .order('nome')
   if (error) throw error
@@ -66,4 +66,46 @@ export async function updateUsuarioRole(userId, role) {
     .update({ role })
     .eq('id', userId)
   if (error) throw error
+}
+
+// Atualiza dados do usuário (nome, email)
+export async function updateUsuario(userId, { nome, email }) {
+  const updates = {}
+  if (nome !== undefined) updates.nome = nome
+  if (email !== undefined) updates.email = email
+
+  const { error } = await supabase
+    .from('users_perfil')
+    .update(updates)
+    .eq('id', userId)
+
+  if (error) throw error
+}
+
+// Ativa/Inativa usuário
+export async function toggleUsuarioAtivo(userId, ativo) {
+  const { error } = await supabase
+    .from('users_perfil')
+    .update({ ativo })
+    .eq('id', userId)
+
+  if (error) throw error
+}
+
+// Reseta senha do usuário (via serverless function)
+export async function resetUsuarioSenha(userId, novaSenha) {
+  const API_URL = import.meta.env.VITE_API_URL || 'https://sellcontrol.vercel.app'
+
+  const response = await fetch(`${API_URL}/api/reset-senha-usuario`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId, novaSenha }),
+  })
+
+  if (!response.ok) {
+    const data = await response.json()
+    throw new Error(data.error || 'Erro ao resetar senha')
+  }
+
+  return await response.json()
 }

@@ -10,6 +10,7 @@ import {
   getTenantPages, getUserPageIds, saveUserPageAccess,
 } from '../../services/authService'
 import ConfigAssuntos from './ConfigAssuntos'
+import UserActionsMenu from '../../components/config/UserActionsMenu'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -486,6 +487,17 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
                 <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {u.nome || u.username || u.email}
                   {u.id === profileAtual?.id && <span style={{ fontSize: 11, color: 'var(--blue)', marginLeft: 8 }}>(você)</span>}
+                  {u.ativo === false && (
+                    <span style={{
+                      fontSize: 10,
+                      color: '#f28b82',
+                      background: 'rgba(242,139,130,0.15)',
+                      padding: '2px 8px',
+                      borderRadius: 10,
+                      marginLeft: 8,
+                      fontWeight: 700,
+                    }}>INATIVO</span>
+                  )}
                 </div>
                 {u.username && <div style={{ fontSize: 12, color: 'var(--green)' }}>@{u.username}</div>}
                 {u.email && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{u.email}</div>}
@@ -520,6 +532,15 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
                   }}>
                   Páginas {isOpen ? '▲' : '▼'}
                 </button>
+              )}
+
+              {/* Menu de ações do usuário */}
+              {!isMaster && (
+                <UserActionsMenu
+                  user={u}
+                  onUpdate={() => getUsuarios(tenantId).then(setUsuarios)}
+                  showToast={showToast}
+                />
               )}
 
               {salvando === u.id && <span style={{ fontSize: 12, color: 'var(--muted)' }}>…</span>}
