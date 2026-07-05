@@ -168,6 +168,7 @@ export default function VendasPage() {
   const dataLiveRef  = useRef(dataLive)
   const liveNomeRef  = useRef(liveNome)
   const tenantIdRef  = useRef(tenantId)
+  const saveTimerRef = useRef(null)
   // Atualização síncrona durante o render — sem lag de useEffect
   dataLiveRef.current  = dataLive
   liveNomeRef.current  = liveNome
@@ -207,6 +208,7 @@ export default function VendasPage() {
 
   useEffect(() => () => {
     if (busyTimerRef.current) clearTimeout(busyTimerRef.current)
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
   }, [])
 
   // ── Total vendido ──
@@ -323,6 +325,47 @@ export default function VendasPage() {
     setHasUnsaved(true)
   }, [])
 
+  // ── salvarAgora: salva IMEDIATAMENTE com debounce de 300ms ──
+  const salvarAgora = useCallback(() => {
+    // Limpa timer anterior
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+
+    // Debounce de 300ms
+    saveTimerRef.current = setTimeout(async () => {
+      if (isSavingRef.current || busyRef.current) return
+      isSavingRef.current = true
+
+      try {
+        const res = await salvarVendas(tenantIdRef.current, linhasRef.current, {
+          data_live: dataLiveRef.current || null,
+          live_nome: liveNomeRef.current || '',
+        })
+
+        if (res.novosIds?.length) {
+          setLinhas(prev => {
+            const queue = [...res.novosIds]
+            return prev.map(l => {
+              if (!l.id && !l.deleted && queue.length) {
+                return { ...l, id: queue.shift().id, isNew: false }
+              }
+              return l
+            })
+          })
+        }
+
+        setHasUnsaved(false)
+        console.log('💾 Salvo automaticamente')
+      } catch (err) {
+        console.error('Erro ao salvar:', err)
+        showToast('Erro ao salvar alterações', 'error')
+      } finally {
+        isSavingRef.current = false
+      }
+    }, 300)
+  }, [showToast])
+
   // ── Auto-save periódico (1 minuto) ──
   useEffect(() => {
     if (!tenantId || !pronto) return
@@ -424,7 +467,7 @@ export default function VendasPage() {
       return novasLinhas
     })
     setPronto(true)
-    triggerAutoSave()
+    salvarAgora()
 
     // Foca no campo PRODUTO da nova linha criada (posição idx)
     setTimeout(() => {
@@ -448,7 +491,7 @@ export default function VendasPage() {
         input?.focus()
       }
     }, 80)
-  }, [busy, triggerAutoSave])
+  }, [busy, salvarAgora])
 
   // Adiciona nova linha ao FINAL sem scroll — chamado quando usuário dá Enter na última linha
   const novoAbaixo = useCallback(() => {
@@ -462,8 +505,8 @@ export default function VendasPage() {
       const input = lastRow?.querySelector('td:nth-child(2) .cell-input')
       input?.focus()
     }, 80)
-    triggerAutoSave()
-  }, [triggerAutoSave])
+    salvarAgora()
+  }, [salvarAgora])
 
   // Adiciona produto da busca às vendas
   const adicionarProdutoBusca = useCallback((produto) => {
@@ -471,8 +514,8 @@ export default function VendasPage() {
     setProdutosBusca(prev => prev.filter(p => p._key !== produto._key))
     setLinhas(prev => [{ ...produto, _key: `new-${Date.now()}-${Math.random()}`, _isBuscaResult: false }, ...prev])
     setHasUnsaved(true)
-    triggerAutoSave()
-  }, [triggerAutoSave])
+    salvarAgora()
+  }, [salvarAgora])
 
   useEffect(() => {
     if (!pronto || !tenantId) return
@@ -618,8 +661,8 @@ export default function VendasPage() {
       n[idx] = l
       return n
     })
-    triggerAutoSave()
-  }, [triggerAutoSave])
+    salvarAgora()
+  }, [salvarAgora])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
   function showBloqueioModal(idx, nomeExibido, inputEl) {
@@ -668,16 +711,16 @@ export default function VendasPage() {
   // ── FILA ──
   const salvarFila = useCallback((idx, f1, f2, f3) => {
     setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],fila1:f1,fila2:f2,fila3:f3}; return n })
-    triggerAutoSave(); setModalFilaIdx(null)
-  }, [triggerAutoSave])
+    salvarAgora(); setModalFilaIdx(null)
+  }, [salvarAgora])
 
   const trocarClienteFila = useCallback((idx, novoCliente) => {
     setLinhas(prev => {
       const n=[...prev]; n[idx]={...n[idx],cliente_nome:novoCliente,liberado:false,sacolinha:null}
       return calcSacolas(n)
     })
-    triggerAutoSave()
-  }, [triggerAutoSave])
+    salvarAgora()
+  }, [salvarAgora])
 
   // ── SALVAR LINHA (aviãozinho) ──
   const handleEnviar = useCallback(async (rowKey) => {
@@ -744,8 +787,8 @@ export default function VendasPage() {
       next.splice(idx + 1, 0, copia)
       return next
     })
-    triggerAutoSave()
-  }, [triggerAutoSave])
+    salvarAgora()
+  }, [salvarAgora])
 
   const handleExcluir = useCallback((rowKey) => {
     setConfirmacao({
@@ -754,11 +797,11 @@ export default function VendasPage() {
       onSim: () => {
         setConfirmacao(null)
         setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, deleted: true, cliente_nome: '', sacolinha: null } : r)))
-        triggerAutoSave()
+        salvarAgora()
       },
       onNao: () => setConfirmacao(null),
     })
-  }, [triggerAutoSave])
+  }, [salvarAgora])
 
   // ── MODAL EDIÇÃO ──
   const confirmarEdicao = useCallback((idx, campos) => {
@@ -768,8 +811,8 @@ export default function VendasPage() {
       if (clienteMudou) n[idx].sacolinha = null
       return calcSacolas(n)
     })
-    triggerAutoSave(); setModalEdicaoIdx(null)
-  }, [])
+    salvarAgora(); setModalEdicaoIdx(null)
+  }, [salvarAgora])
 
   // ── FINALIZAR LIVE ──
   const iniciarFinalizacao = useCallback(async () => {
