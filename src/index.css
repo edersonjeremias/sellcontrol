@@ -217,7 +217,7 @@ input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #252525 inset !important
 
 .app-main {
   flex: 1;
-  padding: 24px;
+  padding: 12px;
   overflow: auto;
 }
 
