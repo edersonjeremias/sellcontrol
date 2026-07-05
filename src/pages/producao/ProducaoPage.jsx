@@ -193,11 +193,21 @@ export default function ProducaoPage() {
   }, [loadData])
 
   // ── Saving helpers ──────────────────────────────────────────
-  const markSaving = (id, field) => setSaving((p) => ({ ...p, [fk(id, field)]: 'saving' }))
-  const markDone   = (id, field, ok) => {
+  const markSaving = useCallback((id, field) => {
+    setSaving((p) => ({ ...p, [fk(id, field)]: 'saving' }))
+  }, [])
+
+  const markDone = useCallback((id, field, ok) => {
     setSaving((p) => ({ ...p, [fk(id, field)]: ok ? 'ok' : 'error' }))
-    setTimeout(() => setSaving((p) => { const n = { ...p }; delete n[fk(id, field)]; return n }), 1200)
-  }
+    setTimeout(() => {
+      setSaving((p) => {
+        const n = { ...p }
+        delete n[fk(id, field)]
+        return n
+      })
+    }, 1200)
+  }, [])
+
   const bc = (id, field) => {
     const s = saving[fk(id, field)]
     return s === 'saving' ? '#00bcd4' : s === 'ok' ? '#22c55e' : s === 'error' ? '#f44336' : undefined
@@ -213,7 +223,7 @@ export default function ProducaoPage() {
       await saveProducaoField(tenantId, id, { [field]: value })
       markDone(id, field, true)
     } catch { markDone(id, field, false) }
-  }, [tenantId])
+  }, [tenantId, markSaving, markDone])
 
   // ── Status Prod com trava de inadimplência ──────────────────
   const handleStatusProd = useCallback(async (row, val) => {
@@ -246,7 +256,7 @@ export default function ProducaoPage() {
       return
     }
     await savePatch(row.id, 'status_prod', val)
-  }, [tenantId, savePatch, updRow, profile])
+  }, [tenantId, savePatch, updRow, profile, markSaving, markDone])
 
   // ── Status Entrega ──────────────────────────────────────────
   const handleStatusEntrega = useCallback(async (row, val) => {
@@ -263,7 +273,7 @@ export default function ProducaoPage() {
       await saveProducaoField(tenantId, row.id, dbPatch)
       markDone(row.id, 'status_entrega', true)
     } catch { markDone(row.id, 'status_entrega', false) }
-  }, [tenantId, updRow])
+  }, [tenantId, updRow, markSaving, markDone])
 
   // ── Pacote ──────────────────────────────────────────────────
   const handlePacote = useCallback(async (row, val) => {
@@ -273,7 +283,7 @@ export default function ProducaoPage() {
       await saveProducaoField(tenantId, row.id, { pacote: val })
       markDone(row.id, 'pacote', true)
     } catch { markDone(row.id, 'pacote', false) }
-  }, [tenantId, updRow])
+  }, [tenantId, updRow, markSaving, markDone])
 
   // ── Romaneio + auto DEC ─────────────────────────────────────
   const handleRomaneioBlur = useCallback(async (row, val) => {
@@ -291,7 +301,7 @@ export default function ProducaoPage() {
         }
       }
     } catch { markDone(row.id, 'romaneio', false) }
-  }, [tenantId, updRow])
+  }, [tenantId, updRow, markSaving, markDone])
 
   // ── DetalheModal save ───────────────────────────────────────
   const handleDetalheSave = useCallback(async (updated) => {
