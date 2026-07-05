@@ -1,5 +1,24 @@
 import { useState } from 'react'
 
+const SITE_URL = 'https://sellcontrol.vercel.app'
+
+const STATUS_LABEL = {
+  PENDENTE:  'Pendente',
+  ENVIADO:   'Enviado',
+  REENVIADO: 'Reenviado',
+  LEMBRETE:  'Lembrete',
+}
+
+function fmtValor(v) {
+  return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function fmtData(iso) {
+  if (!iso) return ''
+  const [y, m, d] = String(iso).slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
+}
+
 function statusCss(status) {
   const s = (status || '').toLowerCase()
   if (s.includes('entregue')) return 'entregue'
@@ -42,7 +61,7 @@ function PecaCard({ peca, getStatusOverride }) {
   )
 }
 
-function AccordionGroup({ data, pecas, getStatusOverride }) {
+function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
   const [open, setOpen] = useState(false)
   const total = pecas.reduce((s, p) => s + Number(p.valor || 0), 0)
 
@@ -54,6 +73,9 @@ function AccordionGroup({ data, pecas, getStatusOverride }) {
     } catch { return data }
   })()
 
+  const pago = debito?.status_pagamento === 'PAGO'
+  const reciboUrl = debito ? `${SITE_URL}/recibo/${debito.id}` : null
+
   return (
     <div className="portal-accordion-group">
       <div className="portal-accordion-header" onClick={() => setOpen(o => !o)}>
@@ -64,6 +86,32 @@ function AccordionGroup({ data, pecas, getStatusOverride }) {
           </div>
         </div>
         <div className="portal-accordion-right">
+          {debito && !pago && (
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              padding: '4px 12px',
+              borderRadius: 20,
+              color: 'var(--p-yellow)',
+              background: 'rgba(251,188,4,0.12)',
+              marginRight: 12,
+            }}>
+              Aguardando Pagamento
+            </span>
+          )}
+          {debito && pago && (
+            <span style={{
+              fontSize: 11,
+              fontWeight: 700,
+              padding: '4px 12px',
+              borderRadius: 20,
+              color: 'var(--p-green)',
+              background: 'rgba(129,201,149,0.12)',
+              marginRight: 12,
+            }}>
+              PAGO
+            </span>
+          )}
           <span className={`portal-accordion-arrow${open ? ' open' : ''}`}>▼</span>
         </div>
       </div>
@@ -72,6 +120,57 @@ function AccordionGroup({ data, pecas, getStatusOverride }) {
           {pecas.map(p => (
             <PecaCard key={p.id} peca={p} getStatusOverride={getStatusOverride} />
           ))}
+
+          {/* Seção de pagamento */}
+          {debito && (
+            <div style={{
+              background: pago ? 'rgba(129,201,149,0.08)' : 'rgba(251,188,4,0.08)',
+              border: `1px solid ${pago ? 'rgba(129,201,149,0.3)' : 'rgba(251,188,4,0.3)'}`,
+              borderRadius: 10,
+              padding: '14px 16px',
+              marginTop: 12,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--p-muted)' }}>
+                  TOTAL
+                </span>
+                <span style={{ fontSize: 20, fontWeight: 900, color: pago ? 'var(--p-green)' : 'var(--p-yellow)' }}>
+                  {fmtValor(debito.total)}
+                </span>
+              </div>
+
+              {debito.observacao && (
+                <div style={{ fontSize: 12, color: 'var(--p-muted)', fontStyle: 'italic', marginBottom: 12 }}>
+                  {debito.observacao}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {!pago && debito.link_mp && (
+                  <a
+                    href={debito.link_mp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="portal-btn portal-btn-green"
+                    style={{ textDecoration: 'none', fontSize: 13, padding: '8px 16px', flex: 1 }}
+                  >
+                    💳 Pagar
+                  </a>
+                )}
+                {reciboUrl && (
+                  <a
+                    href={reciboUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="portal-btn portal-btn-blue"
+                    style={{ textDecoration: 'none', fontSize: 13, padding: '8px 16px', flex: 1 }}
+                  >
+                    🧾 Recibo
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -81,7 +180,7 @@ function AccordionGroup({ data, pecas, getStatusOverride }) {
 // getStatusOverride: função (peca) => string | null
 // Se retornar string, substitui o status_peca para exibição.
 // Se null, usa o status real da peça.
-export default function AccordionPecas({ pecas, getStatusOverride }) {
+export default function AccordionPecas({ pecas, getStatusOverride, debitos = [] }) {
   if (!pecas.length) {
     return <div className="portal-empty">Nenhuma peça encontrada.</div>
   }
@@ -96,6 +195,11 @@ export default function AccordionPecas({ pecas, getStatusOverride }) {
 
   const datas = Object.keys(grupos).sort((a, b) => b.localeCompare(a))
 
+  // Encontrar débito correspondente para cada data
+  function encontrarDebito(data) {
+    return debitos.find(d => d.data?.slice(0, 10) === data)
+  }
+
   return (
     <div>
       {datas.map(d => (
@@ -104,6 +208,7 @@ export default function AccordionPecas({ pecas, getStatusOverride }) {
           data={d}
           pecas={grupos[d]}
           getStatusOverride={getStatusOverride}
+          debito={encontrarDebito(d)}
         />
       ))}
     </div>

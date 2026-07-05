@@ -145,24 +145,16 @@ export default function MinhaSacolinha() {
         >
           Enviadas ({pecasEnviadas.length})
         </button>
-        <button
-          className={`portal-tab${aba === 'debitos' ? ' active' : ''}`}
-          onClick={() => setAba('debitos')}
-          style={debitos.length > 0 ? { color:'var(--p-red)', fontWeight:700 } : {}}
-        >
-          Débitos {debitos.length > 0 ? `(${debitos.length})` : ''}
-        </button>
       </div>
 
       {/* Conteúdo das abas */}
-      {aba !== 'debitos' && (
-        <AccordionPecas
-          pecas={aba === 'sacola' ? pecasSacola : pecasEnviadas}
-          getStatusOverride={aba === 'sacola' ? getStatusOverride : null}
-        />
-      )}
+      <AccordionPecas
+        pecas={aba === 'sacola' ? pecasSacola : pecasEnviadas}
+        getStatusOverride={aba === 'sacola' ? getStatusOverride : null}
+        debitos={debitos}
+      />
 
-      {aba === 'debitos' && (
+      {false && aba === 'debitos' && (
         <div>
           {debitos.length === 0 ? (
             <div className="portal-empty" style={{ color:'var(--p-green)' }}>
