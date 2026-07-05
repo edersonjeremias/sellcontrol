@@ -7,39 +7,33 @@ export const ASSUNTOS_DISPONIVEIS = [
   { value: 'Financeiro', label: 'Financeiro' },
 ]
 
-// Busca configuração de assuntos do tenant
-export async function getAssuntosConfig(tenantId) {
+// Busca assuntos permitidos de um usuário
+export async function getUserAssuntos(userId) {
   const { data, error } = await supabase
-    .from('configuracoes')
-    .select('assuntos_responsaveis')
-    .eq('tenant_id', tenantId)
+    .from('users_perfil')
+    .select('assuntos_permitidos')
+    .eq('id', userId)
     .single()
 
-  if (error) return {}
-  return data?.assuntos_responsaveis || {}
+  if (error) return []
+  return data?.assuntos_permitidos || []
 }
 
-// Salva configuração de assuntos
-export async function saveAssuntosConfig(tenantId, config) {
+// Salva assuntos permitidos de um usuário
+export async function saveUserAssuntos(userId, assuntos) {
   const { error } = await supabase
-    .from('configuracoes')
-    .update({ assuntos_responsaveis: config })
-    .eq('tenant_id', tenantId)
+    .from('users_perfil')
+    .update({ assuntos_permitidos: assuntos })
+    .eq('id', userId)
 
   if (error) throw error
 }
 
-// Busca responsável por assunto
-export async function getResponsavelPorAssunto(tenantId, assunto) {
-  const config = await getAssuntosConfig(tenantId)
-  return config[assunto] || null
-}
-
-// Lista usuários disponíveis para atribuição
-export async function getUsuariosDisponiveis(tenantId) {
+// Lista todos os usuários com seus assuntos
+export async function getUsuariosComAssuntos(tenantId) {
   const { data, error } = await supabase
     .from('users_perfil')
-    .select('id, nome, username, email')
+    .select('id, nome, username, email, role, assuntos_permitidos')
     .eq('tenant_id', tenantId)
     .order('nome')
 

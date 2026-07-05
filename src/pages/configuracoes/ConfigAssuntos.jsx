@@ -3,16 +3,16 @@ import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import {
   ASSUNTOS_DISPONIVEIS,
-  getAssuntosConfig,
-  saveAssuntosConfig,
-  getUsuariosDisponiveis,
+  getUsuariosComAssuntos,
+  saveUserAssuntos,
 } from '../../services/assuntosService'
 
 export default function ConfigAssuntos() {
   const { profile } = useAuth()
   const { showToast } = useApp()
-  const [config, setConfig] = useState({})
   const [usuarios, setUsuarios] = useState([])
+  const [userSelecionado, setUserSelecionado] = useState(null)
+  const [assuntosSelecionados, setAssuntosSelecionados] = useState([])
   const [salvando, setSalvando] = useState(false)
   const [loading, setLoading] = useState(true)
 
@@ -20,14 +20,10 @@ export default function ConfigAssuntos() {
     if (!profile?.tenant_id) return
     async function carregar() {
       try {
-        const [cfg, usrs] = await Promise.all([
-          getAssuntosConfig(profile.tenant_id),
-          getUsuariosDisponiveis(profile.tenant_id),
-        ])
-        setConfig(cfg)
+        const usrs = await getUsuariosComAssuntos(profile.tenant_id)
         setUsuarios(usrs)
       } catch (err) {
-        showToast('Erro ao carregar configurações', 'error')
+        showToast('Erro ao carregar usuários', 'error')
       } finally {
         setLoading(false)
       }
@@ -36,85 +32,159 @@ export default function ConfigAssuntos() {
   }, [profile?.tenant_id, showToast])
 
   async function salvar() {
+    if (!userSelecionado) return
     setSalvando(true)
     try {
-      await saveAssuntosConfig(profile.tenant_id, config)
-      showToast('Configurações salvas com sucesso!', 'success')
+      await saveUserAssuntos(userSelecionado.id, assuntosSelecionados)
+
+      // Atualiza lista local
+      setUsuarios(prev => prev.map(u =>
+        u.id === userSelecionado.id
+          ? { ...u, assuntos_permitidos: assuntosSelecionados }
+          : u
+      ))
+
+      showToast('Assuntos salvos com sucesso!', 'success')
     } catch (err) {
-      showToast('Erro ao salvar configurações', 'error')
+      showToast('Erro ao salvar assuntos', 'error')
     } finally {
       setSalvando(false)
     }
   }
 
-  function handleChange(assunto, userId) {
-    setConfig(prev => ({
-      ...prev,
-      [assunto]: userId || null,
-    }))
+  function selecionarUsuario(user) {
+    setUserSelecionado(user)
+    setAssuntosSelecionados(user.assuntos_permitidos || [])
+  }
+
+  function toggleAssunto(assunto) {
+    setAssuntosSelecionados(prev =>
+      prev.includes(assunto)
+        ? prev.filter(a => a !== assunto)
+        : [...prev, assunto]
+    )
   }
 
   if (loading) return <div>Carregando...</div>
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto' }}>
-      <h2 style={{ fontSize: 20, marginBottom: 8 }}>Roteamento de Assuntos</h2>
+    <div style={{ maxWidth: 900 }}>
+      <h2 style={{ fontSize: 20, marginBottom: 8 }}>Assuntos por Usuário</h2>
       <p style={{ color: 'var(--muted)', marginBottom: 24, fontSize: 14 }}>
-        Configure para qual usuário cada tipo de assunto será direcionado automaticamente.
+        Defina quais assuntos cada usuário pode visualizar nas conversas.
       </p>
 
-      <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border-light)', borderRadius: 10, padding: 24 }}>
-        {ASSUNTOS_DISPONIVEIS.map(assunto => (
-          <div key={assunto.value} style={{ marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid var(--border-light)' }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--text-body)' }}>
-              {assunto.label}
-            </label>
-            <select
-              value={config[assunto.value] || ''}
-              onChange={e => handleChange(assunto.value, e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                fontSize: 14,
-                borderRadius: 8,
-                border: '1px solid var(--input-border)',
-                background: 'var(--input-bg)',
-                color: 'var(--input-text)',
-                outline: 'none',
-              }}
-            >
-              <option value="">Nenhum responsável definido</option>
-              {usuarios.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.nome} (@{user.username})
-                </option>
-              ))}
-            </select>
-            <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
-              Conversas com assunto "{assunto.label}" serão atribuídas a este usuário
-            </p>
-          </div>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+        {usuarios.map(user => {
+          const isExpanded = userSelecionado?.id === user.id
+          const assuntosAtivos = user.assuntos_permitidos || []
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-          <button
-            onClick={salvar}
-            disabled={salvando}
-            className="btn-acao btn-blue"
-            style={{ minWidth: 120 }}
-          >
-            {salvando ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
-      </div>
+          return (
+            <div key={user.id} style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 10,
+              overflow: 'hidden'
+            }}>
+              {/* Header */}
+              <div
+                onClick={() => selecionarUsuario(user)}
+                style={{
+                  padding: '16px 20px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: isExpanded ? 'rgba(var(--blue-rgb), 0.05)' : 'transparent'
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-body)' }}>
+                    {user.nome}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
+                    @{user.username} · {user.email}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{
+                    fontSize: 12,
+                    color: 'var(--blue)',
+                    background: 'rgba(var(--blue-rgb), 0.1)',
+                    padding: '4px 10px',
+                    borderRadius: 12,
+                    fontWeight: 600
+                  }}>
+                    {assuntosAtivos.length} {assuntosAtivos.length === 1 ? 'assunto' : 'assuntos'}
+                  </span>
+                  <button
+                    className="btn-acao"
+                    style={{
+                      padding: '6px 16px',
+                      fontSize: 13,
+                      background: isExpanded ? 'var(--blue)' : 'transparent',
+                      color: isExpanded ? '#fff' : 'var(--blue)',
+                      border: `1px solid ${isExpanded ? 'var(--blue)' : 'var(--border-light)'}`,
+                    }}
+                  >
+                    {isExpanded ? 'Configurando' : 'Configurar'}
+                  </button>
+                </div>
+              </div>
 
-      <div style={{ marginTop: 24, padding: 16, background: 'rgba(74, 222, 128, 0.1)', border: '1px solid rgba(74, 222, 128, 0.3)', borderRadius: 10 }}>
-        <strong style={{ color: 'var(--green)', fontSize: 14 }}>💡 Como funciona:</strong>
-        <ul style={{ marginTop: 8, paddingLeft: 20, color: 'var(--text-body)', fontSize: 13, lineHeight: 1.6 }}>
-          <li>Quando o cliente cria uma nova mensagem no portal, ele escolhe um assunto</li>
-          <li>A conversa é automaticamente direcionada para o usuário configurado</li>
-          <li>Se nenhum responsável estiver definido, a conversa fica sem atribuição</li>
-        </ul>
+              {/* Checkboxes de assuntos */}
+              {isExpanded && (
+                <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border-light)' }}>
+                  <p style={{ fontSize: 13, color: 'var(--muted)', margin: '16px 0 12px' }}>
+                    Marque os assuntos que <strong>{user.nome}</strong> poderá acessar:
+                  </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                    {ASSUNTOS_DISPONIVEIS.map(assunto => (
+                      <label key={assunto.value} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '10px 12px',
+                        background: assuntosSelecionados.includes(assunto.value) ? 'rgba(var(--blue-rgb), 0.08)' : 'transparent',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: 8,
+                        cursor: 'pointer'
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={assuntosSelecionados.includes(assunto.value)}
+                          onChange={() => toggleAssunto(assunto.value)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: 14, color: 'var(--text-body)' }}>
+                          {assunto.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
+                    <button
+                      onClick={salvar}
+                      disabled={salvando}
+                      className="btn-acao btn-blue"
+                    >
+                      {salvando ? 'Salvando...' : 'Salvar Assuntos'}
+                    </button>
+                    <button
+                      onClick={() => setUserSelecionado(null)}
+                      className="btn-acao"
+                      style={{ background: 'transparent', color: 'var(--muted)' }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
