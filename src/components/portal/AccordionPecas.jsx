@@ -124,8 +124,8 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
           {/* Seção de pagamento */}
           {debito && (
             <div style={{
-              background: pago ? 'rgba(129,201,149,0.08)' : 'rgba(251,188,4,0.08)',
-              border: `1px solid ${pago ? 'rgba(129,201,149,0.3)' : 'rgba(251,188,4,0.3)'}`,
+              background: 'var(--p-card)',
+              border: '1px solid var(--p-border)',
               borderRadius: 10,
               padding: '14px 16px',
               marginTop: 12,
@@ -138,12 +138,6 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
                   {fmtValor(debito.total)}
                 </span>
               </div>
-
-              {debito.observacao && (
-                <div style={{ fontSize: 12, color: 'var(--p-muted)', fontStyle: 'italic', marginBottom: 12 }}>
-                  {debito.observacao}
-                </div>
-              )}
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {!pago && debito.link_mp && (
