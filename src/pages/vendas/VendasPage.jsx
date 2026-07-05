@@ -130,7 +130,6 @@ export default function VendasPage() {
   const [tabelaMsg,   setTabelaMsg]   = useState('Iniciando sistema...')
   const [pronto,      setPronto]      = useState(false)
   const [scrollTop,   setScrollTop]   = useState(false)
-  const [flash,       setFlash]       = useState(false)
   const novoProdutoFocus = useRef(false)
   const busyRef = useRef(false)
   const lastRealtimeKeyRef = useRef('')
@@ -558,8 +557,6 @@ export default function VendasPage() {
               }
               return ordenarLinhas(calcSacolas(next))
             })
-            setFlash(true)
-            setTimeout(() => setFlash(false), 400)
           }
         }
       )
@@ -1175,7 +1172,7 @@ export default function VendasPage() {
 
       {/* TABELA — MODO LIVE */}
       {modo === 'live' && (
-        <div id="tabela-container" style={flash ? { backgroundColor: 'rgba(255, 249, 196, 0.45)', transition: 'background-color 0.25s ease' } : undefined}>
+        <div id="tabela-container">
           <div className="table-responsive" ref={scrollRef}
             onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
             {!pronto || linhas.filter(l => !l.deleted && l.status !== 'Vendido').length === 0 ? (
