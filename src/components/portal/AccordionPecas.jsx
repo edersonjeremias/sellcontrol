@@ -48,9 +48,6 @@ function PecaCard({ peca, getStatusOverride }) {
         <div className="portal-peca-valor">
           R$ {Number(peca.valor || 0).toFixed(2).replace('.', ',')}
         </div>
-        <span className={`portal-peca-status ${statusCss(statusExibir)}`}>
-          {statusExibir}
-        </span>
       </div>
       {peca.rastreio && (
         <div style={{ fontSize:11, color:'var(--p-blue)', marginTop:2 }}>
