@@ -475,14 +475,14 @@ export default function ContatosPage() {
     setCarregando(true)
     try {
       const [conv, cols] = await Promise.all([
-        getConversas(tenantId),
+        getConversas(tenantId, profile?.id), // Passa userId para filtrar por assuntos
         getColunas(tenantId),
       ])
       setConversas(conv)
       setColunas(cols || COLUNAS_DEFAULT)
     } catch { showToast('Erro ao carregar.', 'error') }
     setCarregando(false)
-  }, [tenantId, showToast])
+  }, [tenantId, profile?.id, showToast])
 
   useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
 

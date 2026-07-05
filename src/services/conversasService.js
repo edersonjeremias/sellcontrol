@@ -30,7 +30,36 @@ export async function salvarColunas(tenantId, colunas) {
 
 // ── Admin: Conversas ────────────────────────────────────────────
 
-export async function getConversas(tenantId) {
+export async function getConversas(tenantId, userId = null) {
+  // Se userId fornecido, busca apenas conversas dos assuntos permitidos
+  if (userId) {
+    // Busca assuntos permitidos do usuário
+    const { data: userProfile } = await supabase
+      .from('users_perfil')
+      .select('assuntos_permitidos')
+      .eq('id', userId)
+      .single()
+
+    const assuntosPermitidos = userProfile?.assuntos_permitidos || []
+
+    // Se não tem nenhum assunto configurado, retorna vazio
+    if (assuntosPermitidos.length === 0) {
+      return []
+    }
+
+    // Busca conversas apenas dos assuntos permitidos
+    const { data, error } = await supabase
+      .from('conversas')
+      .select('id, cliente_instagram, assunto, coluna, nao_lidas, encerrado, created_at, updated_at')
+      .eq('tenant_id', tid(tenantId))
+      .in('assunto', assuntosPermitidos)
+      .order('updated_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  }
+
+  // Se não tem userId (admin/master), retorna todas
   const { data, error } = await supabase
     .from('conversas')
     .select('id, cliente_instagram, assunto, coluna, nao_lidas, encerrado, created_at, updated_at')
