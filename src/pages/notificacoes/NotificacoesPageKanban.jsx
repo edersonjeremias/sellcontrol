@@ -7,6 +7,7 @@ import {
   getNotificacoesConversas, getMensagensNotificacao, responderNotificacao,
   moverNotificacao, marcarNotificacaoLida, encerrarNotificacao, criarNotificacaoManual,
 } from '../../services/notificacoesConversasService'
+import { getUsuarios } from '../../services/configService'
 
 function fmtTempo(iso) {
   if (!iso) return ''
@@ -267,12 +268,31 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId }) {
 }
 
 // ── Modal nova conversa ────────────────────────────────────────
-function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
+function ModalNovaConversa({ tenantId, profile, onCriada, onClose, showToast }) {
   const [remetente, setRemetente] = useState('')
   const [destinatario, setDestinatario] = useState('TODOS')
   const [assunto, setAssunto] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [usuarios, setUsuarios] = useState([])
+
+  // Busca usuários e preenche remetente automaticamente
+  useEffect(() => {
+    if (profile?.nome) {
+      setRemetente(profile.nome)
+    }
+
+    async function carregarUsuarios() {
+      try {
+        const users = await getUsuarios(tenantId)
+        setUsuarios(users.filter(u => u.ativo))
+      } catch (err) {
+        console.error('Erro ao buscar usuários:', err)
+      }
+    }
+
+    if (tenantId) carregarUsuarios()
+  }, [tenantId, profile])
 
   async function criar() {
     if (!remetente.trim() || !assunto.trim() || !mensagem.trim()) {
@@ -303,21 +323,26 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
             </label>
             <input
               value={remetente}
-              onChange={e => setRemetente(e.target.value)}
-              placeholder="Ex: João, Financeiro, Produção..."
-              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+              readOnly
+              style={{ width:'100%', background:'var(--bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--muted)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box', cursor:'not-allowed' }}
             />
           </div>
           <div>
             <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
               Destinatário *
             </label>
-            <input
+            <select
               value={destinatario}
               onChange={e => setDestinatario(e.target.value)}
-              placeholder="Ex: TODOS, Maria, Comercial..."
-              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box' }}
-            />
+              style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, outline:'none', boxSizing:'border-box', cursor:'pointer' }}
+            >
+              <option value="TODOS">TODOS</option>
+              {usuarios.map(user => (
+                <option key={user.id} value={user.nome}>
+                  {user.nome} {user.email ? `(${user.email})` : ''}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label style={{ display:'block', fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', marginBottom:6 }}>
@@ -609,7 +634,7 @@ export default function NotificacoesPageKanban() {
 
       {/* Modals */}
       {selNotif && <ModalNotificacao notif={selNotif} onClose={() => setSelNotif(null)} onAtualizar={carregar} colunas={colunas} tenantId={tenantId} />}
-      {modalNova && <ModalNovaConversa tenantId={tenantId} onCriada={() => { setModalNova(false); carregar() }} onClose={() => setModalNova(false)} showToast={showToast} />}
+      {modalNova && <ModalNovaConversa tenantId={tenantId} profile={profile} onCriada={() => { setModalNova(false); carregar() }} onClose={() => setModalNova(false)} showToast={showToast} />}
       {modalEncerrados && <ModalEncerrados notificacoes={notificacoes} onAbrir={setSelNotif} onClose={() => setModalEncerrados(false)} />}
       {modalColunas && <ModalColunas colunas={colunas} onSalvar={handleSalvarColunas} onClose={() => setModalColunas(false)} />}
     </AppShell>
