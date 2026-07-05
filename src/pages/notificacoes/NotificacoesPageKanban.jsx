@@ -105,7 +105,7 @@ function KanbanCard({ notif, onAbrir, onMover, colunas }) {
 }
 
 // ── Modal de notificação ───────────────────────────────────────
-function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId }) {
+function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, profile }) {
   const { showToast } = useApp()
   const [mensagens, setMensagens] = useState([])
   const [resposta, setResposta] = useState('')
@@ -126,6 +126,13 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId }) {
       })
     marcarNotificacaoLida(notif.id)
   }, [notif.id, showToast])
+
+  // Preenche remetente automaticamente com nome do usuário logado
+  useEffect(() => {
+    if (profile?.nome) {
+      setRemetente(profile.nome)
+    }
+  }, [profile])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior:'smooth' })
@@ -236,9 +243,9 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId }) {
               <input
                 type="text"
                 value={remetente}
-                onChange={e => setRemetente(e.target.value)}
+                readOnly
                 placeholder="Seu nome..."
-                style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'6px 10px', fontSize:13, outline:'none', boxSizing:'border-box' }}
+                style={{ width:'100%', background:'var(--bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--muted)', padding:'6px 10px', fontSize:13, outline:'none', boxSizing:'border-box', cursor:'not-allowed' }}
               />
             </div>
             <div style={{ padding:'0 16px 12px', borderTop:'1px solid var(--border-light)', paddingTop:12, display:'flex', gap:8 }}>
@@ -339,7 +346,7 @@ function ModalNovaConversa({ tenantId, profile, onCriada, onClose, showToast }) 
               <option value="TODOS">TODOS</option>
               {usuarios.map(user => (
                 <option key={user.id} value={user.nome}>
-                  {user.nome} {user.email ? `(${user.email})` : ''}
+                  {user.nome}
                 </option>
               ))}
             </select>
@@ -633,7 +640,7 @@ export default function NotificacoesPageKanban() {
       </div>
 
       {/* Modals */}
-      {selNotif && <ModalNotificacao notif={selNotif} onClose={() => setSelNotif(null)} onAtualizar={carregar} colunas={colunas} tenantId={tenantId} />}
+      {selNotif && <ModalNotificacao notif={selNotif} onClose={() => setSelNotif(null)} onAtualizar={carregar} colunas={colunas} tenantId={tenantId} profile={profile} />}
       {modalNova && <ModalNovaConversa tenantId={tenantId} profile={profile} onCriada={() => { setModalNova(false); carregar() }} onClose={() => setModalNova(false)} showToast={showToast} />}
       {modalEncerrados && <ModalEncerrados notificacoes={notificacoes} onAbrir={setSelNotif} onClose={() => setModalEncerrados(false)} />}
       {modalColunas && <ModalColunas colunas={colunas} onSalvar={handleSalvarColunas} onClose={() => setModalColunas(false)} />}
