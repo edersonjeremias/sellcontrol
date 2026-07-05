@@ -169,7 +169,7 @@ export default function ContasPagarPage() {
       setCategorias(merged)
     }).catch(() => setCategorias(CATS_DEFAULT))
     carregar()
-  }, [tenantId]) // eslint-disable-line
+  }, [tenantId, carregar])
 
   // ── Filtrar ────────────────────────────────────────────────
   const contasFiltradas = contas.filter(c => {

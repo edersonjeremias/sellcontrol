@@ -524,7 +524,7 @@ export default function NotificacoesPageKanban() {
     setCarregando(false)
   }, [tenantId, showToast])
 
-  useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
+  useEffect(() => { carregar() }, [carregar])
 
   useEffect(() => {
     if (!tenantId) return

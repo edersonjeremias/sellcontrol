@@ -123,7 +123,7 @@ export default function CreditosPage() {
     if (!tenantId) return
     getClientesRelatorio(tenantId).then(setClientes).catch(() => {})
     carregar()
-  }, [tenantId]) // eslint-disable-line
+  }, [tenantId, carregar])
 
   const ch = (campo, val) => setForm(f => ({ ...f, [campo]: val }))
 

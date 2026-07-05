@@ -484,7 +484,7 @@ export default function ContatosPage() {
     setCarregando(false)
   }, [tenantId, profile?.id, showToast])
 
-  useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
+  useEffect(() => { carregar() }, [carregar])
 
   // Polling automático a cada 30s para detectar novas mensagens
   useEffect(() => {

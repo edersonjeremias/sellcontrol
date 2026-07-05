@@ -52,7 +52,7 @@ export default function RelatorioPage() {
     setCarregando(false)
   }, [tenantId, dataIni, dataFim, showToast])
 
-  useEffect(() => { carregar() }, [tenantId]) // eslint-disable-line
+  useEffect(() => { carregar() }, [carregar])
 
   // Filtro de busca aplicado CLIENT-SIDE em tempo real (sem chamada ao servidor)
   const vendas = useMemo(() => {
