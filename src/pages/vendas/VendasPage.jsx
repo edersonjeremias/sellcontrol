@@ -414,6 +414,42 @@ export default function VendasPage() {
     setPronto(true)
   }, [busy])
 
+  // Cria nova linha ACIMA da linha atual (quando Enter em CLIENTE)
+  const novoAcima = useCallback((idx) => {
+    if (busy) return
+    setLinhas(prev => {
+      const novasLinhas = [...prev]
+      // Insere nova linha NA POSIÇÃO idx (empurra a linha atual para baixo)
+      novasLinhas.splice(idx, 0, novaLinha())
+      return novasLinhas
+    })
+    setPronto(true)
+    triggerAutoSave()
+
+    // Foca no campo PRODUTO da nova linha criada (posição idx)
+    setTimeout(() => {
+      const rows = document.querySelectorAll('#tabela tbody tr')
+      let visibleIdx = 0
+      let targetRow = null
+
+      // Encontra a linha visível correspondente ao índice idx
+      for (let i = 0; i < rows.length; i++) {
+        if (visibleIdx === idx) {
+          targetRow = rows[i]
+          break
+        }
+        visibleIdx++
+      }
+
+      if (targetRow) {
+        // Calcula qual coluna é PRODUTO considerando colunas opcionais
+        let colIdx = 2 // Padrão: SACOLA(1) + PRODUTO(2)
+        const input = targetRow.querySelector(`td:nth-child(${colIdx}) .cell-input`)
+        input?.focus()
+      }
+    }, 80)
+  }, [busy, triggerAutoSave])
+
   // Adiciona nova linha ao FINAL sem scroll — chamado quando usuário dá Enter na última linha
   const novoAbaixo = useCallback(() => {
     const nl = novaLinha()
@@ -1131,7 +1167,7 @@ export default function VendasPage() {
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
                         onIsBlocked={handleIsBlocked}
-                        onNovoFromRow={novo}
+                        onNovoFromRow={() => novoAcima(idx)}
                         onAbrirModal={setModalEdicaoIdx}
                         onAbrirFila={setModalFilaIdx}
                         onEnviar={handleEnviar}
