@@ -33,6 +33,7 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   const [texto, setTexto]     = useState('')
   const [enviando, setEnviando] = useState(false)
   const endRef = useRef(null)
+  const containerRef = useRef(null)
 
   useEffect(() => {
     portalGetMensagens(conversa.id).then(setMsgs).catch(() => {})
@@ -45,6 +46,17 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior:'smooth' })
   }, [msgs])
+
+  // Previne scroll da página quando teclado abre
+  useEffect(() => {
+    const preventScroll = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('touchmove', preventScroll, { passive: false })
+    return () => window.removeEventListener('touchmove', preventScroll)
+  }, [])
 
   async function enviar() {
     if (!texto.trim() || enviando) return
@@ -61,7 +73,7 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   const cor = STATUS_COR[conversa.coluna] || '#8ab4f8'
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 200px)', minHeight:400, maxHeight:700 }}>
+    <div ref={containerRef} style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 220px)', minHeight:350, maxHeight:600, position:'relative', touchAction:'pan-y' }}>
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid var(--p-border)', marginBottom:12, flexShrink:0 }}>
         <button onClick={onVoltar} style={{ background:'none', border:'none', color:'var(--p-blue)', cursor:'pointer', fontSize:18, lineHeight:1, padding:0 }}>←</button>
