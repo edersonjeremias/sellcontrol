@@ -247,8 +247,8 @@ export default function MeuContato({ onAtualizar }) {
             </button>
           </div>
 
-          {/* Lista de conversas - com scroll */}
-          <div className="portal-content" style={{ maxHeight:'calc(100vh - 220px)', overflowY:'auto' }}>
+          {/* Lista de conversas - SEM espaço extra */}
+          <div style={{ padding:'14px 16px 0', maxHeight:'calc(100vh - 220px)', overflowY:'auto' }}>
             {conversas.length === 0 ? (
               <div className="portal-empty" style={{ color:'var(--p-muted)' }}>
                 Nenhuma conversa ainda. Clique em "Nova Mensagem" para entrar em contato.

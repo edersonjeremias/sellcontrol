@@ -101,7 +101,7 @@ export default function MinhaSacolinha() {
   const totalDebitos = debitos.reduce((s, d) => s + Number(d.total || 0), 0)
 
   return (
-    <div className="portal-content">
+    <div style={{ padding: '14px 16px 0' }}>
       <AlertaDebito cobrancas={cobrancas} />
 
       {producao && (
@@ -147,8 +147,8 @@ export default function MinhaSacolinha() {
         </button>
       </div>
 
-      {/* Conteúdo das abas - com limite de altura */}
-      <div style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto', overflowX: 'hidden' }}>
+      {/* Conteúdo das abas - sem espaço extra */}
+      <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', overflowX: 'hidden', paddingBottom: 0 }}>
         <AccordionPecas
           pecas={aba === 'sacola' ? pecasSacola : pecasEnviadas}
           getStatusOverride={aba === 'sacola' ? getStatusOverride : null}
