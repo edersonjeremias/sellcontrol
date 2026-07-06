@@ -48,7 +48,10 @@ BEGIN
     COALESCE(p.status_entrega, '')                          AS status_peca,
     v.created_at                                            AS data_insercao,
     NULL::TEXT                                              AS observacao,
-    p.data_enviado                                          AS data_envio,
+    CASE
+      WHEN UPPER(TRIM(COALESCE(v.status, ''))) = 'ENVIADO' THEN v.data_live
+      ELSE p.data_enviado
+    END                                                     AS data_envio,
     COALESCE(p.rastreio, '')                                AS rastreio
   FROM vendas v
   LEFT JOIN producao_pedidos p
