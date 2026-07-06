@@ -73,9 +73,9 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   const cor = STATUS_COR[conversa.coluna] || '#8ab4f8'
 
   return (
-    <div ref={containerRef} style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 220px)', minHeight:350, maxHeight:600, position:'relative', touchAction:'pan-y' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 220px)', position:'relative' }}>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 0', borderBottom:'1px solid var(--p-border)', marginBottom:12, flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderBottom:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
         <button onClick={onVoltar} style={{ background:'none', border:'none', color:'var(--p-blue)', cursor:'pointer', fontSize:18, lineHeight:1, padding:0 }}>←</button>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:14, fontWeight:700, color:'var(--p-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -87,8 +87,8 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
         </span>
       </div>
 
-      {/* Mensagens com scroll */}
-      <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:10, paddingBottom:8, minHeight:0 }}>
+      {/* Mensagens com scroll - ÁREA ROLÁVEL */}
+      <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex', flexDirection:'column', gap:10, padding:'12px 16px', minHeight:0, WebkitOverflowScrolling:'touch' }}>
         {msgs.map(m => {
           const isCliente = m.remetente === 'cliente'
           return (
@@ -114,13 +114,13 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
         <div ref={endRef} />
       </div>
 
-      {/* Input resposta - sempre visível */}
+      {/* Input resposta - FIXO NO FINAL */}
       {conversa.encerrado ? (
-        <div style={{ padding:'12px 0', textAlign:'center', fontSize:12, color:'var(--p-muted)', borderTop:'1px solid var(--p-border)', flexShrink:0 }}>
+        <div style={{ padding:'12px 16px', textAlign:'center', fontSize:12, color:'var(--p-muted)', borderTop:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
           Esta conversa foi encerrada.
         </div>
       ) : (
-        <div style={{ display:'flex', gap:8, paddingTop:12, borderTop:'1px solid var(--p-border)', flexShrink:0 }}>
+        <div style={{ display:'flex', gap:8, padding:'12px 16px', borderTop:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
           <textarea
             value={texto}
             onChange={e => setTexto(e.target.value)}

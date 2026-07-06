@@ -69,10 +69,12 @@ export default function PortalDashboard() {
         ))}
       </nav>
 
-      {/* Conteúdo */}
-      {aba === 'sacola'   && <MinhaSacolinha />}
-      {aba === 'contato'  && <MeuContato onAtualizar={() => setTotalNovas(0)} />}
-      {aba === 'cadastro' && <MeuCadastro />}
+      {/* Conteúdo - com padding para header+nav fixos */}
+      <div style={{ paddingTop: '104px', minHeight: 'calc(100vh - 104px)' }}>
+        {aba === 'sacola'   && <MinhaSacolinha />}
+        {aba === 'contato'  && <MeuContato onAtualizar={() => setTotalNovas(0)} />}
+        {aba === 'cadastro' && <MeuCadastro />}
+      </div>
     </div>
   )
 }
