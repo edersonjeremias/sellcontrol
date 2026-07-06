@@ -147,12 +147,14 @@ export default function MinhaSacolinha() {
         </button>
       </div>
 
-      {/* Conteúdo das abas */}
-      <AccordionPecas
-        pecas={aba === 'sacola' ? pecasSacola : pecasEnviadas}
-        getStatusOverride={aba === 'sacola' ? getStatusOverride : null}
-        debitos={debitos}
-      />
+      {/* Conteúdo das abas - com limite de altura */}
+      <div style={{ maxHeight: 'calc(100vh - 350px)', overflowY: 'auto', overflowX: 'hidden' }}>
+        <AccordionPecas
+          pecas={aba === 'sacola' ? pecasSacola : pecasEnviadas}
+          getStatusOverride={aba === 'sacola' ? getStatusOverride : null}
+          debitos={debitos}
+        />
+      </div>
 
       {false && aba === 'debitos' && (
         <div>

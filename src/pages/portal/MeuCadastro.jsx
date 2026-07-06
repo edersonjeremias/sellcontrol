@@ -81,7 +81,7 @@ export default function MeuCadastro() {
   }
 
   return (
-    <div className="portal-content">
+    <div className="portal-content" style={{ maxHeight:'calc(100vh - 120px)', overflowY:'auto' }}>
       <form onSubmit={salvar}>
 
         <div className="portal-section-title">Informações Pessoais</div>

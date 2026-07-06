@@ -171,6 +171,9 @@
 
 /* ── Abas sacolinha ── */
 .portal-tabs {
+  position: sticky;
+  top: 104px; /* Abaixo de header + nav */
+  z-index: 98;
   display: flex;
   background: var(--p-card);
   border: 1px solid var(--p-border);

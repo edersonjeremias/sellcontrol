@@ -73,9 +73,9 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   const cor = STATUS_COR[conversa.coluna] || '#8ab4f8'
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 220px)', position:'relative' }}>
+    <div style={{ position:'fixed', top:'104px', left:0, right:0, bottom:0, display:'flex', flexDirection:'column', background:'var(--p-bg)' }}>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderBottom:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
+      <div style={{ position:'sticky', top:0, zIndex:99, display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderBottom:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
         <button onClick={onVoltar} style={{ background:'none', border:'none', color:'var(--p-blue)', cursor:'pointer', fontSize:18, lineHeight:1, padding:0 }}>←</button>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontSize:14, fontWeight:700, color:'var(--p-text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
@@ -88,7 +88,7 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
       </div>
 
       {/* Mensagens com scroll - ÁREA ROLÁVEL */}
-      <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex', flexDirection:'column', gap:10, padding:'12px 16px', minHeight:0, WebkitOverflowScrolling:'touch' }}>
+      <div style={{ flex:1, overflowY:'auto', overflowX:'hidden', display:'flex', flexDirection:'column', gap:10, padding:'12px 16px', WebkitOverflowScrolling:'touch' }}>
         {msgs.map(m => {
           const isCliente = m.remetente === 'cliente'
           return (
@@ -114,20 +114,20 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
         <div ref={endRef} />
       </div>
 
-      {/* Input resposta - FIXO NO FINAL */}
+      {/* Input resposta - FIXO NA BASE */}
       {conversa.encerrado ? (
-        <div style={{ padding:'12px 16px', textAlign:'center', fontSize:12, color:'var(--p-muted)', borderTop:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
+        <div style={{ padding:'12px 16px', paddingBottom:'env(safe-area-inset-bottom, 12px)', textAlign:'center', fontSize:12, color:'var(--p-muted)', borderTop:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
           Esta conversa foi encerrada.
         </div>
       ) : (
-        <div style={{ display:'flex', gap:8, padding:'12px 16px', borderTop:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
+        <div style={{ display:'flex', gap:8, padding:'8px 16px', paddingBottom:'max(8px, env(safe-area-inset-bottom))', borderTop:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
           <textarea
             value={texto}
             onChange={e => setTexto(e.target.value)}
             onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
             placeholder="Responder…"
             rows={2}
-            style={{ flex:1, background:'var(--p-input)', border:'1px solid var(--p-border)', borderRadius:10, color:'var(--p-text)', padding:'10px 14px', fontSize:14, resize:'none', outline:'none' }}
+            style={{ flex:1, background:'var(--p-input)', border:'1px solid var(--p-border)', borderRadius:10, color:'var(--p-text)', padding:'10px 14px', fontSize:14, resize:'none', outline:'none', maxHeight:80 }}
           />
           <button onClick={enviar} disabled={enviando || !texto.trim()}
             className="portal-btn portal-btn-blue"
@@ -219,13 +219,15 @@ export default function MeuContato({ onAtualizar }) {
   if (loading) return <div className="portal-loading">Carregando…</div>
 
   return (
-    <div className="portal-content" style={{ minHeight:'calc(100vh - 100px)', display:'flex', flexDirection:'column' }}>
+    <div style={{ position:'relative', minHeight:'calc(100vh - 104px)' }}>
 
       {tela === 'nova' && (
-        <NovaConversa
-          onEnviada={() => { carregar(); setTela('lista') }}
-          onCancelar={() => setTela('lista')}
-        />
+        <div className="portal-content">
+          <NovaConversa
+            onEnviada={() => { carregar(); setTela('lista') }}
+            onCancelar={() => setTela('lista')}
+          />
+        </div>
       )}
 
       {tela === 'thread' && selConv && (
@@ -237,19 +239,22 @@ export default function MeuContato({ onAtualizar }) {
 
       {tela === 'lista' && (
         <>
-          {/* Botão nova mensagem */}
-          <button onClick={() => setTela('nova')} className="portal-btn portal-btn-green"
-            style={{ width:'100%', marginBottom:16, fontSize:14, padding:'12px' }}>
-            ✉ Nova Mensagem / Contato
-          </button>
+          {/* Botão nova mensagem - FIXO */}
+          <div style={{ position:'sticky', top:'104px', zIndex:98, background:'var(--p-bg)', padding:'14px 16px', borderBottom:'1px solid var(--p-border)' }}>
+            <button onClick={() => setTela('nova')} className="portal-btn portal-btn-green"
+              style={{ width:'100%', fontSize:14, padding:'12px' }}>
+              ✉ Nova Mensagem / Contato
+            </button>
+          </div>
 
-          {/* Lista de conversas */}
-          {conversas.length === 0 ? (
-            <div className="portal-empty" style={{ color:'var(--p-muted)' }}>
-              Nenhuma conversa ainda. Clique em "Nova Mensagem" para entrar em contato.
-            </div>
-          ) : (
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {/* Lista de conversas - com scroll */}
+          <div className="portal-content" style={{ maxHeight:'calc(100vh - 220px)', overflowY:'auto' }}>
+            {conversas.length === 0 ? (
+              <div className="portal-empty" style={{ color:'var(--p-muted)' }}>
+                Nenhuma conversa ainda. Clique em "Nova Mensagem" para entrar em contato.
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {conversas.map(c => {
                 const cor = STATUS_COR[c.coluna] || '#8ab4f8'
                 const temNovas = (c.nao_lidas_cliente || 0) > 0
@@ -296,8 +301,9 @@ export default function MeuContato({ onAtualizar }) {
                   </div>
                 )
               })}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>
