@@ -109,3 +109,37 @@ export async function resetUsuarioSenha(userId, novaSenha) {
 
   return await response.json()
 }
+
+// ── Permissões de Vendas ──────────────────────────────────────
+
+export const VENDAS_PERMISSOES_DEFAULT = {
+  pode_alterar_preco: true,
+  pode_alterar_colunas_cadastro: true,
+  pode_editar_modal: true,
+  pode_excluir: true,
+  pode_estornar: true,
+  pode_enviar: true,
+  pode_copiar: true,
+}
+
+// Busca permissões de vendas do usuário
+export async function getVendasPermissoes(userId) {
+  const { data, error } = await supabase
+    .from('users_perfil')
+    .select('vendas_permissoes')
+    .eq('id', userId)
+    .single()
+
+  if (error) throw error
+  return data?.vendas_permissoes || VENDAS_PERMISSOES_DEFAULT
+}
+
+// Salva permissões de vendas do usuário
+export async function saveVendasPermissoes(userId, permissoes) {
+  const { error } = await supabase
+    .from('users_perfil')
+    .update({ vendas_permissoes: permissoes })
+    .eq('id', userId)
+
+  if (error) throw error
+}

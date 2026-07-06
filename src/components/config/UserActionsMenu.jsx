@@ -4,11 +4,13 @@ import {
   toggleUsuarioAtivo,
   resetUsuarioSenha,
 } from '../../services/configService'
+import VendasPermissoesModal from './VendasPermissoesModal'
 
 export default function UserActionsMenu({ user, onUpdate, showToast }) {
   const [showMenu, setShowMenu] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showResetModal, setShowResetModal] = useState(false)
+  const [showVendasModal, setShowVendasModal] = useState(false)
   const [editForm, setEditForm] = useState({ nome: user.nome, email: user.email })
   const [novaSenha, setNovaSenha] = useState('')
   const [loading, setLoading] = useState(false)
@@ -128,6 +130,22 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
               }}
             >
               🔑 Resetar Senha
+            </button>
+            <button
+              onClick={() => { setShowVendasModal(true); setShowMenu(false) }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: '10px 14px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: 13,
+                color: 'var(--text-body)',
+                borderBottom: '1px solid var(--border-light)',
+              }}
+            >
+              🛒 Permissões Vendas
             </button>
             <button
               onClick={() => { handleToggleAtivo(); setShowMenu(false) }}
@@ -287,6 +305,15 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Permissões Vendas */}
+      {showVendasModal && (
+        <VendasPermissoesModal
+          user={user}
+          onClose={() => setShowVendasModal(false)}
+          showToast={showToast}
+        />
       )}
     </>
   )
