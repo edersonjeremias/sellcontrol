@@ -193,7 +193,7 @@ export default function CobrancasPage() {
     getClientesParaCobranca(tenantId).then(setListaClientes)
     getMapaCreditosClientes(tenantId).then(setCreditosMap).catch(() => {})
     carregar()
-  }, [tenantId])
+  }, [tenantId, carregar])
 
   // ── Autocomplete ──────────────────────────────────────────
   function filtrarAuto(texto, setter) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import AppShell from '../components/ui/AppShell'
 import { useAuth } from '../context/AuthContext'
 import { getInformativos, addInformativo, markInformativoRead } from '../services/appService'
@@ -16,12 +16,8 @@ export default function DashboardPage() {
 
   const tenantId = profile?.tenant_id
 
-  useEffect(() => {
+  const loadInformativos = useCallback(async () => {
     if (!tenantId) return
-    loadInformativos()
-  }, [tenantId])
-
-  const loadInformativos = async () => {
     setLoading(true)
     const result = await getInformativos(tenantId)
     if (result.error) {
@@ -31,7 +27,9 @@ export default function DashboardPage() {
       setInformativos(result.data || [])
     }
     setLoading(false)
-  }
+  }, [tenantId, showToast])
+
+  useEffect(() => { loadInformativos() }, [loadInformativos])
 
   const handleSave = async () => {
     if (!message.trim()) {

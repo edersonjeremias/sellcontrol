@@ -189,12 +189,13 @@ export default function PedidosPage() {
   const [printData, setPrintData] = useState(null)
   const [romAddVal, setRomAddVal] = useState('')
 
-  useEffect(() => {
+  const carregarClientes = useCallback(async () => {
     if (!tenantId) return
-    getClientes(tenantId).then(({ data }) => {
-      setClientes((data || []).map(c => (c.instagram || '').replace(/^@/, '').trim()).filter(Boolean))
-    })
+    const { data } = await getClientes(tenantId)
+    setClientes((data || []).map(c => (c.instagram || '').replace(/^@/, '').trim()).filter(Boolean))
   }, [tenantId])
+
+  useEffect(() => { carregarClientes() }, [carregarClientes])
 
   const showMsg = useCallback((text) => {
     setMsg(text)

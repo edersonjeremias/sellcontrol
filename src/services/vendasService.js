@@ -134,14 +134,10 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
   if (opts?.semCliente) {
     rows = rows.filter(row => !row.cliente_nome?.trim())
   }
-  // apenasComCliente: retorna apenas itens COM cliente e não enviados/vendidos
+  // apenasComCliente: retorna apenas itens COM cliente (incluindo os enviados)
+  // As linhas enviadas (aviãozinho) continuam aparecendo até clicar em "Salvar"
   if (opts?.apenasComCliente) {
-    rows = rows.filter(row => {
-      const temCliente = row.cliente_nome?.trim()
-      const naoEnviado = String(row.status || '').trim().toUpperCase() !== 'ENVIADO'
-      const naoVendido = String(row.status || '').trim() !== 'Vendido'
-      return temCliente && naoEnviado && naoVendido
-    })
+    rows = rows.filter(row => row.cliente_nome?.trim())
   }
 
   return rows.map(row => ({
