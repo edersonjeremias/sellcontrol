@@ -17,6 +17,7 @@ export const ALL_PAGES = [
   { slug: 'dashboard-financeiro',        label: 'Dashboard Financeiro',      category: 'Financeiro', icon: 'insights',       order_index: 70 },
   { slug: 'contas-pagar',                label: 'Contas a Pagar',            category: 'Financeiro', icon: 'receipt',        order_index: 75 },
   { slug: 'creditos-clientes',           label: 'Créditos de Clientes',      category: 'Financeiro', icon: 'loyalty',        order_index: 80 },
+  { slug: 'clientes',                    label: 'Cadastro de Cliente',       category: 'Vendas',     icon: 'people',         order_index: 36 },
   { slug: 'contatos',                    label: 'CRM — Contatos',            category: 'Vendas',     icon: 'forum',          order_index: 37 },
 ]
 
