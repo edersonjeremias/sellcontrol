@@ -45,15 +45,16 @@ BEGIN
       NULLIF(TRIM(COALESCE(v.tamanho, '')), '')
     ))                                                      AS descricao_completa,
     v.preco                                                 AS valor,
-    CASE
-      WHEN UPPER(TRIM(COALESCE(v.status, ''))) IN ('ENVIADO', 'ENTREGUE') THEN 'Enviado'
-      ELSE 'Separado'
-    END                                                     AS status_peca,
+    COALESCE(p.status_entrega, '')                          AS status_peca,
     v.created_at                                            AS data_insercao,
     NULL::TEXT                                              AS observacao,
-    NULL::DATE                                              AS data_envio,
-    NULL::TEXT                                              AS rastreio
+    p.data_enviado                                          AS data_envio,
+    COALESCE(p.rastreio, '')                                AS rastreio
   FROM vendas v
+  LEFT JOIN producao_pedidos p
+    ON v.codigo = p.pedido_codigo
+    AND LOWER(TRIM(REPLACE(COALESCE(p.cliente_nome, ''), '@', ''))) = v_slug
+    AND v.data_live = p.data_solicitado
   WHERE LOWER(TRIM(REPLACE(COALESCE(v.cliente_nome, ''), '@', ''))) = v_slug
     AND UPPER(TRIM(COALESCE(v.status, ''))) != 'CANCELADO'
   ORDER BY v.created_at DESC;
