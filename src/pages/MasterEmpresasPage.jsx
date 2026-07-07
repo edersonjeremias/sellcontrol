@@ -480,6 +480,7 @@ function AbaImportarDados({ showToast }) {
   const [preview, setPreview] = useState([])
   const [importing, setImporting] = useState(false)
   const [progresso, setProgresso] = useState(null)
+  const [errosDetalhados, setErrosDetalhados] = useState([])
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -572,11 +573,13 @@ function AbaImportarDados({ showToast }) {
 
     setImporting(true)
     setProgresso({ total: preview.length, atual: 0, inseridos: 0, atualizados: 0, erros: 0, pulados: 0 })
+    setErrosDetalhados([])
 
     let inseridos = 0
     let atualizados = 0
     let erros = 0
     let pulados = 0
+    const listaErros = []
 
     for (let i = 0; i < preview.length; i++) {
       const row = preview[i]
@@ -590,6 +593,12 @@ function AbaImportarDados({ showToast }) {
 
       if (!instagram) {
         pulados++
+        listaErros.push({
+          linha: i + 2, // +2 porque linha 1 é header e array começa em 0
+          instagram: instagram || '(vazio)',
+          erro: 'Instagram vazio ou inválido',
+          tipo: 'pulado'
+        })
         setProgresso(p => ({ ...p, atual: i + 1, pulados }))
         continue
       }
@@ -637,25 +646,43 @@ function AbaImportarDados({ showToast }) {
         await new Promise(resolve => setTimeout(resolve, 50))
 
       } catch (err) {
-        console.error(`Erro linha ${i + 1}:`, err)
+        console.error(`Erro linha ${i + 2}:`, err)
         erros++
+        listaErros.push({
+          linha: i + 2,
+          instagram,
+          erro: err.message || 'Erro desconhecido',
+          detalhes: err.details || err.hint || '',
+          tipo: 'erro'
+        })
         setProgresso(p => ({ ...p, atual: i + 1, erros }))
       }
     }
 
+    setErrosDetalhados(listaErros)
     setImporting(false)
-    showToast(
-      `✅ Importação concluída!\n${inseridos} inseridos, ${atualizados} atualizados, ${pulados} pulados, ${erros} erros`,
-      'success'
-    )
 
-    // Limpar preview após importação
-    setTimeout(() => {
-      setPreview([])
-      setProgresso(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      setSheetsUrl('')
-    }, 3000)
+    if (erros > 0) {
+      showToast(
+        `⚠️ Importação concluída com erros!\n${inseridos} inseridos, ${atualizados} atualizados, ${pulados} pulados, ${erros} erros`,
+        'error'
+      )
+    } else {
+      showToast(
+        `✅ Importação concluída!\n${inseridos} inseridos, ${atualizados} atualizados, ${pulados} pulados`,
+        'success'
+      )
+    }
+
+    // NÃO limpar preview se houver erros (para o usuário revisar)
+    if (erros === 0 && pulados === 0) {
+      setTimeout(() => {
+        setPreview([])
+        setProgresso(null)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        setSheetsUrl('')
+      }, 3000)
+    }
   }
 
   const nomeEmpresa = tenants.find(t => t.tenant_id === tenantId)?.nome_loja || ''
@@ -889,6 +916,91 @@ function AbaImportarDados({ showToast }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Lista de erros detalhados */}
+      {errosDetalhados.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--red)', margin: 0 }}>
+              ⚠️ Erros e Pulados ({errosDetalhados.length})
+            </h3>
+            <button
+              onClick={() => {
+                // Baixar CSV com os erros
+                const csv = [
+                  ['Linha', 'Instagram', 'Erro', 'Detalhes', 'Tipo'].join(','),
+                  ...errosDetalhados.map(e => [
+                    e.linha,
+                    e.instagram,
+                    `"${e.erro.replace(/"/g, '""')}"`,
+                    `"${(e.detalhes || '').replace(/"/g, '""')}"`,
+                    e.tipo
+                  ].join(','))
+                ].join('\n')
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = `erros_importacao_${new Date().toISOString().slice(0,10)}.csv`
+                link.click()
+                showToast('CSV de erros baixado!', 'success')
+              }}
+              className="btn-acao"
+              style={{
+                padding: '6px 12px', fontSize: 12, background: 'var(--blue)', color: '#171717'
+              }}>
+              📥 Baixar CSV dos Erros
+            </button>
+          </div>
+
+          <div style={{
+            maxHeight: 400, overflowY: 'auto',
+            border: '1px solid var(--red)', borderRadius: 8,
+            background: 'rgba(239, 68, 68, 0.05)'
+          }}>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, background: '#1a2230', borderBottom: '1px solid var(--red)' }}>
+                <tr>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Linha</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Instagram</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Erro</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Detalhes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {errosDetalhados.map((erro, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '8px 10px', color: 'var(--text-body)', fontWeight: 700 }}>
+                      {erro.linha}
+                    </td>
+                    <td style={{ padding: '8px 10px', color: 'var(--text-body)' }}>
+                      {erro.instagram}
+                    </td>
+                    <td style={{ padding: '8px 10px', color: erro.tipo === 'erro' ? 'var(--red)' : 'var(--muted)' }}>
+                      {erro.erro}
+                    </td>
+                    <td style={{ padding: '8px 10px', color: 'var(--muted)', fontSize: 11 }}>
+                      {erro.detalhes || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{
+            marginTop: 12, padding: '12px 16px', background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid var(--red)', borderRadius: 8
+          }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-body)', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--red)' }}>💡 Como corrigir:</strong><br/>
+              1. Baixe o CSV dos erros usando o botão acima<br/>
+              2. Corrija os dados no seu arquivo original<br/>
+              3. Tente importar novamente
+            </p>
+          </div>
         </div>
       )}
     </div>
