@@ -559,6 +559,25 @@ function AbaImportarDados({ showToast }) {
     }
   }
 
+  // Converter data brasileira para ISO
+  function converterData(dataStr) {
+    if (!dataStr || dataStr.trim() === '') return new Date().toISOString().split('T')[0]
+
+    const str = dataStr.trim()
+
+    // Se já está no formato ISO (YYYY-MM-DD), retorna
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str
+
+    // Se está no formato brasileiro (DD/MM/YYYY), converte
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+      const [dia, mes, ano] = str.split('/')
+      return `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`
+    }
+
+    // Fallback: data atual
+    return new Date().toISOString().split('T')[0]
+  }
+
   // Importar dados
   async function executarImportacao() {
     if (!tenantId) {
@@ -587,7 +606,7 @@ function AbaImportarDados({ showToast }) {
       // Mapear campos (suporta CSV e Sheets)
       const instagram = (row.instagram || row.Cliente || '').trim().toLowerCase().replace('@', '')
       const whatsapp = row.whatsapp || row.Whatsapp || ''
-      const data_cadastro = row.data_cadastro || row['Data cadastro'] || new Date().toISOString().split('T')[0]
+      const data_cadastro = converterData(row.data_cadastro || row['Data cadastro'] || '')
       const bloqueado = row.bloqueado === 'TRUE' || row.bloqueado === 'true' || row.bloqueado === '☑' || row.Bloqueado === 'TRUE'
       const msg_bloqueio = row.observacoes || row['Observações'] || row.msg_bloqueio || ''
 
