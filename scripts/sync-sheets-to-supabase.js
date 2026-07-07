@@ -1,9 +1,9 @@
-require('dotenv').config()
-const { google } = require('googleapis')
-const { createClient } = require('@supabase/supabase-js')
+import 'dotenv/config'
+import { google } from 'googleapis'
+import { createClient } from '@supabase/supabase-js'
 
 // Configuração
-const SPREADSHEET_ID = '1Mqklox3RL4CrC_z0xfOTUntKZ0786X6ypsK_Co-fes' // Extraído da URL
+const SPREADSHEET_ID = '1Mqklox3RL4CrC_z0xfOTUntKZ0786X6ypsK-_Co-fes' // Extraído da URL
 const RANGE = 'cliente!A2:I' // Aba "cliente", a partir da linha 2
 const TENANT_ID = 'f36f2857-8bac-4059-a9f4-84c9ab58cba0' // Seu tenant_id
 

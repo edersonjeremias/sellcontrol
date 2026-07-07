@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Papa from 'papaparse'
 import AppShell from '../components/ui/AppShell'
 import { useApp } from '../context/AppContext'
 import { createTenantAndAdmin } from '../services/masterService'
@@ -7,6 +8,7 @@ import {
   getAllTenants, getTenantPages, saveTenantPages, ALL_PAGES,
   updateTenantInfo, deleteTenant, getTenantAdmin, updateTenantAdmin,
 } from '../services/authService'
+import { supabase } from '../lib/supabase'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -468,6 +470,431 @@ function AbaPaginas({ showToast }) {
   )
 }
 
+// ── Aba: Importar Dados ────────────────────────────────────────
+function AbaImportarDados({ showToast }) {
+  const [tenants, setTenants] = useState([])
+  const [tenantId, setTenantId] = useState('')
+  const [metodo, setMetodo] = useState('csv') // 'csv' | 'sheets'
+  const [sheetsUrl, setSheetsUrl] = useState('')
+  const [sheetsApiKey, setSheetsApiKey] = useState('')
+  const [preview, setPreview] = useState([])
+  const [importing, setImporting] = useState(false)
+  const [progresso, setProgresso] = useState(null)
+  const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    getAllTenants().then(({ data }) => setTenants(data))
+  }, [])
+
+  // Processar CSV
+  function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.data.length === 0) {
+          showToast('Arquivo CSV vazio', 'error')
+          return
+        }
+        setPreview(results.data)
+        showToast(`${results.data.length} linhas carregadas para preview`, 'success')
+      },
+      error: (error) => {
+        showToast('Erro ao ler CSV: ' + error.message, 'error')
+      }
+    })
+  }
+
+  // Carregar Google Sheets
+  async function carregarGoogleSheets() {
+    if (!sheetsUrl.trim()) {
+      showToast('Informe o link da planilha', 'error')
+      return
+    }
+
+    // Extrair spreadsheet ID da URL
+    const match = sheetsUrl.match(/\/d\/([a-zA-Z0-9-_]+)/)
+    if (!match) {
+      showToast('URL inválida. Use o link completo da planilha.', 'error')
+      return
+    }
+
+    const spreadsheetId = match[1]
+    const range = 'cliente!A2:I' // mesmo range do script
+
+    setImporting(true)
+    try {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${sheetsApiKey}`
+      const response = await fetch(url)
+      const data = await response.json()
+
+      if (data.error) {
+        throw new Error(data.error.message || 'Erro ao acessar planilha')
+      }
+
+      if (!data.values || data.values.length === 0) {
+        showToast('Nenhum dado encontrado na planilha', 'error')
+        return
+      }
+
+      // Converter para formato de objetos
+      const rows = data.values.map(row => ({
+        whatsapp: row[0] || '',
+        instagram: row[1] || '',
+        data_cadastro: row[2] || '',
+        bloqueado: row[3] || '',
+        observacoes: row[4] || '',
+      }))
+
+      setPreview(rows)
+      showToast(`${rows.length} linhas carregadas da planilha!`, 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  // Importar dados
+  async function executarImportacao() {
+    if (!tenantId) {
+      showToast('Selecione uma empresa de destino', 'error')
+      return
+    }
+
+    if (preview.length === 0) {
+      showToast('Nenhum dado para importar', 'error')
+      return
+    }
+
+    setImporting(true)
+    setProgresso({ total: preview.length, atual: 0, inseridos: 0, atualizados: 0, erros: 0, pulados: 0 })
+
+    let inseridos = 0
+    let atualizados = 0
+    let erros = 0
+    let pulados = 0
+
+    for (let i = 0; i < preview.length; i++) {
+      const row = preview[i]
+
+      // Mapear campos (suporta CSV e Sheets)
+      const instagram = (row.instagram || row.Cliente || '').trim().toLowerCase().replace('@', '')
+      const whatsapp = row.whatsapp || row.Whatsapp || ''
+      const data_cadastro = row.data_cadastro || row['Data cadastro'] || new Date().toISOString().split('T')[0]
+      const bloqueado = row.bloqueado === 'TRUE' || row.bloqueado === 'true' || row.bloqueado === '☑' || row.Bloqueado === 'TRUE'
+      const msg_bloqueio = row.observacoes || row['Observações'] || row.msg_bloqueio || ''
+
+      if (!instagram) {
+        pulados++
+        setProgresso(p => ({ ...p, atual: i + 1, pulados }))
+        continue
+      }
+
+      try {
+        // Verificar se existe
+        const { data: existente } = await supabase
+          .from('clientes')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('instagram', instagram)
+          .maybeSingle()
+
+        const clienteData = {
+          tenant_id: tenantId,
+          instagram,
+          whatsapp,
+          data_cadastro,
+          bloqueado,
+          msg_bloqueio,
+        }
+
+        if (existente) {
+          // Atualizar
+          const { error } = await supabase
+            .from('clientes')
+            .update(clienteData)
+            .eq('id', existente.id)
+
+          if (error) throw error
+          atualizados++
+        } else {
+          // Inserir
+          const { error } = await supabase
+            .from('clientes')
+            .insert(clienteData)
+
+          if (error) throw error
+          inseridos++
+        }
+
+        setProgresso(p => ({ ...p, atual: i + 1, inseridos, atualizados }))
+
+        // Pausa de 50ms para não sobrecarregar
+        await new Promise(resolve => setTimeout(resolve, 50))
+
+      } catch (err) {
+        console.error(`Erro linha ${i + 1}:`, err)
+        erros++
+        setProgresso(p => ({ ...p, atual: i + 1, erros }))
+      }
+    }
+
+    setImporting(false)
+    showToast(
+      `✅ Importação concluída!\n${inseridos} inseridos, ${atualizados} atualizados, ${pulados} pulados, ${erros} erros`,
+      'success'
+    )
+
+    // Limpar preview após importação
+    setTimeout(() => {
+      setPreview([])
+      setProgresso(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setSheetsUrl('')
+    }, 3000)
+  }
+
+  const nomeEmpresa = tenants.find(t => t.tenant_id === tenantId)?.nome_loja || ''
+
+  return (
+    <div style={{ padding: '20px 0', maxWidth: 800 }}>
+      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 20 }}>
+        Importe dados de clientes em massa via CSV ou Google Sheets para qualquer empresa.
+      </p>
+
+      {/* Selecionar empresa */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+          Empresa de destino *
+        </label>
+        <select value={tenantId} onChange={e => setTenantId(e.target.value)} style={SI}>
+          <option value="">-- Selecione a empresa --</option>
+          {tenants.map(t => (
+            <option key={t.tenant_id} value={t.tenant_id}>
+              {t.nome_loja || t.tenant_id}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Tabs método */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, borderBottom: '1px solid var(--border-light)' }}>
+        <button
+          onClick={() => setMetodo('csv')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '10px 16px', fontSize: 14, fontWeight: 600,
+            color: metodo === 'csv' ? 'var(--blue)' : 'var(--muted)',
+            borderBottom: metodo === 'csv' ? '2px solid var(--blue)' : '2px solid transparent',
+          }}>
+          📁 Upload CSV
+        </button>
+        <button
+          onClick={() => setMetodo('sheets')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '10px 16px', fontSize: 14, fontWeight: 600,
+            color: metodo === 'sheets' ? 'var(--blue)' : 'var(--muted)',
+            borderBottom: metodo === 'sheets' ? '2px solid var(--blue)' : '2px solid transparent',
+          }}>
+          📊 Google Sheets
+        </button>
+      </div>
+
+      {/* Upload CSV */}
+      {metodo === 'csv' && (
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+            Arquivo CSV
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleFileUpload}
+            disabled={importing}
+            style={{
+              ...SI,
+              cursor: 'pointer',
+              padding: '10px',
+            }}
+          />
+          <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+            Formato: instagram, whatsapp, data_cadastro, bloqueado, observacoes
+          </p>
+        </div>
+      )}
+
+      {/* Google Sheets */}
+      {metodo === 'sheets' && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+              Link da planilha
+            </label>
+            <input
+              value={sheetsUrl}
+              onChange={e => setSheetsUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/..."
+              disabled={importing}
+              style={SI}
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+              Google API Key (opcional se planilha for pública)
+            </label>
+            <input
+              type="password"
+              value={sheetsApiKey}
+              onChange={e => setSheetsApiKey(e.target.value)}
+              placeholder="AIza..."
+              disabled={importing}
+              style={SI}
+            />
+          </div>
+          <button
+            onClick={carregarGoogleSheets}
+            disabled={importing || !sheetsUrl.trim()}
+            className="btn-acao btn-blue"
+            style={{ width: '100%', minHeight: 40, fontSize: 14, color: '#171717', fontWeight: 600 }}>
+            {importing ? 'Carregando...' : 'Carregar Planilha'}
+          </button>
+        </div>
+      )}
+
+      {/* Preview */}
+      {preview.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-body)', margin: 0 }}>
+              Preview ({preview.length} linhas)
+            </h3>
+            <button
+              onClick={() => {
+                setPreview([])
+                if (fileInputRef.current) fileInputRef.current.value = ''
+                setSheetsUrl('')
+              }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--red)',
+                cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
+              }}>
+              Limpar
+            </button>
+          </div>
+
+          <div style={{
+            maxHeight: 300, overflowY: 'auto',
+            border: '1px solid var(--border-light)', borderRadius: 8,
+            background: 'var(--input-bg)'
+          }}>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, background: '#1a2230', borderBottom: '1px solid var(--border-light)' }}>
+                <tr>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Instagram</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>WhatsApp</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Bloqueado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.slice(0, 50).map((row, i) => {
+                  const instagram = (row.instagram || row.Cliente || '').trim()
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                        {instagram || <span style={{ color: 'var(--red)' }}>❌ vazio</span>}
+                      </td>
+                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                        {row.whatsapp || row.Whatsapp || '-'}
+                      </td>
+                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                        {row.bloqueado === 'TRUE' || row.Bloqueado === 'TRUE' ? '🔒' : '-'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {preview.length > 50 && (
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+              Mostrando 50 de {preview.length} linhas
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Botão importar */}
+      {preview.length > 0 && (
+        <div>
+          {!progresso && (
+            <button
+              onClick={executarImportacao}
+              disabled={importing || !tenantId}
+              className="btn-acao"
+              style={{
+                width: '100%', minHeight: 48, fontSize: 15, fontWeight: 700,
+                background: 'var(--green)', color: '#fff'
+              }}>
+              {importing ? 'Importando...' : `Importar ${preview.length} clientes para ${nomeEmpresa || 'empresa selecionada'}`}
+            </button>
+          )}
+
+          {/* Barra de progresso */}
+          {progresso && (
+            <div style={{
+              padding: 20, background: 'var(--input-bg)',
+              border: '1px solid var(--border-light)', borderRadius: 8
+            }}>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-body)' }}>
+                    {importing ? 'Importando...' : 'Concluído!'}
+                  </span>
+                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                    {progresso.atual} / {progresso.total}
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 8, background: 'var(--border-light)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${(progresso.atual / progresso.total) * 100}%`,
+                    height: '100%', background: 'var(--blue)',
+                    transition: 'width 0.2s'
+                  }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, fontSize: 12 }}>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Inseridos</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--green)' }}>{progresso.inseridos}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Atualizados</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)' }}>{progresso.atualizados}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Pulados</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--muted)' }}>{progresso.pulados}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Erros</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--red)' }}>{progresso.erros}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Página principal ───────────────────────────────────────────
 export default function MasterEmpresasPage() {
   const { showToast } = useApp()
@@ -477,11 +904,13 @@ export default function MasterEmpresasPage() {
     <AppShell title="Master — Empresas">
       <section className="admin-panel">
         <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 4 }}>
-          <TabBtn label="Empresa"             active={aba === 'empresa'} onClick={() => setAba('empresa')} />
-          <TabBtn label="Páginas por Empresa" active={aba === 'paginas'} onClick={() => setAba('paginas')} />
+          <TabBtn label="Empresa"             active={aba === 'empresa'}  onClick={() => setAba('empresa')} />
+          <TabBtn label="Páginas por Empresa" active={aba === 'paginas'}  onClick={() => setAba('paginas')} />
+          <TabBtn label="Importar Dados"      active={aba === 'importar'} onClick={() => setAba('importar')} />
         </div>
-        {aba === 'empresa' && <AbaEmpresa showToast={showToast} />}
-        {aba === 'paginas' && <AbaPaginas showToast={showToast} />}
+        {aba === 'empresa'  && <AbaEmpresa showToast={showToast} />}
+        {aba === 'paginas'  && <AbaPaginas showToast={showToast} />}
+        {aba === 'importar' && <AbaImportarDados showToast={showToast} />}
       </section>
     </AppShell>
   )
