@@ -18,11 +18,26 @@ const EMPTY_DETALHES = {
   rua: '', num: '', comp: '', bairro: '', cidade: '', estado: '', email: '',
 }
 
+function TabBtn({ label, active, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      background: 'none', border: 'none', cursor: 'pointer',
+      padding: '10px 18px', fontSize: 14, fontWeight: 600,
+      color: active ? 'var(--blue)' : 'var(--muted)',
+      borderBottom: active ? '2px solid var(--blue)' : '2px solid transparent',
+      transition: 'all 0.15s',
+    }}>
+      {label}
+    </button>
+  )
+}
+
 export default function ClientesPage() {
   const { profile }   = useAuth()
   const { showToast } = useApp()
   const tenantId      = profile?.tenant_id
 
+  const [aba,           setAba]           = useState('cadastro')
   const [clientes,      setClientes]      = useState([])
   const [saving,        setSaving]        = useState(false)
   const [confirmacao,   setConfirmacao]   = useState(null)
@@ -336,6 +351,15 @@ Qualquer dúvida, estamos à disposição! 😊`
   return (
     <AppShell title="Clientes">
 
+      {/* Abas */}
+      <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 16, paddingLeft: 16 }}>
+        <TabBtn label="Cadastro"       active={aba === 'cadastro'} onClick={() => setAba('cadastro')} />
+        <TabBtn label="Busca Avançada" active={aba === 'busca'}    onClick={() => setAba('busca')} />
+      </div>
+
+      {/* Aba Cadastro */}
+      {aba === 'cadastro' && (
+        <>
       {/* Banner de migração pendente */}
       {needsMigration && (
         <div style={{
@@ -751,6 +775,11 @@ Qualquer dúvida, estamos à disposição! 😊`
           </div>
         </div>
       )}
+        </>
+      )}
+
+      {/* Aba Busca Avançada */}
+      {aba === 'busca' && <AbaBuscaAvancada clientes={clientes} tenantId={tenantId} />}
 
       {/* ── Confirmação ── */}
       {confirmacao && (
@@ -762,5 +791,297 @@ Qualquer dúvida, estamos à disposição! 😊`
         />
       )}
     </AppShell>
+  )
+}
+
+// ── Aba: Busca Avançada ─────────────────────────────────────────
+function AbaBuscaAvancada({ clientes, tenantId }) {
+  const [filtros, setFiltros] = useState({
+    instagram: '',
+    nome: '',
+    whatsapp: '',
+    cpf: '',
+    cep: '',
+    cidade: '',
+    estado: '',
+    email: '',
+    bloqueado: 'todos', // 'todos' | 'sim' | 'nao'
+  })
+
+  const updateFiltro = (campo, valor) => {
+    setFiltros(prev => ({ ...prev, [campo]: valor }))
+  }
+
+  // Filtrar clientes
+  const filtrados = clientes.filter(c => {
+    // Instagram
+    if (filtros.instagram && !c.instagram.toLowerCase().includes(filtros.instagram.toLowerCase())) return false
+
+    // Nome
+    if (filtros.nome && !(c.nome_completo || '').toLowerCase().includes(filtros.nome.toLowerCase())) return false
+
+    // WhatsApp
+    if (filtros.whatsapp && !(c.whatsapp || '').includes(filtros.whatsapp.replace(/\D/g, ''))) return false
+
+    // CPF
+    if (filtros.cpf && !(c.cpf || '').includes(filtros.cpf.replace(/\D/g, ''))) return false
+
+    // CEP
+    if (filtros.cep && !(c.cep || '').includes(filtros.cep.replace(/\D/g, ''))) return false
+
+    // Cidade
+    if (filtros.cidade && !(c.cidade || '').toLowerCase().includes(filtros.cidade.toLowerCase())) return false
+
+    // Estado
+    if (filtros.estado && !(c.uf || '').toLowerCase().includes(filtros.estado.toLowerCase())) return false
+
+    // E-mail
+    if (filtros.email && !(c.email || '').toLowerCase().includes(filtros.email.toLowerCase())) return false
+
+    // Bloqueado
+    if (filtros.bloqueado === 'sim' && !c.bloqueado) return false
+    if (filtros.bloqueado === 'nao' && c.bloqueado) return false
+
+    return true
+  })
+
+  const limparFiltros = () => {
+    setFiltros({
+      instagram: '', nome: '', whatsapp: '', cpf: '',
+      cep: '', cidade: '', estado: '', email: '', bloqueado: 'todos',
+    })
+  }
+
+  const totalFiltrosAtivos = Object.entries(filtros).filter(([key, val]) =>
+    key !== 'bloqueado' ? val.trim() !== '' : val !== 'todos'
+  ).length
+
+  return (
+    <div style={{ padding: '0 16px', maxWidth: 1400, margin: '0 auto' }}>
+
+      {/* Filtros */}
+      <div style={{
+        background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+        borderRadius: 12, padding: 20, marginBottom: 20
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-body)' }}>
+            🔍 Filtros {totalFiltrosAtivos > 0 && `(${totalFiltrosAtivos} ativo${totalFiltrosAtivos > 1 ? 's' : ''})`}
+          </h3>
+          {totalFiltrosAtivos > 0 && (
+            <button
+              onClick={limparFiltros}
+              style={{
+                background: 'none', border: 'none', color: 'var(--red)',
+                cursor: 'pointer', fontSize: 13, textDecoration: 'underline'
+              }}>
+              Limpar todos
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              Instagram
+            </label>
+            <input
+              value={filtros.instagram}
+              onChange={e => updateFiltro('instagram', e.target.value)}
+              placeholder="@cliente"
+              className="cell-input"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              Nome Completo
+            </label>
+            <input
+              value={filtros.nome}
+              onChange={e => updateFiltro('nome', e.target.value)}
+              placeholder="Nome do cliente"
+              className="cell-input"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              WhatsApp
+            </label>
+            <input
+              value={filtros.whatsapp}
+              onChange={e => updateFiltro('whatsapp', e.target.value)}
+              placeholder="(00) 90000-0000"
+              className="cell-input"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              CPF
+            </label>
+            <input
+              value={filtros.cpf}
+              onChange={e => updateFiltro('cpf', e.target.value)}
+              placeholder="000.000.000-00"
+              className="cell-input"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              CEP
+            </label>
+            <input
+              value={filtros.cep}
+              onChange={e => updateFiltro('cep', e.target.value)}
+              placeholder="00000-000"
+              className="cell-input"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              Cidade
+            </label>
+            <input
+              value={filtros.cidade}
+              onChange={e => updateFiltro('cidade', e.target.value)}
+              placeholder="São Paulo"
+              className="cell-input"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              Estado
+            </label>
+            <input
+              value={filtros.estado}
+              onChange={e => updateFiltro('estado', e.target.value.toUpperCase().slice(0, 2))}
+              placeholder="SP"
+              className="cell-input"
+              maxLength={2}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              E-mail
+            </label>
+            <input
+              value={filtros.email}
+              onChange={e => updateFiltro('email', e.target.value)}
+              placeholder="email@exemplo.com"
+              className="cell-input"
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+              Bloqueado
+            </label>
+            <select
+              value={filtros.bloqueado}
+              onChange={e => updateFiltro('bloqueado', e.target.value)}
+              className="cell-input"
+              style={{ cursor: 'pointer' }}>
+              <option value="todos">Todos</option>
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Resultados */}
+      <div style={{
+        background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+        borderRadius: 12, overflow: 'hidden'
+      }}>
+        <div style={{
+          padding: '14px 20px', borderBottom: '1px solid var(--border-light)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-body)' }}>
+            📋 Resultados
+          </h3>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+            {filtrados.length} cliente{filtrados.length !== 1 ? 's' : ''} encontrado{filtrados.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <div style={{ maxHeight: 'calc(100vh - 450px)', overflowY: 'auto' }}>
+          {filtrados.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+              Nenhum cliente encontrado com os filtros aplicados.
+            </div>
+          ) : (
+            <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-bg)', zIndex: 1 }}>
+                <tr>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>Instagram</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>Nome</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>WhatsApp</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>CPF</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>Cidade/UF</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>CEP</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>E-mail</th>
+                  <th style={{ padding: '10px 14px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)' }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtrados.map((c, idx) => (
+                  <tr key={c.instagram}
+                    style={{
+                      borderBottom: '1px solid var(--border-light)',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ padding: '10px 14px', color: 'var(--blue)', fontWeight: 600 }}>
+                      @{c.instagram}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>
+                      {c.nome_completo || <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>
+                      {c.whatsapp || <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-body)', fontFamily: 'monospace' }}>
+                      {c.cpf || <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>
+                      {c.cidade && c.uf ? `${c.cidade}/${c.uf}` : c.cidade || c.uf || <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-body)', fontFamily: 'monospace' }}>
+                      {c.cep || <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--text-body)', fontSize: 12 }}>
+                      {c.email || <span style={{ color: 'var(--muted)' }}>—</span>}
+                    </td>
+                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                      {c.bloqueado ? (
+                        <span style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--red)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
+                          🔒 Bloqueado
+                        </span>
+                      ) : (
+                        <span style={{ background: 'rgba(52,211,153,0.15)', color: 'var(--green)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
+                          ✅ Ativo
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+    </div>
   )
 }
