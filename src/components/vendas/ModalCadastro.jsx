@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
 export default function ModalCadastro({ onSalvar, onFechar }) {
-  const [tipo,    setTipo]    = useState('produto')
+  const [tipo,    setTipo]    = useState('cliente')
   const [valor,   setValor]   = useState('')
   const [celular, setCelular] = useState('')
   const [salvando, setSalvando] = useState(false)
