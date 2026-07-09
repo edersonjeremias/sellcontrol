@@ -29,6 +29,7 @@ const TabelaRow = memo(function TabelaRow({
   onEnviar, onEstornar, onCopiar, onExcluir,
   onStatusChange,
   cols = {},
+  config = {},
   modoHistorico = false,
 }) {
   const upd = (field, val) => onFieldChange(idx, field, val)
@@ -151,7 +152,15 @@ const TabelaRow = memo(function TabelaRow({
       <td className="col-cod">
         <input className="cell-input" value={linha.codigo}
           onChange={e => upd('codigo', e.target.value)}
-          onKeyDown={onEnterNext} disabled={linha.isSent} />
+          onKeyDown={onEnterNext}
+          disabled={linha.isSent}
+          readOnly={config.codigo_automatico}
+          style={config.codigo_automatico ? {
+            backgroundColor: 'rgba(139, 180, 248, 0.1)',
+            cursor: 'not-allowed',
+            color: 'var(--blue)',
+            fontWeight: 600
+          } : {}} />
       </td>
 
       {/* CLIENTE */}

@@ -22,11 +22,11 @@ import ModalConfirmacao   from '../../components/ui/ModalConfirmacao'
 
 // ─── HELPERS PUROS ────────────────────────────────────────
 let _keyCounter = 0
-function novaLinha() {
+function novaLinha(codigo = '') {
   return {
     _key: `new-${++_keyCounter}`,
     id: null, produto: '', modelo: '', cor: '', marca: '',
-    tamanho: '', preco: '', codigo: '', cliente_nome: '',
+    tamanho: '', preco: '', codigo, cliente_nome: '',
     data_live: '', live_nome: '', sacolinha: null,
     status: '', fila1: '', fila2: '', fila3: '',
     custo: '', qtde: '', condicao: '', genero: '',
@@ -211,6 +211,15 @@ export default function VendasPage() {
     if (busyTimerRef.current) clearTimeout(busyTimerRef.current)
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
   }, [])
+
+  // ── Próximo código automático ──
+  const getProximoCodigo = useCallback(() => {
+    if (!config.codigo_automatico) return ''
+    const codigo = String(config.proximo_codigo)
+    // Incrementa para próxima linha
+    setConfig(prev => ({ ...prev, proximo_codigo: prev.proximo_codigo + 1 }))
+    return codigo
+  }, [config.codigo_automatico, config.proximo_codigo])
 
   // ── Total vendido ──
   const totalInfo = useMemo(() => {
@@ -461,10 +470,10 @@ export default function VendasPage() {
         const input = document.querySelector('#tabela tbody tr:first-child td:nth-child(2) .cell-input')
         input?.focus()
       }, 50)
-      return [novaLinha(), ...prev]
+      return [novaLinha(getProximoCodigo()), ...prev]
     })
     setPronto(true)
-  }, [busy])
+  }, [busy, getProximoCodigo])
 
   // Cria nova linha ACIMA da linha atual (quando Enter em CLIENTE)
   const novoAcima = useCallback((idx) => {
@@ -472,7 +481,7 @@ export default function VendasPage() {
     setLinhas(prev => {
       const novasLinhas = [...prev]
       // Insere nova linha NA POSIÇÃO idx (empurra a linha atual para baixo)
-      novasLinhas.splice(idx, 0, novaLinha())
+      novasLinhas.splice(idx, 0, novaLinha(getProximoCodigo()))
       return novasLinhas
     })
     setPronto(true)
@@ -504,7 +513,7 @@ export default function VendasPage() {
 
   // Adiciona nova linha ao FINAL sem scroll — chamado quando usuário dá Enter na última linha
   const novoAbaixo = useCallback(() => {
-    const nl = novaLinha()
+    const nl = novaLinha(getProximoCodigo())
     setLinhas(prev => [...prev, nl])
     setPronto(true)
     // Foca o primeiro input da nova última linha sem rolar a tela para o topo
@@ -786,7 +795,8 @@ export default function VendasPage() {
   const handleCopiar = useCallback((rowKey) => {
     const o = linhasRef.current.find(r => r._key === rowKey)
     if (!o) return
-    const copia = { ...novaLinha(), produto: o.produto, modelo: o.modelo, cor: o.cor, marca: o.marca, tamanho: o.tamanho, preco: o.preco, codigo: o.codigo }
+    const novoCodigo = config.codigo_automatico ? getProximoCodigo() : o.codigo
+    const copia = { ...novaLinha(novoCodigo), produto: o.produto, modelo: o.modelo, cor: o.cor, marca: o.marca, tamanho: o.tamanho, preco: o.preco }
     setLinhas(prev => {
       const idx = prev.findIndex(r => r._key === rowKey)
       if (idx < 0) return [...prev, copia]
@@ -890,7 +900,8 @@ export default function VendasPage() {
         if (l.deleted || l.isSent) { novas.push(l); return }
         novas.push(l)
         for (let i = 1; i < n; i++) {
-          const nl = novaLinha()
+          const novoCodigo = config.codigo_automatico ? getProximoCodigo() : l.codigo
+          const nl = novaLinha(novoCodigo)
           novas.push({
             ...nl,
             produto: l.produto, modelo: l.modelo, cor: l.cor, marca: l.marca,
@@ -1213,6 +1224,7 @@ export default function VendasPage() {
                       <TabelaRow key={l._key || l.id || idx}
                         linha={l} idx={idx} listas={listas}
                         cols={colsConfig}
+                        config={config}
                         onFieldChange={handleFieldChange}
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
