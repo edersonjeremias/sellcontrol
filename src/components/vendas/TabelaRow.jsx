@@ -7,6 +7,28 @@ function onEnterNext(e) {
   navigateNext(e.target)
 }
 
+function onEnterNextPulaCodigo(e, codigoAutomatico) {
+  if (e.key !== 'Enter') return
+  e.preventDefault()
+
+  if (codigoAutomatico) {
+    // Pula o campo código e vai direto para o próximo (cliente)
+    const target = e.target
+    const inputs = Array.from(target.closest('tr')?.querySelectorAll('input, textarea, select') || [])
+    const idx = inputs.indexOf(target)
+    if (idx >= 0 && idx < inputs.length - 1) {
+      // Pula 2 posições (pula o código)
+      const nextIdx = idx + 2
+      if (nextIdx < inputs.length) {
+        inputs[nextIdx]?.focus()
+        return
+      }
+    }
+  }
+
+  navigateNext(e.target)
+}
+
 function copyToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     return navigator.clipboard.writeText(text)
@@ -145,7 +167,8 @@ const TabelaRow = memo(function TabelaRow({
       <td className="col-preco">
         <input className="cell-input price" value={linha.preco}
           onChange={e => upd('preco', e.target.value.replace(/[^\d,]/g, ''))}
-          onKeyDown={onEnterNext} disabled={linha.isSent} />
+          onKeyDown={e => onEnterNextPulaCodigo(e, config.codigo_automatico)}
+          disabled={linha.isSent} />
       </td>
 
       {/* CÓDIGO */}
@@ -155,6 +178,7 @@ const TabelaRow = memo(function TabelaRow({
           onKeyDown={onEnterNext}
           disabled={linha.isSent}
           readOnly={config.codigo_automatico}
+          tabIndex={config.codigo_automatico ? -1 : undefined}
           style={config.codigo_automatico ? {
             backgroundColor: 'rgba(139, 180, 248, 0.1)',
             cursor: 'not-allowed',

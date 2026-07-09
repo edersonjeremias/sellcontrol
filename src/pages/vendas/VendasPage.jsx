@@ -213,13 +213,29 @@ export default function VendasPage() {
   }, [])
 
   // ── Próximo código automático ──
+  const proximoCodigoRef = useRef(config.proximo_codigo)
+
   const getProximoCodigo = useCallback(() => {
     if (!config.codigo_automatico) return ''
-    const codigo = String(config.proximo_codigo)
-    // Incrementa para próxima linha
-    setConfig(prev => ({ ...prev, proximo_codigo: prev.proximo_codigo + 1 }))
+    const codigo = String(proximoCodigoRef.current)
+    proximoCodigoRef.current += 1
     return codigo
-  }, [config.codigo_automatico, config.proximo_codigo])
+  }, [config.codigo_automatico])
+
+  // Salva o proximo_codigo no banco após salvar com sucesso
+  const salvarProximoCodigo = useCallback(async () => {
+    if (!config.codigo_automatico || !tenantId) return
+    try {
+      await saveConfig(tenantId, { proximo_codigo: proximoCodigoRef.current })
+    } catch (err) {
+      console.error('Erro ao salvar proximo_codigo:', err)
+    }
+  }, [config.codigo_automatico, tenantId])
+
+  // Atualiza ref quando config muda
+  useEffect(() => {
+    proximoCodigoRef.current = config.proximo_codigo
+  }, [config.proximo_codigo])
 
   // ── Total vendido ──
   const totalInfo = useMemo(() => {
@@ -375,6 +391,9 @@ export default function VendasPage() {
 
         setHasUnsaved(false)
         console.log('💾 Salvo automaticamente')
+
+        // Salva o próximo código no banco se modo automático estiver ativo
+        salvarProximoCodigo()
       } catch (err) {
         console.error('Erro ao salvar:', err)
         showToast('Erro ao salvar alterações', 'error')
