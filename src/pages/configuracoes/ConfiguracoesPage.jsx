@@ -37,7 +37,15 @@ function TabBtn({ label, active, onClick }) {
 
 // ── Aba: Configurações da empresa ──────────────────────────────
 function AbaConfiguracoes({ tenantId, showToast }) {
-  const [form, setForm]         = useState({ mp_access_token: '', nome_loja: '', whatsapp: '', email_contato: '', link_frete: '' })
+  const [form, setForm]         = useState({
+    mp_access_token: '',
+    nome_loja: '',
+    whatsapp: '',
+    email_contato: '',
+    link_frete: '',
+    codigo_automatico: false,
+    proximo_codigo: 100,
+  })
   const [salvando, setSalvando] = useState(false)
   const [mostrarToken, setMostrarToken] = useState(false)
   const [pacotes, setPacotes]   = useState([])
@@ -54,6 +62,8 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           whatsapp: cfg.whatsapp || '',
           email_contato: cfg.email_contato || '',
           link_frete: cfg.link_frete || '',
+          codigo_automatico: cfg.codigo_automatico || false,
+          proximo_codigo: cfg.proximo_codigo || 100,
         })
         setPacotes(cfg.pacotes || [])
       }
@@ -208,6 +218,94 @@ function AbaConfiguracoes({ tenantId, showToast }) {
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
           Estas opções aparecem no campo Pacote da página de Produção.
+        </div>
+      </div>
+
+      {/* ── Código Automático ── */}
+      <div style={{ marginBottom: 28 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 8, fontWeight: 600 }}>
+          🔢 Código das Peças (Vendas)
+        </label>
+
+        <div style={{
+          background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+          borderRadius: 8, padding: 14
+        }}>
+
+          {/* Toggle Código Automático */}
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            padding: '8px 0'
+          }}>
+            <input
+              type="checkbox"
+              checked={form.codigo_automatico}
+              onChange={e => setForm(p => ({ ...p, codigo_automatico: e.target.checked }))}
+              style={{
+                width: 20, height: 20, cursor: 'pointer',
+                accentColor: 'var(--blue)'
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-body)', fontWeight: 600, marginBottom: 2 }}>
+                Gerar código automaticamente
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Quando ativado, o sistema gera códigos sequenciais começando de {form.proximo_codigo}
+              </div>
+            </div>
+          </label>
+
+          {/* Campo Próximo Código (só aparece se automático estiver ativo) */}
+          {form.codigo_automatico && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+                Próximo código a ser usado
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={form.proximo_codigo}
+                onChange={e => setForm(p => ({ ...p, proximo_codigo: parseInt(e.target.value) || 100 }))}
+                style={{
+                  ...SI,
+                  maxWidth: 120,
+                  fontFamily: 'monospace',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  textAlign: 'center'
+                }}
+              />
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+                ⚠️ Atenção: Este valor incrementa automaticamente após cada venda.
+              </div>
+            </div>
+          )}
+
+          {/* Aviso quando manual */}
+          {!form.codigo_automatico && (
+            <div style={{
+              marginTop: 10, padding: 10, background: 'rgba(139, 180, 248, 0.1)',
+              border: '1px solid rgba(139, 180, 248, 0.3)', borderRadius: 6
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--blue)' }}>
+                ℹ️ Modo Manual: Você digita o código manualmente na página de Vendas
+              </div>
+            </div>
+          )}
+
+          {/* Aviso quando automático */}
+          {form.codigo_automatico && (
+            <div style={{
+              marginTop: 10, padding: 10, background: 'rgba(52, 211, 153, 0.1)',
+              border: '1px solid rgba(52, 211, 153, 0.3)', borderRadius: 6
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--green)' }}>
+                ✅ Modo Automático: O campo código será bloqueado e preenchido automaticamente
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
 
