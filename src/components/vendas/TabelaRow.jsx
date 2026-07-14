@@ -1,32 +1,40 @@
 import { memo, useState } from 'react'
 import AutocompleteInput, { navigateNext } from '../ui/AutocompleteInput'
 
+// NAVEGAÇÃO DOM DIRETA (Performance crítica - não depende de state)
+function navegarProximoInput(currentElement) {
+  const tr = currentElement.closest('tr')
+  if (!tr) return false
+
+  // Pega TODOS inputs não-disabled da linha (DOM nativo)
+  const inputs = Array.from(tr.querySelectorAll('input:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]), select:not([disabled])'))
+  const currentIndex = inputs.indexOf(currentElement)
+
+  if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
+    inputs[currentIndex + 1]?.focus()
+    return true
+  }
+
+  return false
+}
+
 function onEnterNext(e) {
-  if (e.key !== 'Enter') return
+  if (e.key !== 'Enter' && e.key !== 'Tab') return
   e.preventDefault()
-  navigateNext(e.target)
+
+  // Navegação DOM direta (não passa por state)
+  const navegou = navegarProximoInput(e.target)
+  if (!navegou) {
+    navigateNext(e.target)
+  }
 }
 
 function onEnterNextPulaCodigo(e, codigoAutomatico) {
-  if (e.key !== 'Enter') return
+  if (e.key !== 'Enter' && e.key !== 'Tab') return
   e.preventDefault()
 
-  if (codigoAutomatico) {
-    // Pula o campo código e vai direto para o próximo (cliente)
-    const target = e.target
-    const inputs = Array.from(target.closest('tr')?.querySelectorAll('input, textarea, select') || [])
-    const idx = inputs.indexOf(target)
-    if (idx >= 0 && idx < inputs.length - 1) {
-      // Pula 2 posições (pula o código)
-      const nextIdx = idx + 2
-      if (nextIdx < inputs.length) {
-        inputs[nextIdx]?.focus()
-        return
-      }
-    }
-  }
-
-  navigateNext(e.target)
+  // Navegação DOM direta (instantânea)
+  navegarProximoInput(e.target)
 }
 
 function copyToClipboard(text) {
@@ -297,6 +305,40 @@ const TabelaRow = memo(function TabelaRow({
       </td>
     </tr>
   )
+}, (prevProps, nextProps) => {
+  // COMPARAÇÃO OTIMIZADA (evita rerenders desnecessários)
+  // Só rerrenderiza se a linha atual mudou (não por mudanças em outras linhas)
+  const prev = prevProps.linha
+  const next = nextProps.linha
+
+  // Se qualquer campo da linha mudou, rerenderiza
+  if (
+    prev.produto !== next.produto ||
+    prev.modelo !== next.modelo ||
+    prev.cor !== next.cor ||
+    prev.marca !== next.marca ||
+    prev.tamanho !== next.tamanho ||
+    prev.preco !== next.preco ||
+    prev.codigo !== next.codigo ||
+    prev.cliente_nome !== next.cliente_nome ||
+    prev.deleted !== next.deleted ||
+    prev.isSent !== next.isSent ||
+    prev.sacolinha !== next.sacolinha ||
+    prev.custo !== next.custo ||
+    prev.qtde !== next.qtde ||
+    prev.condicao !== next.condicao ||
+    prev.genero !== next.genero
+  ) {
+    return false // Rerenderiza
+  }
+
+  // Se config mudou, rerenderiza
+  if (prevProps.config?.codigo_automatico !== nextProps.config?.codigo_automatico) {
+    return false
+  }
+
+  // Caso contrário, não rerenderiza (PERFORMANCE!)
+  return true
 })
 
 export default TabelaRow

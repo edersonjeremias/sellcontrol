@@ -21,10 +21,14 @@ import ModalAlerta        from '../../components/ui/ModalAlerta'
 import ModalConfirmacao   from '../../components/ui/ModalConfirmacao'
 
 // ─── HELPERS PUROS ────────────────────────────────────────
-let _keyCounter = 0
+// UUID para keys estáveis (performance crítica)
+function gerarId() {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+}
+
 function novaLinha(codigo = '') {
   return {
-    _key: `new-${++_keyCounter}`,
+    _key: gerarId(), // KEY ÚNICA E ESTÁVEL
     id: null, produto: '', modelo: '', cor: '', marca: '',
     tamanho: '', preco: '', codigo, cliente_nome: '',
     data_live: '', live_nome: '', sacolinha: null,
@@ -36,7 +40,7 @@ function novaLinha(codigo = '') {
 
 function mapRow(row) {
   return {
-    _key:         row.id,
+    _key:         row.id || gerarId(), // KEY ESTÁVEL SEMPRE
     id:           row.id,
     produto:      row.produto      || '',
     modelo:       row.modelo       || '',
@@ -1240,7 +1244,7 @@ export default function VendasPage() {
                   {linhas.map((l, idx) => {
                     if (l.deleted || l.status === 'Vendido' || !passaFiltro(l, filtro)) return null
                     return (
-                      <TabelaRow key={l._key || l.id || idx}
+                      <TabelaRow key={l._key || l.id}
                         linha={l} idx={idx} listas={listas}
                         cols={colsConfig}
                         config={config}
