@@ -152,14 +152,7 @@ export default function VendasPage() {
   const [alerta,            setAlerta]            = useState(null)
   const [confirmacao,       setConfirmacao]       = useState(null)
 
-  // ── Modo Histórico ──
-  const [modo,             setModo]             = useState('live')
-  const [filtrosHist,      setFiltrosHist]      = useState({ dataInicio: '', dataFim: '', clienteNome: '' })
-  const [linhasHist,       setLinhasHist]       = useState([])
-  const [modalHistIdx,     setModalHistIdx]     = useState(null)
-  const [modalFilaHistIdx, setModalFilaHistIdx] = useState(null)
-  const linhasHistRef = useRef(linhasHist)
-  useEffect(() => { linhasHistRef.current = linhasHist }, [linhasHist])
+  // ── Modo Histórico ── (REMOVIDO)
 
   // ── Refs ──
   const scrollRef    = useRef(null)
@@ -1015,82 +1008,8 @@ export default function VendasPage() {
     finally { setBusy(false) }
   }, [tenantId, filtrosHist])
 
-  const confirmarEdicaoHist = useCallback(async (idx, campos) => {
-    setModalHistIdx(null)
-    const linha = { ...linhasHistRef.current[idx], ...campos }
-    setBusy(true, 'Salvando...')
-    try {
-      await updateVendaEnviada(tenantId, linha)
-      setLinhasHist(prev => { const n = [...prev]; n[idx] = linha; return n })
-      showToast('Registro atualizado!', 'success')
-    } catch { showToast('Erro ao salvar alterações.', 'error') }
-    finally { setBusy(false) }
-  }, [tenantId])
-
-  const estornarHist = useCallback((idx) => {
-    setConfirmacao({
-      titulo: '↩️ Estornar Venda',
-      mensagem: 'Deseja ESTORNAR esta venda?<br><br>Ela voltará para pendente e sumirá do histórico.',
-      onSim: async () => {
-        setConfirmacao(null); setBusy(true, 'Estornando...')
-        try {
-          await estornarVenda(linhasHistRef.current[idx].id)
-          setLinhasHist(prev => prev.filter((_, i) => i !== idx))
-          showToast('Venda estornada!', 'success')
-        } catch { showToast('Erro ao estornar.', 'error') }
-        finally { setBusy(false) }
-      },
-      onNao: () => setConfirmacao(null),
-    })
-  }, [])
-
-  const excluirHist = useCallback((idx) => {
-    setConfirmacao({
-      titulo: '🗑️ Excluir Registro',
-      mensagem: 'Deseja EXCLUIR este registro permanentemente?<br><br>Esta ação não pode ser desfeita.',
-      onSim: async () => {
-        setConfirmacao(null); setBusy(true, 'Excluindo...')
-        try {
-          const { error } = await supabase.from('vendas').delete()
-            .eq('id', linhasHistRef.current[idx].id)
-          if (error) throw error
-          setLinhasHist(prev => prev.filter((_, i) => i !== idx))
-          showToast('Registro excluído.', 'success')
-        } catch { showToast('Erro ao excluir.', 'error') }
-        finally { setBusy(false) }
-      },
-      onNao: () => setConfirmacao(null),
-    })
-  }, [])
-
-  const handleStatusChangeHist = useCallback(async (idx, novoStatus) => {
-    const linha = linhasHistRef.current[idx]
-    if (!linha?.id) return
-    try {
-      const { error } = await supabase.from('vendas').update({ status: novoStatus }).eq('id', linha.id)
-      if (error) throw error
-      setLinhasHist(prev => { const n = [...prev]; n[idx] = { ...n[idx], status: novoStatus }; return n })
-      showToast(novoStatus === 'CANCELADO' ? 'Marcado como cancelado.' : 'Status atualizado.', 'success')
-    } catch { showToast('Erro ao atualizar status.', 'error') }
-  }, [])
-
-  const salvarFilaHist = useCallback(async (idx, f1, f2, f3) => {
-    const linha = { ...linhasHistRef.current[idx], fila1: f1, fila2: f2, fila3: f3 }
-    setLinhasHist(prev => { const n = [...prev]; n[idx] = linha; return n })
-    setModalFilaHistIdx(null)
-    try {
-      await updateVendaEnviada(tenantId, linha)
-    } catch { showToast('Erro ao salvar fila.', 'error') }
-  }, [tenantId])
-
-  const trocarClienteFilaHist = useCallback(async (idx, novoCliente) => {
-    const linha = { ...linhasHistRef.current[idx], cliente_nome: novoCliente }
-    setLinhasHist(prev => { const n = [...prev]; n[idx] = linha; return n })
-    try {
-      await updateVendaEnviada(tenantId, linha)
-      showToast('Cliente alterado!', 'success')
-    } catch { showToast('Erro ao salvar.', 'error') }
-  }, [tenantId])
+  // ── HISTÓRICO: funções removidas ──
+  // (código comentado após remoção da aba histórico)
 
   // ── RENDER ──
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
@@ -1261,32 +1180,6 @@ export default function VendasPage() {
             }
           }}
           onFechar={() => setShowModalCadastro(false)}
-        />
-      )}
-      {modalHistIdx !== null && (
-        <ModalEdicao
-          linha={linhasHist[modalHistIdx]}
-          listas={listas}
-          onConfirmar={(campos) => confirmarEdicaoHist(modalHistIdx, campos)}
-          onFechar={() => setModalHistIdx(null)}
-        />
-      )}
-      {modalFilaHistIdx !== null && (
-        <ModalFila
-          linha={linhasHist[modalFilaHistIdx]}
-          clientes={listas.clientes}
-          onSalvar={(res) => {
-            if (res.trocarCliente) {
-              trocarClienteFilaHist(modalFilaHistIdx, res.trocarCliente)
-              salvarFilaHist(modalFilaHistIdx,
-                res.numFila === 1 ? '' : res.fila1,
-                res.numFila === 2 ? '' : res.fila2,
-                res.numFila === 3 ? '' : res.fila3)
-            } else {
-              salvarFilaHist(modalFilaHistIdx, res.fila1, res.fila2, res.fila3)
-            }
-          }}
-          onFechar={() => setModalFilaHistIdx(null)}
         />
       )}
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
