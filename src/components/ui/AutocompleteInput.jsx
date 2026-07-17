@@ -4,10 +4,20 @@ export function navigateNext(input) {
   const tr = input.closest('tr')
   if (!tr) return
   const inputs = Array.from(tr.querySelectorAll(
-    'input:not([readonly]):not([type="hidden"]):not([disabled]), select:not([disabled])'
+    'input:not([readonly]):not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled])'
   ))
   const i = inputs.indexOf(input)
   if (i >= 0 && i < inputs.length - 1) inputs[i + 1].focus()
+}
+
+export function navigatePrevious(input) {
+  const tr = input.closest('tr')
+  if (!tr) return
+  const inputs = Array.from(tr.querySelectorAll(
+    'input:not([readonly]):not([type="hidden"]):not([disabled]):not([tabindex="-1"]), select:not([disabled])'
+  ))
+  const i = inputs.indexOf(input)
+  if (i > 0) inputs[i - 1].focus()
 }
 
 export default function AutocompleteInput({
@@ -67,11 +77,25 @@ export default function AutocompleteInput({
       setOpen(false); setActiveIdx(-1); return
     }
     if (e.key === 'Tab') {
+      // Shift+Tab = navega para trás
+      if (e.shiftKey) {
+        e.preventDefault()
+        if (visible) {
+          const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
+          if (chosen) select(chosen)
+        }
+        setOpen(false); setActiveIdx(-1)
+        navigatePrevious(e.target)
+        return
+      }
+
+      // Tab normal = navega para frente
       if (visible) {
         const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
         if (chosen) select(chosen)
       }
-      setOpen(false); setActiveIdx(-1); return
+      setOpen(false); setActiveIdx(-1)
+      return
     }
     if (e.key === 'Enter') {
       e.preventDefault()

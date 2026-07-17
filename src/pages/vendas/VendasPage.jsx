@@ -689,9 +689,16 @@ export default function VendasPage() {
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((key, field, value) => {
     // Usa _key para identificar a linha (não depende de índice visual)
+    console.log('[handleFieldChange]', { key, field, value, totalLinhas: linhasRef.current.length })
+
     setLinhas(prev => {
       const idx = prev.findIndex(l => l._key === key)
-      if (idx === -1) return prev
+      console.log('[handleFieldChange] idx encontrado:', idx, 'de', prev.length, 'linhas')
+
+      if (idx === -1) {
+        console.error('[handleFieldChange] KEY NÃO ENCONTRADA!', key)
+        return prev
+      }
 
       const n = [...prev]
       const l = { ...n[idx], [field]: value }

@@ -1,5 +1,5 @@
 import { memo, useState } from 'react'
-import AutocompleteInput, { navigateNext } from '../ui/AutocompleteInput'
+import AutocompleteInput, { navigateNext, navigatePrevious } from '../ui/AutocompleteInput'
 
 // NAVEGAÇÃO DOM DIRETA (Performance crítica - não depende de state)
 function navegarProximoInput(currentElement) {
@@ -18,23 +18,58 @@ function navegarProximoInput(currentElement) {
   return false
 }
 
-function onEnterNext(e) {
-  if (e.key !== 'Enter' && e.key !== 'Tab') return
-  e.preventDefault()
+function navegarAnteriorInput(currentElement) {
+  const tr = currentElement.closest('tr')
+  if (!tr) return false
 
-  // Navegação DOM direta (não passa por state)
-  const navegou = navegarProximoInput(e.target)
-  if (!navegou) {
-    navigateNext(e.target)
+  const inputs = Array.from(tr.querySelectorAll('input:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]), select:not([disabled])'))
+  const currentIndex = inputs.indexOf(currentElement)
+
+  if (currentIndex > 0) {
+    inputs[currentIndex - 1]?.focus()
+    return true
+  }
+
+  return false
+}
+
+function onEnterNext(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    const navegou = navegarProximoInput(e.target)
+    if (!navegou) navigateNext(e.target)
+    return
+  }
+
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      e.preventDefault()
+      const navegou = navegarAnteriorInput(e.target)
+      if (!navegou) navigatePrevious(e.target)
+    } else {
+      e.preventDefault()
+      const navegou = navegarProximoInput(e.target)
+      if (!navegou) navigateNext(e.target)
+    }
   }
 }
 
 function onEnterNextPulaCodigo(e, codigoAutomatico) {
-  if (e.key !== 'Enter' && e.key !== 'Tab') return
-  e.preventDefault()
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    navegarProximoInput(e.target)
+    return
+  }
 
-  // Navegação DOM direta (instantânea)
-  navegarProximoInput(e.target)
+  if (e.key === 'Tab') {
+    if (e.shiftKey) {
+      e.preventDefault()
+      navegarAnteriorInput(e.target)
+    } else {
+      e.preventDefault()
+      navegarProximoInput(e.target)
+    }
+  }
 }
 
 function copyToClipboard(text) {
@@ -62,7 +97,10 @@ const TabelaRow = memo(function TabelaRow({
   config = {},
   modoHistorico = false,
 }) {
-  const upd = (field, val) => onFieldChange(linha._key, field, val)
+  const upd = (field, val) => {
+    console.log('[TabelaRow.upd]', { key: linha._key, codigo: linha.codigo, field, val })
+    onFieldChange(linha._key, field, val)
+  }
   const [txtCopiado, setTxtCopiado] = useState(false)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
   const isCancelado = (linha.status || '').toUpperCase() === 'CANCELADO'
