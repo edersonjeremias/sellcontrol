@@ -80,6 +80,105 @@ export default function EditorVendasPage() {
     }
   }
 
+  function adicionarNovaLinha() {
+    const novaVenda = {
+      id: `temp-${Date.now()}`, // ID temporário
+      _isNew: true,
+      data_live: filtros.data || new Date().toISOString().split('T')[0],
+      live_nome: filtros.live || '',
+      codigo: '',
+      produto: '',
+      modelo: '',
+      cor: '',
+      marca: '',
+      tamanho: '',
+      preco: '',
+      cliente_nome: filtros.cliente || '',
+      fila1: '',
+      fila2: '',
+      fila3: ''
+    }
+    setVendas(prev => [novaVenda, ...prev])
+  }
+
+  function atualizarVenda(id, campo, valor) {
+    setVendas(prev => prev.map(v => v.id === id ? { ...v, [campo]: valor } : v))
+  }
+
+  async function salvarTodasAlteracoes() {
+    if (!tenantId) return
+    setBusy(true)
+
+    try {
+      const novas = vendas.filter(v => v._isNew)
+      const editadas = vendas.filter(v => !v._isNew)
+
+      // Insere novas
+      if (novas.length > 0) {
+        const { data: inserted, error: insertError } = await supabase
+          .from('vendas')
+          .insert(novas.map(v => ({
+            tenant_id: tenantId,
+            data_live: v.data_live,
+            live_nome: v.live_nome,
+            codigo: v.codigo,
+            produto: v.produto,
+            modelo: v.modelo,
+            cor: v.cor,
+            marca: v.marca,
+            tamanho: v.tamanho,
+            preco: v.preco,
+            cliente_nome: v.cliente_nome,
+            fila1: v.fila1,
+            fila2: v.fila2,
+            fila3: v.fila3,
+            status: 'ENVIADO'
+          })))
+          .select()
+
+        if (insertError) throw insertError
+
+        // Atualiza IDs temporários com IDs reais
+        setVendas(prev => prev.map(v => {
+          if (v._isNew) {
+            const novoId = inserted?.find(i => i.produto === v.produto && i.cliente_nome === v.cliente_nome)
+            return novoId ? { ...v, id: novoId.id, _isNew: false } : v
+          }
+          return v
+        }))
+      }
+
+      // Atualiza editadas
+      for (const venda of editadas) {
+        const { error } = await supabase
+          .from('vendas')
+          .update({
+            produto: venda.produto,
+            modelo: venda.modelo,
+            cor: venda.cor,
+            marca: venda.marca,
+            tamanho: venda.tamanho,
+            preco: venda.preco,
+            codigo: venda.codigo,
+            cliente_nome: venda.cliente_nome,
+            fila1: venda.fila1,
+            fila2: venda.fila2,
+            fila3: venda.fila3
+          })
+          .eq('id', venda.id)
+
+        if (error) throw error
+      }
+
+      alert(`✅ Salvos: ${editadas.length} editados, ${novas.length} novos`)
+    } catch (error) {
+      console.error('Erro ao salvar alterações:', error)
+      alert('❌ Erro ao salvar alterações')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function salvarVenda(venda) {
     if (!tenantId) return
     setBusy(true)
@@ -152,6 +251,14 @@ export default function EditorVendasPage() {
 
   return (
     <AppShell>
+      {/* Datalists para autocomplete */}
+      <datalist id="dlProdutos">{listas.produtos.map(p => <option key={p} value={p} />)}</datalist>
+      <datalist id="dlModelos">{listas.modelos.map(m => <option key={m} value={m} />)}</datalist>
+      <datalist id="dlCores">{listas.cores.map(c => <option key={c} value={c} />)}</datalist>
+      <datalist id="dlMarcas">{listas.marcas.map(m => <option key={m} value={m} />)}</datalist>
+      <datalist id="dlClientes">{listas.clientes.map(c => <option key={c} value={c} />)}</datalist>
+      <datalist id="dlLives">{listas.lives.map(l => <option key={l} value={l} />)}</datalist>
+
       <div style={{ padding: '20px', maxWidth: 1400, margin: '0 auto' }}>
         {/* TOOLBAR DE FILTROS */}
         <div style={{
@@ -235,7 +342,22 @@ export default function EditorVendasPage() {
           </div>
 
           {/* Botões */}
-          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+          <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+            <button
+              onClick={adicionarNovaLinha}
+              disabled={busy}
+              style={{
+                padding: '12px 20px',
+                background: 'var(--bg)',
+                color: 'var(--input-text)',
+                border: '1px solid var(--border-light)',
+                borderRadius: 8,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              + Novo
+            </button>
             <button
               onClick={buscarVendas}
               disabled={busy}
@@ -250,7 +372,22 @@ export default function EditorVendasPage() {
                 cursor: 'pointer'
               }}
             >
-              🔍 Buscar
+              Buscar
+            </button>
+            <button
+              onClick={salvarTodasAlteracoes}
+              disabled={busy}
+              style={{
+                padding: '12px 20px',
+                background: 'var(--blue)',
+                color: '#000',
+                border: 'none',
+                borderRadius: 8,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Salvar Alterações
             </button>
           </div>
         </div>
@@ -288,61 +425,214 @@ export default function EditorVendasPage() {
                   {vendasFiltradas.map(venda => (
                     <tr
                       key={venda.id}
-                      onClick={() => setModalEdicao(venda)}
                       style={{
                         borderBottom: '1px solid var(--border-light)',
-                        cursor: 'pointer',
                         transition: 'background 0.2s'
                       }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <td style={{ padding: '10px' }}>{venda.data_live ? new Date(venda.data_live).toLocaleDateString('pt-BR') : '—'}</td>
-                      <td style={{ padding: '10px' }}>{venda.live_nome || '—'}</td>
-                      <td style={{ padding: '10px' }}>{venda.codigo || '—'}</td>
-                      <td style={{ padding: '10px' }}>{venda.produto || '—'}</td>
-                      <td style={{ padding: '10px' }}>{venda.modelo || '—'}</td>
-                      <td style={{ padding: '10px' }}>{venda.cor || '—'}</td>
-                      <td style={{ padding: '10px' }}>{venda.marca || '—'}</td>
-                      <td style={{ padding: '10px' }}>{venda.tamanho || '—'}</td>
-                      <td style={{ padding: '10px', color: 'var(--green)', fontWeight: 700 }}>R$ {venda.preco || '0,00'}</td>
-                      <td style={{ padding: '10px' }}>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          type="date"
+                          value={venda.data_live || ''}
+                          onChange={e => atualizarVenda(venda.id, 'data_live', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.live_nome || ''}
+                          onChange={e => atualizarVenda(venda.id, 'live_nome', e.target.value)}
+                          list="dlLives"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.codigo || ''}
+                          onChange={e => atualizarVenda(venda.id, 'codigo', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13,
+                            textAlign: 'center'
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.produto || ''}
+                          onChange={e => atualizarVenda(venda.id, 'produto', e.target.value)}
+                          list="dlProdutos"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.modelo || ''}
+                          onChange={e => atualizarVenda(venda.id, 'modelo', e.target.value)}
+                          list="dlModelos"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.cor || ''}
+                          onChange={e => atualizarVenda(venda.id, 'cor', e.target.value)}
+                          list="dlCores"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.marca || ''}
+                          onChange={e => atualizarVenda(venda.id, 'marca', e.target.value)}
+                          list="dlMarcas"
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.tamanho || ''}
+                          onChange={e => atualizarVenda(venda.id, 'tamanho', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--input-text)',
+                            fontSize: 13,
+                            textAlign: 'center'
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
+                        <input
+                          value={venda.preco || ''}
+                          onChange={e => atualizarVenda(venda.id, 'preco', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            color: 'var(--green)',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            textAlign: 'right'
+                          }}
+                        />
+                      </td>
+                      <td style={{ padding: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span>{venda.cliente_nome || '—'}</span>
-                          {(venda.fila1 || venda.fila2 || venda.fila3) && (
-                            <button
-                              onClick={e => { e.stopPropagation(); setModalFila(venda) }}
-                              style={{
-                                background: 'rgba(147,197,253,0.15)',
-                                border: '1px solid var(--blue)',
-                                color: 'var(--blue)',
-                                borderRadius: 6,
-                                padding: '4px 8px',
-                                fontSize: 10,
-                                fontWeight: 700,
-                                cursor: 'pointer'
-                              }}
-                            >
-                              FILA
-                            </button>
-                          )}
+                          <input
+                            value={venda.cliente_nome || ''}
+                            onChange={e => atualizarVenda(venda.id, 'cliente_nome', e.target.value)}
+                            list="dlClientes"
+                            style={{
+                              flex: 1,
+                              padding: '8px 10px',
+                              background: 'var(--input-bg)',
+                              border: '1px solid var(--border-light)',
+                              borderRadius: 6,
+                              color: 'var(--input-text)',
+                              fontSize: 13
+                            }}
+                          />
+                          <button
+                            onClick={() => setModalFila(venda)}
+                            style={{
+                              background: (venda.fila1 || venda.fila2 || venda.fila3) ? 'rgba(147,197,253,0.15)' : 'var(--bg)',
+                              border: `1px solid ${(venda.fila1 || venda.fila2 || venda.fila3) ? 'var(--blue)' : 'var(--border-light)'}`,
+                              color: (venda.fila1 || venda.fila2 || venda.fila3) ? 'var(--blue)' : 'var(--muted)',
+                              borderRadius: 6,
+                              width: 36,
+                              height: 36,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                              <circle cx="9" cy="7" r="4"/>
+                              <line x1="19" y1="8" x2="19" y2="14"/>
+                              <line x1="22" y1="11" x2="16" y2="11"/>
+                            </svg>
+                          </button>
                         </div>
                       </td>
-                      <td style={{ padding: '10px' }}>
+                      <td style={{ padding: '6px', textAlign: 'center' }}>
                         <button
-                          onClick={e => { e.stopPropagation(); setModalEdicao(venda) }}
+                          onClick={() => setModalEdicao(venda)}
                           style={{
-                            background: 'var(--blue)',
-                            color: '#000',
-                            border: 'none',
+                            background: 'transparent',
+                            color: 'var(--muted)',
+                            border: '1px solid var(--border-light)',
                             borderRadius: 6,
-                            padding: '6px 12px',
-                            fontSize: 12,
+                            padding: '6px 10px',
+                            fontSize: 11,
                             fontWeight: 600,
                             cursor: 'pointer'
                           }}
                         >
-                          Editar
+                          ...
                         </button>
                       </td>
                     </tr>
