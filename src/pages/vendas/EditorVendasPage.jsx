@@ -1,0 +1,763 @@
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useApp } from '../../context/AppContext'
+import AppShell from '../../components/ui/AppShell'
+import AutocompleteInput from '../../components/ui/AutocompleteInput'
+import { supabase } from '../../lib/supabase'
+
+export default function EditorVendasPage() {
+  const { tenantId } = useApp()
+
+  // Estados principais
+  const [busy, setBusy] = useState(false)
+  const [vendas, setVendas] = useState([])
+  const [listas, setListas] = useState({ produtos: [], modelos: [], cores: [], marcas: [], clientes: [], lives: [] })
+
+  // Filtros
+  const [filtros, setFiltros] = useState({
+    data: '',
+    live: '',
+    cliente: '',
+    busca: ''
+  })
+
+  // Modais
+  const [modalEdicao, setModalEdicao] = useState(null)
+  const [modalFila, setModalFila] = useState(null)
+
+  // Carrega listas para autocomplete
+  useEffect(() => {
+    if (!tenantId) return
+    carregarListas()
+  }, [tenantId])
+
+  async function carregarListas() {
+    try {
+      const [produtosRes, modelosRes, coresRes, marcasRes, clientesRes, livesRes] = await Promise.all([
+        supabase.from('produtos').select('nome').eq('tenant_id', tenantId).order('nome'),
+        supabase.from('modelos').select('nome').eq('tenant_id', tenantId).order('nome'),
+        supabase.from('cores').select('nome').eq('tenant_id', tenantId).order('nome'),
+        supabase.from('marcas').select('nome').eq('tenant_id', tenantId).order('nome'),
+        supabase.from('clientes').select('instagram').eq('tenant_id', tenantId).order('instagram'),
+        supabase.from('vendas').select('live_nome').eq('tenant_id', tenantId).order('live_nome')
+      ])
+
+      setListas({
+        produtos: produtosRes.data?.map(p => p.nome) || [],
+        modelos: modelosRes.data?.map(m => m.nome) || [],
+        cores: coresRes.data?.map(c => c.nome) || [],
+        marcas: marcasRes.data?.map(m => m.nome) || [],
+        clientes: clientesRes.data?.map(c => c.instagram) || [],
+        lives: [...new Set(livesRes.data?.map(v => v.live_nome).filter(Boolean))] || []
+      })
+    } catch (error) {
+      console.error('Erro ao carregar listas:', error)
+    }
+  }
+
+  async function buscarVendas() {
+    if (!tenantId) return
+    setBusy(true)
+
+    try {
+      let query = supabase
+        .from('vendas')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('data_live', { ascending: false })
+
+      if (filtros.data) query = query.eq('data_live', filtros.data)
+      if (filtros.live) query = query.eq('live_nome', filtros.live)
+      if (filtros.cliente) query = query.eq('cliente_nome', filtros.cliente)
+
+      const { data, error } = await query
+
+      if (error) throw error
+      setVendas(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar vendas:', error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function salvarVenda(venda) {
+    if (!tenantId) return
+    setBusy(true)
+
+    try {
+      const { error } = await supabase
+        .from('vendas')
+        .update({
+          produto: venda.produto,
+          modelo: venda.modelo,
+          cor: venda.cor,
+          marca: venda.marca,
+          tamanho: venda.tamanho,
+          preco: venda.preco,
+          codigo: venda.codigo,
+          cliente_nome: venda.cliente_nome,
+          fila1: venda.fila1,
+          fila2: venda.fila2,
+          fila3: venda.fila3
+        })
+        .eq('id', venda.id)
+
+      if (error) throw error
+
+      // Atualiza a lista local
+      setVendas(prev => prev.map(v => v.id === venda.id ? venda : v))
+      setModalEdicao(null)
+    } catch (error) {
+      console.error('Erro ao salvar venda:', error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function excluirVenda(id) {
+    if (!confirm('Tem certeza que deseja excluir esta venda?')) return
+    setBusy(true)
+
+    try {
+      const { error } = await supabase.from('vendas').delete().eq('id', id)
+      if (error) throw error
+
+      setVendas(prev => prev.filter(v => v.id !== id))
+      setModalEdicao(null)
+    } catch (error) {
+      console.error('Erro ao excluir venda:', error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Aplica filtro de busca inteligente (múltiplas palavras)
+  const vendasFiltradas = vendas.filter(venda => {
+    if (!filtros.busca) return true
+
+    const palavras = filtros.busca.toLowerCase().replace(/,/g, ' ').split(' ').filter(p => p.trim())
+    const textoVenda = [
+      venda.produto,
+      venda.modelo,
+      venda.cor,
+      venda.marca,
+      venda.tamanho,
+      venda.preco,
+      venda.codigo,
+      venda.cliente_nome
+    ].join(' ').toLowerCase()
+
+    return palavras.every(palavra => textoVenda.includes(palavra))
+  })
+
+  return (
+    <AppShell>
+      <div style={{ padding: '20px', maxWidth: 1400, margin: '0 auto' }}>
+        {/* TOOLBAR DE FILTROS */}
+        <div style={{
+          background: 'var(--panel)',
+          border: '1px solid var(--border-light)',
+          borderRadius: 12,
+          padding: 20,
+          marginBottom: 20
+        }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+            {/* Data */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Data
+              </label>
+              <input
+                type="date"
+                value={filtros.data}
+                onChange={e => setFiltros(f => ({ ...f, data: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 8,
+                  color: 'var(--input-text)',
+                  fontSize: 14
+                }}
+              />
+            </div>
+
+            {/* Live */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Live
+              </label>
+              <AutocompleteInput
+                value={filtros.live}
+                onChange={v => setFiltros(f => ({ ...f, live: v }))}
+                list={listas.lives}
+                placeholder="Buscar Live..."
+                showOnFocus
+              />
+            </div>
+
+            {/* Cliente */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Cliente (Opcional)
+              </label>
+              <AutocompleteInput
+                value={filtros.cliente}
+                onChange={v => setFiltros(f => ({ ...f, cliente: v }))}
+                list={listas.clientes}
+                placeholder="Todos os clientes..."
+                showOnFocus
+              />
+            </div>
+
+            {/* Busca Inteligente */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Busca Inteligente
+              </label>
+              <input
+                type="text"
+                value={filtros.busca}
+                onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
+                placeholder="Ex: vestido verde, calça P..."
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 8,
+                  color: 'var(--input-text)',
+                  fontSize: 14
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Botões */}
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button
+              onClick={buscarVendas}
+              disabled={busy}
+              style={{
+                flex: 1,
+                padding: '12px 20px',
+                background: 'var(--green)',
+                color: '#000',
+                border: 'none',
+                borderRadius: 8,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              🔍 Buscar
+            </button>
+          </div>
+        </div>
+
+        {/* TABELA DE VENDAS */}
+        <div style={{
+          background: 'var(--panel)',
+          border: '1px solid var(--border-light)',
+          borderRadius: 12,
+          overflow: 'hidden'
+        }}>
+          {vendasFiltradas.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+              {vendas.length === 0 ? 'Nenhuma venda encontrada. Clique em Buscar.' : 'Nenhum resultado com esses filtros.'}
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border-light)' }}>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Data</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Live</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Cód.</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Produto</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Modelo</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Cor</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Marca</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Tam.</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Preço</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Cliente</th>
+                    <th style={{ padding: '12px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vendasFiltradas.map(venda => (
+                    <tr
+                      key={venda.id}
+                      onClick={() => setModalEdicao(venda)}
+                      style={{
+                        borderBottom: '1px solid var(--border-light)',
+                        cursor: 'pointer',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '10px' }}>{venda.data_live ? new Date(venda.data_live).toLocaleDateString('pt-BR') : '—'}</td>
+                      <td style={{ padding: '10px' }}>{venda.live_nome || '—'}</td>
+                      <td style={{ padding: '10px' }}>{venda.codigo || '—'}</td>
+                      <td style={{ padding: '10px' }}>{venda.produto || '—'}</td>
+                      <td style={{ padding: '10px' }}>{venda.modelo || '—'}</td>
+                      <td style={{ padding: '10px' }}>{venda.cor || '—'}</td>
+                      <td style={{ padding: '10px' }}>{venda.marca || '—'}</td>
+                      <td style={{ padding: '10px' }}>{venda.tamanho || '—'}</td>
+                      <td style={{ padding: '10px', color: 'var(--green)', fontWeight: 700 }}>R$ {venda.preco || '0,00'}</td>
+                      <td style={{ padding: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>{venda.cliente_nome || '—'}</span>
+                          {(venda.fila1 || venda.fila2 || venda.fila3) && (
+                            <button
+                              onClick={e => { e.stopPropagation(); setModalFila(venda) }}
+                              style={{
+                                background: 'rgba(147,197,253,0.15)',
+                                border: '1px solid var(--blue)',
+                                color: 'var(--blue)',
+                                borderRadius: 6,
+                                padding: '4px 8px',
+                                fontSize: 10,
+                                fontWeight: 700,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              FILA
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); setModalEdicao(venda) }}
+                          style={{
+                            background: 'var(--blue)',
+                            color: '#000',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '6px 12px',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* MODAL DE EDIÇÃO */}
+        {modalEdicao && (
+          <ModalEdicao
+            venda={modalEdicao}
+            listas={listas}
+            onSalvar={salvarVenda}
+            onExcluir={excluirVenda}
+            onFechar={() => setModalEdicao(null)}
+            onAbrirFila={() => setModalFila(modalEdicao)}
+          />
+        )}
+
+        {/* MODAL DE FILA */}
+        {modalFila && (
+          <ModalFila
+            venda={modalFila}
+            listas={listas}
+            onSalvar={venda => {
+              salvarVenda(venda)
+              setModalFila(null)
+              if (modalEdicao?.id === venda.id) setModalEdicao(venda)
+            }}
+            onFechar={() => setModalFila(null)}
+          />
+        )}
+      </div>
+    </AppShell>
+  )
+}
+
+// MODAL DE EDIÇÃO
+function ModalEdicao({ venda: vendaInicial, listas, onSalvar, onExcluir, onFechar, onAbrirFila }) {
+  const [venda, setVenda] = useState(vendaInicial)
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.8)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: 20
+      }}
+      onClick={onFechar}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--panel)',
+          border: '1px solid var(--border-light)',
+          borderRadius: 12,
+          maxWidth: 500,
+          width: '100%',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', background: 'var(--bg)' }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Editar Venda</h3>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 20, overflowY: 'auto', flex: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Código
+              </label>
+              <input
+                value={venda.codigo || ''}
+                onChange={e => setVenda({ ...venda, codigo: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 8,
+                  color: 'var(--input-text)',
+                  fontSize: 14
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Preço
+              </label>
+              <input
+                value={venda.preco || ''}
+                onChange={e => setVenda({ ...venda, preco: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 8,
+                  color: 'var(--input-text)',
+                  fontSize: 14
+                }}
+              />
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Produto
+              </label>
+              <AutocompleteInput
+                value={venda.produto || ''}
+                onChange={v => setVenda({ ...venda, produto: v })}
+                list={listas.produtos}
+              />
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Modelo
+              </label>
+              <AutocompleteInput
+                value={venda.modelo || ''}
+                onChange={v => setVenda({ ...venda, modelo: v })}
+                list={listas.modelos}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Cor
+              </label>
+              <AutocompleteInput
+                value={venda.cor || ''}
+                onChange={v => setVenda({ ...venda, cor: v })}
+                list={listas.cores}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Marca
+              </label>
+              <AutocompleteInput
+                value={venda.marca || ''}
+                onChange={v => setVenda({ ...venda, marca: v })}
+                list={listas.marcas}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Tamanho
+              </label>
+              <input
+                value={venda.tamanho || ''}
+                onChange={e => setVenda({ ...venda, tamanho: e.target.value })}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 8,
+                  color: 'var(--input-text)',
+                  fontSize: 14
+                }}
+              />
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Cliente Principal
+              </label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <AutocompleteInput
+                    value={venda.cliente_nome || ''}
+                    onChange={v => setVenda({ ...venda, cliente_nome: v })}
+                    list={listas.clientes}
+                  />
+                </div>
+                <button
+                  onClick={onAbrirFila}
+                  style={{
+                    background: (venda.fila1 || venda.fila2 || venda.fila3) ? 'rgba(147,197,253,0.15)' : 'var(--bg)',
+                    border: `1px solid ${(venda.fila1 || venda.fila2 || venda.fila3) ? 'var(--blue)' : 'var(--border-light)'}`,
+                    color: (venda.fila1 || venda.fila2 || venda.fila3) ? 'var(--blue)' : 'var(--muted)',
+                    borderRadius: 8,
+                    width: 44,
+                    height: 44,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="19" y1="8" x2="19" y2="14"/>
+                    <line x1="22" y1="11" x2="16" y2="11"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-light)', background: 'var(--bg)', display: 'flex', gap: 10 }}>
+          <button
+            onClick={() => onExcluir(venda.id)}
+            style={{
+              flex: '0 0 auto',
+              padding: '12px 16px',
+              background: 'var(--red)',
+              color: '#000',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            🗑️ Excluir
+          </button>
+          <button
+            onClick={onFechar}
+            style={{
+              flex: 1,
+              padding: '12px 20px',
+              background: 'var(--input-bg)',
+              color: 'var(--input-text)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => onSalvar(venda)}
+            style={{
+              flex: 1,
+              padding: '12px 20px',
+              background: 'var(--green)',
+              color: '#000',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// MODAL DE FILA
+function ModalFila({ venda: vendaInicial, listas, onSalvar, onFechar }) {
+  const [venda, setVenda] = useState(vendaInicial)
+
+  function puxarDaFila(numero) {
+    const novoCliente = venda[`fila${numero}`]
+    if (!novoCliente) return
+
+    if (numero === 1) {
+      setVenda({
+        ...venda,
+        cliente_nome: novoCliente,
+        fila1: venda.fila2,
+        fila2: venda.fila3,
+        fila3: ''
+      })
+    } else if (numero === 2) {
+      setVenda({
+        ...venda,
+        cliente_nome: novoCliente,
+        fila2: venda.fila3,
+        fila3: ''
+      })
+    } else if (numero === 3) {
+      setVenda({
+        ...venda,
+        cliente_nome: novoCliente,
+        fila3: ''
+      })
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.8)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1001,
+        padding: 20
+      }}
+      onClick={onFechar}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--panel)',
+          border: '1px solid var(--border-light)',
+          borderRadius: 12,
+          maxWidth: 400,
+          width: '100%'
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', background: 'var(--bg)' }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Fila de Clientes</h3>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 20 }}>
+          {[1, 2, 3].map(num => (
+            <div key={num} style={{ marginBottom: num < 3 ? 15 : 0 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
+                Fila {num}
+              </label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <AutocompleteInput
+                    value={venda[`fila${num}`] || ''}
+                    onChange={v => setVenda({ ...venda, [`fila${num}`]: v })}
+                    list={listas.clientes}
+                    placeholder="Cliente..."
+                  />
+                </div>
+                <button
+                  onClick={() => puxarDaFila(num)}
+                  disabled={!venda[`fila${num}`]}
+                  style={{
+                    background: 'var(--blue)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: 8,
+                    width: 44,
+                    height: 44,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: venda[`fila${num}`] ? 1 : 0.3
+                  }}
+                  title="Passar para Cliente Principal"
+                >
+                  ⬆️
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-light)', background: 'var(--bg)', display: 'flex', gap: 10 }}>
+          <button
+            onClick={onFechar}
+            style={{
+              flex: 1,
+              padding: '12px 20px',
+              background: 'var(--input-bg)',
+              color: 'var(--input-text)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Voltar
+          </button>
+          <button
+            onClick={() => onSalvar(venda)}
+            style={{
+              flex: 1,
+              padding: '12px 20px',
+              background: 'var(--green)',
+              color: '#000',
+              border: 'none',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Salvar Fila
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
