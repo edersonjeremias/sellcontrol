@@ -126,7 +126,10 @@ export default function VendasPage() {
   const [listas,      setListas]      = useState({ produtos: [], modelos: [], cores: [], marcas: [], clientes: [] })
   const [globalDB,    setGlobalDB]    = useState({ lives: [], bloqueados: {} })
   const [config,      setConfig]      = useState({ codigo_automatico: false, proximo_codigo: 100 })
-  const [dataLive,    setDataLive]    = useState('')
+  const [dataLive,    setDataLive]    = useState(() => {
+    const hoje = new Date()
+    return hoje.toISOString().split('T')[0] // Formato YYYY-MM-DD
+  })
   const [liveNome,    setLiveNome]    = useState('')
   const [statusFiltro, setStatusFiltro] = useState('pendentes') // 'pendentes' | 'enviadas' | 'todas'
   const [busy,        setBusyState]   = useState(false)
@@ -458,6 +461,13 @@ export default function VendasPage() {
 
   const buscar = useCallback(async () => {
     if (busyRef.current || !tenantId) return
+
+    // Validação: exige data preenchida
+    if (!dataLive?.trim()) {
+      showToast('Preencha a data antes de buscar.', 'error')
+      return
+    }
+
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
