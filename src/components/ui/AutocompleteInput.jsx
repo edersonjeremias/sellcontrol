@@ -114,11 +114,17 @@ export default function AutocompleteInput({
         }
       }
 
-      if (onEnterNewRow) {
+      // Se tem lista definida E o valor não está na lista, não chama onEnterNewRow
+      const valorNaLista = !list?.length || list.some(item =>
+        item.toLowerCase() === value?.trim().toLowerCase()
+      )
+
+      if (onEnterNewRow && valorNaLista) {
         onEnterNewRow()
-      } else {
+      } else if (!onEnterNewRow) {
         navigateNext(e.target)
       }
+      // Se valor não está na lista e tem onEnterNewRow, não faz nada (aguarda correção)
     }
   }
 

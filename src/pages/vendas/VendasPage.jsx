@@ -547,21 +547,46 @@ export default function VendasPage() {
     salvarAgora()
   }, [salvarAgora])
 
-  // Chamado ao dar Enter no campo Cliente - SEMPRE cria nova linha no topo
+  // Chamado ao dar Enter no campo Cliente - verifica linha vazia antes de criar nova
   const handleEnterNoCliente = useCallback(() => {
     if (busy) return
 
-    // SEMPRE cria nova linha no topo
-    setLinhas(prev => [novaLinha(getProximoCodigo()), ...prev])
-    setPronto(true)
-    salvarAgora()
+    // Procura por linha vazia (sem produto e sem cliente) começando do topo
+    const linhaVazia = linhasRef.current.find(l =>
+      !l.deleted &&
+      !l.isSent &&
+      !l.produto?.trim() &&
+      !l.cliente_nome?.trim()
+    )
 
-    // Foca no campo PRODUTO da primeira linha (nova linha criada)
-    setTimeout(() => {
-      const firstRow = document.querySelector('#tabela tbody tr:first-child')
-      const produtoInput = firstRow?.querySelector('.col-produto .cell-input')
-      produtoInput?.focus()
-    }, 50)
+    if (linhaVazia) {
+      // Já existe linha vazia - foca no campo PRODUTO dela
+      setTimeout(() => {
+        const rows = document.querySelectorAll('#tabela tbody tr')
+        for (let row of rows) {
+          const codigoInput = row.querySelector('.col-cod .cell-input')
+          if (codigoInput && codigoInput.value === linhaVazia.codigo) {
+            const produtoInput = row.querySelector('.col-produto .cell-input')
+            produtoInput?.focus()
+            // Scroll suave para a linha
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            break
+          }
+        }
+      }, 50)
+    } else {
+      // Não existe linha vazia - cria nova no topo
+      setLinhas(prev => [novaLinha(getProximoCodigo()), ...prev])
+      setPronto(true)
+      salvarAgora()
+
+      // Foca no campo PRODUTO da primeira linha (nova linha criada)
+      setTimeout(() => {
+        const firstRow = document.querySelector('#tabela tbody tr:first-child')
+        const produtoInput = firstRow?.querySelector('.col-produto .cell-input')
+        produtoInput?.focus()
+      }, 50)
+    }
   }, [busy, salvarAgora])
 
   // Adiciona produto da busca às vendas
@@ -748,6 +773,21 @@ export default function VendasPage() {
     if (!l || l.liberado) return
     const nome = (l.cliente_nome || '').trim()
     if (!nome) return
+
+    // Valida se o cliente está cadastrado
+    const clienteExiste = globalDBRef.current.clientes.some(c =>
+      c.toLowerCase() === nome.toLowerCase()
+    )
+
+    if (!clienteExiste) {
+      // Cliente não cadastrado - limpa o campo
+      setLinhas(prev => calcSacolas(prev.map(linha =>
+        linha._key === key ? {...linha, cliente_nome: '', sacolinha: null, liberado: false} : linha
+      )))
+      showToast('Cliente não cadastrado! Use o botão +Cadastro para adicionar.', 'error')
+      return
+    }
+
     showBloqueioModal(key, nome)
   }, [])
 
