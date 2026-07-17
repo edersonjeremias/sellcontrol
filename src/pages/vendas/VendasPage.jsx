@@ -549,6 +549,46 @@ export default function VendasPage() {
     salvarAgora()
   }, [salvarAgora])
 
+  // Chamado ao dar Enter no campo Cliente - navega para linha vazia ou cria nova
+  const handleEnterNoCliente = useCallback(() => {
+    if (busy) return
+
+    // Procura por linha vazia (sem produto e sem cliente)
+    const linhaVazia = linhasRef.current.find(l =>
+      !l.deleted &&
+      !l.isSent &&
+      !l.produto?.trim() &&
+      !l.cliente_nome?.trim()
+    )
+
+    if (linhaVazia) {
+      // Já existe linha vazia - foca no campo PRODUTO dela
+      setTimeout(() => {
+        const rows = document.querySelectorAll('#tabela tbody tr')
+        for (let row of rows) {
+          const codigoInput = row.querySelector('.col-cod .cell-input')
+          if (codigoInput && codigoInput.value === linhaVazia.codigo) {
+            const produtoInput = row.querySelector('.col-produto .cell-input')
+            produtoInput?.focus()
+            break
+          }
+        }
+      }, 50)
+    } else {
+      // Não existe linha vazia - cria nova no topo
+      setLinhas(prev => [novaLinha(getProximoCodigo()), ...prev])
+      setPronto(true)
+      salvarAgora()
+
+      // Foca no campo PRODUTO da primeira linha
+      setTimeout(() => {
+        const firstRow = document.querySelector('#tabela tbody tr:first-child')
+        const produtoInput = firstRow?.querySelector('.col-produto .cell-input')
+        produtoInput?.focus()
+      }, 50)
+    }
+  }, [busy, salvarAgora])
+
   // Adiciona produto da busca às vendas
   const adicionarProdutoBusca = useCallback((produto) => {
     // Remove da lista de busca e adiciona às linhas
@@ -689,16 +729,9 @@ export default function VendasPage() {
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((key, field, value) => {
     // Usa _key para identificar a linha (não depende de índice visual)
-    console.log('[handleFieldChange]', { key, field, value, totalLinhas: linhasRef.current.length })
-
     setLinhas(prev => {
       const idx = prev.findIndex(l => l._key === key)
-      console.log('[handleFieldChange] idx encontrado:', idx, 'de', prev.length, 'linhas')
-
-      if (idx === -1) {
-        console.error('[handleFieldChange] KEY NÃO ENCONTRADA!', key)
-        return prev
-      }
+      if (idx === -1) return prev
 
       const n = [...prev]
       const l = { ...n[idx], [field]: value }
@@ -1204,11 +1237,11 @@ export default function VendasPage() {
                   {linhasHist.map((l, idx) => {
                     if (!passaFiltro(l, filtro)) return null
                     return (
-                      <TabelaRow key={l.id} linha={l} idx={idx} listas={listas}
+                      <TabelaRow key={l.id} linha={l} listas={listas}
                         modoHistorico={true}
                         onFieldChange={() => {}}
                         onClienteBlur={() => {}}
-                        onNovoFromRow={() => {}}
+                        onEnterNoCliente={() => {}}
                         onAbrirModal={setModalHistIdx}
                         onAbrirFila={setModalFilaHistIdx}
                         onEnviar={() => {}}
@@ -1264,7 +1297,7 @@ export default function VendasPage() {
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
                         onIsBlocked={handleIsBlocked}
-                        onNovoFromRow={() => novoAcima(idx)}
+                        onEnterNoCliente={handleEnterNoCliente}
                         onAbrirModal={() => setModalEdicaoKey(l._key)}
                         onAbrirFila={() => setModalFilaKey(l._key)}
                         onEnviar={handleEnviar}

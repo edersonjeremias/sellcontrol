@@ -89,7 +89,7 @@ function copyToClipboard(text) {
 
 const TabelaRow = memo(function TabelaRow({
   linha, listas,
-  onFieldChange, onClienteBlur, onClienteSelect, onIsBlocked, onNovoFromRow,
+  onFieldChange, onClienteBlur, onClienteSelect, onIsBlocked, onEnterNoCliente,
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
   onStatusChange,
@@ -97,10 +97,7 @@ const TabelaRow = memo(function TabelaRow({
   config = {},
   modoHistorico = false,
 }) {
-  const upd = (field, val) => {
-    console.log('[TabelaRow.upd]', { key: linha._key, codigo: linha.codigo, field, val })
-    onFieldChange(linha._key, field, val)
-  }
+  const upd = (field, val) => onFieldChange(linha._key, field, val)
   const [txtCopiado, setTxtCopiado] = useState(false)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
   const isCancelado = (linha.status || '').toUpperCase() === 'CANCELADO'
@@ -243,7 +240,7 @@ const TabelaRow = memo(function TabelaRow({
           onBlur={() => onClienteBlur(linha._key)}
           onSelect={(v, inputEl) => onClienteSelect?.(linha._key, v, inputEl)}
           isBlocked={v => onIsBlocked?.(v)}
-          onEnterNewRow={onNovoFromRow}
+          onEnterNewRow={onEnterNoCliente}
           disabled={linha.isSent}
         />
       </td>
