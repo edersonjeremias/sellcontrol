@@ -62,7 +62,7 @@ function mapRow(row) {
     qtde:         row.qtde         || '',
     condicao:     row.condicao     || '',
     genero:       row.genero       || '',
-    isSent: (row.status || '').toUpperCase() === 'ENVIADO',
+    isSent: ['ENVIADO', 'VENDIDO'].includes((row.status || '').toUpperCase()),
     liberado: false,
   }
 }
@@ -239,13 +239,16 @@ export default function VendasPage() {
   const totalInfo = useMemo(() => {
     let total = 0, qtd = 0
     linhas.forEach(l => {
-      if (l.deleted || l.status === 'Vendido' || !l.cliente_nome?.trim() || !passaFiltro(l, filtro)) return
+      // Ignora deletados e sem cliente
+      if (l.deleted || !l.cliente_nome?.trim() || !passaFiltro(l, filtro)) return
+      // Se estiver em modo Pendentes, ignora vendidos
+      if (statusFiltro === 'pendentes' && l.status === 'Vendido') return
       qtd++
       const n = parseFloat((l.preco || '').replace(/\./g, '').replace(',', '.'))
       if (!isNaN(n)) total += n
     })
     return { total, qtd }
-  }, [linhas, filtro])
+  }, [linhas, filtro, statusFiltro])
 
   // ── BUSCA DE PRODUTOS (quando digita no filtro) ──
   useEffect(() => {
@@ -465,9 +468,12 @@ export default function VendasPage() {
         // Busca apenas vendas pendentes (não enviadas)
         rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true, somentePendentes: true })
       } else if (statusFiltro === 'enviadas') {
-        // Busca apenas vendas enviadas
+        // Busca apenas vendas finalizadas (enviadas/vendidas)
         const allRows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
-        rows = allRows.filter(r => r.status?.toUpperCase() === 'ENVIADO')
+        rows = allRows.filter(r => {
+          const status = r.status?.toUpperCase() || ''
+          return status === 'ENVIADO' || status === 'VENDIDO'
+        })
       } else {
         // Busca todas as vendas com cliente
         rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
@@ -1137,7 +1143,10 @@ export default function VendasPage() {
                 </thead>
                 <tbody>
                   {linhas.map((l, idx) => {
-                    if (l.deleted || l.status === 'Vendido' || !passaFiltro(l, filtro)) return null
+                    // Filtra deletados e pelo filtro de busca
+                    if (l.deleted || !passaFiltro(l, filtro)) return null
+                    // Se estiver em modo Pendentes, não mostra vendidos
+                    if (statusFiltro === 'pendentes' && l.status === 'Vendido') return null
                     return (
                       <TabelaRow key={l._key}
                         linha={l} listas={listas}
