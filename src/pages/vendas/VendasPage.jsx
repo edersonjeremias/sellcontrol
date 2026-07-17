@@ -127,6 +127,7 @@ export default function VendasPage() {
   const [config,      setConfig]      = useState({ codigo_automatico: false, proximo_codigo: 100 })
   const [dataLive,    setDataLive]    = useState('')
   const [liveNome,    setLiveNome]    = useState('')
+  const [statusFiltro, setStatusFiltro] = useState('pendentes') // 'pendentes' | 'enviadas' | 'todas'
   const [busy,        setBusyState]   = useState(false)
   const [busyMsg,     setBusyMsg]     = useState('')
   const [hasUnsaved,  setHasUnsaved]  = useState(false)
@@ -456,17 +457,38 @@ export default function VendasPage() {
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      // Busca vendas com cliente que ainda não foram enviadas
-      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true, somentePendentes: true })
+      let rows = []
+
+      // Filtra conforme status selecionado
+      if (statusFiltro === 'pendentes') {
+        // Busca apenas vendas pendentes (não enviadas)
+        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true, somentePendentes: true })
+      } else if (statusFiltro === 'enviadas') {
+        // Busca apenas vendas enviadas
+        const allRows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
+        rows = allRows.filter(r => r.status?.toUpperCase() === 'ENVIADO')
+      } else {
+        // Busca todas as vendas com cliente
+        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
+      }
+
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
       skipFilterEffectRef.current = true  // Evita que useEffect execute ao limpar filtro
       setFiltro('') // Limpa filtro
       setHasUnsaved(false)
-      if (!novas.length) setTabelaMsg('Nenhum item com cliente encontrado. Use o campo de busca para encontrar produtos ou clique em + Novo.')
+
+      if (!novas.length) {
+        const msg = statusFiltro === 'pendentes'
+          ? 'Nenhuma venda pendente encontrada. Use o campo de busca para encontrar produtos ou clique em + Novo.'
+          : statusFiltro === 'enviadas'
+          ? 'Nenhuma venda enviada encontrada para os filtros selecionados.'
+          : 'Nenhuma venda encontrada.'
+        setTabelaMsg(msg)
+      }
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
     finally { setBusy(false) }
-  }, [tenantId, dataLive, liveNome])
+  }, [tenantId, dataLive, liveNome, statusFiltro])
 
   const novo = useCallback(() => {
     if (busy) return
@@ -1039,6 +1061,29 @@ export default function VendasPage() {
               <label>Live</label>
               <AutocompleteInput value={liveNome} onChange={setLiveNome}
                 list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
+            </div>
+            <div className="field">
+              <label>Status</label>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', height: 40 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="radio" name="statusFiltro" value="pendentes"
+                    checked={statusFiltro === 'pendentes'}
+                    onChange={e => setStatusFiltro(e.target.value)} />
+                  Pendentes
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="radio" name="statusFiltro" value="enviadas"
+                    checked={statusFiltro === 'enviadas'}
+                    onChange={e => setStatusFiltro(e.target.value)} />
+                  Enviadas
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="radio" name="statusFiltro" value="todas"
+                    checked={statusFiltro === 'todas'}
+                    onChange={e => setStatusFiltro(e.target.value)} />
+                  Todas
+                </label>
+              </div>
             </div>
             <div className="total-container">
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>

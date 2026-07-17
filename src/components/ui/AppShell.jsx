@@ -8,7 +8,6 @@ const SLUG_TO_CATEGORY = {
   'dashboard':                   'Principal',
   'notificacoes':                'Principal',
   'vendas':                      'Vendas',
-  'vendas/editor':               'Vendas',
   'cobrancas':                   'Financeiro',
   'relatorio':                   'Financeiro',
   'contatos':                    'Vendas',

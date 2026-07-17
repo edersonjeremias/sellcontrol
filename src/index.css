@@ -675,7 +675,8 @@ tbody tr:hover { background-color: var(--table-row-hover); }
 tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); vertical-align: middle; position: relative; }
 
 .linha-apagada { display: none !important; }
-.linha-enviada input.cell-input { color: var(--green) !important; border-color: transparent !important; pointer-events: none !important; }
+.linha-enviada { background: rgba(34, 197, 94, 0.08) !important; }
+.linha-enviada input.cell-input { color: var(--green); border-color: rgba(34, 197, 94, 0.3); }
 .linha-enviada .btn-action-sm.send { display: none !important; }
 .linha-enviada .btn-action-sm.del  { display: none !important; }
 .linha-enviada .btn-action-sm.fila { display: none !important; }
