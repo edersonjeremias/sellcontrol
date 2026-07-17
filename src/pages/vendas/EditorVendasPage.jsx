@@ -5,7 +5,10 @@ import AutocompleteInput from '../../components/ui/AutocompleteInput'
 import { supabase } from '../../lib/supabase'
 
 export default function EditorVendasPage() {
-  const { tenantId } = useApp()
+  const { tenant, empresaSelecionada } = useApp()
+
+  // Fallback: pega tenant_id do empresaSelecionada se tenant não existir
+  const tenant = tenant || empresaSelecionada?.id
 
   // Estados principais
   const [busy, setBusy] = useState(false)
@@ -26,19 +29,19 @@ export default function EditorVendasPage() {
 
   // Carrega listas para autocomplete
   useEffect(() => {
-    if (!tenantId) return
+    if (!tenant) return
     carregarListas()
-  }, [tenantId])
+  }, [tenant])
 
   async function carregarListas() {
     try {
       const [produtosRes, modelosRes, coresRes, marcasRes, clientesRes, livesRes] = await Promise.all([
-        supabase.from('produtos').select('nome').eq('tenant_id', tenantId).order('nome'),
-        supabase.from('modelos').select('nome').eq('tenant_id', tenantId).order('nome'),
-        supabase.from('cores').select('nome').eq('tenant_id', tenantId).order('nome'),
-        supabase.from('marcas').select('nome').eq('tenant_id', tenantId).order('nome'),
-        supabase.from('clientes').select('instagram').eq('tenant_id', tenantId).order('instagram'),
-        supabase.from('vendas').select('live_nome').eq('tenant_id', tenantId).order('live_nome')
+        supabase.from('produtos').select('nome').eq('tenant_id', tenant).order('nome'),
+        supabase.from('modelos').select('nome').eq('tenant_id', tenant).order('nome'),
+        supabase.from('cores').select('nome').eq('tenant_id', tenant).order('nome'),
+        supabase.from('marcas').select('nome').eq('tenant_id', tenant).order('nome'),
+        supabase.from('clientes').select('instagram').eq('tenant_id', tenant).order('instagram'),
+        supabase.from('vendas').select('live_nome').eq('tenant_id', tenant).order('live_nome')
       ])
 
       setListas({
@@ -55,7 +58,7 @@ export default function EditorVendasPage() {
   }
 
   async function buscarVendas() {
-    if (!tenantId) {
+    if (!tenant) {
       alert('⚠️ Tenant ID não encontrado')
       return
     }
@@ -66,7 +69,7 @@ export default function EditorVendasPage() {
       let query = supabase
         .from('vendas')
         .select('*')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', tenant)
         .eq('status', 'ENVIADO')
         .order('data_live', { ascending: false })
         .limit(500)
@@ -129,7 +132,7 @@ export default function EditorVendasPage() {
   }
 
   async function salvarTodasAlteracoes() {
-    if (!tenantId) return
+    if (!tenant) return
     setBusy(true)
 
     try {
@@ -141,7 +144,7 @@ export default function EditorVendasPage() {
         const { data: inserted, error: insertError } = await supabase
           .from('vendas')
           .insert(novas.map(v => ({
-            tenant_id: tenantId,
+            tenant_id: tenant,
             data_live: v.data_live,
             live_nome: v.live_nome,
             codigo: v.codigo,
@@ -203,7 +206,7 @@ export default function EditorVendasPage() {
   }
 
   async function salvarVenda(venda) {
-    if (!tenantId) return
+    if (!tenant) return
     setBusy(true)
 
     try {
@@ -273,7 +276,7 @@ export default function EditorVendasPage() {
   })
 
   return (
-    <AppShell>
+    <AppShell flush={true}>
       {/* Datalists para autocomplete */}
       <datalist id="dlProdutos">{listas.produtos.map(p => <option key={p} value={p} />)}</datalist>
       <datalist id="dlModelos">{listas.modelos.map(m => <option key={m} value={m} />)}</datalist>
@@ -282,14 +285,12 @@ export default function EditorVendasPage() {
       <datalist id="dlClientes">{listas.clientes.map(c => <option key={c} value={c} />)}</datalist>
       <datalist id="dlLives">{listas.lives.map(l => <option key={l} value={l} />)}</datalist>
 
-      {/* TOOLBAR DE FILTROS - SEM PADDING, NO TOPO */}
+      {/* TOOLBAR DE FILTROS - GRUDADO NO TOPO */}
       <div style={{
         background: 'var(--panel)',
         borderBottom: '1px solid var(--border-light)',
         padding: '14px 20px',
-        position: 'sticky',
-        top: 60,
-        zIndex: 10
+        margin: 0
       }}>
         {/* Linha com campos e botões inline */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
