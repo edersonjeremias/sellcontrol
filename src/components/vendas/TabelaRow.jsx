@@ -53,7 +53,7 @@ function copyToClipboard(text) {
 }
 
 const TabelaRow = memo(function TabelaRow({
-  linha, idx, listas,
+  linha, listas,
   onFieldChange, onClienteBlur, onClienteSelect, onIsBlocked, onNovoFromRow,
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
@@ -62,7 +62,7 @@ const TabelaRow = memo(function TabelaRow({
   config = {},
   modoHistorico = false,
 }) {
-  const upd = (field, val) => onFieldChange(idx, field, val)
+  const upd = (field, val) => onFieldChange(linha._key, field, val)
   const [txtCopiado, setTxtCopiado] = useState(false)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
   const isCancelado = (linha.status || '').toUpperCase() === 'CANCELADO'
@@ -92,7 +92,7 @@ const TabelaRow = memo(function TabelaRow({
     <tr className={linha.isSent && !modoHistorico ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
       {/* SACOLA / DATA-LIVE */}
       <td className="col-sacola td-sacola"
-        onClick={() => (modoHistorico || !linha.isSent) && onAbrirModal(idx)}
+        onClick={() => (modoHistorico || !linha.isSent) && onAbrirModal()}
         title="Clique para editar">
         {modoHistorico ? (
           <div style={{ textAlign: 'center', lineHeight: 1.4 }}>
@@ -202,8 +202,8 @@ const TabelaRow = memo(function TabelaRow({
           value={linha.cliente_nome}
           list={listas.clientes}
           onChange={v => upd('cliente_nome', v)}
-          onBlur={() => onClienteBlur(idx)}
-          onSelect={(v, inputEl) => onClienteSelect?.(idx, v, inputEl)}
+          onBlur={() => onClienteBlur(linha._key)}
+          onSelect={(v, inputEl) => onClienteSelect?.(linha._key, v, inputEl)}
           isBlocked={v => onIsBlocked?.(v)}
           onEnterNewRow={onNovoFromRow}
           disabled={linha.isSent}
@@ -237,7 +237,7 @@ const TabelaRow = memo(function TabelaRow({
           <button type="button"
             className={`btn-action-sm fila${hasFila ? ' has-fila' : ''}`}
             title="Fila de Espera"
-            onClick={e => { e.stopPropagation(); onAbrirFila(idx) }}
+            onClick={e => { e.stopPropagation(); onAbrirFila() }}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/>

@@ -148,8 +148,8 @@ export default function VendasPage() {
   const [qtInput,       setQtInput]       = useState('2')
 
   // ── Modal state ──
-  const [modalEdicaoIdx,    setModalEdicaoIdx]    = useState(null)
-  const [modalFilaIdx,      setModalFilaIdx]      = useState(null)
+  const [modalEdicaoKey,    setModalEdicaoKey]    = useState(null)
+  const [modalFilaKey,      setModalFilaKey]      = useState(null)
   const [showModalCadastro, setShowModalCadastro] = useState(false)
   const [alerta,            setAlerta]            = useState(null)
   const [confirmacao,       setConfirmacao]       = useState(null)
@@ -687,12 +687,12 @@ export default function VendasPage() {
   }, [pronto, tenantId])
 
   // ── UPDATE DE CAMPO ──
-  const handleFieldChange = useCallback((idx, field, value) => {
-    // Usa refs para evitar dependência circular
-    const itemAtual = linhasRef.current[idx]
-    if (!itemAtual) return
-
+  const handleFieldChange = useCallback((key, field, value) => {
+    // Usa _key para identificar a linha (não depende de índice visual)
     setLinhas(prev => {
+      const idx = prev.findIndex(l => l._key === key)
+      if (idx === -1) return prev
+
       const n = [...prev]
       const l = { ...n[idx], [field]: value }
       if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
@@ -704,7 +704,7 @@ export default function VendasPage() {
   }, [salvarAgora])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
-  function showBloqueioModal(idx, nomeExibido, inputEl) {
+  function showBloqueioModal(key, nomeExibido, inputEl) {
     const nome = nomeExibido.trim().toLowerCase()
     const info = globalDBRef.current.bloqueados[nome]
     if (!info) return
@@ -720,7 +720,7 @@ export default function VendasPage() {
       mensagem: msg,
       hideConfirm: true,
       onNao: () => {
-        setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],cliente_nome:'',sacolinha:null,liberado:false}; return calcSacolas(n) })
+        setLinhas(prev => calcSacolas(prev.map(l => l._key === key ? {...l, cliente_nome:'', sacolinha:null, liberado:false} : l)))
         setConfirmacao(null)
         const el = focusReturnRef.current
         if (el) setTimeout(() => { el.focus(); focusReturnRef.current = null }, 50)
@@ -728,19 +728,19 @@ export default function VendasPage() {
     })
   }
 
-  const handleClienteBlur = useCallback((idx) => {
-    const l = linhasRef.current[idx]
+  const handleClienteBlur = useCallback((key) => {
+    const l = linhasRef.current.find(linha => linha._key === key)
     if (!l || l.liberado) return
     const nome = (l.cliente_nome || '').trim()
     if (!nome) return
-    showBloqueioModal(idx, nome)
+    showBloqueioModal(key, nome)
   }, [])
 
   // Sem useCallback para garantir closure sempre atualizada
-  function handleClienteSelect(idx, nome, inputEl) {
-    const l = linhasRef.current[idx]
+  function handleClienteSelect(key, nome, inputEl) {
+    const l = linhasRef.current.find(linha => linha._key === key)
     if (l?.liberado) return
-    showBloqueioModal(idx, nome, inputEl)
+    showBloqueioModal(key, nome, inputEl)
   }
 
   function handleIsBlocked(nome) {
@@ -748,15 +748,14 @@ export default function VendasPage() {
   }
 
   // ── FILA ──
-  const salvarFila = useCallback((idx, f1, f2, f3) => {
-    setLinhas(prev => { const n=[...prev]; n[idx]={...n[idx],fila1:f1,fila2:f2,fila3:f3}; return n })
-    salvarAgora(); setModalFilaIdx(null)
+  const salvarFila = useCallback((key, f1, f2, f3) => {
+    setLinhas(prev => prev.map(l => l._key === key ? {...l, fila1:f1, fila2:f2, fila3:f3} : l))
+    salvarAgora(); setModalFilaKey(null)
   }, [salvarAgora])
 
-  const trocarClienteFila = useCallback((idx, novoCliente) => {
+  const trocarClienteFila = useCallback((key, novoCliente) => {
     setLinhas(prev => {
-      const n=[...prev]; n[idx]={...n[idx],cliente_nome:novoCliente,liberado:false,sacolinha:null}
-      return calcSacolas(n)
+      return calcSacolas(prev.map(l => l._key === key ? {...l, cliente_nome:novoCliente, liberado:false, sacolinha:null} : l))
     })
     salvarAgora()
   }, [salvarAgora])
@@ -844,14 +843,20 @@ export default function VendasPage() {
   }, [salvarAgora])
 
   // ── MODAL EDIÇÃO ──
-  const confirmarEdicao = useCallback((idx, campos) => {
+  const confirmarEdicao = useCallback((key, campos) => {
     setLinhas(prev => {
-      const n=[...prev]; const clienteMudou = n[idx].cliente_nome !== campos.cliente_nome
-      n[idx] = { ...n[idx], ...campos, liberado: clienteMudou ? false : campos.liberado }
-      if (clienteMudou) n[idx].sacolinha = null
-      return calcSacolas(n)
+      return calcSacolas(prev.map(l => {
+        if (l._key !== key) return l
+        const clienteMudou = l.cliente_nome !== campos.cliente_nome
+        return {
+          ...l,
+          ...campos,
+          liberado: clienteMudou ? false : campos.liberado,
+          sacolinha: clienteMudou ? null : l.sacolinha
+        }
+      }))
     })
-    salvarAgora(); setModalEdicaoIdx(null)
+    salvarAgora(); setModalEdicaoKey(null)
   }, [salvarAgora])
 
   // ── FINALIZAR LIVE ──
@@ -1244,8 +1249,8 @@ export default function VendasPage() {
                   {linhas.map((l, idx) => {
                     if (l.deleted || l.status === 'Vendido' || !passaFiltro(l, filtro)) return null
                     return (
-                      <TabelaRow key={l._key || l.id}
-                        linha={l} idx={idx} listas={listas}
+                      <TabelaRow key={l._key}
+                        linha={l} listas={listas}
                         cols={colsConfig}
                         config={config}
                         onFieldChange={handleFieldChange}
@@ -1253,8 +1258,8 @@ export default function VendasPage() {
                         onClienteSelect={handleClienteSelect}
                         onIsBlocked={handleIsBlocked}
                         onNovoFromRow={() => novoAcima(idx)}
-                        onAbrirModal={setModalEdicaoIdx}
-                        onAbrirFila={setModalFilaIdx}
+                        onAbrirModal={() => setModalEdicaoKey(l._key)}
+                        onAbrirFila={() => setModalFilaKey(l._key)}
                         onEnviar={handleEnviar}
                         onEstornar={handleEstornar}
                         onCopiar={handleCopiar}
@@ -1270,30 +1275,30 @@ export default function VendasPage() {
       )}
 
       {/* MODAIS */}
-      {modalFilaIdx !== null && (
+      {modalFilaKey !== null && (
         <ModalFila
-          linha={linhas[modalFilaIdx]}
+          linha={linhas.find(l => l._key === modalFilaKey)}
           clientes={listas.clientes}
           onSalvar={(res) => {
             if (res.trocarCliente) {
-              trocarClienteFila(modalFilaIdx, res.trocarCliente)
-              salvarFila(modalFilaIdx,
+              trocarClienteFila(modalFilaKey, res.trocarCliente)
+              salvarFila(modalFilaKey,
                 res.numFila === 1 ? '' : res.fila1,
                 res.numFila === 2 ? '' : res.fila2,
                 res.numFila === 3 ? '' : res.fila3)
             } else {
-              salvarFila(modalFilaIdx, res.fila1, res.fila2, res.fila3)
+              salvarFila(modalFilaKey, res.fila1, res.fila2, res.fila3)
             }
           }}
-          onFechar={() => setModalFilaIdx(null)}
+          onFechar={() => setModalFilaKey(null)}
         />
       )}
-      {modalEdicaoIdx !== null && (
+      {modalEdicaoKey !== null && (
         <ModalEdicao
-          linha={linhas[modalEdicaoIdx]}
+          linha={linhas.find(l => l._key === modalEdicaoKey)}
           listas={listas}
-          onConfirmar={(campos) => confirmarEdicao(modalEdicaoIdx, campos)}
-          onFechar={() => setModalEdicaoIdx(null)}
+          onConfirmar={(campos) => confirmarEdicao(modalEdicaoKey, campos)}
+          onFechar={() => setModalEdicaoKey(null)}
         />
       )}
       {showModalCadastro && (
