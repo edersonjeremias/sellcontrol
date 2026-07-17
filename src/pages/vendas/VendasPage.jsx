@@ -89,12 +89,10 @@ function calcSacolas(linhas) {
   })
 }
 
+// Removido: não queremos reordenar as linhas automaticamente
+// As linhas devem permanecer na posição onde o usuário as criou
 function ordenarLinhas(linhas) {
-  return [...linhas].sort((a, b) => {
-    const aPreenchido = a.cliente_nome?.trim() ? 0 : 1
-    const bPreenchido = b.cliente_nome?.trim() ? 0 : 1
-    return aPreenchido - bPreenchido
-  })
+  return linhas // Retorna sem ordenar
 }
 
 const GENERO_TXT = { M: 'masculino masc', F: 'feminino fem', U: 'unissex' }
@@ -549,44 +547,21 @@ export default function VendasPage() {
     salvarAgora()
   }, [salvarAgora])
 
-  // Chamado ao dar Enter no campo Cliente - navega para linha vazia ou cria nova
+  // Chamado ao dar Enter no campo Cliente - SEMPRE cria nova linha no topo
   const handleEnterNoCliente = useCallback(() => {
     if (busy) return
 
-    // Procura por linha vazia (sem produto e sem cliente)
-    const linhaVazia = linhasRef.current.find(l =>
-      !l.deleted &&
-      !l.isSent &&
-      !l.produto?.trim() &&
-      !l.cliente_nome?.trim()
-    )
+    // SEMPRE cria nova linha no topo
+    setLinhas(prev => [novaLinha(getProximoCodigo()), ...prev])
+    setPronto(true)
+    salvarAgora()
 
-    if (linhaVazia) {
-      // Já existe linha vazia - foca no campo PRODUTO dela
-      setTimeout(() => {
-        const rows = document.querySelectorAll('#tabela tbody tr')
-        for (let row of rows) {
-          const codigoInput = row.querySelector('.col-cod .cell-input')
-          if (codigoInput && codigoInput.value === linhaVazia.codigo) {
-            const produtoInput = row.querySelector('.col-produto .cell-input')
-            produtoInput?.focus()
-            break
-          }
-        }
-      }, 50)
-    } else {
-      // Não existe linha vazia - cria nova no topo
-      setLinhas(prev => [novaLinha(getProximoCodigo()), ...prev])
-      setPronto(true)
-      salvarAgora()
-
-      // Foca no campo PRODUTO da primeira linha
-      setTimeout(() => {
-        const firstRow = document.querySelector('#tabela tbody tr:first-child')
-        const produtoInput = firstRow?.querySelector('.col-produto .cell-input')
-        produtoInput?.focus()
-      }, 50)
-    }
+    // Foca no campo PRODUTO da primeira linha (nova linha criada)
+    setTimeout(() => {
+      const firstRow = document.querySelector('#tabela tbody tr:first-child')
+      const produtoInput = firstRow?.querySelector('.col-produto .cell-input')
+      produtoInput?.focus()
+    }, 50)
   }, [busy, salvarAgora])
 
   // Adiciona produto da busca às vendas
