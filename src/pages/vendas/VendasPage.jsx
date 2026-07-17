@@ -1116,60 +1116,6 @@ export default function VendasPage() {
         </svg>
       </button>
 
-      {/* TOOLBAR — MODO HISTÓRICO */}
-      {modo === 'historico' && (
-        <div className="no-print">
-          <div style={{ padding: '6px 14px 0', maxWidth: 1200, margin: '0 auto' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--purple)' }}>
-              📋 Modo Histórico — registros enviados
-            </span>
-          </div>
-          <div className="toolbar">
-            <div className="field">
-              <label>Data De</label>
-              <input type="date" value={filtrosHist.dataInicio}
-                onChange={e => setFiltrosHist(p => ({ ...p, dataInicio: e.target.value }))}
-                onClick={e => { try { e.target.showPicker() } catch {} }} />
-            </div>
-            <div className="field">
-              <label>Data Até</label>
-              <input type="date" value={filtrosHist.dataFim}
-                onChange={e => setFiltrosHist(p => ({ ...p, dataFim: e.target.value }))}
-                onClick={e => { try { e.target.showPicker() } catch {} }} />
-            </div>
-            <div className="field" style={{ flex: 2 }}>
-              <label>Cliente</label>
-              <AutocompleteInput
-                value={filtrosHist.clienteNome}
-                onChange={v => setFiltrosHist(p => ({ ...p, clienteNome: v }))}
-                list={listas.clientes}
-                placeholder="Nome do cliente..."
-                showOnFocus
-              />
-            </div>
-            <div className="total-container">
-              <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Encontrados</label>
-              <div className="total-valor" style={{ fontSize: 18 }}>
-                <span style={{ color: 'var(--purple)' }}>{linhasHist.filter(l => passaFiltro(l, filtro)).length}</span>
-                <span style={{ fontSize:13, color:'var(--muted)', fontWeight:600, marginLeft:4 }}>itens</span>
-              </div>
-            </div>
-            <div className="actions">
-              <button className="btn-acao btn-ghost" onClick={() => { setModo('live'); setLinhasHist([]) }} disabled={busy}>
-                ← Voltar
-              </button>
-              <button className="btn-acao btn-green" onClick={buscarHistorico} disabled={busy}>
-                Buscar Enviados
-              </button>
-            </div>
-          </div>
-          <div className="filter-header-bar">
-            <input type="text" value={filtro} onChange={e => setFiltro(e.target.value)}
-              placeholder="Filtro Rápido: produto, cor, marca, tamanho..." />
-          </div>
-        </div>
-      )}
-
       {/* TOOLBAR — MODO LIVE */}
       {modo === 'live' && (
         <div className="no-print">
@@ -1205,10 +1151,6 @@ export default function VendasPage() {
                   <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                 </svg>
               </button>
-              <button className="btn-acao btn-ghost" style={{ color: 'var(--purple)', borderColor: 'rgba(197,138,249,0.3)' }}
-                onClick={() => { setModo('historico'); setFiltro('') }} disabled={busy} title="Buscar e editar registros já enviados">
-                Histórico
-              </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
               <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
@@ -1220,56 +1162,6 @@ export default function VendasPage() {
           <div className="filter-header-bar">
             <input type="text" value={filtro} onChange={e => setFiltro(e.target.value)}
               placeholder="Filtro Rápido: Digite para buscar (Ex: camiseta, verde, zara)" />
-          </div>
-        </div>
-      )}
-
-      {/* TABELA — MODO HISTÓRICO */}
-      {modo === 'historico' && (
-        <div id="tabela-container">
-          <div className="table-responsive" ref={scrollRef}
-            onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
-            {linhasHist.length === 0 ? (
-              <div id="tabela-msg">
-                {busy ? 'Buscando...' : 'Use os filtros acima e clique em "Buscar Enviados".'}
-              </div>
-            ) : (
-              <table id="tabela">
-                <thead>
-                  <tr>
-                    <th className="col-sacola">Data / Live</th>
-                    <th>Produto</th><th>Modelo</th>
-                    <th className="col-cor">Cor</th><th>Marca</th>
-                    <th className="col-tam">Tam.</th>
-                    <th className="col-preco">Preço</th>
-                    <th className="col-cod">Cód.</th>
-                    <th className="col-cliente">Cliente</th>
-                    <th className="col-status">Status</th>
-                    <th className="col-acoes">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {linhasHist.map((l, idx) => {
-                    if (!passaFiltro(l, filtro)) return null
-                    return (
-                      <TabelaRow key={l.id} linha={l} listas={listas}
-                        modoHistorico={true}
-                        onFieldChange={() => {}}
-                        onClienteBlur={() => {}}
-                        onEnterNoCliente={() => {}}
-                        onAbrirModal={setModalHistIdx}
-                        onAbrirFila={setModalFilaHistIdx}
-                        onEnviar={() => {}}
-                        onEstornar={estornarHist}
-                        onCopiar={() => {}}
-                        onExcluir={excluirHist}
-                        onStatusChange={handleStatusChangeHist}
-                      />
-                    )
-                  })}
-                </tbody>
-              </table>
-            )}
           </div>
         </div>
       )}
