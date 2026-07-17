@@ -114,17 +114,18 @@ export default function AutocompleteInput({
         }
       }
 
-      // Se tem lista definida E o valor não está na lista, não chama onEnterNewRow
+      // Permite Enter se: campo vazio OU valor está na lista
+      const campoVazio = !value?.trim()
       const valorNaLista = !list?.length || list.some(item =>
         item.toLowerCase() === value?.trim().toLowerCase()
       )
 
-      if (onEnterNewRow && valorNaLista) {
+      if (onEnterNewRow && (campoVazio || valorNaLista)) {
         onEnterNewRow()
       } else if (!onEnterNewRow) {
         navigateNext(e.target)
       }
-      // Se valor não está na lista e tem onEnterNewRow, não faz nada (aguarda correção)
+      // Se valor não está na lista (e não está vazio), não faz nada (aguarda correção)
     }
   }
 
