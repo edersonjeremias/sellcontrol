@@ -138,6 +138,7 @@ export default function VendasPage() {
   const busyRef = useRef(false)
   const lastRealtimeKeyRef = useRef('')
   const focusReturnRef = useRef(null)  // guarda o input de cliente que disparou o bloqueio
+  const skipFilterEffectRef = useRef(false)  // flag para evitar loop ao limpar filtro
 
   // ── Configurações de colunas ──
   const [colsConfig,    setColsConfig]    = useState({ custo: false, condicao: false, genero: false })
@@ -250,6 +251,12 @@ export default function VendasPage() {
 
     // Se limpar filtro, remove produtos da busca que não foram editados
     if (!filtro.trim()) {
+      // Evita executar se a limpeza veio da função buscar()
+      if (skipFilterEffectRef.current) {
+        console.log('⏭️ Pulando useEffect (flag skipFilterEffect ativa)')
+        skipFilterEffectRef.current = false
+        return
+      }
       console.log('⚪ Filtro vazio, removendo produtos não editados da busca')
       setLinhas(prev => prev.filter(l => {
         // Mantém se NÃO for da busca, OU se foi editado (tem cliente ou outros dados)
@@ -453,7 +460,8 @@ export default function VendasPage() {
       const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
-      setFiltro('') // Limpa filtro (produtos da busca serão removidos pelo useEffect)
+      skipFilterEffectRef.current = true  // Evita que useEffect execute ao limpar filtro
+      setFiltro('') // Limpa filtro
       setHasUnsaved(false)
       if (!novas.length) setTabelaMsg('Nenhum item com cliente encontrado. Use o campo de busca para encontrar produtos ou clique em + Novo.')
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
