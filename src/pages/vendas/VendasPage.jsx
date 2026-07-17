@@ -457,8 +457,11 @@ export default function VendasPage() {
     setTabelaMsg('Buscando registros...')
     try {
       // Busca apenas itens COM cliente e não enviados/vendidos
-      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
+      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true, somentePendentes: true })
+      console.log('📊 Total de vendas retornadas do banco:', rows.length)
+      console.log('📊 Vendas:', rows.map(r => ({ cliente: r.cliente_nome, status: r.status, produto: r.produto })))
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
+      console.log('📊 Linhas após mapRow e calcSacolas:', novas.length)
       setLinhas(novas)
       skipFilterEffectRef.current = true  // Evita que useEffect execute ao limpar filtro
       setFiltro('') // Limpa filtro
