@@ -55,7 +55,11 @@ export default function EditorVendasPage() {
   }
 
   async function buscarVendas() {
-    if (!tenantId) return
+    if (!tenantId) {
+      alert('⚠️ Tenant ID não encontrado')
+      return
+    }
+
     setBusy(true)
 
     try {
@@ -63,18 +67,37 @@ export default function EditorVendasPage() {
         .from('vendas')
         .select('*')
         .eq('tenant_id', tenantId)
+        .eq('status', 'ENVIADO')
         .order('data_live', { ascending: false })
+        .limit(500)
 
-      if (filtros.data) query = query.eq('data_live', filtros.data)
-      if (filtros.live) query = query.eq('live_nome', filtros.live)
-      if (filtros.cliente) query = query.eq('cliente_nome', filtros.cliente)
+      // Aplica filtros se preenchidos
+      if (filtros.data) {
+        query = query.eq('data_live', filtros.data)
+      }
+      if (filtros.live && filtros.live.trim()) {
+        query = query.ilike('live_nome', `%${filtros.live.trim()}%`)
+      }
+      if (filtros.cliente && filtros.cliente.trim()) {
+        query = query.ilike('cliente_nome', `%${filtros.cliente.trim()}%`)
+      }
 
       const { data, error } = await query
 
-      if (error) throw error
+      if (error) {
+        console.error('Erro na query:', error)
+        throw error
+      }
+
+      console.log('Vendas encontradas:', data?.length || 0)
       setVendas(data || [])
+
+      if (!data || data.length === 0) {
+        alert('ℹ️ Nenhuma venda encontrada com esses filtros')
+      }
     } catch (error) {
       console.error('Erro ao buscar vendas:', error)
+      alert('❌ Erro ao buscar vendas: ' + error.message)
     } finally {
       setBusy(false)
     }
@@ -259,144 +282,178 @@ export default function EditorVendasPage() {
       <datalist id="dlClientes">{listas.clientes.map(c => <option key={c} value={c} />)}</datalist>
       <datalist id="dlLives">{listas.lives.map(l => <option key={l} value={l} />)}</datalist>
 
-      <div style={{ padding: '20px', maxWidth: 1400, margin: '0 auto' }}>
-        {/* TOOLBAR DE FILTROS */}
-        <div style={{
-          background: 'var(--panel)',
-          border: '1px solid var(--border-light)',
-          borderRadius: 12,
-          padding: 20,
-          marginBottom: 20
-        }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-            {/* Data */}
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
-                Data
-              </label>
-              <input
-                type="date"
-                value={filtros.data}
-                onChange={e => setFiltros(f => ({ ...f, data: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'var(--input-bg)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: 8,
-                  color: 'var(--input-text)',
-                  fontSize: 14
-                }}
-              />
-            </div>
-
-            {/* Live */}
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
-                Live
-              </label>
-              <AutocompleteInput
-                value={filtros.live}
-                onChange={v => setFiltros(f => ({ ...f, live: v }))}
-                list={listas.lives}
-                placeholder="Buscar Live..."
-                showOnFocus
-              />
-            </div>
-
-            {/* Cliente */}
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
-                Cliente (Opcional)
-              </label>
-              <AutocompleteInput
-                value={filtros.cliente}
-                onChange={v => setFiltros(f => ({ ...f, cliente: v }))}
-                list={listas.clientes}
-                placeholder="Todos os clientes..."
-                showOnFocus
-              />
-            </div>
-
-            {/* Busca Inteligente */}
-            <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase' }}>
-                Busca Inteligente
-              </label>
-              <input
-                type="text"
-                value={filtros.busca}
-                onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
-                placeholder="Ex: vestido verde, calça P..."
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: 'var(--input-bg)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: 8,
-                  color: 'var(--input-text)',
-                  fontSize: 14
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Botões */}
-          <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-            <button
-              onClick={adicionarNovaLinha}
-              disabled={busy}
+      {/* TOOLBAR DE FILTROS - SEM PADDING, NO TOPO */}
+      <div style={{
+        background: 'var(--panel)',
+        borderBottom: '1px solid var(--border-light)',
+        padding: '14px 20px',
+        position: 'sticky',
+        top: 60,
+        zIndex: 10
+      }}>
+        {/* Linha com campos e botões inline */}
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          {/* Data - campo menor */}
+          <div style={{ flex: '0 0 140px' }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Data
+            </label>
+            <input
+              type="date"
+              value={filtros.data}
+              onChange={e => setFiltros(f => ({ ...f, data: e.target.value }))}
               style={{
-                padding: '12px 20px',
-                background: 'var(--bg)',
-                color: 'var(--input-text)',
+                width: '100%',
+                height: 40,
+                padding: '0 10px',
+                background: 'var(--input-bg)',
                 border: '1px solid var(--border-light)',
-                borderRadius: 8,
-                fontWeight: 600,
-                cursor: 'pointer'
+                borderRadius: 6,
+                color: 'var(--input-text)',
+                fontSize: 13
               }}
-            >
-              + Novo
-            </button>
-            <button
-              onClick={buscarVendas}
-              disabled={busy}
-              style={{
-                flex: 1,
-                padding: '12px 20px',
-                background: 'var(--green)',
-                color: '#000',
-                border: 'none',
-                borderRadius: 8,
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Buscar
-            </button>
-            <button
-              onClick={salvarTodasAlteracoes}
-              disabled={busy}
-              style={{
-                padding: '12px 20px',
-                background: 'var(--blue)',
-                color: '#000',
-                border: 'none',
-                borderRadius: 8,
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Salvar Alterações
-            </button>
+            />
           </div>
-        </div>
 
-        {/* TABELA DE VENDAS */}
+          {/* Live */}
+          <div style={{ flex: '1 1 160px', minWidth: 160 }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Live
+            </label>
+            <input
+              type="text"
+              value={filtros.live}
+              onChange={e => setFiltros(f => ({ ...f, live: e.target.value }))}
+              list="dlLives"
+              placeholder="Buscar Live..."
+              style={{
+                width: '100%',
+                height: 40,
+                padding: '0 12px',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border-light)',
+                borderRadius: 6,
+                color: 'var(--input-text)',
+                fontSize: 13
+              }}
+            />
+          </div>
+
+          {/* Cliente */}
+          <div style={{ flex: '1 1 180px', minWidth: 180 }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Cliente (Opcional)
+            </label>
+            <input
+              type="text"
+              value={filtros.cliente}
+              onChange={e => setFiltros(f => ({ ...f, cliente: e.target.value }))}
+              list="dlClientes"
+              placeholder="Todos..."
+              style={{
+                width: '100%',
+                height: 40,
+                padding: '0 12px',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border-light)',
+                borderRadius: 6,
+                color: 'var(--input-text)',
+                fontSize: 13
+              }}
+            />
+          </div>
+
+          {/* Busca Inteligente */}
+          <div style={{ flex: '1 1 220px', minWidth: 220 }}>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Busca Inteligente
+            </label>
+            <input
+              type="text"
+              value={filtros.busca}
+              onChange={e => setFiltros(f => ({ ...f, busca: e.target.value }))}
+              placeholder="Ex: vestido verde, calça P..."
+              style={{
+                width: '100%',
+                height: 40,
+                padding: '0 12px',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border-light)',
+                borderRadius: 6,
+                color: 'var(--input-text)',
+                fontSize: 13
+              }}
+            />
+          </div>
+
+          {/* Botões - mesma altura */}
+          <button
+            onClick={adicionarNovaLinha}
+            disabled={busy}
+            style={{
+              height: 40,
+              padding: '0 18px',
+              background: 'var(--bg)',
+              color: 'var(--input-text)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 6,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            + Novo
+          </button>
+          <button
+            onClick={buscarVendas}
+            disabled={busy}
+            style={{
+              height: 40,
+              padding: '0 24px',
+              background: 'var(--green)',
+              color: '#000',
+              border: 'none',
+              borderRadius: 6,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Buscar
+          </button>
+          <button
+            onClick={salvarTodasAlteracoes}
+            disabled={busy}
+            style={{
+              height: 40,
+              padding: '0 24px',
+              background: 'var(--blue)',
+              color: '#000',
+              border: 'none',
+              borderRadius: 6,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Salvar
+          </button>
+        </div>
+      </div>
+
+      {/* CONTEÚDO - SEM PADDING SUPERIOR */}
+      <div style={{ padding: '0' }}>
+
+        {/* TABELA DE VENDAS - SEM MARGEM SUPERIOR */}
         <div style={{
           background: 'var(--panel)',
           border: '1px solid var(--border-light)',
-          borderRadius: 12,
+          borderLeft: 'none',
+          borderRight: 'none',
+          borderTop: 'none',
           overflow: 'hidden'
         }}>
           {vendasFiltradas.length === 0 ? (
