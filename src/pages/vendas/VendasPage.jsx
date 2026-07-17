@@ -116,9 +116,11 @@ function storageLoad(tid) {
 
 // ─── COMPONENT ────────────────────────────────────────────
 export default function VendasPage() {
+  console.log('🚀 VendasPage CARREGADA - Versão DEBUG v2.0')
   const { showToast } = useApp()
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
+  console.log('👤 Tenant ID:', tenantId)
 
   // ── State ──
   const [linhas,      setLinhas]      = useState([])
