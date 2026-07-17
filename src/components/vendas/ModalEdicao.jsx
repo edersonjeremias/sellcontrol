@@ -3,7 +3,8 @@ import AutocompleteInput from './AutocompleteInput'
 
 export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBloqueio }) {
   const [campos, setCampos] = useState({
-    sacola: '', produto: '', modelo: '', cor: '', marca: '',
+    sacola: '', data_live: '', live_nome: '',
+    produto: '', modelo: '', cor: '', marca: '',
     tamanho: '', preco: '', codigo: '', cliente_nome: '', liberado: false,
   })
 
@@ -11,6 +12,8 @@ export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBl
     if (!linha) return
     setCampos({
       sacola:       linha.sacolinha ?? '',
+      data_live:    linha.data_live    || '',
+      live_nome:    linha.live_nome    || '',
       produto:      linha.produto      || '',
       modelo:       linha.modelo       || '',
       cor:          linha.cor          || '',
@@ -52,6 +55,18 @@ export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBl
               <label>Sacola (Auto)</label>
               <input value={campos.sacola} readOnly tabIndex={-1}
                 style={{ background: 'var(--input-bg)', color: 'var(--blue)', fontWeight: 'bold' }} />
+            </div>
+            <div className="modal-field">
+              <label>Data</label>
+              <input type="date" className="cell-input" value={campos.data_live}
+                onChange={e => set('data_live', e.target.value)}
+                onClick={e => { try { e.target.showPicker() } catch {} }} />
+            </div>
+            <div className="modal-field">
+              <label>Live</label>
+              <input className="cell-input" value={campos.live_nome}
+                onChange={e => set('live_nome', e.target.value)}
+                placeholder="Nome da Live..." />
             </div>
             <div className="modal-field">
               <label>Produto</label>

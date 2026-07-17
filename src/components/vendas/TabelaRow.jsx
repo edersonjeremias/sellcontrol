@@ -125,19 +125,11 @@ const TabelaRow = memo(function TabelaRow({
 
   return (
     <tr className={linha.isSent ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
-      {/* SACOLA / DATA-LIVE */}
+      {/* SACOLA */}
       <td className="col-sacola td-sacola"
         onClick={() => onAbrirModal()}
         title="Clique para editar">
-        {linha.isSent ? (
-          <div style={{ textAlign: 'center', lineHeight: 1.4 }}>
-            <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13 }}>{dataFormatada}</div>
-            <div style={{ color: 'var(--muted)', fontSize: 10, maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '0 auto' }}
-              title={linha.live_nome}>{linha.live_nome || '—'}</div>
-          </div>
-        ) : (
-          <input className="cell-input sacola" value={linha.sacolinha ?? ''} readOnly tabIndex={-1} />
-        )}
+        <input className="cell-input sacola" value={linha.sacolinha ?? ''} readOnly tabIndex={-1} />
       </td>
 
       {/* PRODUTO */}
