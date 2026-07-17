@@ -992,24 +992,7 @@ export default function VendasPage() {
     setModalQt(false)
   }
 
-  // ── HISTÓRICO: handlers ──────────────────────────────────────
-  const buscarHistorico = useCallback(async () => {
-    if (busyRef.current || !tenantId) return
-    if (!filtrosHist.dataInicio && !filtrosHist.dataFim) {
-      showToast('Preencha ao menos uma data para buscar.', 'error'); return
-    }
-    setBusy(true, 'Buscando histórico...')
-    try {
-      const rows = await getVendasEnviadas(tenantId, filtrosHist)
-      setLinhasHist(rows)
-      if (!rows.length) showToast('Nenhum registro encontrado para os filtros informados.', 'info')
-      else showToast(`${rows.length} registro(s) encontrado(s).`, 'success')
-    } catch { showToast('Erro ao buscar histórico.', 'error') }
-    finally { setBusy(false) }
-  }, [tenantId, filtrosHist])
-
-  // ── HISTÓRICO: funções removidas ──
-  // (código comentado após remoção da aba histórico)
+  // ── HISTÓRICO: código completamente removido ──
 
   // ── RENDER ──
   const totalFmt = totalInfo.total.toLocaleString('pt-BR', { style:'currency', currency:'BRL' })
