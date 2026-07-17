@@ -1065,26 +1065,13 @@ export default function VendasPage() {
             </div>
             <div className="field">
               <label>Status</label>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', height: 40 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer' }}>
-                  <input type="radio" name="statusFiltro" value="pendentes"
-                    checked={statusFiltro === 'pendentes'}
-                    onChange={e => setStatusFiltro(e.target.value)} />
-                  Pendentes
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer' }}>
-                  <input type="radio" name="statusFiltro" value="enviadas"
-                    checked={statusFiltro === 'enviadas'}
-                    onChange={e => setStatusFiltro(e.target.value)} />
-                  Enviadas
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, cursor: 'pointer' }}>
-                  <input type="radio" name="statusFiltro" value="todas"
-                    checked={statusFiltro === 'todas'}
-                    onChange={e => setStatusFiltro(e.target.value)} />
-                  Todas
-                </label>
-              </div>
+              <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}
+                style={{ width: '100%', height: 40, padding: '0 12px', borderRadius: 6, border: '1px solid var(--input-border)',
+                         background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: 14, cursor: 'pointer' }}>
+                <option value="pendentes">Pendentes</option>
+                <option value="enviadas">Enviadas</option>
+                <option value="todas">Todas</option>
+              </select>
             </div>
             <div className="total-container">
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>
