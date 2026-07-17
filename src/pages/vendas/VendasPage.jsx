@@ -186,6 +186,7 @@ export default function VendasPage() {
 
   // ── setBusy helper ──
   const setBusy = useCallback((v, msg = '') => {
+    console.log('⏳ setBusy chamado - valor:', v, 'mensagem:', msg)
     if (busyTimerRef.current) {
       clearTimeout(busyTimerRef.current)
       busyTimerRef.current = null
@@ -193,6 +194,7 @@ export default function VendasPage() {
 
     setBusyState(v)
     setBusyMsg(msg)
+    console.log('⏳ busyRef.current atualizado para:', v)
 
     if (v) {
       busyTimerRef.current = setTimeout(() => {
@@ -1071,7 +1073,7 @@ export default function VendasPage() {
               </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
-              <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
+              <button className="btn-acao btn-green" onClick={() => { console.log('🖱️ BOTÃO BUSCAR CLICADO - busy:', busy); buscar() }} disabled={busy}>Buscar</button>
               <div className="save-group">
                 <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
               </div>
