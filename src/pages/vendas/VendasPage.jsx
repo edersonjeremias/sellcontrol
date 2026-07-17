@@ -121,6 +121,7 @@ export default function VendasPage() {
   const tenantId = profile?.tenant_id
 
   // ── State ──
+  const modo = 'live' // Modo fixo (histórico removido)
   const [linhas,      setLinhas]      = useState([])
   const [listas,      setListas]      = useState({ produtos: [], modelos: [], cores: [], marcas: [], clientes: [] })
   const [globalDB,    setGlobalDB]    = useState({ lives: [], bloqueados: {} })
