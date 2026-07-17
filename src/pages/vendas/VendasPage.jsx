@@ -1120,10 +1120,18 @@ export default function VendasPage() {
         <div id="tabela-container">
           <div className="table-responsive" ref={scrollRef}
             onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
-            {!pronto || linhas.filter(l => !l.deleted && l.status !== 'Vendido').length === 0 ? (
+            {!pronto || linhas.filter(l => {
+              if (l.deleted || !passaFiltro(l, filtro)) return false
+              if (statusFiltro === 'pendentes' && l.status === 'Vendido') return false
+              return true
+            }).length === 0 ? (
               <div id="tabela-msg">{tabelaMsg}</div>
             ) : null}
-            {pronto && linhas.filter(l => !l.deleted && l.status !== 'Vendido').length > 0 && (
+            {pronto && linhas.filter(l => {
+              if (l.deleted || !passaFiltro(l, filtro)) return false
+              if (statusFiltro === 'pendentes' && l.status === 'Vendido') return false
+              return true
+            }).length > 0 && (
               <table id="tabela">
                 <thead>
                   <tr>
