@@ -452,12 +452,17 @@ export default function VendasPage() {
   }, [tenantId])
 
   const buscar = useCallback(async () => {
-    if (busyRef.current || !tenantId) return
+    console.log('🔍 BUSCAR CHAMADO - busyRef:', busyRef.current, 'tenantId:', tenantId)
+    if (busyRef.current || !tenantId) {
+      console.log('❌ BUSCAR BLOQUEADO - busy ou sem tenant')
+      return
+    }
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      // Busca apenas itens COM cliente e não enviados/vendidos
-      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true, somentePendentes: true })
+      console.log('🚀 Iniciando busca no banco...')
+      // Busca todas as vendas com cliente (pendentes e enviadas)
+      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
       console.log('📊 Total de vendas retornadas do banco:', rows.length)
       console.log('📊 Vendas:', rows.map(r => ({ cliente: r.cliente_nome, status: r.status, produto: r.produto })))
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
