@@ -9,6 +9,7 @@ const PERMISSOES_LABELS = {
   pode_estornar: 'Estornar Vendas',
   pode_enviar: 'Enviar para Cobrança',
   pode_copiar: 'Copiar Linhas',
+  pode_editar_enviadas: 'Editar Vendas Enviadas',
 }
 
 export default function VendasPermissoesModal({ user, onClose, showToast }) {

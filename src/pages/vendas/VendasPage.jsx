@@ -7,7 +7,7 @@ import {
   enviarVenda,
   buscarProdutosPorTermos,
 } from '../../services/vendasService'
-import { getConfig, saveConfig } from '../../services/configService'
+import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -126,6 +126,7 @@ export default function VendasPage() {
   const [listas,      setListas]      = useState({ produtos: [], modelos: [], cores: [], marcas: [], clientes: [] })
   const [globalDB,    setGlobalDB]    = useState({ lives: [], bloqueados: {} })
   const [config,      setConfig]      = useState({ codigo_automatico: false, proximo_codigo: 100 })
+  const [permissoes,  setPermissoes]  = useState({ pode_editar_enviadas: true })
   const [dataLive,    setDataLive]    = useState(() => {
     const hoje = new Date()
     return hoje.toISOString().split('T')[0] // Formato YYYY-MM-DD
@@ -309,10 +310,11 @@ export default function VendasPage() {
       if (!tenantId) return
       setBusy(true, 'Iniciando...')
       try {
-        const [db, lst, cfg] = await Promise.all([
+        const [db, lst, cfg, perms] = await Promise.all([
           getDadosIniciais(tenantId),
           getListas(tenantId),
-          getConfig(tenantId)
+          getConfig(tenantId),
+          getVendasPermissoes(profile?.id)
         ])
         setGlobalDB(db)
         setListas(lst)
@@ -320,6 +322,7 @@ export default function VendasPage() {
           codigo_automatico: cfg?.codigo_automatico || false,
           proximo_codigo: cfg?.proximo_codigo || 100
         })
+        setPermissoes(perms)
         setPronto(true)
         setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
       } catch {
@@ -1170,6 +1173,7 @@ export default function VendasPage() {
                         linha={l} listas={listas}
                         cols={colsConfig}
                         config={config}
+                        podeEditarEnviadas={permissoes.pode_editar_enviadas}
                         onFieldChange={handleFieldChange}
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}

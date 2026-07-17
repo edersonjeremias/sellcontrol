@@ -120,6 +120,7 @@ export const VENDAS_PERMISSOES_DEFAULT = {
   pode_estornar: true,
   pode_enviar: true,
   pode_copiar: true,
+  pode_editar_enviadas: true,
 }
 
 // Busca permissões de vendas do usuário
