@@ -124,14 +124,14 @@ const TabelaRow = memo(function TabelaRow({
   }
 
   return (
-    <tr className={linha.isSent && !modoHistorico ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
+    <tr className={linha.isSent ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
       {/* SACOLA / DATA-LIVE */}
       <td className="col-sacola td-sacola"
-        onClick={() => (modoHistorico || !linha.isSent) && onAbrirModal()}
+        onClick={() => onAbrirModal()}
         title="Clique para editar">
-        {modoHistorico ? (
+        {linha.isSent ? (
           <div style={{ textAlign: 'center', lineHeight: 1.4 }}>
-            <div style={{ color: 'var(--blue)', fontWeight: 700, fontSize: 13 }}>{dataFormatada}</div>
+            <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13 }}>{dataFormatada}</div>
             <div style={{ color: 'var(--muted)', fontSize: 10, maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '0 auto' }}
               title={linha.live_nome}>{linha.live_nome || '—'}</div>
           </div>
@@ -143,19 +143,19 @@ const TabelaRow = memo(function TabelaRow({
       {/* PRODUTO */}
       <td className="col-produto">
         <AutocompleteInput className="cell-input" value={linha.produto}
-          list={listas.produtos} onChange={v => upd('produto', v)} disabled={linha.isSent} />
+          list={listas.produtos} onChange={v => upd('produto', v)} disabled={false} />
       </td>
 
       {/* MODELO */}
       <td className="col-modelo">
         <AutocompleteInput className="cell-input" value={linha.modelo}
-          list={listas.modelos} onChange={v => upd('modelo', v)} disabled={linha.isSent} />
+          list={listas.modelos} onChange={v => upd('modelo', v)} disabled={false} />
       </td>
 
       {/* GÊNERO (opcional) */}
       {cols.genero && (
         <td className="col-genero">
-          <select className="cell-input cell-select" value={linha.genero || ''} disabled={linha.isSent}
+          <select className="cell-input cell-select" value={linha.genero || ''} disabled={false}
             onChange={e => upd('genero', e.target.value)}>
             <option value=""></option>
             <option value="M">Masc.</option>
@@ -168,26 +168,26 @@ const TabelaRow = memo(function TabelaRow({
       {/* COR */}
       <td className="col-cor">
         <AutocompleteInput className="cell-input" value={linha.cor}
-          list={listas.cores} onChange={v => upd('cor', v)} disabled={linha.isSent} />
+          list={listas.cores} onChange={v => upd('cor', v)} disabled={false} />
       </td>
 
       {/* MARCA */}
       <td>
         <AutocompleteInput className="cell-input" value={linha.marca}
-          list={listas.marcas} onChange={v => upd('marca', v)} disabled={linha.isSent} />
+          list={listas.marcas} onChange={v => upd('marca', v)} disabled={false} />
       </td>
 
       {/* TAMANHO */}
       <td className="col-tam">
         <input className="cell-input" value={linha.tamanho}
           onChange={e => upd('tamanho', e.target.value)}
-          onKeyDown={onEnterNext} disabled={linha.isSent} />
+          onKeyDown={onEnterNext} disabled={false} />
       </td>
 
       {/* CONDIÇÃO (opcional) */}
       {cols.condicao && (
         <td className="col-tam">
-          <select className="cell-input cell-select" value={linha.condicao || ''} disabled={linha.isSent}
+          <select className="cell-input cell-select" value={linha.condicao || ''} disabled={false}
             onChange={e => upd('condicao', e.target.value)}>
             <option value=""></option>
             <option value="Novo">Novo</option>
@@ -201,7 +201,7 @@ const TabelaRow = memo(function TabelaRow({
         <td className="col-preco">
           <input className="cell-input price" value={linha.custo || ''}
             onChange={e => upd('custo', e.target.value.replace(/[^\d,]/g, ''))}
-            onKeyDown={onEnterNext} disabled={linha.isSent}
+            onKeyDown={onEnterNext} disabled={false}
             placeholder="0,00" />
         </td>
       )}
@@ -211,7 +211,7 @@ const TabelaRow = memo(function TabelaRow({
         <input className="cell-input price" value={linha.preco}
           onChange={e => upd('preco', e.target.value.replace(/[^\d,]/g, ''))}
           onKeyDown={e => onEnterNextPulaCodigo(e, config.codigo_automatico)}
-          disabled={linha.isSent} />
+          disabled={false} />
       </td>
 
       {/* CÓDIGO */}
@@ -219,7 +219,7 @@ const TabelaRow = memo(function TabelaRow({
         <input className="cell-input" value={linha.codigo}
           onChange={e => upd('codigo', e.target.value)}
           onKeyDown={onEnterNext}
-          disabled={linha.isSent}
+          disabled={false}
           readOnly={config.codigo_automatico}
           tabIndex={config.codigo_automatico ? -1 : undefined}
           style={config.codigo_automatico ? {
@@ -241,7 +241,7 @@ const TabelaRow = memo(function TabelaRow({
           onSelect={(v, inputEl) => onClienteSelect?.(linha._key, v, inputEl)}
           isBlocked={v => onIsBlocked?.(v)}
           onEnterNewRow={onEnterNoCliente}
-          disabled={linha.isSent}
+          disabled={false}
         />
       </td>
 
