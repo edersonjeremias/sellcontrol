@@ -116,11 +116,9 @@ function storageLoad(tid) {
 
 // ─── COMPONENT ────────────────────────────────────────────
 export default function VendasPage() {
-  console.log('🚀 VendasPage CARREGADA - Versão DEBUG v2.0')
   const { showToast } = useApp()
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
-  console.log('👤 Tenant ID:', tenantId)
 
   // ── State ──
   const [linhas,      setLinhas]      = useState([])
@@ -188,7 +186,6 @@ export default function VendasPage() {
 
   // ── setBusy helper ──
   const setBusy = useCallback((v, msg = '') => {
-    console.log('⏳ setBusy chamado - valor:', v, 'mensagem:', msg)
     if (busyTimerRef.current) {
       clearTimeout(busyTimerRef.current)
       busyTimerRef.current = null
@@ -196,7 +193,6 @@ export default function VendasPage() {
 
     setBusyState(v)
     setBusyMsg(msg)
-    console.log('⏳ busyRef.current atualizado para:', v)
 
     if (v) {
       busyTimerRef.current = setTimeout(() => {
@@ -456,21 +452,13 @@ export default function VendasPage() {
   }, [tenantId])
 
   const buscar = useCallback(async () => {
-    console.log('🔍 BUSCAR CHAMADO - busyRef:', busyRef.current, 'tenantId:', tenantId)
-    if (busyRef.current || !tenantId) {
-      console.log('❌ BUSCAR BLOQUEADO - busy ou sem tenant')
-      return
-    }
+    if (busyRef.current || !tenantId) return
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      console.log('🚀 Iniciando busca no banco...')
-      // Busca todas as vendas com cliente (pendentes e enviadas)
-      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
-      console.log('📊 Total de vendas retornadas do banco:', rows.length)
-      console.log('📊 Vendas:', rows.map(r => ({ cliente: r.cliente_nome, status: r.status, produto: r.produto })))
+      // Busca vendas com cliente que ainda não foram enviadas
+      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true, somentePendentes: true })
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
-      console.log('📊 Linhas após mapRow e calcSacolas:', novas.length)
       setLinhas(novas)
       skipFilterEffectRef.current = true  // Evita que useEffect execute ao limpar filtro
       setFiltro('') // Limpa filtro
@@ -1075,7 +1063,7 @@ export default function VendasPage() {
               </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
-              <button className="btn-acao btn-green" onClick={() => { console.log('🖱️ BOTÃO BUSCAR CLICADO - busy:', busy); buscar() }} disabled={busy}>Buscar</button>
+              <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
               <div className="save-group">
                 <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
               </div>
