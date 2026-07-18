@@ -157,6 +157,7 @@ export default function VendasPage() {
   const [modalFilaKey,      setModalFilaKey]      = useState(null)
   const [showModalCadastro, setShowModalCadastro] = useState(false)
   const [alerta,            setAlerta]            = useState(null)
+  const [modalClienteErro,  setModalClienteErro]  = useState(null) // { key, nome }
   const [confirmacao,       setConfirmacao]       = useState(null)
 
   // ── Modo Histórico ── (REMOVIDO)
@@ -791,7 +792,11 @@ export default function VendasPage() {
       n[idx] = l
       return n
     })
-    salvarAgora()
+
+    // NÃO salva enquanto está digitando cliente (salva no onBlur)
+    if (field !== 'cliente_nome') {
+      salvarAgora()
+    }
   }, [salvarAgora])
 
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
@@ -823,6 +828,10 @@ export default function VendasPage() {
     const l = linhasRef.current.find(linha => linha._key === key)
     if (!l || l.liberado) return
     const nome = (l.cliente_nome || '').trim()
+
+    // Salva o que foi digitado (já que não salvou durante a digitação)
+    salvarAgora()
+
     if (!nome) return
 
     // Valida se o cliente está cadastrado
@@ -831,16 +840,26 @@ export default function VendasPage() {
     )
 
     if (!clienteExiste) {
-      // Cliente não cadastrado - limpa o campo
-      setLinhas(prev => calcSacolas(prev.map(linha =>
-        linha._key === key ? {...linha, cliente_nome: '', sacolinha: null, liberado: false} : linha
-      )))
-      showToast('Cliente não cadastrado! Use o botão +Cadastro para adicionar.', 'error')
+      // Cliente não cadastrado - mostra popup
+      setModalClienteErro({ key, nome })
       return
     }
 
     showBloqueioModal(key, nome)
-  }, [])
+  }, [salvarAgora])
+
+  const confirmarClienteErro = useCallback(() => {
+    if (!modalClienteErro) return
+
+    // Limpa o campo do cliente
+    setLinhas(prev => calcSacolas(prev.map(linha =>
+      linha._key === modalClienteErro.key
+        ? {...linha, cliente_nome: '', sacolinha: null, liberado: false}
+        : linha
+    )))
+
+    setModalClienteErro(null)
+  }, [modalClienteErro])
 
   // Sem useCallback para garantir closure sempre atualizada
   function handleClienteSelect(key, nome, inputEl) {
@@ -1296,6 +1315,36 @@ export default function VendasPage() {
       )}
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
       {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} hideConfirm={confirmacao.hideConfirm} />}
+
+      {/* MODAL ERRO CLIENTE NÃO CADASTRADO */}
+      {modalClienteErro && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%', border: '1px solid var(--border)' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 18, color: 'var(--red)' }}>❌ Cliente Não Cadastrado</h3>
+            <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-body)', lineHeight: 1.5 }}>
+              O cliente <strong>"{modalClienteErro.nome}"</strong> não está cadastrado no sistema.
+              <br /><br />
+              Use o botão <strong>+Cadastro</strong> para adicionar este cliente.
+            </p>
+            <button
+              onClick={confirmarClienteErro}
+              style={{
+                width: '100%',
+                padding: '12px 24px',
+                background: 'var(--blue)',
+                border: 'none',
+                borderRadius: 8,
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CONFIGURAÇÕES DE COLUNAS */}
       {showSettings && (
