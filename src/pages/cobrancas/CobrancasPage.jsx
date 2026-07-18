@@ -239,10 +239,10 @@ export default function CobrancasPage() {
     const reciboUrl = `https://sellcontrol.app/recibo/${cobranca.id}`
     let url = `https://wa.me/55${zap}`
     if (tipo === 'lembrete') {
-      const msg = `${nomeEmpresa}\nsellcontrol.app\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* ainda está aguardando o pagamento.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
+      const msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* ainda está aguardando o pagamento.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     } else if (tipo === 'enviar') {
-      const msg = `${nomeEmpresa}\nsellcontrol.app\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nSegue sua compra do dia *${fmtData(cobranca.data)}*.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
+      const msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nSegue sua compra do dia *${fmtData(cobranca.data)}*.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     }
     // tipo === 'chat': abre só o WhatsApp sem mensagem pré-definida
