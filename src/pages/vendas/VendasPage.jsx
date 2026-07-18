@@ -393,6 +393,14 @@ export default function VendasPage() {
     // Debounce de 300ms
     saveTimerRef.current = setTimeout(async () => {
       if (isSavingRef.current || busyRef.current) return
+
+      // Verifica se tem linhas com cliente mas sem live_nome
+      const temLinhasComCliente = linhasRef.current.some(l => !l.deleted && l.cliente_nome?.trim())
+      if (temLinhasComCliente && !liveNomeRef.current?.trim()) {
+        console.warn('⚠️ Salvamento bloqueado: Live não preenchida')
+        return
+      }
+
       isSavingRef.current = true
 
       try {
@@ -1053,6 +1061,12 @@ export default function VendasPage() {
   // ── FINALIZAR LIVE ──
   const iniciarFinalizacao = useCallback(async () => {
     if (busy) return
+
+    // Valida se Live está preenchida (obrigatório)
+    if (!liveNome?.trim()) {
+      showToast('Preencha o campo Live antes de salvar.', 'error')
+      return
+    }
 
     const linhasComCliente = linhasRef.current.filter(l => !l.deleted && l.cliente_nome?.trim())
     const todasJaEnviadas  = linhasComCliente.length > 0 && linhasComCliente.every(l => l.isSent)
