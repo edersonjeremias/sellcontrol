@@ -3,7 +3,10 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 export default function AutocompleteInput({
   value = '', onChange, onSelect, list = [],
   className = '', placeholder = '', readOnly = false,
-  inputRef: externalRef, onEnterKey, ...props
+  inputRef: externalRef, onEnterKey,
+  validateOnBlur = false, onValidationError,
+  disableDropdown = false,
+  ...props
 }) {
   const [show,   setShow]   = useState(false)
   const [active, setActive] = useState(-1)
@@ -21,6 +24,21 @@ export default function AutocompleteInput({
     onSelect?.(item)
     onChange?.(item)
     setShow(false)
+  }
+
+  function handleBlur() {
+    setShow(false)
+
+    // Validação ao sair do campo
+    if (validateOnBlur && value.trim()) {
+      const existe = list.some(item =>
+        item.toLowerCase() === value.toLowerCase()
+      )
+
+      if (!existe) {
+        onValidationError?.(value)
+      }
+    }
   }
 
   function handleKey(e) {
@@ -55,8 +73,9 @@ export default function AutocompleteInput({
         readOnly={readOnly}
         placeholder={placeholder}
         autoComplete="off"
-        onChange={e => { onChange?.(e.target.value); setShow(true) }}
-        onFocus={() => value.trim() && setShow(true)}
+        onChange={e => { onChange?.(e.target.value); !disableDropdown && setShow(true) }}
+        onFocus={() => !disableDropdown && value.trim() && setShow(true)}
+        onBlur={handleBlur}
         onKeyDown={handleKey}
         {...props}
       />

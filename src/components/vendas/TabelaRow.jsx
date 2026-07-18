@@ -242,6 +242,7 @@ const TabelaRow = memo(function TabelaRow({
           onSelect={(v, inputEl) => onClienteSelect?.(linha._key, v, inputEl)}
           isBlocked={v => onIsBlocked?.(v)}
           onEnterNewRow={onEnterNoCliente}
+          disableDropdown={true}
           disabled={camposDesabilitados}
         />
       </td>

@@ -111,7 +111,8 @@ export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBl
               <label>Cliente</label>
               <AutocompleteInput value={campos.cliente_nome} list={listas.clientes}
                 onChange={v => set('cliente_nome', v)}
-                onSelect={handleClienteSelect} />
+                onSelect={handleClienteSelect}
+                disableDropdown={true} />
             </div>
           </div>
         </div>
