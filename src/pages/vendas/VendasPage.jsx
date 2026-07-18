@@ -825,26 +825,43 @@ export default function VendasPage() {
   }
 
   const handleClienteBlur = useCallback((key) => {
+    console.log('🔍 handleClienteBlur chamado para key:', key)
+
     const l = linhasRef.current.find(linha => linha._key === key)
-    if (!l || l.liberado) return
+    console.log('📋 Linha encontrada:', l)
+
+    if (!l || l.liberado) {
+      console.log('⚠️ Linha não encontrada ou já liberada')
+      return
+    }
+
     const nome = (l.cliente_nome || '').trim()
+    console.log('👤 Nome do cliente:', nome)
 
     // Salva o que foi digitado (já que não salvou durante a digitação)
     salvarAgora()
 
-    if (!nome) return
+    if (!nome) {
+      console.log('⚠️ Nome vazio, ignorando validação')
+      return
+    }
 
     // Valida se o cliente está cadastrado
     const clienteExiste = globalDBRef.current.clientes.some(c =>
       c.toLowerCase() === nome.toLowerCase()
     )
 
+    console.log('✅ Cliente existe?', clienteExiste)
+    console.log('📚 Lista de clientes:', globalDBRef.current.clientes)
+
     if (!clienteExiste) {
+      console.log('❌ Cliente NÃO cadastrado - abrindo popup')
       // Cliente não cadastrado - mostra popup
       setModalClienteErro({ key, nome })
       return
     }
 
+    console.log('✓ Cliente válido, verificando bloqueio')
     showBloqueioModal(key, nome)
   }, [salvarAgora])
 
