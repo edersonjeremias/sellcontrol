@@ -323,6 +323,8 @@ export default function VendasPage() {
           proximo_codigo: cfg?.proximo_codigo || 100
         })
         setPermissoes(perms)
+        console.log('🔐 Permissões carregadas:', perms)
+        console.log('✏️ Pode editar enviadas?', perms?.pode_editar_enviadas)
         setPronto(true)
         setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
       } catch {
