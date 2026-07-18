@@ -1,0 +1,15 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+supabase/.temp/
+.vercel
+.env*.local
+
+# Arquivos de migração (dados pessoais — não subir para o Git)
+scripts/dados/*.csv
+scripts/dados/*.xlsx
+.claude/settings.local.json
