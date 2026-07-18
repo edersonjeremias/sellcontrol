@@ -97,22 +97,12 @@ const TabelaRow = memo(function TabelaRow({
   config = {},
   modoHistorico = false,
   podeEditarEnviadas = true,
+  podeEstornar = true,
 }) {
   const upd = (field, val) => onFieldChange(linha._key, field, val)
 
   // Desabilita edição se for venda enviada E usuário não tiver permissão
   const camposDesabilitados = linha.isSent && !podeEditarEnviadas
-
-  // Debug
-  if (linha.isSent && linha._key) {
-    console.log('🔒 Linha enviada:', {
-      key: linha._key,
-      isSent: linha.isSent,
-      podeEditarEnviadas,
-      camposDesabilitados
-    })
-  }
-
   const [txtCopiado, setTxtCopiado] = useState(false)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
   const isCancelado = (linha.status || '').toUpperCase() === 'CANCELADO'
@@ -142,8 +132,12 @@ const TabelaRow = memo(function TabelaRow({
     <tr className={linha.isSent ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
       {/* SACOLA */}
       <td className="col-sacola td-sacola"
-        onClick={() => onAbrirModal()}
-        title="Clique para editar">
+        onClick={() => {
+          if (camposDesabilitados) return // Bloqueia se não tiver permissão
+          onAbrirModal()
+        }}
+        title={camposDesabilitados ? "Sem permissão para editar vendas enviadas" : "Clique para editar"}
+        style={camposDesabilitados ? { cursor: 'not-allowed', opacity: 0.6 } : undefined}>
         <input className="cell-input sacola" value={linha.sacolinha ?? ''} readOnly tabIndex={-1} />
       </td>
 
@@ -312,8 +306,8 @@ const TabelaRow = memo(function TabelaRow({
             </button>
           )}
 
-          {/* Estornar */}
-          {(linha.isSent || modoHistorico) && (
+          {/* Estornar - só aparece se tiver permissão */}
+          {(linha.isSent || modoHistorico) && podeEstornar && (
             <button type="button" className="btn-action-sm undo" title="Estornar envio" style={{ display: 'flex' }}
               onClick={e => { e.stopPropagation(); onEstornar(linha._key) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

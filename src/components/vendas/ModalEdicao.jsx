@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import AutocompleteInput from './AutocompleteInput'
 
-export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBloqueio }) {
+export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBloqueio, onSalvarDireto, podeSalvarDireto = false }) {
   const [campos, setCampos] = useState({
     sacola: '', data_live: '', live_nome: '',
     produto: '', modelo: '', cor: '', marca: '',
@@ -43,6 +43,10 @@ export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBl
 
   function confirmar() {
     onConfirmar?.({ ...campos })
+  }
+
+  function salvarDireto() {
+    onSalvarDireto?.({ ...campos })
   }
 
   return (
@@ -114,6 +118,12 @@ export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBl
         <div className="modal-footer">
           <button className="btn-cancel"  onClick={onFechar}>Cancelar</button>
           <button className="btn-confirm" onClick={confirmar}>Confirmar na Linha</button>
+          {podeSalvarDireto && (
+            <button className="btn-confirm" onClick={salvarDireto}
+              style={{ background: 'var(--green)', borderColor: 'var(--green)' }}>
+              💾 Salvar Agora
+            </button>
+          )}
         </div>
       </div>
     </div>

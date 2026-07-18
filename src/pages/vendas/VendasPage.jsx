@@ -323,8 +323,6 @@ export default function VendasPage() {
           proximo_codigo: cfg?.proximo_codigo || 100
         })
         setPermissoes(perms)
-        console.log('🔐 Permissões carregadas:', perms)
-        console.log('✏️ Pode editar enviadas?', perms?.pode_editar_enviadas)
         setPronto(true)
         setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
       } catch {
@@ -943,6 +941,45 @@ export default function VendasPage() {
   }, [salvarAgora])
 
   // ── MODAL EDIÇÃO ──
+  const salvarDiretoDoModal = useCallback(async (key, campos) => {
+    const linha = linhas.find(l => l._key === key)
+    if (!linha || !linha.id) {
+      showToast('Linha não encontrada ou sem ID', 'error')
+      return
+    }
+
+    setBusy(true, 'Salvando...')
+    try {
+      // Atualiza no banco
+      await updateVendaEnviada(tenantId, {
+        ...linha,
+        ...campos,
+        sacolinha: campos.sacola,
+        data_live: campos.data_live,
+        live_nome: campos.live_nome
+      })
+
+      // Atualiza na interface
+      setLinhas(prev => prev.map(l => {
+        if (l._key !== key) return l
+        return {
+          ...l,
+          ...campos,
+          sacolinha: campos.sacola,
+          data_live: campos.data_live,
+          live_nome: campos.live_nome
+        }
+      }))
+
+      setModalEdicaoKey(null)
+      showToast('Venda salva com sucesso!', 'success')
+    } catch (err) {
+      showToast('Erro ao salvar: ' + err.message, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }, [linhas, tenantId])
+
   const confirmarEdicao = useCallback((key, campos) => {
     setLinhas(prev => {
       return calcSacolas(prev.map(l => {
@@ -1176,6 +1213,7 @@ export default function VendasPage() {
                         cols={colsConfig}
                         config={config}
                         podeEditarEnviadas={permissoes.pode_editar_enviadas}
+                        podeEstornar={permissoes.pode_estornar}
                         onFieldChange={handleFieldChange}
                         onClienteBlur={handleClienteBlur}
                         onClienteSelect={handleClienteSelect}
@@ -1216,14 +1254,20 @@ export default function VendasPage() {
           onFechar={() => setModalFilaKey(null)}
         />
       )}
-      {modalEdicaoKey !== null && (
-        <ModalEdicao
-          linha={linhas.find(l => l._key === modalEdicaoKey)}
-          listas={listas}
-          onConfirmar={(campos) => confirmarEdicao(modalEdicaoKey, campos)}
-          onFechar={() => setModalEdicaoKey(null)}
-        />
-      )}
+      {modalEdicaoKey !== null && (() => {
+        const linhaModal = linhas.find(l => l._key === modalEdicaoKey)
+        const podeSalvarDireto = linhaModal?.isSent && permissoes.pode_editar_enviadas
+        return (
+          <ModalEdicao
+            linha={linhaModal}
+            listas={listas}
+            onConfirmar={(campos) => confirmarEdicao(modalEdicaoKey, campos)}
+            onFechar={() => setModalEdicaoKey(null)}
+            podeSalvarDireto={podeSalvarDireto}
+            onSalvarDireto={(campos) => salvarDiretoDoModal(modalEdicaoKey, campos)}
+          />
+        )
+      })()}
       {showModalCadastro && (
         <ModalCadastro
           onSalvar={async (tipo, val, wpp) => {
