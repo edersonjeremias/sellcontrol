@@ -10,6 +10,7 @@ import {
   buscarVendasParaCobranca, gerarPreferenciaMp,
   sincronizarCobrancaComVendas, dividirPagamento,
 } from '../../services/cobrancasService'
+import { getConfig } from '../../services/configService'
 
 // ── Constantes ─────────────────────────────────────────────────
 const HOJE = new Date().toISOString().slice(0, 10)
@@ -115,6 +116,7 @@ export default function CobrancasPage() {
   const [listaClientes, setListaClientes] = useState([])
   const [carregando,    setCarregando]    = useState(false)
   const [creditosMap,   setCreditosMap]   = useState({})
+  const [config,        setConfig]        = useState(null)
 
   // Filtros barra superior (período para o resumo)
   const [dataInicio, setDataInicio] = useState('')
@@ -190,6 +192,7 @@ export default function CobrancasPage() {
   useEffect(() => {
     if (!tenantId) return
     getLivesParaCobranca(tenantId).then(setListaLives)
+    getConfig(tenantId).then(setConfig).catch(() => {})
     getClientesParaCobranca(tenantId).then(setListaClientes)
     getMapaCreditosClientes(tenantId).then(setCreditosMap).catch(() => {})
     carregar()
@@ -229,14 +232,17 @@ export default function CobrancasPage() {
     const zap = String(cobranca.whatsapp || '').replace(/\D/g, '')
     if (!zap) { showToast('Cliente sem WhatsApp', 'error'); return }
 
+    // Nome da empresa (fallback para SellControl se não tiver configurado)
+    const nomeEmpresa = config?.nome_empresa || 'SellControl'
+
     // Monta URL antes de qualquer async para abrir WhatsApp imediatamente
     const reciboUrl = `https://sellcontrol.vercel.app/recibo/${cobranca.id}`
     let url = `https://wa.me/55${zap}`
     if (tipo === 'lembrete') {
-      const msg = `Olá ${cobranca.cliente}! Tudo bem? 🌸\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* no valor de *R$ ${vlrStr(cobranca.total)}* ainda está aguardando o pagamento.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
+      const msg = `${nomeEmpresa}\n${config?.site_url || 'sellcontrol.vercel.app'}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* ainda está aguardando o pagamento.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     } else if (tipo === 'enviar') {
-      const msg = `Olá ${cobranca.cliente}! Tudo bem? 🌸\n\nSegue sua compra do dia *${fmtData(cobranca.data)}* no valor de *R$ ${vlrStr(cobranca.total)}*.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
+      const msg = `${nomeEmpresa}\n${config?.site_url || 'sellcontrol.vercel.app'}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nSegue sua compra do dia *${fmtData(cobranca.data)}*.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     }
     // tipo === 'chat': abre só o WhatsApp sem mensagem pré-definida
