@@ -142,6 +142,35 @@ export function AuthProvider({ children }) {
     }
   }, [loadProfile]) // isRecovery não entra nas deps para evitar re-subscribe
 
+  // ── Realtime: Monitora se usuário foi inativado ──
+  useEffect(() => {
+    if (!profile?.id) return
+
+    const channel = supabase
+      .channel(`user-status-${profile.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users_perfil',
+          filter: `id=eq.${profile.id}`,
+        },
+        async (payload) => {
+          const novoAtivo = payload.new?.ativo
+          if (novoAtivo === false) {
+            console.warn('⚠️ Usuário foi inativado - fazendo logout imediato')
+            await supabase.auth.signOut()
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [profile?.id])
+
   const signIn = useCallback(async (email, password) => {
     const result = await supabase.auth.signInWithPassword({ email, password })
     if (result.error) throw result.error
