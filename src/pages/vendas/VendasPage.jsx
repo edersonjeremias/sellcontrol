@@ -1375,7 +1375,7 @@ export default function VendasPage() {
 
       {/* MODAL CONFIGURAÇÕES DE COLUNAS */}
       {showSettings && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:900, display:'flex', alignItems:'center', justifyContent:'center' }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.55)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center' }}
           onClick={() => setShowSettings(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background:'#1a2232', border:'1px solid rgba(255,255,255,.12)', borderRadius:12, padding:'24px 28px', width:320, boxShadow:'0 12px 40px rgba(0,0,0,.6)' }}>
             <div style={{ fontSize:16, fontWeight:800, color:'#e6edf3', marginBottom:18 }}>⚙ Colunas Opcionais</div>
