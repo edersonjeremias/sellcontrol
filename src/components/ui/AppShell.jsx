@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { getConfig } from '../../services/configService'
 
 const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impressão', 'Cadastro', 'Admin', 'Outros']
 
@@ -30,8 +31,18 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   const location = useLocation()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [config, setConfig] = useState(null)
   // Categorias fechadas por padrão — expanded só quando o usuário clicar
   const [expanded, setExpanded] = useState({})
+
+  // Carrega configurações para pegar nome da empresa
+  useEffect(() => {
+    if (profile?.tenant_id) {
+      getConfig(profile.tenant_id).then(setConfig).catch(() => {})
+    }
+  }, [profile?.tenant_id])
+
+  const nomeEmpresa = config?.nome_empresa || 'SellControl'
 
   const handleLogout = async () => {
     setMenuOpen(false)
@@ -81,7 +92,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
       <header className="app-header">
         <div className="app-brand">
           <img src="/logo.svg" alt="" className="app-logo-img" />
-          <span className="app-logo-text">SellControl</span>
+          <span className="app-logo-text">{nomeEmpresa}</span>
         </div>
 
         <button
@@ -100,7 +111,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
         <div className="app-drawer-top">
           <div className="app-drawer-brand">
             <img src="/logo.svg" alt="" className="app-logo-img" />
-            <span className="app-logo-text">SellControl</span>
+            <span className="app-logo-text">{nomeEmpresa}</span>
           </div>
           <button className="app-drawer-close" onClick={close}>✕</button>
         </div>
