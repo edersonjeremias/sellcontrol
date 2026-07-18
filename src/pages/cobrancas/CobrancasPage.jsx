@@ -413,6 +413,7 @@ export default function CobrancasPage() {
   // ── Importar vendas ────────────────────────────────────────
   async function buscarVendas() {
     if (!impData) { showToast('Selecione a data', 'error'); return }
+    if (!impLive?.trim()) { showToast('Selecione a live', 'error'); return }
     setImportando(true)
     try {
       const res = await buscarVendasParaCobranca(tenantId, impData, impLive || null)
@@ -799,9 +800,9 @@ export default function CobrancasPage() {
                   <input type="date" value={impData} onChange={e => setImpData(e.target.value)} style={SI} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 2 }}>Live</label>
+                  <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 2 }}>Live *</label>
                   <select value={impLive} onChange={e => setImpLive(e.target.value)} style={{ ...SL, width: '100%' }}>
-                    <option value="">Todas</option>
+                    <option value="">Selecione a Live...</option>
                     {listaLives.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
                 </div>
@@ -836,7 +837,7 @@ export default function CobrancasPage() {
                 </>
               ) : (
                 <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: 20 }}>
-                  Selecione a data e clique em Buscar para ver as vendas ainda não cobradas
+                  Selecione a data e a live, depois clique em Buscar para ver as vendas ainda não cobradas
                 </div>
               )}
             </div>
