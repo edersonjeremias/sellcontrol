@@ -172,11 +172,13 @@ export default function VendasPage() {
   const dataLiveRef  = useRef(dataLive)
   const liveNomeRef  = useRef(liveNome)
   const tenantIdRef  = useRef(tenantId)
+  const listasRef    = useRef(listas)
   const saveTimerRef = useRef(null)
   // Atualização síncrona durante o render — sem lag de useEffect
   dataLiveRef.current  = dataLive
   liveNomeRef.current  = liveNome
   tenantIdRef.current  = tenantId
+  listasRef.current    = listas
   useEffect(() => { linhasRef.current = linhas },         [linhas])
   useEffect(() => { globalDBRef.current = globalDB },     [globalDB])
   useEffect(() => { busyRef.current = busy },             [busy])
@@ -846,13 +848,21 @@ export default function VendasPage() {
       return
     }
 
+    // Verifica se lista de clientes está carregada
+    if (!listasRef.current || !listasRef.current.clientes) {
+      console.error('❌ listasRef.current.clientes não está carregado!')
+      console.log('listasRef.current:', listasRef.current)
+      showToast('Erro: lista de clientes não carregada. Recarregue a página.', 'error')
+      return
+    }
+
     // Valida se o cliente está cadastrado
-    const clienteExiste = globalDBRef.current.clientes.some(c =>
+    const clienteExiste = listasRef.current.clientes.some(c =>
       c.toLowerCase() === nome.toLowerCase()
     )
 
     console.log('✅ Cliente existe?', clienteExiste)
-    console.log('📚 Lista de clientes:', globalDBRef.current.clientes)
+    console.log('📚 Lista de clientes:', listasRef.current.clientes)
 
     if (!clienteExiste) {
       console.log('❌ Cliente NÃO cadastrado - abrindo popup')
