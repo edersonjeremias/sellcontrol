@@ -1,8 +1,0 @@
-# Copie este arquivo para .env e preencha com seus dados do Supabase
-# Project Settings > API no painel do Supabase
-
-VITE_SUPABASE_URL=https://SEU_PROJETO.supabase.co
-VITE_SUPABASE_ANON_KEY=sua_anon_key_aqui
-
-# UUID do seu tenant — gerado ao rodar o INSERT do schema.sql
-VITE_TENANT_ID=uuid-do-seu-tenant-aqui

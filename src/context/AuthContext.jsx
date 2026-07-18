@@ -56,6 +56,15 @@ export function AuthProvider({ children }) {
       setMenuItems(DEFAULT_PAGES)
       return null
     }
+    // Verifica se o usuário está ativo
+    if (data.ativo === false) {
+      console.warn('Usuário inativo - fazendo logout')
+      await supabase.auth.signOut()
+      setProfile(null)
+      setMenuItems(DEFAULT_PAGES)
+      return null
+    }
+
     setProfile(data)
     const pagesRes = await getPagesForUser(data.id, data.tenant_id, data.role)
     if (pagesRes.error) {

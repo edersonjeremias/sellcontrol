@@ -304,12 +304,13 @@ export default function VendasPage() {
     }
   }, [filtro, tenantId])
 
-  // ── Força statusFiltro para pendentes se não tiver permissão ──
+  // ── Força statusFiltro para pendentes se não for Master/Admin e não tiver permissão ──
   useEffect(() => {
-    if (!permissoes.pode_editar_enviadas && statusFiltro !== 'pendentes') {
+    const isMasterOuAdmin = profile?.role === 'master' || profile?.role === 'admin'
+    if (!isMasterOuAdmin && !permissoes.pode_editar_enviadas && statusFiltro !== 'pendentes') {
       setStatusFiltro('pendentes')
     }
-  }, [permissoes.pode_editar_enviadas])
+  }, [permissoes.pode_editar_enviadas, profile?.role])
 
   // ── INIT ──
   useEffect(() => {
@@ -1128,8 +1129,8 @@ export default function VendasPage() {
               <AutocompleteInput value={liveNome} onChange={setLiveNome}
                 list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
             </div>
-            {/* Filtro Status - só aparece se tiver permissão para editar enviadas */}
-            {permissoes.pode_editar_enviadas && (
+            {/* Filtro Status - sempre aparece para Master/Admin, ou se tiver permissão */}
+            {(profile?.role === 'master' || profile?.role === 'admin' || permissoes.pode_editar_enviadas) && (
               <div className="field">
                 <label>Status</label>
                 <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}
