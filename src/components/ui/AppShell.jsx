@@ -42,7 +42,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     }
   }, [profile?.tenant_id])
 
-  const nomeEmpresa = config?.nome_empresa || 'SellControl'
+  const nomeEmpresa = config?.nome_loja || 'SellControl'
 
   const handleLogout = async () => {
     setMenuOpen(false)

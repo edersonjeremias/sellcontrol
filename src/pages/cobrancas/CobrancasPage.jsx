@@ -232,8 +232,8 @@ export default function CobrancasPage() {
     const zap = String(cobranca.whatsapp || '').replace(/\D/g, '')
     if (!zap) { showToast('Cliente sem WhatsApp', 'error'); return }
 
-    // Nome da empresa (fallback para SellControl se não tiver configurado)
-    const nomeEmpresa = config?.nome_empresa || 'SellControl'
+    // Nome da loja (fallback para SellControl se não tiver configurado)
+    const nomeEmpresa = config?.nome_loja || 'SellControl'
 
     // Monta URL antes de qualquer async para abrir WhatsApp imediatamente
     const reciboUrl = `https://sellcontrol.app/recibo/${cobranca.id}`
