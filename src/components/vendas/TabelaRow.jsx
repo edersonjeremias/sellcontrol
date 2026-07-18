@@ -103,6 +103,16 @@ const TabelaRow = memo(function TabelaRow({
 
   // Desabilita edição se for venda enviada E usuário não tiver permissão
   const camposDesabilitados = linha.isSent && !podeEditarEnviadas
+
+  // Debug permissões
+  if (linha.isSent) {
+    console.log('🔍 Permissões da linha:', {
+      podeEditarEnviadas,
+      podeEstornar,
+      camposDesabilitados
+    })
+  }
+
   const [txtCopiado, setTxtCopiado] = useState(false)
   const hasFila = linha.fila1 || linha.fila2 || linha.fila3
   const isCancelado = (linha.status || '').toUpperCase() === 'CANCELADO'
