@@ -1359,12 +1359,25 @@ export default function VendasPage() {
               console.log('💾 Salvando novo cadastro:', { tipo, val, wpp })
               await salvarNovoCadastro(tenantId, tipo, val, wpp)
 
+              console.log('⏳ Aguardando 500ms para propagação no banco...')
+              await new Promise(resolve => setTimeout(resolve, 500))
+
               console.log('🔄 Recarregando lista de clientes...')
               const novasListas = await getListas(tenantId)
               setListas(novasListas)
 
               console.log('✅ Lista atualizada. Total de clientes:', novasListas.clientes.length)
               console.log('✅ Cliente recém-cadastrado na lista?', novasListas.clientes.includes(val))
+
+              if (!novasListas.clientes.includes(val)) {
+                console.error('⚠️ PROBLEMA: Cliente não apareceu na lista após cadastro!')
+                console.log('🔍 Tentando recarregar novamente...')
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                const novasListasTentativa2 = await getListas(tenantId)
+                setListas(novasListasTentativa2)
+                console.log('🔄 2ª tentativa - Total:', novasListasTentativa2.clientes.length)
+                console.log('🔄 2ª tentativa - Cliente na lista?', novasListasTentativa2.clientes.includes(val))
+              }
 
               showToast('Cadastro realizado! Lista atualizada.', 'success')
               setShowModalCadastro(false) // Fecha modal automaticamente
