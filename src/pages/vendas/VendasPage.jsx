@@ -1356,9 +1356,18 @@ export default function VendasPage() {
         <ModalCadastro
           onSalvar={async (tipo, val, wpp) => {
             try {
+              console.log('💾 Salvando novo cadastro:', { tipo, val, wpp })
               await salvarNovoCadastro(tenantId, tipo, val, wpp)
-              setListas(await getListas(tenantId))
-              showToast('Cadastro realizado!', 'success')
+
+              console.log('🔄 Recarregando lista de clientes...')
+              const novasListas = await getListas(tenantId)
+              setListas(novasListas)
+
+              console.log('✅ Lista atualizada. Total de clientes:', novasListas.clientes.length)
+              console.log('✅ Cliente recém-cadastrado na lista?', novasListas.clientes.includes(val))
+
+              showToast('Cadastro realizado! Lista atualizada.', 'success')
+              setShowModalCadastro(false) // Fecha modal automaticamente
             } catch (err) {
               showToast(err?.message || 'Erro ao cadastrar. Verifique o banco.', 'error')
               throw err
