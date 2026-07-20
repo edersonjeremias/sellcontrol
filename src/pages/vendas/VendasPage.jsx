@@ -864,13 +864,26 @@ export default function VendasPage() {
       return
     }
 
-    // Valida se o cliente está cadastrado
+    // Valida se o cliente está cadastrado (com trim para evitar espaços)
     const clienteExiste = listasRef.current.clientes.some(c =>
-      c.toLowerCase() === nome.toLowerCase()
+      c.trim().toLowerCase() === nome.toLowerCase()
     )
 
     console.log('✅ Cliente existe?', clienteExiste)
+    console.log('📚 Total de clientes na lista:', listasRef.current.clientes.length)
     console.log('📚 Lista de clientes:', listasRef.current.clientes)
+    console.log('🔍 Procurando por:', nome)
+
+    // Log detalhado para debug
+    if (!clienteExiste) {
+      const similares = listasRef.current.clientes.filter(c =>
+        c.toLowerCase().includes(nome.toLowerCase()) ||
+        nome.toLowerCase().includes(c.toLowerCase())
+      )
+      if (similares.length > 0) {
+        console.log('⚠️ Clientes similares encontrados:', similares)
+      }
+    }
 
     if (!clienteExiste) {
       console.log('❌ Cliente NÃO cadastrado - abrindo popup')
