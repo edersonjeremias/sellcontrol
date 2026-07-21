@@ -5,7 +5,7 @@ import AppShell from '../../components/ui/AppShell'
 import ModalConfirmacao from '../../components/ui/ModalConfirmacao'
 import {
   getClientes, saveCliente, toggleBloqueio,
-  deleteCliente, saveDetalhes,
+  deleteCliente, saveDetalhes, searchClientes,
 } from '../../services/clientesService'
 
 const LABEL = {
@@ -44,6 +44,8 @@ export default function ClientesPage() {
   const [showDados,     setShowDados]     = useState(false)
   const [showDrop,      setShowDrop]      = useState(false)
   const [needsMigration, setNeedsMigration] = useState(false)
+  const [searchResults, setSearchResults] = useState([])
+  const [searching,     setSearching]     = useState(false)
 
   // Form fields
   const [searchVal,  setSearchVal]  = useState('')
@@ -73,9 +75,32 @@ export default function ClientesPage() {
 
   useEffect(() => { carregarClientes() }, [carregarClientes])
 
-  const filtrados = searchVal
-    ? clientes.filter(c => c.instagram.toLowerCase().includes(searchVal.toLowerCase()))
-    : clientes
+  // Busca sob demanda
+  useEffect(() => {
+    const trimmed = searchVal?.trim()
+    if (!trimmed || trimmed.length < 2) {
+      setSearchResults([])
+      return
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const { data, error } = await searchClientes(tenantId, trimmed, 20)
+        if (!error && data) {
+          setSearchResults(data)
+        }
+      } catch (err) {
+        console.error('Erro ao buscar clientes:', err)
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+
+    return () => clearTimeout(timeoutId)
+  }, [searchVal, tenantId])
+
+  const filtrados = searchResults
 
   const selecionarCliente = useCallback((c) => {
     setCurrent(c.instagram)

@@ -121,7 +121,7 @@ export default function ClienteAutocomplete({
         ref={inputRef}
         className={className}
         value={value}
-        placeholder="Digite 2+ letras..."
+        placeholder=""
         disabled={disabled}
         autoComplete="off"
         onChange={e => { onChange(e.target.value); setOpen(true); setActiveIdx(-1) }}
