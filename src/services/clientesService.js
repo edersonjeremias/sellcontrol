@@ -10,6 +10,23 @@ export async function getClientes(tenantId) {
   return { data: data || [], error }
 }
 
+// Busca clientes por termo (busca sob demanda para autocomplete)
+export async function searchClientes(tenantId, searchTerm, limit = 20) {
+  if (!searchTerm || searchTerm.length < 2) {
+    return { data: [], error: null }
+  }
+
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('instagram, bloqueado, msg_bloqueio')
+    .eq('tenant_id', tenantId)
+    .ilike('instagram', `%${searchTerm}%`)
+    .order('instagram')
+    .limit(limit)
+
+  return { data: data || [], error }
+}
+
 function isSchemaError(error) {
   return error?.message?.includes('schema cache') ||
     error?.message?.includes('column') ||
