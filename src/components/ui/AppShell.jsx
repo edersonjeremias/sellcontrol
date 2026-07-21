@@ -62,7 +62,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
       label: item.label,
       category: SLUG_TO_CATEGORY[item.slug] || 'Outros',
     })),
-    { to: '/clientes', label: 'Clientes', category: 'Cadastro' },
+    // Clientes só aparece se estiver em menuItems (configurado por empresa)
     ...(['admin', 'master'].includes(profile?.role)
       ? [{ to: '/configuracoes', label: 'Configurações', category: 'Admin' }]
       : []),
