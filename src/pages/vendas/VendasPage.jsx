@@ -998,7 +998,18 @@ export default function VendasPage() {
     const o = linhasRef.current.find(r => r._key === rowKey)
     if (!o) return
     const novoCodigo = config.codigo_automatico ? getProximoCodigo() : o.codigo
-    const copia = { ...novaLinha(novoCodigo), produto: o.produto, modelo: o.modelo, cor: o.cor, marca: o.marca, tamanho: o.tamanho, preco: o.preco }
+    const copia = {
+      ...novaLinha(novoCodigo),
+      produto: o.produto,
+      modelo: o.modelo,
+      cor: o.cor,
+      marca: o.marca,
+      tamanho: o.tamanho,
+      preco: o.preco,
+      genero: o.genero,
+      condicao: o.condicao,
+      custo: o.custo
+    }
     setLinhas(prev => {
       const idx = prev.findIndex(r => r._key === rowKey)
       if (idx < 0) return [...prev, copia]
