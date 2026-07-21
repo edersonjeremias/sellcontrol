@@ -6,6 +6,7 @@ export async function getClientes(tenantId) {
     .select('*')
     .eq('tenant_id', tenantId)
     .order('instagram')
+    .limit(50000)
   return { data: data || [], error }
 }
 
