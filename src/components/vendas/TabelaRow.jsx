@@ -1,5 +1,6 @@
 import { memo, useState } from 'react'
 import AutocompleteInput, { navigateNext, navigatePrevious } from '../ui/AutocompleteInput'
+import ClienteAutocomplete from './ClienteAutocomplete'
 
 // NAVEGAÇÃO DOM DIRETA (Performance crítica - não depende de state)
 function navegarProximoInput(currentElement) {
@@ -88,7 +89,7 @@ function copyToClipboard(text) {
 }
 
 const TabelaRow = memo(function TabelaRow({
-  linha, listas,
+  linha, listas, tenantId,
   onFieldChange, onClienteBlur, onClienteSelect, onIsBlocked, onEnterNoCliente,
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
@@ -233,15 +234,13 @@ const TabelaRow = memo(function TabelaRow({
 
       {/* CLIENTE */}
       <td className="col-cliente">
-        <AutocompleteInput
+        <ClienteAutocomplete
           className="cell-input"
           value={linha.cliente_nome}
-          list={listas.clientes}
+          tenantId={tenantId}
           onChange={v => upd('cliente_nome', v)}
-          onBlur={() => onClienteBlur(linha._key)}
-          onSelect={(v, inputEl) => onClienteSelect?.(linha._key, v, inputEl)}
-          isBlocked={v => onIsBlocked?.(v)}
-          onEnterNewRow={onEnterNoCliente}
+          onSelect={(v) => onClienteSelect?.(linha._key, v)}
+          onEnterKey={onEnterNoCliente}
           disabled={camposDesabilitados}
         />
       </td>

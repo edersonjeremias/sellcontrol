@@ -1,4 +1,5 @@
 import AutocompleteInput from './AutocompleteInput'
+import ClienteAutocomplete from './ClienteAutocomplete'
 
 const IconSend  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
 const IconUndo  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
@@ -7,7 +8,7 @@ const IconCopy  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const IconDel   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
 
 export default function LinhaVenda({
-  linha, listas,
+  linha, listas, tenantId,
   onUpdate, onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
   onClienteChange, onNovaLinha,
@@ -75,9 +76,9 @@ export default function LinhaVenda({
 
       {/* CLIENTE */}
       <td className="col-cliente">
-        <AutocompleteInput
+        <ClienteAutocomplete
           value={linha.cliente_nome}
-          list={listas.clientes}
+          tenantId={tenantId}
           onChange={v => upd('cliente_nome', v)}
           onSelect={v => onClienteChange?.(v)}
           onEnterKey={onNovaLinha}

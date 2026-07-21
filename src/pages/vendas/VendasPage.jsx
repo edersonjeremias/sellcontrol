@@ -1300,7 +1300,7 @@ export default function VendasPage() {
                     if (statusFiltro === 'pendentes' && l.status === 'Vendido') return null
                     return (
                       <TabelaRow key={l._key}
-                        linha={l} listas={listas}
+                        linha={l} listas={listas} tenantId={tenantId}
                         cols={colsConfig}
                         config={config}
                         podeEditarEnviadas={permissoes.pode_editar_enviadas}
