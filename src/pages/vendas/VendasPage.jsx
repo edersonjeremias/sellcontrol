@@ -321,12 +321,18 @@ export default function VendasPage() {
       if (!tenantId) return
       setBusy(true, 'Iniciando...')
       try {
+        console.log('📦 Iniciando carregamento das listas... tenant_id:', tenantId)
         const [db, lst, cfg, perms] = await Promise.all([
           getDadosIniciais(tenantId),
           getListas(tenantId),
           getConfig(tenantId),
           getVendasPermissoes(profile?.id)
         ])
+        console.log('📊 Listas carregadas:', {
+          total_clientes: lst?.clientes?.length || 0,
+          total_produtos: lst?.produtos?.length || 0,
+          primeiros_5_clientes: lst?.clientes?.slice(0, 5)
+        })
         setGlobalDB(db)
         setListas(lst)
         setConfig({
@@ -336,7 +342,8 @@ export default function VendasPage() {
         setPermissoes(perms)
         setPronto(true)
         setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
-      } catch {
+      } catch (err) {
+        console.error('❌ Erro ao iniciar:', err)
         showToast('Erro ao iniciar o sistema.', 'error')
         setTabelaMsg('Erro ao carregar. Verifique suas credenciais no .env e recarregue.')
       } finally {
