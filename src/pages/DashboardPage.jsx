@@ -1,184 +1,44 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import AppShell from '../components/ui/AppShell'
 import { useAuth } from '../context/AuthContext'
-import { getInformativos, addInformativo, markInformativoRead } from '../services/appService'
-import { useApp } from '../context/AppContext'
-import { supabase } from '../lib/supabase'
+import { getConfig } from '../services/configService'
 
 export default function DashboardPage() {
-  const { profile, menuItems } = useAuth()
-  const { showToast } = useApp()
-  const [informativos, setInformativos] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [destinatario, setDestinatario] = useState('TODOS')
-  const [filter, setFilter] = useState('Pendente')
+  const { profile } = useAuth()
+  const [nomeEmpresa, setNomeEmpresa] = useState('SellControl')
 
-  const tenantId = profile?.tenant_id
-
-  const loadInformativos = useCallback(async () => {
-    if (!tenantId) return
-    setLoading(true)
-    const result = await getInformativos(tenantId)
-    if (result.error) {
-      showToast('Erro ao carregar comunicados.', 'error')
-      setInformativos([])
-    } else {
-      setInformativos(result.data || [])
+  useEffect(() => {
+    if (profile?.tenant_id) {
+      getConfig(profile.tenant_id)
+        .then(config => {
+          if (config?.nome_loja) {
+            setNomeEmpresa(config.nome_loja)
+          }
+        })
+        .catch(() => {})
     }
-    setLoading(false)
-  }, [tenantId, showToast])
-
-  useEffect(() => { loadInformativos() }, [loadInformativos])
-
-  const handleSave = async () => {
-    if (!message.trim()) {
-      showToast('Digite uma mensagem antes de salvar.', 'error')
-      return
-    }
-    const result = await addInformativo(tenantId, message.trim(), destinatario, profile?.nome || '')
-    if (result.error) {
-      showToast('Erro ao salvar comunicado.', 'error')
-      return
-    }
-    setMessage('')
-    setDestinatario('TODOS')
-    showToast('Comunicado salvo com sucesso!', 'success')
-    loadInformativos()
-  }
-
-  const handleMarkRead = async (id) => {
-    const { error } = await markInformativoRead(id)
-    if (error) {
-      showToast('Erro ao marcar como lido.', 'error')
-      return
-    }
-    showToast('Marcado como lido.', 'success')
-    loadInformativos()
-  }
-
-  const showDebugInfo = async () => {
-    const { data: pages } = await supabase.from('pages').select('*').eq('tenant_id', tenantId)
-    const { data: access } = await supabase.from('pages_access').select('*, pages(slug)').eq('user_id', profile.id)
-
-    const info = {
-      usuario: {
-        id: profile.id,
-        nome: profile.nome,
-        role: profile.role,
-        tenant_id: profile.tenant_id
-      },
-      menu_items: menuItems.map(m => m.slug),
-      pages_no_banco: pages?.map(p => p.slug) || [],
-      acessos: access?.map(a => a.pages?.slug) || [],
-      tem_notificacoes: {
-        no_menu: menuItems.some(m => m.slug === 'notificacoes'),
-        no_banco: pages?.some(p => p.slug === 'notificacoes'),
-        com_acesso: access?.some(a => a.pages?.slug === 'notificacoes')
-      }
-    }
-
-    console.log('🔍 DEBUG INFO:', info)
-    alert('Informações enviadas para o Console! Pressione F12 e veja a aba Console.')
-  }
-
-  const filtered = informativos.filter((item) => {
-    if (filter === 'Pendente') return item.status === 'Pendente'
-    if (filter === 'Lido') return item.status === 'Lido'
-    return true
-  })
-
-  const formatItemDate = (item) => {
-    const raw = item?.data_insercao || item?.created_at || item?.data_conclusao
-    if (!raw) return '-'
-    const d = new Date(raw)
-    return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('pt-BR')
-  }
+  }, [profile?.tenant_id])
 
   return (
-    <AppShell title="Dashboard">
-      <section className="dashboard-panel">
-        <div className="dashboard-cards">
-          <div className="dashboard-card">
-            <div className="card-title">Pendentes</div>
-            <div className="card-value">{informativos.filter((item) => item.status === 'Pendente').length}</div>
-          </div>
-          <div className="dashboard-card">
-            <div className="card-title">Histórico</div>
-            <div className="card-value">{informativos.filter((item) => item.status === 'Lido').length}</div>
-          </div>
-          <div className="dashboard-card">
-            <div className="card-title">Seus Dados</div>
-            <div className="card-value">{profile?.nome || 'Usuário'}</div>
-            <button onClick={showDebugInfo} style={{ marginTop: 10, padding: '8px 16px', background: '#00d4ff', color: '#000', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>
-              🔍 Debug Info
-            </button>
-          </div>
-        </div>
-
-        <div className="dashboard-actions">
-          <div className="dashboard-form-card">
-            <h2>Novo aviso</h2>
-            <textarea
-              rows={5}
-              placeholder="Digite a comunicação interna aqui..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-            />
-            <div className="row gap">
-              <input
-                type="text"
-                placeholder="Destinatário (TODOS, nome de usuário, setor...)"
-                value={destinatario}
-                onChange={(e) => setDestinatario(e.target.value)}
-              />
-              <button className="btn-acao btn-blue" onClick={handleSave}>
-                Salvar aviso
-              </button>
-            </div>
-          </div>
-
-          <div className="dashboard-list-card">
-            <div className="list-header">
-              <h2>Informativos</h2>
-              <div className="list-tabs">
-                {['Pendente', 'Lido', 'Todos'].map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    className={filter === tab ? 'btn-acao btn-blue' : 'btn-acao btn-ghost'}
-                    onClick={() => setFilter(tab)}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="informativos-list">
-              {loading && <div className="empty-state">Carregando...</div>}
-              {!loading && filtered.length === 0 && <div className="empty-state">Nenhum informativo encontrado.</div>}
-              {!loading && filtered.map((item) => (
-                <div key={item.id} className="informativo-card">
-                  <div className="informativo-header">
-                    <strong>{item.destinatario || 'TODOS'}</strong>
-                    <span>{formatItemDate(item)}</span>
-                  </div>
-                  <div className="informativo-message" dangerouslySetInnerHTML={{ __html: item.mensagem }} />
-                  <div className="informativo-footer">
-                    <span>{item.status}</span>
-                    {item.status !== 'Lido' && (
-                      <button className="btn-acao btn-ghost" onClick={() => handleMarkRead(item.id)}>
-                        Marcar como lido
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+    <AppShell title="Dashboard" hideTitle>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '70vh',
+      }}>
+        <h1 style={{
+          fontSize: '6rem',
+          fontWeight: 700,
+          color: 'var(--blue)',
+          textAlign: 'center',
+          margin: 0,
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+        }}>
+          {nomeEmpresa}
+        </h1>
+      </div>
     </AppShell>
   )
 }
