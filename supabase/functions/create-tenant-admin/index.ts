@@ -66,7 +66,7 @@ serve(async (req) => {
     const adminCelular  = body.adminCelular?.trim()
     const adminSenha    = body.adminSenha ?? ''
 
-    if (!empresaNome || !empresaCnpj || !adminNome || !adminEmail || !adminCpf || !adminCelular) {
+    if (!empresaNome || !adminNome || !adminEmail || !adminCelular) {
       return new Response(JSON.stringify({ ok: false, message: 'Dados obrigatórios não informados.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
