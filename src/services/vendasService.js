@@ -68,11 +68,11 @@ export async function getDadosIniciais(tenantId = null) {
 export async function getListas(tenantId = null) {
   const tid = TENANT_ID(tenantId)
   const [prod, mod, cor, marc, cli] = await Promise.all([
-    supabase.from('listas_produtos').select('nome').eq('tenant_id', tid).order('nome'),
-    supabase.from('listas_modelos') .select('nome').eq('tenant_id', tid).order('nome'),
-    supabase.from('listas_cores')   .select('nome').eq('tenant_id', tid).order('nome'),
-    supabase.from('listas_marcas')  .select('nome').eq('tenant_id', tid).order('nome'),
-    supabase.from('clientes')       .select('instagram').eq('tenant_id', tid).order('instagram'),
+    supabase.from('listas_produtos').select('nome').eq('tenant_id', tid).order('nome').limit(50000),
+    supabase.from('listas_modelos') .select('nome').eq('tenant_id', tid).order('nome').limit(50000),
+    supabase.from('listas_cores')   .select('nome').eq('tenant_id', tid).order('nome').limit(50000),
+    supabase.from('listas_marcas')  .select('nome').eq('tenant_id', tid).order('nome').limit(50000),
+    supabase.from('clientes')       .select('instagram').eq('tenant_id', tid).order('instagram').limit(50000),
   ])
   return {
     produtos: prod.data?.map(r => r.nome)     || [],
