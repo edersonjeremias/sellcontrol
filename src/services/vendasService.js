@@ -30,9 +30,9 @@ function safeQuery(promise) {
 export async function getDadosIniciais(tenantId = null) {
   const tid = TENANT_ID(tenantId)
   const [livesRes, bloqRes, cobRes] = await Promise.all([
-    safeQuery(supabase.from('lives').select('nome').eq('tenant_id', tid).order('nome')),
+    safeQuery(supabase.from('lives').select('nome').eq('tenant_id', tid).order('nome').limit(50000)),
     safeQuery(supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
-      .eq('tenant_id', tid).eq('bloqueado', true)),
+      .eq('tenant_id', tid).eq('bloqueado', true).limit(50000)),
     // Cobrancas pendentes = dívidas ativas do cliente
     safeQuery(supabase.from('cobrancas')
       .select('cliente, total, data')

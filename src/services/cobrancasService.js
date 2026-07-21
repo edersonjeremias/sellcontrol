@@ -278,7 +278,7 @@ export async function getLivesParaCobranca(tenantId) {
 }
 
 export async function getClientesParaCobranca(tenantId) {
-  const { data } = await supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid(tenantId)).order('instagram')
+  const { data } = await supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid(tenantId)).order('instagram').limit(50000)
   return data || []
 }
 
