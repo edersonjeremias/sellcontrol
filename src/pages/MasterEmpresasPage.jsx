@@ -225,6 +225,7 @@ function AbaEmpresa({ showToast }) {
                 ch(e)
               } else {
                 setBusca(e.target.value)
+                setForm(p => ({ ...p, nome_loja: e.target.value })) // atualiza form também
                 setDropOpen(true)
               }
             }}
