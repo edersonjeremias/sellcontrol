@@ -46,45 +46,21 @@ export async function getUserProfile(userId) {
 export async function getPagesForUser(userId, tenantId, role) {
   if (!tenantId) return { data: [] }
   if (!pagesResourceAvailable) return { data: [] }
-  if (role === 'master') {
-    const result = await supabase
-      .from('pages')
-      .select('id, slug, label, category, icon')
-      .eq('tenant_id', tenantId)
-      .order('slug', { ascending: true })
-    if (isMissingResource(result.error)) {
-      pagesResourceAvailable = false
-      return { data: [] }
-    }
-    if (!result.error) return { ...result, data: normalizePages(result.data) }
-    return result
-  }
-  if (!pagesAccessResourceAvailable) return { data: [] }
-  const accessRes = await supabase
-    .from('pages_access')
-    .select('page_id')
-    .eq('user_id', userId)
 
-  if (isMissingResource(accessRes.error)) {
-    pagesAccessResourceAvailable = false
-    return { data: [] }
-  }
-  if (accessRes.error) return accessRes
-  const pageIds = (accessRes.data || []).map(item => item.page_id)
-  if (!pageIds.length) return { data: [] }
-
-  const pagesRes = await supabase
+  // Para todos os roles (master, admin, vendedor): busca páginas por tenant
+  const result = await supabase
     .from('pages')
-    .select('id, slug, label, category, icon')
+    .select('id, slug, label, category, icon, order_index')
     .eq('tenant_id', tenantId)
-    .in('id', pageIds)
-    .order('slug', { ascending: true })
-  if (isMissingResource(pagesRes.error)) {
+    .order('order_index', { ascending: true })
+
+  if (isMissingResource(result.error)) {
     pagesResourceAvailable = false
     return { data: [] }
   }
-  if (!pagesRes.error) return { ...pagesRes, data: normalizePages(pagesRes.data) }
-  return pagesRes
+
+  if (!result.error) return { ...result, data: normalizePages(result.data) }
+  return result
 }
 
 export async function getTenantUsers(tenantId) {

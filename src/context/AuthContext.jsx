@@ -69,20 +69,24 @@ export function AuthProvider({ children }) {
     const pagesRes = await getPagesForUser(data.id, data.tenant_id, data.role)
     if (pagesRes.error) {
       console.error('Erro ao carregar menu', pagesRes.error)
-      setMenuItems(DEFAULT_PAGES)
+      // Master tem acesso a tudo se houver erro
+      setMenuItems(data.role === 'master' ? DEFAULT_PAGES : [])
     } else {
       const fetched = pagesRes.data || []
       console.log('🔍 DEBUG - Páginas retornadas do banco:', fetched)
       console.log('🔍 DEBUG - Total de páginas:', fetched.length)
       console.log('🔍 DEBUG - Slugs:', fetched.map(p => p.slug))
+
       if (data.role === 'master') {
+        // Master: merge páginas configuradas com páginas padrão
         const bySlug = new Map(DEFAULT_PAGES.map((item) => [item.slug, item]))
         fetched.forEach((item) => bySlug.set(item.slug, item))
         const merged = Array.from(bySlug.values())
           .sort((a, b) => (a.order_index || 999) - (b.order_index || 999))
         setMenuItems(merged)
       } else {
-        setMenuItems(fetched.length > 0 ? fetched : DEFAULT_PAGES)
+        // Admin/Vendedor: APENAS páginas configuradas para a empresa
+        setMenuItems(fetched)
       }
     }
     return data
