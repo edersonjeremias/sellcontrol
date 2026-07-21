@@ -46,6 +46,7 @@ export default function ClientesPage() {
   const [needsMigration, setNeedsMigration] = useState(false)
   const [searchResults, setSearchResults] = useState([])
   const [searching,     setSearching]     = useState(false)
+  const [activeIdx,     setActiveIdx]     = useState(-1)
 
   // Form fields
   const [searchVal,  setSearchVal]  = useState('')
@@ -150,7 +151,7 @@ export default function ClientesPage() {
       if (error) throw error
       showToast(current ? 'Atualizado com sucesso!' : 'Cadastrado com sucesso!', 'success')
       await carregarClientes()
-      resetForm()
+      // NÃO limpar form - mantém campos para permitir múltiplas edições
     } catch (e) {
       showToast('Erro: ' + (e.message || String(e)), 'error')
     } finally {
@@ -533,9 +534,27 @@ Qualquer dúvida, estamos à disposição! 😊`
               <input
                 ref={searchRef}
                 value={searchVal}
-                onChange={e => { setSearchVal(e.target.value); setShowDrop(true) }}
+                onChange={e => { setSearchVal(e.target.value); setShowDrop(true); setActiveIdx(-1) }}
                 onFocus={() => setShowDrop(true)}
                 onBlur={() => setTimeout(() => setShowDrop(false), 150)}
+                onKeyDown={e => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    setActiveIdx(i => (i + 1) >= filtrados.length ? 0 : i + 1)
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    setActiveIdx(i => (i - 1) < 0 ? filtrados.length - 1 : i - 1)
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (activeIdx >= 0 && filtrados[activeIdx]) {
+                      selecionarCliente(filtrados[activeIdx])
+                      setShowDrop(false)
+                    }
+                  } else if (e.key === 'Escape') {
+                    setShowDrop(false)
+                    setActiveIdx(-1)
+                  }
+                }}
                 placeholder="Digite para buscar..."
                 autoComplete="off"
                 className="cell-input"
@@ -543,12 +562,12 @@ Qualquer dúvida, estamos à disposição! 😊`
               />
               {showDrop && filtrados.length > 0 && (
                 <ul className="autocomplete-list" style={{ top: 'calc(100% + 4px)', zIndex: 200 }}>
-                  {filtrados.map(c => (
+                  {filtrados.map((c, idx) => (
                     <li key={c.instagram}
+                      className={idx === activeIdx ? 'dropdown-item-active' : ''}
                       onMouseDown={() => selecionarCliente(c)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-light)', color: 'var(--text-body)', fontSize: 14 }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
-                      onMouseLeave={e => e.currentTarget.style.background = ''}
+                      onMouseEnter={() => setActiveIdx(idx)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid var(--border-light)', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 14, background: idx === activeIdx ? 'var(--blue)' : '' }}
                     >
                       {c.instagram}
                       {c.bloqueado && (
