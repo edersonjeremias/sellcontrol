@@ -132,8 +132,8 @@ function AbaEmpresa({ showToast }) {
     try {
       if (modo === 'novo') {
         // Criação
-        if (!form.nome_loja.trim() || !form.cnpj.trim()) throw new Error('Informe nome e CNPJ.')
-        if (!form.adminNome.trim() || !form.adminEmail.trim() || !form.adminCpf.trim() || !form.adminCelular.trim()) throw new Error('Preencha todos os dados do admin.')
+        if (!form.nome_loja.trim()) throw new Error('Informe o nome da empresa.')
+        if (!form.adminNome.trim() || !form.adminEmail.trim() || !form.adminCelular.trim()) throw new Error('Preencha todos os dados do admin.')
         if (form.adminSenha.length < 6) throw new Error('Senha mínima de 6 caracteres.')
         const { data, error } = await createTenantAndAdmin({
           empresaNome: form.nome_loja.trim(), empresaCnpj: form.cnpj.trim(),
@@ -268,7 +268,7 @@ function AbaEmpresa({ showToast }) {
           <>
             {modo === 'novo' && (
               <>
-                <label style={LBL}>CNPJ *</label>
+                <label style={LBL}>CNPJ</label>
                 <input name="cnpj" value={form.cnpj} onChange={ch} placeholder="00.000.000/0001-00" autoComplete="off" style={SI} />
               </>
             )}
@@ -302,7 +302,7 @@ function AbaEmpresa({ showToast }) {
               {modo === 'novo' && (
                 <>
                   <div>
-                    <label style={LBL}>CPF *</label>
+                    <label style={LBL}>CPF</label>
                     <input name="adminCpf" value={form.adminCpf} onChange={ch} placeholder="000.000.000-00" autoComplete="off" style={SI} />
                   </div>
                   <div>
