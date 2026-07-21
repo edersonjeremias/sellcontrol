@@ -27,6 +27,60 @@ export async function searchClientes(tenantId, searchTerm, limit = 20) {
   return { data: data || [], error }
 }
 
+// Busca avançada com múltiplos filtros
+export async function searchClientesAvancada(tenantId, filtros, limit = 200) {
+  let query = supabase
+    .from('clientes')
+    .select('*')
+    .eq('tenant_id', tenantId)
+
+  // Aplicar filtros apenas se preenchidos
+  if (filtros.instagram?.trim()) {
+    query = query.ilike('instagram', `%${filtros.instagram.trim()}%`)
+  }
+  if (filtros.nome?.trim()) {
+    query = query.ilike('nome_completo', `%${filtros.nome.trim()}%`)
+  }
+  if (filtros.whatsapp?.trim()) {
+    const digitos = filtros.whatsapp.replace(/\D/g, '')
+    if (digitos) {
+      query = query.ilike('whatsapp', `%${digitos}%`)
+    }
+  }
+  if (filtros.cpf?.trim()) {
+    const digitos = filtros.cpf.replace(/\D/g, '')
+    if (digitos) {
+      query = query.ilike('cpf', `%${digitos}%`)
+    }
+  }
+  if (filtros.cep?.trim()) {
+    const digitos = filtros.cep.replace(/\D/g, '')
+    if (digitos) {
+      query = query.ilike('cep', `%${digitos}%`)
+    }
+  }
+  if (filtros.cidade?.trim()) {
+    query = query.ilike('cidade', `%${filtros.cidade.trim()}%`)
+  }
+  if (filtros.estado?.trim()) {
+    query = query.ilike('uf', `%${filtros.estado.trim()}%`)
+  }
+  if (filtros.email?.trim()) {
+    query = query.ilike('email', `%${filtros.email.trim()}%`)
+  }
+  if (filtros.bloqueado === 'sim') {
+    query = query.eq('bloqueado', true)
+  } else if (filtros.bloqueado === 'nao') {
+    query = query.eq('bloqueado', false)
+  }
+
+  const { data, error } = await query
+    .order('instagram')
+    .limit(limit)
+
+  return { data: data || [], error }
+}
+
 function isSchemaError(error) {
   return error?.message?.includes('schema cache') ||
     error?.message?.includes('column') ||

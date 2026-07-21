@@ -6,6 +6,7 @@ import ModalConfirmacao from '../../components/ui/ModalConfirmacao'
 import {
   getClientes, saveCliente, toggleBloqueio,
   deleteCliente, saveDetalhes, searchClientes,
+  searchClientesAvancada,
 } from '../../services/clientesService'
 
 const LABEL = {
@@ -851,57 +852,84 @@ function AbaBuscaAvancada({ clientes, tenantId }) {
     email: '',
     bloqueado: 'todos', // 'todos' | 'sim' | 'nao'
   })
+  const [resultados, setResultados] = useState([])
+  const [buscando, setBuscando] = useState(false)
+  const [activeIdx, setActiveIdx] = useState(-1)
+  const tableRef = useRef(null)
 
   const updateFiltro = (campo, valor) => {
     setFiltros(prev => ({ ...prev, [campo]: valor }))
+    setActiveIdx(-1) // Reset índice ao mudar filtro
   }
 
-  // Filtrar clientes
-  const filtrados = clientes.filter(c => {
-    // Instagram
-    if (filtros.instagram && !c.instagram.toLowerCase().includes(filtros.instagram.toLowerCase())) return false
+  // Busca sob demanda quando filtros mudam
+  useEffect(() => {
+    // Verifica se há algum filtro ativo
+    const algumFiltro = Object.entries(filtros).some(([key, val]) =>
+      key !== 'bloqueado' ? val.trim() !== '' : val !== 'todos'
+    )
 
-    // Nome
-    if (filtros.nome && !(c.nome_completo || '').toLowerCase().includes(filtros.nome.toLowerCase())) return false
+    if (!algumFiltro) {
+      setResultados([])
+      return
+    }
 
-    // WhatsApp
-    if (filtros.whatsapp && !(c.whatsapp || '').includes(filtros.whatsapp.replace(/\D/g, ''))) return false
+    const timeoutId = setTimeout(async () => {
+      setBuscando(true)
+      try {
+        const { data, error } = await searchClientesAvancada(tenantId, filtros, 200)
+        if (!error && data) {
+          setResultados(data)
+        }
+      } catch (err) {
+        console.error('Erro ao buscar clientes:', err)
+      } finally {
+        setBuscando(false)
+      }
+    }, 300)
 
-    // CPF
-    if (filtros.cpf && !(c.cpf || '').includes(filtros.cpf.replace(/\D/g, ''))) return false
+    return () => clearTimeout(timeoutId)
+  }, [filtros, tenantId])
 
-    // CEP
-    if (filtros.cep && !(c.cep || '').includes(filtros.cep.replace(/\D/g, ''))) return false
-
-    // Cidade
-    if (filtros.cidade && !(c.cidade || '').toLowerCase().includes(filtros.cidade.toLowerCase())) return false
-
-    // Estado
-    if (filtros.estado && !(c.uf || '').toLowerCase().includes(filtros.estado.toLowerCase())) return false
-
-    // E-mail
-    if (filtros.email && !(c.email || '').toLowerCase().includes(filtros.email.toLowerCase())) return false
-
-    // Bloqueado
-    if (filtros.bloqueado === 'sim' && !c.bloqueado) return false
-    if (filtros.bloqueado === 'nao' && c.bloqueado) return false
-
-    return true
-  })
+  // Scroll automático para item ativo
+  useEffect(() => {
+    if (activeIdx >= 0 && tableRef.current) {
+      const rows = tableRef.current.querySelectorAll('tbody tr')
+      rows[activeIdx]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [activeIdx])
 
   const limparFiltros = () => {
     setFiltros({
       instagram: '', nome: '', whatsapp: '', cpf: '',
       cep: '', cidade: '', estado: '', email: '', bloqueado: 'todos',
     })
+    setResultados([])
+    setActiveIdx(-1)
   }
 
   const totalFiltrosAtivos = Object.entries(filtros).filter(([key, val]) =>
     key !== 'bloqueado' ? val.trim() !== '' : val !== 'todos'
   ).length
 
+  const handleKeyDown = (e) => {
+    if (resultados.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIdx(i => (i + 1) >= resultados.length ? 0 : i + 1)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIdx(i => (i - 1) < 0 ? resultados.length - 1 : i - 1)
+    }
+  }
+
   return (
-    <div style={{ padding: '0 16px 16px', maxWidth: 1100, margin: '0 auto' }}>
+    <div
+      style={{ padding: '0 16px 16px', maxWidth: 1100, margin: '0 auto' }}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+    >
 
       {/* Filtros */}
       <div style={{
@@ -1059,20 +1087,24 @@ function AbaBuscaAvancada({ clientes, tenantId }) {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-body)' }}>
-            📋 Resultados
+            📋 Resultados {buscando && <span style={{ fontSize: 11, color: 'var(--muted)' }}>(Buscando...)</span>}
           </h3>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            {filtrados.length} cliente{filtrados.length !== 1 ? 's' : ''}
+            {resultados.length} cliente{resultados.length !== 1 ? 's' : ''}
           </span>
         </div>
 
         <div style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
-          {filtrados.length === 0 ? (
+          {totalFiltrosAtivos === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+              Preencha ao menos um filtro para buscar
+            </div>
+          ) : resultados.length === 0 && !buscando ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
               Nenhum cliente encontrado com os filtros aplicados.
             </div>
           ) : (
-            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <table ref={tableRef} style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-bg)', zIndex: 1 }}>
                 <tr>
                   <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>Instagram</th>
@@ -1086,42 +1118,45 @@ function AbaBuscaAvancada({ clientes, tenantId }) {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((c, idx) => (
+                {resultados.map((c, idx) => (
                   <tr key={c.instagram}
                     style={{
                       borderBottom: '1px solid var(--border-light)',
                       transition: 'background 0.15s',
+                      background: idx === activeIdx ? 'var(--blue)' : 'transparent',
+                      color: idx === activeIdx ? '#171717' : 'inherit',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding: '8px 12px', color: 'var(--blue)', fontWeight: 600 }}>
+                    onMouseEnter={e => { if (idx !== activeIdx) e.currentTarget.style.background = 'var(--table-row-hover)' }}
+                    onMouseLeave={e => { if (idx !== activeIdx) e.currentTarget.style.background = 'transparent' }}
+                    onClick={() => setActiveIdx(idx)}>
+                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--blue)', fontWeight: 600 }}>
                       @{c.instagram}
                     </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--text-body)' }}>
-                      {c.nome_completo || <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
+                      {c.nome_completo || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 11 }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--text-body)' }}>
-                      {c.whatsapp || <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
+                      {c.whatsapp || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 11 }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--text-body)', fontFamily: 'monospace', fontSize: 11 }}>
-                      {c.cpf || <span style={{ color: 'var(--muted)' }}>—</span>}
+                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 11 }}>
+                      {c.cpf || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--text-body)' }}>
-                      {c.cidade && c.uf ? `${c.cidade}/${c.uf}` : c.cidade || c.uf || <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
+                      {c.cidade && c.uf ? `${c.cidade}/${c.uf}` : c.cidade || c.uf || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 11 }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--text-body)', fontFamily: 'monospace', fontSize: 11 }}>
-                      {c.cep || <span style={{ color: 'var(--muted)' }}>—</span>}
+                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 11 }}>
+                      {c.cep || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: 'var(--text-body)', fontSize: 11 }}>
-                      {c.email || <span style={{ color: 'var(--muted)' }}>—</span>}
+                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 11 }}>
+                      {c.email || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
                     <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                       {c.bloqueado ? (
-                        <span style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--red)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
+                        <span style={{ background: idx === activeIdx ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.15)', color: idx === activeIdx ? '#171717' : 'var(--red)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
                           🔒 Bloqueado
                         </span>
                       ) : (
-                        <span style={{ background: 'rgba(52,211,153,0.15)', color: 'var(--green)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
+                        <span style={{ background: idx === activeIdx ? 'rgba(52,211,153,0.3)' : 'rgba(52,211,153,0.15)', color: idx === activeIdx ? '#171717' : 'var(--green)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
                           ✅ Ativo
                         </span>
                       )}
