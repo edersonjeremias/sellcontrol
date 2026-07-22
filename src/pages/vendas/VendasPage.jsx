@@ -513,6 +513,9 @@ export default function VendasPage() {
           const status = r.status?.toUpperCase() || ''
           return status === 'ENVIADO' || status === 'VENDIDO'
         })
+      } else if (statusFiltro === 'cadastrados') {
+        // Busca TODOS os produtos cadastrados no dia (com ou sem cliente)
+        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
       } else {
         // Busca todas as vendas com cliente
         rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
@@ -529,6 +532,8 @@ export default function VendasPage() {
           ? 'Nenhuma venda pendente encontrada. Use o campo de busca para encontrar produtos ou clique em + Novo.'
           : statusFiltro === 'enviadas'
           ? 'Nenhuma venda enviada encontrada para os filtros selecionados.'
+          : statusFiltro === 'cadastrados'
+          ? 'Nenhum produto cadastrado encontrado para esta data.'
           : 'Nenhuma venda encontrada.'
         setTabelaMsg(msg)
       }
@@ -1229,7 +1234,8 @@ export default function VendasPage() {
                            background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: 14, cursor: 'pointer' }}>
                   <option value="pendentes">Pendentes</option>
                   <option value="enviadas">Enviadas</option>
-                  <option value="todas">Todas</option>
+                  <option value="cadastrados">Cadastrados (Todos)</option>
+                  <option value="todas">Todas com Cliente</option>
                 </select>
               </div>
             )}
