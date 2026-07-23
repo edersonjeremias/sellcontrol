@@ -323,7 +323,8 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
         cor: linha.cor || '',
         marca: linha.marca || '',
         tamanho: linha.tamanho || '',
-        codigo: linha.codigo || ''
+        codigo: linha.codigo || '',
+        sacolinha: linha.sacolinha ?? null
       })
       .eq('id', linha.id)
     if (error) throw error
