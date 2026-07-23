@@ -403,14 +403,14 @@ export default function EtiquetasPage() {
               <div style={{ display: 'flex', gap: 4, height: 44 }}>
                 <button
                   className={`sacol-btn${fonte === 'nao_vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
-                  onClick={() => { setFonte('nao_vendidas'); if (dataFiltro && liveNome) puxarVendas('nao_vendidas') }}
+                  onClick={() => { setFonte('nao_vendidas'); if (dataFiltro) puxarVendas('nao_vendidas') }}
                   style={{ fontSize: 13, padding: '0 12px' }}
                 >
                   Não Vendidas
                 </button>
                 <button
                   className={`sacol-btn${fonte === 'vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
-                  onClick={() => { setFonte('vendidas'); if (dataFiltro && liveNome) puxarVendas('vendidas') }}
+                  onClick={() => { setFonte('vendidas'); if (dataFiltro) puxarVendas('vendidas') }}
                   style={{ fontSize: 13, padding: '0 12px' }}
                 >
                   Vendidas
@@ -419,7 +419,7 @@ export default function EtiquetasPage() {
             </div>
             <div className="sacol-actions">
               <button className="sacol-btn sacol-btn-green" onClick={puxarVendas}
-                disabled={loading || !dataFiltro || !liveNome}>
+                disabled={loading || !dataFiltro}>
                 {loading ? 'Carregando…' : 'Puxar'}
               </button>
               <button className="sacol-btn sacol-btn-blue" onClick={imprimir} disabled={!gerado}>
