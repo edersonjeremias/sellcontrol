@@ -507,13 +507,8 @@ export default function VendasPage() {
         // Busca apenas vendas pendentes (não enviadas)
         rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true, somentePendentes: true })
       } else if (statusFiltro === 'sessao') {
-        // SESSÃO COMPLETA: tudo do dia (cadastrados + vendidos não finalizados)
-        const allRows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
-        // Filtra apenas não enviados
-        rows = allRows.filter(r => {
-          const status = r.status?.toUpperCase() || ''
-          return status !== 'ENVIADO' && status !== 'VENDIDO'
-        })
+        // SESSÃO COMPLETA: TUDO do dia (cadastrados + pendentes + enviados)
+        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
       } else if (statusFiltro === 'enviadas') {
         // Busca apenas vendas finalizadas (enviadas/vendidas)
         const allRows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
@@ -1243,9 +1238,9 @@ export default function VendasPage() {
                   style={{ width: '100%', height: 40, padding: '0 12px', borderRadius: 6, border: '1px solid var(--input-border)',
                            background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: 14, cursor: 'pointer' }}>
                   <option value="pendentes">Pendentes (com cliente)</option>
-                  <option value="sessao">Sessão Completa (cadastrados + pendentes)</option>
-                  <option value="cadastrados">Cadastrados (Todos)</option>
-                  <option value="enviadas">Enviadas</option>
+                  <option value="sessao">Sessão Completa (TUDO do dia)</option>
+                  <option value="cadastrados">Apenas Cadastrados (sem cliente)</option>
+                  <option value="enviadas">Apenas Enviadas</option>
                   <option value="todas">Todas com Cliente</option>
                 </select>
               </div>
