@@ -153,16 +153,22 @@ export default function EtiquetasPage() {
   }, [tenantId, dataFiltro])
 
   const puxarVendas = useCallback(async (fonteOverride) => {
-    if (!dataFiltro || !liveNome) { setErr('Selecione data e live.'); return }
+    if (!dataFiltro) { setErr('Selecione a data.'); return }
     const fonteAtual = fonteOverride ?? fonte
     setLoading(true); setErr(null); setGerado(false); setRows([])
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('vendas')
         .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome')
         .eq('tenant_id', tenantId)
         .eq('data_live', dataFiltro)
-        .eq('live_nome', liveNome)
+
+      // Filtrar por live apenas se estiver selecionada
+      if (liveNome) {
+        query = query.eq('live_nome', liveNome)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       const allRows = (data || []).map(r => ({
         uid:         r.id,
