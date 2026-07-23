@@ -442,7 +442,7 @@ export default function VendasPage() {
     }, 300)
   }, [showToast])
 
-  // ── Auto-save periódico (1 minuto) ──
+  // ── Auto-save periódico (15 segundos) ──
   useEffect(() => {
     if (!tenantId || !pronto) return
     const interval = setInterval(async () => {
@@ -471,7 +471,7 @@ export default function VendasPage() {
       } finally {
         isSavingRef.current = false
       }
-    }, 60000)
+    }, 15000)
     return () => clearInterval(interval)
   }, [tenantId, pronto, showToast])
 
