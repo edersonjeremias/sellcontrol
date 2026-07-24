@@ -82,7 +82,7 @@ export default function ReciboPage() {
             totalFinal: Number(res.total),
           })
         } catch (err) {
-          // Cupom expirado ou inválido - remover
+          // Cupom expirado ou inválido - remover do banco
           await supabase
             .from('cobrancas')
             .update({
@@ -104,7 +104,10 @@ export default function ReciboPage() {
             setCob(cobAtualizada)
           }
 
-          setErroCupom('Cupom expirado! O desconto foi removido.')
+          // Limpar estado local (permitir que cliente tente inserir novamente)
+          setCupomAplicado(null)
+          setCodigoCupom('')
+          setErroCupom('Cupom expirado! O desconto foi removido. Você pode inserir outro cupom válido.')
         }
       }
     } catch {
