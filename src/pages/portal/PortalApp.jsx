@@ -34,46 +34,28 @@ export default function PortalApp() {
       setErro(false)
 
       try {
-        let tid = null
-        let nome = ''
-
-        if (slug) {
-          // Buscar por slug
-          const { data, error } = await supabase
-            .from('configuracoes')
-            .select('tenant_id, nome_loja')
-            .eq('slug', slug)
-            .single()
-
-          if (error || !data) {
-            setErro(true)
-            setLoading(false)
-            return
-          }
-
-          tid = data.tenant_id
-          nome = data.nome_loja || 'Portal'
-        } else {
-          // Fallback: usar VITE_TENANT_ID (compatibilidade)
-          tid = import.meta.env.VITE_TENANT_ID
-
-          if (tid) {
-            const { data } = await supabase
-              .from('configuracoes')
-              .select('nome_loja')
-              .eq('tenant_id', tid)
-              .single()
-
-            nome = data?.nome_loja || 'Portal'
-          }
-        }
-
-        if (!tid) {
+        // Slug é OBRIGATÓRIO
+        if (!slug) {
           setErro(true)
-        } else {
-          setTenantId(tid)
-          setNomeEmpresa(nome)
+          setLoading(false)
+          return
         }
+
+        // Buscar por slug
+        const { data, error } = await supabase
+          .from('configuracoes')
+          .select('tenant_id, nome_loja')
+          .eq('slug', slug)
+          .single()
+
+        if (error || !data) {
+          setErro(true)
+          setLoading(false)
+          return
+        }
+
+        setTenantId(data.tenant_id)
+        setNomeEmpresa(data.nome_loja || 'Portal')
       } catch {
         setErro(true)
       } finally {
