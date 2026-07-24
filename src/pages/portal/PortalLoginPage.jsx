@@ -1,36 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
-import { supabase } from '../../lib/supabase'
 
-export default function PortalLoginPage() {
+export default function PortalLoginPage({ nomeEmpresa = 'Portal' }) {
   const { login }           = usePortalAuth()
   const [instagram, setInstagram] = useState('')
   const [senha, setSenha]         = useState('')
   const [erro, setErro]           = useState('')
   const [loading, setLoading]     = useState(false)
-  const [nomeEmpresa, setNomeEmpresa] = useState('Carregando...')
-
-  useEffect(() => {
-    // Buscar nome da empresa
-    const tenantId = import.meta.env.VITE_TENANT_ID
-    if (tenantId) {
-      supabase
-        .from('configuracoes')
-        .select('nome_loja')
-        .eq('tenant_id', tenantId)
-        .single()
-        .then(({ data }) => {
-          if (data?.nome_loja) {
-            setNomeEmpresa(data.nome_loja)
-          } else {
-            setNomeEmpresa('Portal do Cliente')
-          }
-        })
-        .catch(() => setNomeEmpresa('Portal do Cliente'))
-    } else {
-      setNomeEmpresa('Portal do Cliente')
-    }
-  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()

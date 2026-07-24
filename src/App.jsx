@@ -108,6 +108,7 @@ export default function App() {
             <Route path="/contas-pagar"          element={<RequireAuth><ContasPagarPage /></RequireAuth>} />
             <Route path="/creditos-clientes"     element={<RequireAuth><CreditosPage /></RequireAuth>} />
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
+            <Route path="/portal/:slug" element={<PortalApp />} />
             <Route path="/portal" element={<PortalApp />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

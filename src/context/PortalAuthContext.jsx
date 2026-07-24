@@ -3,7 +3,7 @@ import { portalSb } from '../lib/portalSupabase'
 
 const Ctx = createContext(null)
 
-export function PortalAuthProvider({ children }) {
+export function PortalAuthProvider({ children, tenantId }) {
   const [cliente, setCliente] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -49,7 +49,7 @@ export function PortalAuthProvider({ children }) {
   }
 
   return (
-    <Ctx.Provider value={{ cliente, loading, login, logout, refreshCliente }}>
+    <Ctx.Provider value={{ cliente, loading, login, logout, refreshCliente, tenantId }}>
       {children}
     </Ctx.Provider>
   )
