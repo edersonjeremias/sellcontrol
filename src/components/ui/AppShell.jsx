@@ -10,6 +10,7 @@ const SLUG_TO_CATEGORY = {
   'notificacoes':                'Principal',
   'vendas':                      'Vendas',
   'cobrancas':                   'Financeiro',
+  'cupons':                      'Vendas',
   'relatorio':                   'Financeiro',
   'contatos':                    'Vendas',
   'dashboard-financeiro':        'Financeiro',
@@ -64,7 +65,10 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     })),
     // Clientes só aparece se estiver em menuItems (configurado por empresa)
     ...(['admin', 'master'].includes(profile?.role)
-      ? [{ to: '/configuracoes', label: 'Configurações', category: 'Admin' }]
+      ? [
+          { to: '/cupons', label: 'Cupons', category: 'Vendas' },
+          { to: '/configuracoes', label: 'Configurações', category: 'Admin' }
+        ]
       : []),
     ...(profile?.role === 'master'
       ? [{ to: '/master/empresas', label: 'Empresas', category: 'Admin' }]

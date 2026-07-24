@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getCobrancaById, formatMoeda, dividirPagamento } from '../../services/cobrancasService'
+import { validarCupom, calcularDesconto } from '../../services/cuponsService'
 import { supabase } from '../../lib/supabase'
 
 function fmtData(iso) {
@@ -39,6 +40,12 @@ export default function ReciboPage() {
   const [dividindo, setDividindo] = useState(false)
   const [erroDivisao, setErroDivisao] = useState('')
 
+  // Estados para cupom de desconto
+  const [codigoCupom, setCodigoCupom] = useState('')
+  const [aplicando, setAplicando] = useState(false)
+  const [cupomAplicado, setCupomAplicado] = useState(null)
+  const [erroCupom, setErroCupom] = useState('')
+
   const carregarCob = async () => {
     if (!id) { setErro(true); return }
     setErro(false)
@@ -57,6 +64,18 @@ export default function ReciboPage() {
         if (config?.nome_loja) {
           setNomeEmpresa(config.nome_loja)
         }
+      }
+
+      // Restaurar cupom se já foi aplicado
+      if (res.cupom_codigo && res.cupom_desconto_percentual && res.cupom_desconto_valor) {
+        const totalOriginal = Number(res.total) + Number(res.cupom_desconto_valor)
+        setCupomAplicado({
+          codigo: res.cupom_codigo,
+          percentual: res.cupom_desconto_percentual,
+          desconto: res.cupom_desconto_valor,
+          totalOriginal,
+          totalFinal: Number(res.total),
+        })
       }
     } catch {
       setErro(true)
@@ -90,6 +109,79 @@ export default function ReciboPage() {
     setVerificando(false)
     setVerificado(true)
     carregarCob()
+  }
+
+  const handleAplicarCupom = async () => {
+    setErroCupom('')
+
+    if (!codigoCupom.trim()) {
+      setErroCupom('Digite o código do cupom')
+      return
+    }
+
+    setAplicando(true)
+    try {
+      // Validar cupom
+      const cupom = await validarCupom(cob.tenant_id, codigoCupom)
+
+      // Calcular desconto
+      const totalAtual = cupomAplicado ? cupomAplicado.totalOriginal : Number(cob.total)
+      const { desconto, totalFinal } = calcularDesconto(totalAtual, cupom.percentual)
+
+      // Salvar cupom aplicado na cobrança
+      const { error } = await supabase
+        .from('cobrancas')
+        .update({
+          cupom_codigo: cupom.codigo,
+          cupom_desconto_percentual: cupom.percentual,
+          cupom_desconto_valor: Number(desconto),
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Atualizar estado local
+      setCupomAplicado({
+        codigo: cupom.codigo,
+        percentual: cupom.percentual,
+        desconto: Number(desconto),
+        totalOriginal: totalAtual,
+        totalFinal: Number(totalFinal),
+      })
+
+      // Atualizar total na cobrança
+      setCob(prev => ({ ...prev, total: Number(totalFinal) }))
+
+      setCodigoCupom('')
+    } catch (err) {
+      setErroCupom(err.message || 'Erro ao aplicar cupom')
+    } finally {
+      setAplicando(false)
+    }
+  }
+
+  const handleRemoverCupom = async () => {
+    try {
+      // Remover cupom da cobrança
+      const { error } = await supabase
+        .from('cobrancas')
+        .update({
+          cupom_codigo: null,
+          cupom_desconto_percentual: null,
+          cupom_desconto_valor: null,
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Restaurar total original
+      setCob(prev => ({ ...prev, total: cupomAplicado.totalOriginal }))
+      setCupomAplicado(null)
+      setCodigoCupom('')
+      setErroCupom('')
+    } catch (err) {
+      setErroCupom(err.message || 'Erro ao remover cupom')
+    }
   }
 
   const handleDividir = async () => {
@@ -189,9 +281,57 @@ export default function ReciboPage() {
 
         {/* Total */}
         <div style={estilos.totalBox}>
-          <span style={{ color: '#9aa0a6', fontSize: 14 }}>Total</span>
-          <span style={{ fontSize: 28, fontWeight: 800, color: '#81c995' }}>{formatMoeda(cob.total)}</span>
+          <span style={{ color: '#9aa0a6', fontSize: 14 }}>
+            {cupomAplicado ? 'Subtotal' : 'Total'}
+          </span>
+          <span style={{ fontSize: 28, fontWeight: 800, color: '#81c995' }}>
+            {formatMoeda(cupomAplicado ? cupomAplicado.totalOriginal : cob.total)}
+          </span>
         </div>
+
+        {/* Cupom aplicado */}
+        {cupomAplicado && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: '#81c995', fontSize: 14, fontWeight: 600 }}>
+                  🎟️ {cupomAplicado.codigo} ({cupomAplicado.percentual}%)
+                </span>
+                <button
+                  onClick={handleRemoverCupom}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: 11,
+                    background: 'rgba(242,139,130,0.1)',
+                    color: '#f28b82',
+                    border: '1px solid rgba(242,139,130,0.3)',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Remover
+                </button>
+              </div>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#81c995' }}>
+                - {formatMoeda(cupomAplicado.desconto)}
+              </span>
+            </div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              marginBottom: 16,
+              borderTop: '2px solid #81c995',
+              borderBottom: '1px solid #3c4043',
+            }}>
+              <span style={{ color: '#e8eaed', fontSize: 16, fontWeight: 700 }}>Total com desconto</span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: '#81c995' }}>
+                {formatMoeda(cupomAplicado.totalFinal)}
+              </span>
+            </div>
+          </>
+        )}
 
         {/* Pagamento dividido */}
         {!pago && div && (
@@ -231,6 +371,66 @@ export default function ReciboPage() {
             {verificando && (
               <div style={{ textAlign: 'center', color: '#9aa0a6', fontSize: 13, padding: '8px 0' }}>
                 Verificando pagamento…
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Campo de cupom */}
+        {!pago && !div && !cupomAplicado && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: '#9aa0a6', marginBottom: 8, textAlign: 'center' }}>
+              🎟️ Tem um cupom de desconto?
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                value={codigoCupom}
+                onChange={e => setCodigoCupom(e.target.value.toUpperCase())}
+                placeholder="Digite o código"
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  background: '#202124',
+                  border: '1px solid #3c4043',
+                  borderRadius: 8,
+                  color: '#e8eaed',
+                  fontSize: 14,
+                  outline: 'none',
+                  textTransform: 'uppercase',
+                }}
+                disabled={aplicando}
+              />
+              <button
+                onClick={handleAplicarCupom}
+                disabled={aplicando || !codigoCupom.trim()}
+                style={{
+                  padding: '10px 20px',
+                  background: aplicando ? 'rgba(129,201,149,0.3)' : '#81c995',
+                  color: '#000',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: aplicando || !codigoCupom.trim() ? 'not-allowed' : 'pointer',
+                  opacity: aplicando || !codigoCupom.trim() ? 0.5 : 1,
+                }}
+              >
+                {aplicando ? '...' : 'Aplicar'}
+              </button>
+            </div>
+            {erroCupom && (
+              <div style={{
+                marginTop: 8,
+                padding: '8px 12px',
+                background: 'rgba(242,139,130,0.1)',
+                border: '1px solid rgba(242,139,130,0.3)',
+                borderRadius: 6,
+                color: '#f28b82',
+                fontSize: 12,
+                textAlign: 'center',
+              }}>
+                {erroCupom}
               </div>
             )}
           </div>
