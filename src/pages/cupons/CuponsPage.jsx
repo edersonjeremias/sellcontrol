@@ -125,8 +125,9 @@ export default function CuponsPage() {
     }
   }
 
-  // Data atual em formato YYYY-MM-DD (UTC-3 Brasil)
-  const hoje = new Date(new Date().getTime() - 3 * 60 * 60 * 1000).toISOString().split('T')[0]
+  // Data atual no horário de Brasília (formato YYYY-MM-DD)
+  const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    .split('/').reverse().join('-') // DD/MM/YYYY → YYYY-MM-DD
 
   return (
     <AppShell title="Cupons de Desconto">

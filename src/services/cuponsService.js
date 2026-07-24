@@ -75,8 +75,10 @@ export async function validarCupom(tenantId, codigo) {
     throw error
   }
 
-  // Verificar período de validade
-  const hoje = new Date().toISOString().split('T')[0]
+  // Verificar período de validade (horário de Brasília)
+  const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    .split('/').reverse().join('-') // DD/MM/YYYY → YYYY-MM-DD
+
   if (hoje < data.data_inicio || hoje > data.data_fim) {
     throw new Error('Cupom fora do período de validade')
   }
