@@ -8,6 +8,7 @@ import {
   deleteCliente, saveDetalhes, searchClientes,
   searchClientesAvancada,
 } from '../../services/clientesService'
+import { supabase } from '../../lib/supabase'
 
 const LABEL = {
   display: 'block', color: 'var(--muted)', fontSize: '0.78rem',
@@ -250,18 +251,30 @@ export default function ClientesPage() {
         return
       }
 
+      // Buscar slug e nome da empresa
+      const { data: config } = await supabase
+        .from('configuracoes')
+        .select('slug, nome_loja')
+        .eq('tenant_id', tenantId)
+        .single()
+
+      const slug = config?.slug || ''
+      const nomeEmpresa = config?.nome_loja || 'nossa loja'
+
       // Sucesso — abre WhatsApp com mensagem
       const primeiroNome = (detalhes.nomeCompleto || nome).split(' ')[0]
       const login        = json.login
       const senha        = json.senha
-      const urlPortal    = window.location.origin + '/portal'
+      const urlPortal    = slug
+        ? `${window.location.origin}/portal/${slug}`
+        : `${window.location.origin}/portal`
       let   phoneWa      = phone
       if (!phoneWa.startsWith('55')) phoneWa = '55' + phoneWa
 
       const msg =
 `Olá, ${primeiroNome}! Tudo bem?
 
-Segue o link exclusivo para acessar a sua Sacolinha Virtual e o seu Painel de Cliente da VM Kids:
+Segue o link exclusivo para acessar a sua Sacolinha Virtual e o seu Painel de Cliente da ${nomeEmpresa}:
 
 🔗 Acesso: ${urlPortal}
 👤 Login: ${login}
