@@ -66,16 +66,46 @@ export default function ReciboPage() {
         }
       }
 
-      // Restaurar cupom se já foi aplicado
+      // Restaurar cupom se já foi aplicado (validar se ainda está vigente)
       if (res.cupom_codigo && res.cupom_desconto_percentual && res.cupom_desconto_valor) {
-        const totalOriginal = Number(res.total) + Number(res.cupom_desconto_valor)
-        setCupomAplicado({
-          codigo: res.cupom_codigo,
-          percentual: res.cupom_desconto_percentual,
-          desconto: res.cupom_desconto_valor,
-          totalOriginal,
-          totalFinal: Number(res.total),
-        })
+        try {
+          // Validar se o cupom ainda está válido
+          await validarCupom(res.tenant_id, res.cupom_codigo)
+
+          // Cupom ainda válido - restaurar
+          const totalOriginal = Number(res.total) + Number(res.cupom_desconto_valor)
+          setCupomAplicado({
+            codigo: res.cupom_codigo,
+            percentual: res.cupom_desconto_percentual,
+            desconto: res.cupom_desconto_valor,
+            totalOriginal,
+            totalFinal: Number(res.total),
+          })
+        } catch (err) {
+          // Cupom expirado ou inválido - remover
+          await supabase
+            .from('cobrancas')
+            .update({
+              cupom_codigo: null,
+              cupom_desconto_percentual: null,
+              cupom_desconto_valor: null,
+              total: Number(res.total) + Number(res.cupom_desconto_valor)
+            })
+            .eq('id', id)
+
+          // Recarregar cobrança atualizada
+          const { data: cobAtualizada } = await supabase
+            .from('cobrancas')
+            .select('*')
+            .eq('id', id)
+            .single()
+
+          if (cobAtualizada) {
+            setCob(cobAtualizada)
+          }
+
+          setErroCupom('Cupom expirado! O desconto foi removido.')
+        }
       }
     } catch {
       setErro(true)
