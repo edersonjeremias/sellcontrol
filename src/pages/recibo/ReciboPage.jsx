@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getCobrancaById, formatMoeda } from '../../services/cobrancasService'
+import { supabase } from '../../lib/supabase'
 
 function fmtData(iso) {
   if (!iso) return ''
@@ -30,13 +31,30 @@ export default function ReciboPage() {
   const [erro, setErro] = useState(false)
   const [verificando, setVerificando] = useState(false)
   const [verificado,  setVerificado]  = useState(false)
+  const [nomeEmpresa, setNomeEmpresa] = useState('Carregando...')
 
-  const carregarCob = () => {
+  const carregarCob = async () => {
     if (!id) { setErro(true); return }
     setErro(false)
-    getCobrancaById(id)
-      .then(res => { if (!res) setErro(true); else setCob(res) })
-      .catch(() => setErro(true))
+    try {
+      const res = await getCobrancaById(id)
+      if (!res) { setErro(true); return }
+      setCob(res)
+
+      // Buscar nome da empresa
+      if (res.tenant_id) {
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('nome_loja')
+          .eq('id', res.tenant_id)
+          .single()
+        if (tenant?.nome_loja) {
+          setNomeEmpresa(tenant.nome_loja)
+        }
+      }
+    } catch {
+      setErro(true)
+    }
   }
 
   // Carregamento inicial
@@ -98,7 +116,7 @@ export default function ReciboPage() {
 
         {/* Cabeçalho */}
         <div style={estilos.header}>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#e8eaed' }}>VM Kids</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#e8eaed' }}>{nomeEmpresa}</div>
           <div style={{ fontSize: 13, color: '#9aa0a6', marginTop: 2 }}>Pedido #{id?.slice(0, 8).toUpperCase()}</div>
         </div>
 
