@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getCobrancaById, formatMoeda } from '../../services/cobrancasService'
+import { getCobrancaById, formatMoeda, dividirPagamento } from '../../services/cobrancasService'
 import { supabase } from '../../lib/supabase'
 
 function fmtData(iso) {
@@ -32,6 +32,12 @@ export default function ReciboPage() {
   const [verificando, setVerificando] = useState(false)
   const [verificado,  setVerificado]  = useState(false)
   const [nomeEmpresa, setNomeEmpresa] = useState('Carregando...')
+
+  // Estados para divisão de pagamento
+  const [showDividir, setShowDividir] = useState(false)
+  const [valorP1, setValorP1] = useState('')
+  const [dividindo, setDividindo] = useState(false)
+  const [erroDivisao, setErroDivisao] = useState('')
 
   const carregarCob = async () => {
     if (!id) { setErro(true); return }
@@ -84,6 +90,39 @@ export default function ReciboPage() {
     setVerificando(false)
     setVerificado(true)
     carregarCob()
+  }
+
+  const handleDividir = async () => {
+    setErroDivisao('')
+
+    const v1 = parseFloat(String(valorP1).replace(',', '.'))
+    const total = Number(cob.total)
+
+    // Validações
+    if (!valorP1 || isNaN(v1)) {
+      setErroDivisao('Informe um valor válido.')
+      return
+    }
+    if (v1 < 10) {
+      setErroDivisao('Valor mínimo por parte: R$ 10,00')
+      return
+    }
+    if (v1 >= total - 10) {
+      setErroDivisao('A segunda parte deve ser no mínimo R$ 10,00')
+      return
+    }
+
+    setDividindo(true)
+    try {
+      const { dados_divisao } = await dividirPagamento(cob, v1, cob.tenant_id)
+      setCob(prev => ({ ...prev, dados_divisao }))
+      setShowDividir(false)
+      setValorP1('')
+    } catch (err) {
+      setErroDivisao(err.message || 'Erro ao dividir pagamento')
+    } finally {
+      setDividindo(false)
+    }
   }
 
   if (erro) return (
@@ -199,14 +238,26 @@ export default function ReciboPage() {
 
         {/* Botão de pagamento simples (não dividido) */}
         {!pago && !div && cob.link_mp && cob.link_mp !== 'Pago com Crédito' && (
-          <a
-            href={cob.link_mp}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={estilos.btnPagar}
-          >
-            💳 Pagar Agora
-          </a>
+          <>
+            <a
+              href={cob.link_mp}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={estilos.btnPagar}
+            >
+              💳 Pagar Agora
+            </a>
+
+            {/* Botão dividir pagamento - só aparece se total >= 20 */}
+            {Number(cob.total) >= 20 && (
+              <button
+                onClick={() => setShowDividir(true)}
+                style={estilos.btnDividir}
+              >
+                ✂️ Dividir Pagamento
+              </button>
+            )}
+          </>
         )}
 
         {pago && (
@@ -225,6 +276,72 @@ export default function ReciboPage() {
           Em caso de dúvidas, entre em contato via WhatsApp
         </div>
       </div>
+
+      {/* Modal Dividir Pagamento */}
+      {showDividir && (
+        <div
+          style={estilos.modalOverlay}
+          onClick={e => e.target === e.currentTarget && setShowDividir(false)}
+        >
+          <div style={estilos.modalBox}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#e8eaed', marginBottom: 16 }}>
+              ✂️ Dividir Pagamento
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: '#9aa0a6', marginBottom: 4 }}>Total</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: '#e8eaed' }}>
+                R$ {Number(cob.total).toFixed(2).replace('.', ',')}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 12, color: '#9aa0a6', marginBottom: 6 }}>
+                Quanto quer pagar agora? (Mínimo R$ 10,00)
+              </label>
+              <input
+                type="text"
+                value={valorP1}
+                onChange={e => setValorP1(e.target.value)}
+                placeholder="Ex: 50,00"
+                style={estilos.modalInput}
+              />
+            </div>
+
+            {valorP1 && !isNaN(parseFloat(valorP1.replace(',', '.'))) && (
+              <div style={{ marginBottom: 16, padding: 10, background: 'rgba(129,201,149,0.1)', borderRadius: 6 }}>
+                <div style={{ fontSize: 12, color: '#9aa0a6' }}>Restante (Parte 2)</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#81c995' }}>
+                  R$ {(Number(cob.total) - parseFloat(valorP1.replace(',', '.'))).toFixed(2).replace('.', ',')}
+                </div>
+              </div>
+            )}
+
+            {erroDivisao && (
+              <div style={{ marginBottom: 12, padding: 10, background: 'rgba(242,139,130,0.1)', borderRadius: 6, color: '#f28b82', fontSize: 13 }}>
+                {erroDivisao}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => { setShowDividir(false); setValorP1(''); setErroDivisao('') }}
+                style={estilos.btnCancelar}
+                disabled={dividindo}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDividir}
+                style={estilos.btnConfirmar}
+                disabled={dividindo}
+              >
+                {dividindo ? 'Gerando...' : 'Gerar Links de Pagamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -327,5 +444,71 @@ const estilos = {
     border: '1px solid rgba(255,255,255,0.1)',
     cursor: 'pointer',
     marginTop: 4,
+  },
+  btnDividir: {
+    display: 'block',
+    width: '100%',
+    padding: '12px',
+    background: 'rgba(110,63,217,0.12)',
+    color: '#a78bfa',
+    fontWeight: 700,
+    fontSize: 14,
+    textAlign: 'center',
+    borderRadius: 8,
+    border: '1px solid rgba(110,63,217,0.3)',
+    cursor: 'pointer',
+    marginTop: 8,
+  },
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.75)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    zIndex: 9999,
+  },
+  modalBox: {
+    background: '#292a2d',
+    border: '1px solid #3c4043',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+  },
+  modalInput: {
+    width: '100%',
+    padding: '12px 14px',
+    background: '#202124',
+    border: '1px solid #3c4043',
+    borderRadius: 8,
+    color: '#e8eaed',
+    fontSize: 16,
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+  btnCancelar: {
+    flex: 1,
+    padding: '12px',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#9aa0a6',
+    fontWeight: 600,
+    fontSize: 14,
+    borderRadius: 8,
+    border: '1px solid rgba(255,255,255,0.1)',
+    cursor: 'pointer',
+  },
+  btnConfirmar: {
+    flex: 2,
+    padding: '12px',
+    background: '#009ee3',
+    color: '#fff',
+    fontWeight: 700,
+    fontSize: 14,
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
   },
 }
