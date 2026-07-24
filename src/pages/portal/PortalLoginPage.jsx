@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
+import { supabase } from '../../lib/supabase'
 
 export default function PortalLoginPage() {
   const { login }           = usePortalAuth()
@@ -7,6 +8,29 @@ export default function PortalLoginPage() {
   const [senha, setSenha]         = useState('')
   const [erro, setErro]           = useState('')
   const [loading, setLoading]     = useState(false)
+  const [nomeEmpresa, setNomeEmpresa] = useState('Carregando...')
+
+  useEffect(() => {
+    // Buscar nome da empresa
+    const tenantId = import.meta.env.VITE_TENANT_ID
+    if (tenantId) {
+      supabase
+        .from('configuracoes')
+        .select('nome_loja')
+        .eq('tenant_id', tenantId)
+        .single()
+        .then(({ data }) => {
+          if (data?.nome_loja) {
+            setNomeEmpresa(data.nome_loja)
+          } else {
+            setNomeEmpresa('Portal do Cliente')
+          }
+        })
+        .catch(() => setNomeEmpresa('Portal do Cliente'))
+    } else {
+      setNomeEmpresa('Portal do Cliente')
+    }
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -28,7 +52,7 @@ export default function PortalLoginPage() {
   return (
     <div className="portal-login-wrap">
       <div className="portal-login-card">
-        <div className="portal-login-logo">VM KIDS</div>
+        <div className="portal-login-logo">{nomeEmpresa}</div>
         <div className="portal-login-subtitle">Painel do Cliente</div>
 
         <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:14 }}>

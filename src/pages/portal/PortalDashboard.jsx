@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { portalGetConversas } from '../../services/conversasService'
+import { supabase } from '../../lib/supabase'
 import MinhaSacolinha from './MinhaSacolinha'
 import MeuCadastro    from './MeuCadastro'
 import MeuContato     from './MeuContato'
@@ -15,6 +16,22 @@ export default function PortalDashboard() {
   const { cliente, logout } = usePortalAuth()
   const [aba, setAba]       = useState('sacola')
   const [totalNovas, setTotalNovas] = useState(0)
+  const [nomeEmpresa, setNomeEmpresa] = useState('Portal')
+
+  // Buscar nome da empresa
+  useEffect(() => {
+    const tenantId = import.meta.env.VITE_TENANT_ID
+    if (tenantId) {
+      supabase
+        .from('configuracoes')
+        .select('nome_loja')
+        .eq('tenant_id', tenantId)
+        .single()
+        .then(({ data }) => {
+          if (data?.nome_loja) setNomeEmpresa(data.nome_loja)
+        })
+    }
+  }, [])
 
   // Busca total de mensagens não lidas
   useEffect(() => {
@@ -34,7 +51,7 @@ export default function PortalDashboard() {
     <div>
       {/* Header */}
       <header className="portal-header">
-        <div className="portal-header-logo">VM KIDS</div>
+        <div className="portal-header-logo">{nomeEmpresa}</div>
         <div className="portal-header-right">
           <span className="portal-header-insta">
             @{(cliente?.instagram || '').replace('@', '')}
