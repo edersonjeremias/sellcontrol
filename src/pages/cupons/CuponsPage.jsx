@@ -129,15 +129,6 @@ export default function CuponsPage() {
   const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
     .split('/').reverse().join('-') // DD/MM/YYYY → YYYY-MM-DD
 
-  console.log('🔍 DEBUG CUPONS:')
-  console.log('Hoje:', hoje)
-  console.log('Cupons:', cupons.map(c => ({
-    codigo: c.codigo,
-    data_fim: c.data_fim,
-    expirado: hoje > c.data_fim,
-    comparacao: `${hoje} > ${c.data_fim}`
-  })))
-
   return (
     <AppShell title="Cupons de Desconto">
       <div style={{ padding: 16, maxWidth: 1200, margin: '0 auto' }}>
