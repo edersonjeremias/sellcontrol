@@ -43,13 +43,13 @@ export default function ReciboPage() {
 
       // Buscar nome da empresa
       if (res.tenant_id) {
-        const { data: tenant } = await supabase
-          .from('tenants')
+        const { data: config } = await supabase
+          .from('configuracoes')
           .select('nome_loja')
-          .eq('id', res.tenant_id)
+          .eq('tenant_id', res.tenant_id)
           .single()
-        if (tenant?.nome_loja) {
-          setNomeEmpresa(tenant.nome_loja)
+        if (config?.nome_loja) {
+          setNomeEmpresa(config.nome_loja)
         }
       }
     } catch {
