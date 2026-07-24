@@ -837,7 +837,7 @@ Qualquer dúvida, estamos à disposição! 😊`
       )}
 
       {/* Aba Busca Avançada */}
-      {aba === 'busca' && <AbaBuscaAvancada clientes={clientes} tenantId={tenantId} />}
+      {aba === 'busca' && <AbaBuscaAvancada clientes={clientes} tenantId={tenantId} selecionarCliente={selecionarCliente} setAba={setAba} />}
 
       {/* ── Confirmação ── */}
       {confirmacao && (
@@ -853,7 +853,7 @@ Qualquer dúvida, estamos à disposição! 😊`
 }
 
 // ── Aba: Busca Avançada ─────────────────────────────────────────
-function AbaBuscaAvancada({ clientes, tenantId }) {
+function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
   const [filtros, setFiltros] = useState({
     instagram: '',
     nome: '',
@@ -1138,10 +1138,15 @@ function AbaBuscaAvancada({ clientes, tenantId }) {
                       transition: 'background 0.15s',
                       background: idx === activeIdx ? 'var(--blue)' : 'transparent',
                       color: idx === activeIdx ? '#171717' : 'inherit',
+                      cursor: 'pointer',
                     }}
                     onMouseEnter={e => { if (idx !== activeIdx) e.currentTarget.style.background = 'var(--table-row-hover)' }}
                     onMouseLeave={e => { if (idx !== activeIdx) e.currentTarget.style.background = 'transparent' }}
-                    onClick={() => setActiveIdx(idx)}>
+                    onClick={() => {
+                      setActiveIdx(idx)
+                      selecionarCliente(c)
+                      setAba('cadastro')
+                    }}>
                     <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--blue)', fontWeight: 600 }}>
                       @{c.instagram}
                     </td>
