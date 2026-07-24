@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Limpar Cache - SellControl</title>
+</head>
+<body>
+  <h1>Limpando cache...</h1>
+  <script>
+    // Limpar Service Workers
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(reg => reg.unregister());
+        console.log('✅ Service Workers removidos');
+      });
+    }
+
+    // Limpar cache do navegador
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+        console.log('✅ Cache limpo');
+      });
+    }
+
+    // Limpar localStorage
+    localStorage.clear();
+    sessionStorage.clear();
+    console.log('✅ Storage limpo');
+
+    // Redirecionar
+    setTimeout(() => {
+      window.location.href = '/login?nocache=' + Date.now();
+    }, 2000);
+  </script>
+</body>
+</html>

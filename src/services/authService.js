@@ -22,6 +22,10 @@ export const ALL_PAGES = [
   { slug: 'cupons',                      label: 'Cupons de Desconto',        category: 'Vendas',     icon: 'confirmation_number', order_index: 38 },
 ]
 
+// Debug: verificar se cupons está presente (remover após deploy)
+console.log('🔍 ALL_PAGES carregado:', ALL_PAGES.length, 'páginas')
+console.log('🎟️ Cupons presente:', ALL_PAGES.find(p => p.slug === 'cupons') ? 'SIM ✅' : 'NÃO ❌')
+
 function isMissingResource(error) {
   if (!error) return false
   return error.code === 'PGRST205' || error.code === '42P01' || error.status === 404
