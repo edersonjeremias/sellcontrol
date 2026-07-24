@@ -18,7 +18,7 @@ export async function searchClientes(tenantId, searchTerm, limit = 20) {
 
   const { data, error } = await supabase
     .from('clientes')
-    .select('instagram, whatsapp, bloqueado, msg_bloqueio, senha, detalhes')
+    .select('*')
     .eq('tenant_id', tenantId)
     .ilike('instagram', `%${searchTerm}%`)
     .order('instagram')
