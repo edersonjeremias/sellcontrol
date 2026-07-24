@@ -179,8 +179,8 @@ export default function CuponsPage() {
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {cupons.map(cupom => {
-              const expirado = hoje > cupom.data_fim
-              const futuro = hoje < cupom.data_inicio
+              const expirado = hoje > cupom.data_fim  // Expira DEPOIS do último dia
+              const futuro = hoje < cupom.data_inicio  // Válido a partir da data_inicio
               const vigente = !expirado && !futuro
 
               return (
@@ -207,8 +207,8 @@ export default function CuponsPage() {
                       {cupom.codigo}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-                      {new Date(cupom.data_inicio).toLocaleDateString('pt-BR')} até{' '}
-                      {new Date(cupom.data_fim).toLocaleDateString('pt-BR')}
+                      {cupom.data_inicio.split('-').reverse().join('/')} até{' '}
+                      {cupom.data_fim.split('-').reverse().join('/')}
                     </div>
                   </div>
 
