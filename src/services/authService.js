@@ -19,6 +19,7 @@ export const ALL_PAGES = [
   { slug: 'creditos-clientes',           label: 'Créditos de Clientes',      category: 'Financeiro', icon: 'loyalty',        order_index: 80 },
   { slug: 'clientes',                    label: 'Cadastro de Cliente',       category: 'Vendas',     icon: 'people',         order_index: 36 },
   { slug: 'contatos',                    label: 'CRM — Contatos',            category: 'Vendas',     icon: 'forum',          order_index: 37 },
+  { slug: 'cupons',                      label: 'Cupons de Desconto',        category: 'Vendas',     icon: 'confirmation_number', order_index: 38 },
 ]
 
 function isMissingResource(error) {

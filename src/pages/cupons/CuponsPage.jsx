@@ -136,7 +136,7 @@ export default function CuponsPage() {
           <h2 style={{ margin: 0, fontSize: 20, color: 'var(--text-header)' }}>
             🎟️ Cupons de Desconto
           </h2>
-          <button onClick={novoCupom} className="btn-acao btn-blue">
+          <button onClick={novoCupom} className="btn-acao btn-blue" style={{ padding: '8px 16px', fontSize: 14, width: 'auto' }}>
             + Novo Cupom
           </button>
         </div>
