@@ -355,6 +355,8 @@ const estilos = {
     justifyContent: 'center',
     padding: '30px 16px 60px',
     fontFamily: 'system-ui, -apple-system, sans-serif',
+    overflowY: 'auto',
+    overflowX: 'hidden',
   },
   paginaErro: {
     minHeight: '100vh',
