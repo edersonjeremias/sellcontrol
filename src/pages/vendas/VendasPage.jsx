@@ -823,20 +823,36 @@ export default function VendasPage() {
         return prev
       }
 
-      const n = [...prev]
-      const l = { ...n[idx], [field]: value }
-
-      if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
-      if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
-      if (field === 'preco_promocional') {
-        const cleaned = value.replace(/[^\d,]/g, '')
-        console.log('💰 Atualizando preco_promocional:', { antes: l.preco_promocional, depois: cleaned })
-        l.preco_promocional = cleaned
+      const idx = prev.findIndex(l => l._key === key)
+      if (idx === -1) {
+        console.log('❌ Linha não encontrada para key:', key)
+        return prev
       }
 
-      n[idx] = l
-      console.log('✅ Nova linha:', { field, valor: l[field], linha: l })
-      return n
+      // Criar NOVA linha com valor atualizado
+      const linhaAtualizada = { ...prev[idx], [field]: value }
+
+      if (field === 'cliente_nome') {
+        linhaAtualizada.liberado = false
+        linhaAtualizada.sacolinha = null
+        const novasLinhas = [...prev]
+        novasLinhas[idx] = linhaAtualizada
+        return calcSacolas(novasLinhas)
+      }
+
+      if (field === 'preco') linhaAtualizada.preco = value.replace(/[^\d,]/g, '')
+      if (field === 'preco_promocional') {
+        const cleaned = value.replace(/[^\d,]/g, '')
+        console.log('💰 Atualizando preco_promocional:', { antes: prev[idx].preco_promocional, depois: cleaned })
+        linhaAtualizada.preco_promocional = cleaned
+      }
+
+      // IMPORTANTE: Criar NOVO array para React detectar mudança
+      const novasLinhas = [...prev]
+      novasLinhas[idx] = linhaAtualizada
+
+      console.log('✅ Nova linha:', { field, valor: linhaAtualizada[field], linha: linhaAtualizada })
+      return novasLinhas
     })
 
     // NÃO salva enquanto está digitando cliente (salva no onBlur)
