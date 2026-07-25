@@ -823,11 +823,7 @@ export default function VendasPage() {
       const l = { ...n[idx], [field]: value }
       if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
       if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
-      if (field === 'preco_promocional') {
-        const cleaned = value.replace(/[^\d,]/g, '')
-        // Não salva "0" ou "0,00" como valor - deixa vazio
-        l.preco_promocional = (cleaned === '0' || cleaned === '0,00' || cleaned === '00') ? '' : cleaned
-      }
+      if (field === 'preco_promocional') l.preco_promocional = value.replace(/[^\d,]/g, '')
       n[idx] = l
       return n
     })
