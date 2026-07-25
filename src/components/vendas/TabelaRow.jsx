@@ -223,7 +223,16 @@ const TabelaRow = memo(function TabelaRow({
             key={`preco-promo-${linha._key}`}
             className="cell-input price"
             value={linha.preco_promocional || ''}
-            onChange={e => upd('preco_promocional', e.target.value.replace(/[^\d,]/g, ''))}
+            onChange={e => {
+              const valor = e.target.value.replace(/[^\d,]/g, '')
+              console.log('🎁 TabelaRow onChange PROMOÇÃO:', {
+                valor_digitado: e.target.value,
+                valor_limpo: valor,
+                linha_key: linha._key,
+                linha_preco_promocional_atual: linha.preco_promocional
+              })
+              upd('preco_promocional', valor)
+            }}
             onKeyDown={onEnterNext}
             disabled={camposDesabilitados}
             placeholder="0,00"
@@ -237,7 +246,13 @@ const TabelaRow = memo(function TabelaRow({
       {/* CÓDIGO */}
       <td className="col-cod">
         <input className="cell-input" value={linha.codigo}
-          onChange={e => upd('codigo', e.target.value)}
+          onChange={e => {
+            console.log('🔢 TabelaRow onChange CÓDIGO:', {
+              valor: e.target.value,
+              linha_key: linha._key
+            })
+            upd('codigo', e.target.value)
+          }}
           onKeyDown={onEnterNext}
           disabled={camposDesabilitados}
           readOnly={config.codigo_automatico}

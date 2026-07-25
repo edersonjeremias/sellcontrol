@@ -813,17 +813,29 @@ export default function VendasPage() {
 
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((key, field, value) => {
+    console.log('🔧 handleFieldChange:', { key, field, value })
+
     // Usa _key para identificar a linha (não depende de índice visual)
     setLinhas(prev => {
       const idx = prev.findIndex(l => l._key === key)
-      if (idx === -1) return prev
+      if (idx === -1) {
+        console.log('❌ Linha não encontrada para key:', key)
+        return prev
+      }
 
       const n = [...prev]
       const l = { ...n[idx], [field]: value }
+
       if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
       if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
-      if (field === 'preco_promocional') l.preco_promocional = value.replace(/[^\d,]/g, '')
+      if (field === 'preco_promocional') {
+        const cleaned = value.replace(/[^\d,]/g, '')
+        console.log('💰 Atualizando preco_promocional:', { antes: l.preco_promocional, depois: cleaned })
+        l.preco_promocional = cleaned
+      }
+
       n[idx] = l
+      console.log('✅ Nova linha:', { field, valor: l[field], linha: l })
       return n
     })
 
