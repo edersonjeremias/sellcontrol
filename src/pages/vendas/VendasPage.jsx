@@ -48,7 +48,9 @@ function mapRow(row) {
     marca:        row.marca        || '',
     tamanho:      row.tamanho      || '',
     preco:        formatMoney(row.preco),
-    preco_promocional: row.preco_promocional ? formatMoney(row.preco_promocional) : '',
+    preco_promocional: (row.preco_promocional && row.preco_promocional !== '0' && row.preco_promocional !== 0)
+      ? formatMoney(row.preco_promocional)
+      : '',
     codigo:       row.codigo       || '',
     cliente_nome: row.cliente_nome || '',
     data_live:    row.data_live    || '',
@@ -818,7 +820,11 @@ export default function VendasPage() {
       const l = { ...n[idx], [field]: value }
       if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
       if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
-      if (field === 'preco_promocional') l.preco_promocional = value.replace(/[^\d,]/g, '')
+      if (field === 'preco_promocional') {
+        const cleaned = value.replace(/[^\d,]/g, '')
+        // Não salva "0" ou "0,00" como valor - deixa vazio
+        l.preco_promocional = (cleaned === '0' || cleaned === '0,00' || cleaned === '00') ? '' : cleaned
+      }
       n[idx] = l
       return n
     })
