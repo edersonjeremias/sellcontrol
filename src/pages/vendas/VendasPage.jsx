@@ -818,6 +818,7 @@ export default function VendasPage() {
       const l = { ...n[idx], [field]: value }
       if (field === 'cliente_nome') { l.liberado = false; l.sacolinha = null; n[idx] = l; return calcSacolas(n) }
       if (field === 'preco') l.preco = value.replace(/[^\d,]/g, '')
+      if (field === 'preco_promocional') l.preco_promocional = value.replace(/[^\d,]/g, '')
       n[idx] = l
       return n
     })
