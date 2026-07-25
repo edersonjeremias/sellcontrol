@@ -100,6 +100,12 @@ const TabelaRow = memo(function TabelaRow({
   podeEditarEnviadas = true,
   podeEstornar = true,
 }) {
+  console.log('🔄 TabelaRow RENDER:', {
+    linha_key: linha._key,
+    preco_promocional: linha.preco_promocional,
+    codigo: linha.codigo
+  })
+
   const upd = (field, val) => onFieldChange(linha._key, field, val)
 
   // Desabilita edição se for venda enviada E usuário não tiver permissão
