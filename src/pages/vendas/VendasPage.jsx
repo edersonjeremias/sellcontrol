@@ -30,7 +30,7 @@ function novaLinha(codigo = '') {
   return {
     _key: gerarId(), // KEY ÚNICA E ESTÁVEL
     id: null, produto: '', modelo: '', cor: '', marca: '',
-    tamanho: '', preco: '', codigo, cliente_nome: '',
+    tamanho: '', preco: '', preco_promocional: '', codigo, cliente_nome: '',
     data_live: '', live_nome: '', sacolinha: null,
     status: '', fila1: '', fila2: '', fila3: '',
     custo: '', qtde: '', condicao: '', genero: '',
@@ -48,6 +48,7 @@ function mapRow(row) {
     marca:        row.marca        || '',
     tamanho:      row.tamanho      || '',
     preco:        formatMoney(row.preco),
+    preco_promocional: row.preco_promocional ? formatMoney(row.preco_promocional) : '',
     codigo:       row.codigo       || '',
     cliente_nome: row.cliente_nome || '',
     data_live:    row.data_live    || '',
@@ -125,7 +126,7 @@ export default function VendasPage() {
   const [linhas,      setLinhas]      = useState([])
   const [listas,      setListas]      = useState({ produtos: [], modelos: [], cores: [], marcas: [], clientes: [] })
   const [globalDB,    setGlobalDB]    = useState({ lives: [], bloqueados: {} })
-  const [config,      setConfig]      = useState({ codigo_automatico: false, proximo_codigo: 100 })
+  const [config,      setConfig]      = useState({ codigo_automatico: false, proximo_codigo: 100, modo_promocao: false })
   const [permissoes,  setPermissoes]  = useState({ pode_editar_enviadas: true })
   const [dataLive,    setDataLive]    = useState(() => {
     const hoje = new Date()
@@ -337,7 +338,8 @@ export default function VendasPage() {
         setListas(lst)
         setConfig({
           codigo_automatico: cfg?.codigo_automatico || false,
-          proximo_codigo: cfg?.proximo_codigo || 100
+          proximo_codigo: cfg?.proximo_codigo || 100,
+          modo_promocao: cfg?.modo_promocao || false
         })
         setPermissoes(perms)
         setPronto(true)
@@ -1310,6 +1312,7 @@ export default function VendasPage() {
                     {colsConfig.condicao && <th className="col-tam">Cond.</th>}
                     {colsConfig.custo    && <th className="col-preco">Custo</th>}
                     <th className="col-preco">Preço</th>
+                    {config.modo_promocao && <th className="col-preco" style={{ color: 'var(--yellow)' }}>🎁 Promoção</th>}
                     <th className="col-cod">Cód.</th>
                     <th className="col-cliente">Cliente</th>
                     <th className="col-acoes">Ações</th>

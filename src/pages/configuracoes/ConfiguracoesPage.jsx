@@ -45,6 +45,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
     link_frete: '',
     codigo_automatico: false,
     proximo_codigo: 100,
+    modo_promocao: false,
   })
   const [salvando, setSalvando] = useState(false)
   const [mostrarToken, setMostrarToken] = useState(false)
@@ -64,6 +65,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           link_frete: cfg.link_frete || '',
           codigo_automatico: cfg.codigo_automatico || false,
           proximo_codigo: cfg.proximo_codigo || 100,
+          modo_promocao: cfg.modo_promocao || false,
         })
         setPacotes(cfg.pacotes || [])
       }
@@ -306,6 +308,68 @@ function AbaConfiguracoes({ tenantId, showToast }) {
             </div>
           )}
 
+        </div>
+      </div>
+
+      {/* Modo Promoção */}
+      <div style={{
+        background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+        borderRadius: 10, padding: 20, marginBottom: 28
+      }}>
+        <div style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 14 }}>
+          🎁 Modo Promoção
+        </div>
+
+        <div>
+          {/* Toggle Modo Promoção */}
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            padding: '8px 0'
+          }}>
+            <input
+              type="checkbox"
+              checked={form.modo_promocao}
+              onChange={e => setForm(p => ({ ...p, modo_promocao: e.target.checked }))}
+              style={{
+                width: 20, height: 20, cursor: 'pointer',
+                accentColor: 'var(--blue)'
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-body)', fontWeight: 600, marginBottom: 2 }}>
+                Ativar coluna de preços promocionais
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Quando ativo, uma coluna extra aparece na tela de Vendas para definir preços promocionais por item
+              </div>
+            </div>
+          </label>
+
+          {/* Aviso quando ativo */}
+          {form.modo_promocao && (
+            <div style={{
+              marginTop: 10, padding: 10, background: 'rgba(251, 188, 4, 0.1)',
+              border: '1px solid rgba(251, 188, 4, 0.3)', borderRadius: 6
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--yellow)' }}>
+                🎁 Modo Promoção Ativo: Você poderá definir preços promocionais na página de Vendas.
+                <br />
+                Se um item tiver preço promocional, ele será usado no lugar do preço normal.
+              </div>
+            </div>
+          )}
+
+          {/* Aviso quando inativo */}
+          {!form.modo_promocao && (
+            <div style={{
+              marginTop: 10, padding: 10, background: 'rgba(139, 180, 248, 0.1)',
+              border: '1px solid rgba(139, 180, 248, 0.3)', borderRadius: 6
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--blue)' }}>
+                ℹ️ Desativado: Apenas o preço normal será usado nas vendas
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

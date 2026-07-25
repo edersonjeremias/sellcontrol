@@ -216,6 +216,21 @@ const TabelaRow = memo(function TabelaRow({
           disabled={camposDesabilitados} />
       </td>
 
+      {/* PREÇO PROMOCIONAL (opcional) */}
+      {config.modo_promocao && (
+        <td className="col-preco">
+          <input className="cell-input price" value={linha.preco_promocional || ''}
+            onChange={e => upd('preco_promocional', e.target.value.replace(/[^\d,]/g, ''))}
+            onKeyDown={onEnterNext}
+            disabled={camposDesabilitados}
+            placeholder="0,00"
+            style={{
+              backgroundColor: linha.preco_promocional?.trim() ? 'rgba(251, 188, 4, 0.1)' : undefined,
+              borderColor: linha.preco_promocional?.trim() ? 'var(--yellow)' : undefined,
+            }} />
+        </td>
+      )}
+
       {/* CÓDIGO */}
       <td className="col-cod">
         <input className="cell-input" value={linha.codigo}
