@@ -387,6 +387,7 @@ const TabelaRow = memo(function TabelaRow({
     prev.marca !== next.marca ||
     prev.tamanho !== next.tamanho ||
     prev.preco !== next.preco ||
+    prev.preco_promocional !== next.preco_promocional ||  // ← ADICIONADO!
     prev.codigo !== next.codigo ||
     prev.cliente_nome !== next.cliente_nome ||
     prev.deleted !== next.deleted ||
