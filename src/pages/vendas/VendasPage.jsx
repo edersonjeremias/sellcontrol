@@ -48,12 +48,11 @@ function mapRow(row) {
     marca:        row.marca        || '',
     tamanho:      row.tamanho      || '',
     preco:        formatMoney(row.preco),
-    preco_promocional: (() => {
-      if (!row.preco_promocional) return ''
-      const valor = String(row.preco_promocional).replace(/\./g, '').replace(',', '.')
-      const num = parseFloat(valor)
-      return (num && num > 0) ? formatMoney(row.preco_promocional) : ''
-    })(),
+    preco_promocional: row.preco_promocional
+      ? (String(row.preco_promocional) === '0' || String(row.preco_promocional) === '0,00' || String(row.preco_promocional) === '0.00'
+        ? ''
+        : formatMoney(row.preco_promocional))
+      : '',
     codigo:       row.codigo       || '',
     cliente_nome: row.cliente_nome || '',
     data_live:    row.data_live    || '',
