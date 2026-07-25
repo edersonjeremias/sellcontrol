@@ -220,7 +220,10 @@ const TabelaRow = memo(function TabelaRow({
       {config.modo_promocao && (
         <td className="col-preco">
           <input className="cell-input price" value={linha.preco_promocional || ''}
-            onChange={e => upd('preco_promocional', e.target.value.replace(/[^\d,]/g, ''))}
+            onChange={e => {
+              console.log('🎁 onChange:', { valor: e.target.value, disabled: camposDesabilitados, linha_key: linha._key })
+              upd('preco_promocional', e.target.value.replace(/[^\d,]/g, ''))
+            }}
             onKeyDown={onEnterNext}
             disabled={camposDesabilitados}
             placeholder="0,00"
