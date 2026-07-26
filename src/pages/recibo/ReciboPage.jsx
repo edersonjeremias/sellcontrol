@@ -33,6 +33,7 @@ export default function ReciboPage() {
   const [verificando, setVerificando] = useState(false)
   const [verificado,  setVerificado]  = useState(false)
   const [nomeEmpresa, setNomeEmpresa] = useState('Loja')
+  const [debugNome, setDebugNome] = useState('') // DEBUG temporário
 
   // Estados para divisão de pagamento
   const [showDividir, setShowDividir] = useState(false)
@@ -113,9 +114,13 @@ export default function ReciboPage() {
   // Carregar nome da empresa (separado para evitar race condition)
   useEffect(() => {
     const carregarNomeEmpresa = async () => {
-      if (!cob?.tenant_id) return
+      if (!cob?.tenant_id) {
+        setDebugNome('tenant_id não disponível')
+        return
+      }
 
       console.log('🏪 Buscando nome da empresa para tenant:', cob.tenant_id)
+      setDebugNome('Buscando...')
 
       try {
         const { data, error } = await supabase
@@ -128,17 +133,21 @@ export default function ReciboPage() {
 
         if (error) {
           console.error('❌ Erro ao buscar nome da empresa:', error)
+          setDebugNome(`Erro: ${error.message || error.code || 'desconhecido'}`)
           return
         }
 
         if (data?.nome_loja?.trim()) {
           console.log('✅ Nome da empresa encontrado:', data.nome_loja)
           setNomeEmpresa(data.nome_loja)
+          setDebugNome('OK - Nome carregado')
         } else {
           console.warn('⚠️ nome_loja não encontrado ou vazio')
+          setDebugNome(`Configuração existe mas nome_loja está vazio. Data: ${JSON.stringify(data)}`)
         }
       } catch (err) {
         console.error('❌ Exceção ao buscar nome da empresa:', err)
+        setDebugNome(`Exceção: ${err.message}`)
       }
     }
 
@@ -313,6 +322,30 @@ export default function ReciboPage() {
         <div style={estilos.header}>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#e8eaed' }}>{nomeEmpresa}</div>
           <div style={{ fontSize: 13, color: '#9aa0a6', marginTop: 2 }}>Pedido #{id?.slice(0, 8).toUpperCase()}</div>
+
+          {/* DEBUG TEMPORÁRIO - Remover depois */}
+          {nomeEmpresa === 'Loja' && cob && (
+            <div style={{
+              marginTop: 12,
+              padding: 12,
+              background: 'rgba(251, 188, 4, 0.1)',
+              border: '1px solid rgba(251, 188, 4, 0.3)',
+              borderRadius: 6,
+              fontSize: 11,
+              color: '#fbbc04',
+              fontFamily: 'monospace',
+              lineHeight: 1.6,
+            }}>
+              🔍 <strong>DEBUG (tire print e me envie)</strong><br/>
+              • tenant_id: {cob.tenant_id || 'UNDEFINED'}<br/>
+              • Nome atual: "{nomeEmpresa}"<br/>
+              • Status: {debugNome}<br/>
+              <br/>
+              <em>Abra as Ferramentas de Desenvolvedor<br/>
+              (Chrome: Menu → Mais Ferramentas → Console)<br/>
+              e tire print também</em>
+            </div>
+          )}
         </div>
 
         {/* Cliente e data */}
