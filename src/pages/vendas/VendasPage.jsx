@@ -825,12 +825,6 @@ export default function VendasPage() {
         return prev
       }
 
-      const idx = prev.findIndex(l => l._key === key)
-      if (idx === -1) {
-        console.log('❌ Linha não encontrada para key:', key)
-        return prev
-      }
-
       // Criar NOVA linha com valor atualizado
       const linhaAtualizada = { ...prev[idx], [field]: value }
 
