@@ -269,7 +269,9 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
       tenant_id: tid,
       produto: l.produto || '', modelo: l.modelo || '', cor: l.cor || '',
       marca: l.marca || '', tamanho: l.tamanho || '',
-      preco: parseMoney(l.preco), codigo: l.codigo || '',
+      preco: parseMoney(l.preco),
+      preco_promocional: parseMoney(l.preco_promocional),
+      codigo: l.codigo || '',
       cliente_nome: l.cliente_nome || '',
       data_live: dataLive || null, live_nome: liveNome || '',
       sacolinha: l.sacolinha ?? null, status: l.status || '',
@@ -318,6 +320,7 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
         live_nome: liveNome,
         cliente_nome: linha.cliente_nome || '',
         preco: parseMoney(linha.preco),
+        preco_promocional: parseMoney(linha.preco_promocional),
         produto: linha.produto || '',
         modelo: linha.modelo || '',
         cor: linha.cor || '',
@@ -334,7 +337,9 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
     tenant_id: tid,
     produto: linha.produto || '', modelo: linha.modelo || '', cor: linha.cor || '',
     marca: linha.marca || '', tamanho: linha.tamanho || '',
-    preco: parseMoney(linha.preco), codigo: linha.codigo || '',
+    preco: parseMoney(linha.preco),
+    preco_promocional: parseMoney(linha.preco_promocional),
+    codigo: linha.codigo || '',
     cliente_nome: linha.cliente_nome || '',
     data_live: dataLive || null, live_nome: liveNome || '',
     sacolinha: linha.sacolinha ?? null,
@@ -394,14 +399,15 @@ export async function updateVendaEnviada(tenantId = null, linha) {
   const { error } = await supabase
     .from('vendas')
     .update({
-      produto:      linha.produto      || '',
-      modelo:       linha.modelo       || '',
-      cor:          linha.cor          || '',
-      marca:        linha.marca        || '',
-      tamanho:      linha.tamanho      || '',
-      preco:        parseMoney(linha.preco),
-      codigo:       linha.codigo       || '',
-      cliente_nome: linha.cliente_nome || '',
+      produto:           linha.produto      || '',
+      modelo:            linha.modelo       || '',
+      cor:               linha.cor          || '',
+      marca:             linha.marca        || '',
+      tamanho:           linha.tamanho      || '',
+      preco:             parseMoney(linha.preco),
+      preco_promocional: parseMoney(linha.preco_promocional),
+      codigo:            linha.codigo       || '',
+      cliente_nome:      linha.cliente_nome || '',
     })
     .eq('id', linha.id)
     .eq('tenant_id', tid)
