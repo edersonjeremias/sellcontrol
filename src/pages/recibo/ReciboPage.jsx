@@ -33,7 +33,6 @@ export default function ReciboPage() {
   const [verificando, setVerificando] = useState(false)
   const [verificado,  setVerificado]  = useState(false)
   const [nomeEmpresa, setNomeEmpresa] = useState('Loja')
-  const [debugNome, setDebugNome] = useState('') // DEBUG temporário
 
   // Estados para divisão de pagamento
   const [showDividir, setShowDividir] = useState(false)
@@ -114,13 +113,7 @@ export default function ReciboPage() {
   // Carregar nome da empresa (separado para evitar race condition)
   useEffect(() => {
     const carregarNomeEmpresa = async () => {
-      if (!cob?.tenant_id) {
-        setDebugNome('tenant_id não disponível')
-        return
-      }
-
-      console.log('🏪 Buscando nome da empresa para tenant:', cob.tenant_id)
-      setDebugNome('Buscando...')
+      if (!cob?.tenant_id) return
 
       try {
         // Tentar 1: Buscar de configuracoes.nome_loja
@@ -131,13 +124,9 @@ export default function ReciboPage() {
           .maybeSingle()
 
         if (config?.nome_loja?.trim()) {
-          console.log('✅ Nome encontrado em configuracoes:', config.nome_loja)
           setNomeEmpresa(config.nome_loja)
-          setDebugNome('')
           return
         }
-
-        console.warn('⚠️ nome_loja vazio, buscando de tenants...')
 
         // Tentar 2: Buscar de tenants (nome ou slug)
         const { data: tenant } = await supabase
@@ -147,9 +136,7 @@ export default function ReciboPage() {
           .maybeSingle()
 
         if (tenant?.nome?.trim()) {
-          console.log('✅ Nome encontrado em tenants.nome:', tenant.nome)
           setNomeEmpresa(tenant.nome)
-          setDebugNome('')
           return
         }
 
@@ -159,17 +146,10 @@ export default function ReciboPage() {
             .split('-')
             .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
             .join(' ')
-          console.log('✅ Nome gerado do slug:', nomeFormatado)
           setNomeEmpresa(nomeFormatado)
-          setDebugNome('')
-          return
         }
-
-        console.error('❌ Nenhuma fonte de nome encontrada')
-        setDebugNome('nome_loja, tenants.nome e slug estão vazios!')
       } catch (err) {
-        console.error('❌ Exceção ao buscar nome da empresa:', err)
-        setDebugNome(`Exceção: ${err.message}`)
+        console.error('Erro ao buscar nome da empresa:', err)
       }
     }
 
@@ -344,30 +324,6 @@ export default function ReciboPage() {
         <div style={estilos.header}>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#e8eaed' }}>{nomeEmpresa}</div>
           <div style={{ fontSize: 13, color: '#9aa0a6', marginTop: 2 }}>Pedido #{id?.slice(0, 8).toUpperCase()}</div>
-
-          {/* DEBUG TEMPORÁRIO - Remover depois */}
-          {nomeEmpresa === 'Loja' && cob && (
-            <div style={{
-              marginTop: 12,
-              padding: 12,
-              background: 'rgba(251, 188, 4, 0.1)',
-              border: '1px solid rgba(251, 188, 4, 0.3)',
-              borderRadius: 6,
-              fontSize: 11,
-              color: '#fbbc04',
-              fontFamily: 'monospace',
-              lineHeight: 1.6,
-            }}>
-              🔍 <strong>DEBUG (tire print e me envie)</strong><br/>
-              • tenant_id: {cob.tenant_id || 'UNDEFINED'}<br/>
-              • Nome atual: "{nomeEmpresa}"<br/>
-              • Status: {debugNome}<br/>
-              <br/>
-              <em>Abra as Ferramentas de Desenvolvedor<br/>
-              (Chrome: Menu → Mais Ferramentas → Console)<br/>
-              e tire print também</em>
-            </div>
-          )}
         </div>
 
         {/* Cliente e data */}
