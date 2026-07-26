@@ -70,7 +70,7 @@ export default function ReciboPage() {
       if (res.cupom_codigo && res.cupom_desconto_percentual && res.cupom_desconto_valor) {
         try {
           // Validar se o cupom ainda está válido
-          await validarCupom(res.tenant_id, res.cupom_codigo)
+          const cupom = await validarCupom(res.tenant_id, res.cupom_codigo)
 
           // Cupom ainda válido - restaurar
           const totalOriginal = Number(res.total) + Number(res.cupom_desconto_valor)
@@ -80,6 +80,10 @@ export default function ReciboPage() {
             desconto: res.cupom_desconto_valor,
             totalOriginal,
             totalFinal: Number(res.total),
+            data_inicio: cupom.data_inicio,
+            data_fim: cupom.data_fim,
+            hora_inicio: cupom.hora_inicio,
+            hora_fim: cupom.hora_fim,
           })
         } catch (err) {
           // Cupom expirado ou inválido - remover do banco
@@ -180,6 +184,10 @@ export default function ReciboPage() {
         desconto: Number(desconto),
         totalOriginal: totalAtual,
         totalFinal: Number(totalFinal),
+        data_inicio: cupom.data_inicio,
+        data_fim: cupom.data_fim,
+        hora_inicio: cupom.hora_inicio,
+        hora_fim: cupom.hora_fim,
       })
 
       // Atualizar total na cobrança
@@ -326,24 +334,35 @@ export default function ReciboPage() {
         {cupomAplicado && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: '#81c995', fontSize: 14, fontWeight: 600 }}>
-                  🎟️ {cupomAplicado.codigo} ({cupomAplicado.percentual}%)
-                </span>
-                <button
-                  onClick={handleRemoverCupom}
-                  style={{
-                    padding: '2px 8px',
-                    fontSize: 11,
-                    background: 'rgba(242,139,130,0.1)',
-                    color: '#f28b82',
-                    border: '1px solid rgba(242,139,130,0.3)',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Remover
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: '#81c995', fontSize: 14, fontWeight: 600 }}>
+                    🎟️ {cupomAplicado.codigo} ({cupomAplicado.percentual}%)
+                  </span>
+                  <button
+                    onClick={handleRemoverCupom}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: 11,
+                      background: 'rgba(242,139,130,0.1)',
+                      color: '#f28b82',
+                      border: '1px solid rgba(242,139,130,0.3)',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Remover
+                  </button>
+                </div>
+                {cupomAplicado.data_inicio && cupomAplicado.data_fim && (
+                  <span style={{ color: '#9aa0a6', fontSize: 11 }}>
+                    Válido: {new Date(cupomAplicado.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {cupomAplicado.hora_inicio && ` ${cupomAplicado.hora_inicio}`}
+                    {' até '}
+                    {new Date(cupomAplicado.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {cupomAplicado.hora_fim && ` ${cupomAplicado.hora_fim}`}
+                  </span>
+                )}
               </div>
               <span style={{ fontSize: 16, fontWeight: 700, color: '#81c995' }}>
                 - {formatMoeda(cupomAplicado.desconto)}
