@@ -139,9 +139,29 @@ export default function CuponsPage() {
     }
   }
 
-  // Data atual no horário de Brasília (formato YYYY-MM-DD)
-  const hoje = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-    .split('/').reverse().join('-') // DD/MM/YYYY → YYYY-MM-DD
+  // Data e hora atual no horário de Brasília
+  const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+  const [dataStr, horaStr] = agora.split(', ')
+  const hoje = dataStr.split('/').reverse().join('-') // DD/MM/YYYY → YYYY-MM-DD
+  const horaAtual = horaStr.substring(0, 5) // HH:MM (remove segundos)
+
+  // Função para verificar se cupom está expirado (considera data + hora)
+  const cupomExpirado = (cupom) => {
+    if (hoje > cupom.data_fim) return true
+    if (hoje < cupom.data_fim) return false
+    // Se é o dia de fim, verificar horário
+    if (cupom.hora_fim && horaAtual > cupom.hora_fim) return true
+    return false
+  }
+
+  // Função para verificar se cupom é futuro (considera data + hora)
+  const cupomFuturo = (cupom) => {
+    if (hoje < cupom.data_inicio) return true
+    if (hoje > cupom.data_inicio) return false
+    // Se é o dia de início, verificar horário
+    if (cupom.hora_inicio && horaAtual < cupom.hora_inicio) return true
+    return false
+  }
 
   return (
     <AppShell title="Cupons de Desconto">
@@ -184,8 +204,8 @@ export default function CuponsPage() {
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {cupons.map(cupom => {
-              const expirado = hoje > cupom.data_fim  // Expira DEPOIS do último dia
-              const futuro = hoje < cupom.data_inicio  // Válido a partir da data_inicio
+              const expirado = cupomExpirado(cupom)
+              const futuro = cupomFuturo(cupom)
               const vigente = !expirado && !futuro
 
               return (

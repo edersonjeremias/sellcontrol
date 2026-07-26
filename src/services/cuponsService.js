@@ -85,7 +85,7 @@ export async function validarCupom(tenantId, codigo) {
 
   // Validar data
   if (hoje < data.data_inicio || hoje > data.data_fim) {
-    throw new Error('Cupom fora do período de validade')
+    throw new Error('Cupom expirado')
   }
 
   // Validar horário (se definido)
@@ -95,12 +95,12 @@ export async function validarCupom(tenantId, codigo) {
 
     // Se é o dia de início, verificar se já passou da hora de início
     if (hoje === data.data_inicio && horaAtual < horaIni) {
-      throw new Error(`Cupom válido a partir das ${horaIni}`)
+      throw new Error('Cupom expirado')
     }
 
     // Se é o dia de fim, verificar se ainda não passou da hora de fim
     if (hoje === data.data_fim && horaAtual > horaFin) {
-      throw new Error(`Cupom válido até às ${horaFin}`)
+      throw new Error('Cupom expirado')
     }
 
     // Se é um dia entre início e fim, está válido
