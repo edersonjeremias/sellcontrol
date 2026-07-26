@@ -32,7 +32,7 @@ export default function ReciboPage() {
   const [erro, setErro] = useState(false)
   const [verificando, setVerificando] = useState(false)
   const [verificado,  setVerificado]  = useState(false)
-  const [nomeEmpresa, setNomeEmpresa] = useState('Carregando...')
+  const [nomeEmpresa, setNomeEmpresa] = useState('Loja')
 
   // Estados para divisão de pagamento
   const [showDividir, setShowDividir] = useState(false)
@@ -56,14 +56,27 @@ export default function ReciboPage() {
 
       // Buscar nome da empresa
       if (res.tenant_id) {
-        const { data: config } = await supabase
-          .from('configuracoes')
-          .select('nome_loja')
-          .eq('tenant_id', res.tenant_id)
-          .single()
-        if (config?.nome_loja) {
-          setNomeEmpresa(config.nome_loja)
+        try {
+          const { data: config, error } = await supabase
+            .from('configuracoes')
+            .select('nome_loja')
+            .eq('tenant_id', res.tenant_id)
+            .single()
+
+          if (error) {
+            console.warn('Erro ao buscar nome da empresa:', error)
+            setNomeEmpresa('Loja')
+          } else if (config?.nome_loja?.trim()) {
+            setNomeEmpresa(config.nome_loja)
+          } else {
+            setNomeEmpresa('Loja')
+          }
+        } catch (err) {
+          console.warn('Erro ao buscar configurações:', err)
+          setNomeEmpresa('Loja')
         }
+      } else {
+        setNomeEmpresa('Loja')
       }
 
       // Restaurar cupom se já foi aplicado (validar se ainda está vigente)
