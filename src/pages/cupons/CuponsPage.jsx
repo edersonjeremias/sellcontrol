@@ -212,8 +212,11 @@ export default function CuponsPage() {
                       {cupom.codigo}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-                      {cupom.data_inicio.split('-').reverse().join('/')} até{' '}
+                      {cupom.data_inicio.split('-').reverse().join('/')}
+                      {cupom.hora_inicio && ` ${cupom.hora_inicio}`}
+                      {' até '}
                       {cupom.data_fim.split('-').reverse().join('/')}
+                      {cupom.hora_fim && ` ${cupom.hora_fim}`}
                     </div>
                   </div>
 
