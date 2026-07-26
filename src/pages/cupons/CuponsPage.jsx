@@ -19,6 +19,8 @@ export default function CuponsPage() {
   const [percentual, setPercentual] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [horaInicio, setHoraInicio] = useState('')
+  const [horaFim, setHoraFim] = useState('')
   const [ativo, setAtivo] = useState(true)
   const [salvando, setSalvando] = useState(false)
 
@@ -45,6 +47,8 @@ export default function CuponsPage() {
     setPercentual('')
     setDataInicio('')
     setDataFim('')
+    setHoraInicio('')
+    setHoraFim('')
     setAtivo(true)
     setShowForm(true)
   }
@@ -55,6 +59,8 @@ export default function CuponsPage() {
     setPercentual(cupom.percentual)
     setDataInicio(cupom.data_inicio)
     setDataFim(cupom.data_fim)
+    setHoraInicio(cupom.hora_inicio || '')
+    setHoraFim(cupom.hora_fim || '')
     setAtivo(cupom.ativo)
     setShowForm(true)
   }
@@ -77,6 +83,12 @@ export default function CuponsPage() {
       return
     }
 
+    // Validar horários
+    if (dataInicio === dataFim && horaInicio && horaFim && horaFim <= horaInicio) {
+      showToast('No mesmo dia, hora fim deve ser maior que hora início', 'error')
+      return
+    }
+
     setSalvando(true)
     try {
       const dados = {
@@ -84,6 +96,8 @@ export default function CuponsPage() {
         percentual: Number(percentual),
         data_inicio: dataInicio,
         data_fim: dataFim,
+        hora_inicio: horaInicio || null,
+        hora_fim: horaFim || null,
         ativo,
       }
 
@@ -390,6 +404,42 @@ export default function CuponsPage() {
                       className="cell-input"
                       style={{ width: '100%' }}
                     />
+                  </div>
+                </div>
+
+                {/* Horários (Opcional) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>
+                      ⏰ Hora Início (opcional)
+                    </label>
+                    <input
+                      type="time"
+                      value={horaInicio}
+                      onChange={e => setHoraInicio(e.target.value)}
+                      className="cell-input"
+                      style={{ width: '100%' }}
+                      placeholder="00:00"
+                    />
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+                      Se vazio, vale desde 00:00
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>
+                      ⏰ Hora Fim (opcional)
+                    </label>
+                    <input
+                      type="time"
+                      value={horaFim}
+                      onChange={e => setHoraFim(e.target.value)}
+                      className="cell-input"
+                      style={{ width: '100%' }}
+                      placeholder="23:59"
+                    />
+                    <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+                      Se vazio, vale até 23:59
+                    </div>
                   </div>
                 </div>
 
