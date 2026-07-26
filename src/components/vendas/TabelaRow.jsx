@@ -108,6 +108,9 @@ function TabelaRow({
 
   const upd = (field, val) => onFieldChange(linha._key, field, val)
 
+  // Estado LOCAL para preco_promocional (uncontrolled)
+  const [precoPromoLocal, setPrecoPromoLocal] = useState(linha.preco_promocional || '')
+
   // Desabilita edição se for venda enviada E usuário não tiver permissão
   const camposDesabilitados = linha.isSent && !podeEditarEnviadas
   const [txtCopiado, setTxtCopiado] = useState(false)
@@ -222,29 +225,24 @@ function TabelaRow({
           disabled={camposDesabilitados} />
       </td>
 
-      {/* PREÇO PROMOCIONAL (opcional) */}
+      {/* PREÇO PROMOCIONAL (opcional) - USA ESTADO LOCAL */}
       {config.modo_promocao && (
         <td className="col-preco">
           <input
-            key={`preco-promo-${linha._key}`}
             className="cell-input price"
-            value={linha.preco_promocional || ''}
+            value={precoPromoLocal}
             onChange={e => {
               const valor = e.target.value.replace(/[^\d,]/g, '')
-              console.log('🎁 TabelaRow onChange PROMOÇÃO:', {
-                valor_digitado: e.target.value,
-                valor_limpo: valor,
-                linha_key: linha._key,
-                linha_preco_promocional_atual: linha.preco_promocional
-              })
-              upd('preco_promocional', valor)
+              console.log('🎁 onChange PROMOÇÃO (estado local):', valor)
+              setPrecoPromoLocal(valor)  // Atualiza estado LOCAL
+              upd('preco_promocional', valor)  // Salva no pai também
             }}
             onKeyDown={onEnterNext}
             disabled={camposDesabilitados}
             placeholder="0,00"
             style={{
-              backgroundColor: linha.preco_promocional?.trim() ? 'rgba(251, 188, 4, 0.1)' : undefined,
-              borderColor: linha.preco_promocional?.trim() ? 'var(--yellow)' : undefined,
+              backgroundColor: precoPromoLocal?.trim() ? 'rgba(251, 188, 4, 0.1)' : undefined,
+              borderColor: precoPromoLocal?.trim() ? 'var(--yellow)' : undefined,
             }} />
         </td>
       )}
