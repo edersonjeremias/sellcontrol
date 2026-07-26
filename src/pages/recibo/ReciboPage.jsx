@@ -123,28 +123,50 @@ export default function ReciboPage() {
       setDebugNome('Buscando...')
 
       try {
-        const { data, error } = await supabase
+        // Tentar 1: Buscar de configuracoes.nome_loja
+        const { data: config } = await supabase
           .from('configuracoes')
           .select('nome_loja')
           .eq('tenant_id', cob.tenant_id)
           .maybeSingle()
 
-        console.log('🏪 Resultado da busca:', { data, error })
-
-        if (error) {
-          console.error('❌ Erro ao buscar nome da empresa:', error)
-          setDebugNome(`Erro: ${error.message || error.code || 'desconhecido'}`)
+        if (config?.nome_loja?.trim()) {
+          console.log('✅ Nome encontrado em configuracoes:', config.nome_loja)
+          setNomeEmpresa(config.nome_loja)
+          setDebugNome('')
           return
         }
 
-        if (data?.nome_loja?.trim()) {
-          console.log('✅ Nome da empresa encontrado:', data.nome_loja)
-          setNomeEmpresa(data.nome_loja)
-          setDebugNome('OK - Nome carregado')
-        } else {
-          console.warn('⚠️ nome_loja não encontrado ou vazio')
-          setDebugNome(`Configuração existe mas nome_loja está vazio. Data: ${JSON.stringify(data)}`)
+        console.warn('⚠️ nome_loja vazio, buscando de tenants...')
+
+        // Tentar 2: Buscar de tenants (nome ou slug)
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('nome, slug')
+          .eq('id', cob.tenant_id)
+          .maybeSingle()
+
+        if (tenant?.nome?.trim()) {
+          console.log('✅ Nome encontrado em tenants.nome:', tenant.nome)
+          setNomeEmpresa(tenant.nome)
+          setDebugNome('')
+          return
         }
+
+        if (tenant?.slug?.trim()) {
+          // Formatar slug: "ea-second-hand" → "EA Second Hand"
+          const nomeFormatado = tenant.slug
+            .split('-')
+            .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1))
+            .join(' ')
+          console.log('✅ Nome gerado do slug:', nomeFormatado)
+          setNomeEmpresa(nomeFormatado)
+          setDebugNome('')
+          return
+        }
+
+        console.error('❌ Nenhuma fonte de nome encontrada')
+        setDebugNome('nome_loja, tenants.nome e slug estão vazios!')
       } catch (err) {
         console.error('❌ Exceção ao buscar nome da empresa:', err)
         setDebugNome(`Exceção: ${err.message}`)
