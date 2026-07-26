@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { useState } from 'react'
 import AutocompleteInput, { navigateNext, navigatePrevious } from '../ui/AutocompleteInput'
 import ClienteAutocomplete from './ClienteAutocomplete'
 
@@ -88,7 +88,7 @@ function copyToClipboard(text) {
   })
 }
 
-const TabelaRow = memo(function TabelaRow({
+function TabelaRow({
   linha, listas, tenantId,
   onFieldChange, onClienteBlur, onClienteSelect, onIsBlocked, onEnterNoCliente,
   onAbrirModal, onAbrirFila,
@@ -379,41 +379,6 @@ const TabelaRow = memo(function TabelaRow({
       </td>
     </tr>
   )
-}, (prevProps, nextProps) => {
-  // COMPARAÇÃO OTIMIZADA (evita rerenders desnecessários)
-  // Só rerrenderiza se a linha atual mudou (não por mudanças em outras linhas)
-  const prev = prevProps.linha
-  const next = nextProps.linha
-
-  // Se qualquer campo da linha mudou, rerenderiza
-  if (
-    prev.produto !== next.produto ||
-    prev.modelo !== next.modelo ||
-    prev.cor !== next.cor ||
-    prev.marca !== next.marca ||
-    prev.tamanho !== next.tamanho ||
-    prev.preco !== next.preco ||
-    prev.preco_promocional !== next.preco_promocional ||  // ← ADICIONADO!
-    prev.codigo !== next.codigo ||
-    prev.cliente_nome !== next.cliente_nome ||
-    prev.deleted !== next.deleted ||
-    prev.isSent !== next.isSent ||
-    prev.sacolinha !== next.sacolinha ||
-    prev.custo !== next.custo ||
-    prev.qtde !== next.qtde ||
-    prev.condicao !== next.condicao ||
-    prev.genero !== next.genero
-  ) {
-    return false // Rerenderiza
-  }
-
-  // Se config mudou, rerenderiza
-  if (prevProps.config?.codigo_automatico !== nextProps.config?.codigo_automatico) {
-    return false
-  }
-
-  // Caso contrário, não rerenderiza (PERFORMANCE!)
-  return true
-})
+}
 
 export default TabelaRow
