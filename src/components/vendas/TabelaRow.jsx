@@ -226,7 +226,7 @@ function TabelaRow({
       </td>
 
       {/* PREÇO PROMOCIONAL (opcional) - USA ESTADO LOCAL */}
-      {config.modo_promocao && (
+      {cols.preco_promocional && (
         <td className="col-preco">
           <input
             className="cell-input price"

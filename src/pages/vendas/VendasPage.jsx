@@ -154,7 +154,7 @@ export default function VendasPage() {
   const skipFilterEffectRef = useRef(false)  // flag para evitar loop ao limpar filtro
 
   // ── Configurações de colunas ──
-  const [colsConfig,    setColsConfig]    = useState({ custo: false, condicao: false, genero: false })
+  const [colsConfig,    setColsConfig]    = useState({ custo: false, condicao: false, genero: false, preco_promocional: false })
   const [showSettings,  setShowSettings]  = useState(false)
   const [modalQt,       setModalQt]       = useState(false)
   const [qtInput,       setQtInput]       = useState('2')
@@ -1347,7 +1347,7 @@ export default function VendasPage() {
                     {colsConfig.condicao && <th className="col-tam">Cond.</th>}
                     {colsConfig.custo    && <th className="col-preco">Custo</th>}
                     <th className="col-preco">Preço</th>
-                    {config.modo_promocao && <th className="col-preco" style={{ color: 'var(--yellow)' }}>🎁 Promoção</th>}
+                    {colsConfig.preco_promocional && <th className="col-preco" style={{ color: 'var(--yellow)' }}>🎁 Promoção</th>}
                     <th className="col-cod">Cód.</th>
                     <th className="col-cliente">Cliente</th>
                     <th className="col-acoes">Ações</th>
@@ -1498,6 +1498,7 @@ export default function VendasPage() {
             <div style={{ fontSize:16, fontWeight:800, color:'#e6edf3', marginBottom:18 }}>⚙ Colunas Opcionais</div>
             {[
               { key:'custo',    label:'Coluna Custo' },
+              { key:'preco_promocional', label:'🎁 Coluna Preço Promocional' },
               { key:'condicao', label:'Coluna Novo / Usado' },
               { key:'genero',   label:'Coluna Masc. / Fem. / Unissex' },
             ].map(({ key, label }) => (
