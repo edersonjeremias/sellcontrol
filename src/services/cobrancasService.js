@@ -116,7 +116,7 @@ export async function excluirCobranca(tenantId, cobranca) {
 export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
   console.log('Sincronizando cobrança:', cobranca.cliente);
 
-  const { data: vendas, error: eV } = await supabase.from('vendas').select('produto, modelo, cor, marca, tamanho, preco, codigo, live_nome, status').eq('tenant_id', tid(tenantId)).eq('data_live', cobranca.data).ilike('cliente_nome', cobranca.cliente.trim()).eq('live_nome', cobranca.live || '')
+  const { data: vendas, error: eV } = await supabase.from('vendas').select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status').eq('tenant_id', tid(tenantId)).eq('data_live', cobranca.data).ilike('cliente_nome', cobranca.cliente.trim()).eq('live_nome', cobranca.live || '')
   if (eV) throw eV
 
   const { data: outras } = await supabase.from('cobrancas').select('id, itens').eq('tenant_id', tid(tenantId)).eq('data', cobranca.data).ilike('cliente', cobranca.cliente.trim()).eq('live', cobranca.live || '').neq('id', cobranca.id).neq('status', 'CANCELADO')
@@ -132,7 +132,8 @@ export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
     const desc = [v.codigo, v.produto, v.modelo, v.cor, v.marca, v.tamanho ? `(${v.tamanho})` : ''].filter(Boolean).join(' ')
     if (jaCobrados.has(desc.toLowerCase().trim())) return
     const cancelado = String(v.status || '').toLowerCase().includes('cancelado')
-    const valor = Number(v.preco) || 0
+    // Usa preço promocional se existir, senão usa preço normal
+    const valor = Number(v.preco_promocional || v.preco) || 0
     novosItens.push({ descricao: desc, valor, cancelado })
     if (!cancelado) novoTotal += valor
   })
@@ -338,7 +339,7 @@ export async function devolverCredito(tenantId, cliente, valor) {
 // ── Importação ───────────────────────────────────────────────
 export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   console.log('🔍 Buscando vendas para cobrança:', { dataISO, live, tenantId: tid(tenantId) })
-  let qV = supabase.from('vendas').select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO)
+  let qV = supabase.from('vendas').select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO)
   if (live) qV = qV.eq('live_nome', live)
   const { data: vendas } = await qV
   console.log('📦 Vendas encontradas:', vendas?.length || 0, vendas)
@@ -363,8 +364,10 @@ export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
     }
     if (!agrup[n]) agrup[n] = { cliente: v.cliente_nome.trim(), whatsapp: mapZ[n] || '', total: 0, data: dataISO, live: v.live_nome || live || '', itens: [] }
     const canc = String(v.status || '').toUpperCase().includes('CANCELADO')
-    agrup[n].itens.push({ descricao: d, valor: Number(v.preco) || 0, cancelado: canc })
-    if (!canc) agrup[n].total += Number(v.preco) || 0
+    // Usa preço promocional se existir, senão usa preço normal
+    const valorItem = Number(v.preco_promocional || v.preco) || 0
+    agrup[n].itens.push({ descricao: d, valor: valorItem, cancelado: canc })
+    if (!canc) agrup[n].total += valorItem
   })
   const resultado = Object.values(agrup)
   console.log('✅ Resultado final:', resultado.length, 'clientes', resultado)

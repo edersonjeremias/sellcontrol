@@ -13,3 +13,4 @@ supabase/.temp/
 scripts/dados/*.csv
 scripts/dados/*.xlsx
 .claude/settings.local.json
+.tmp.driveupload/
