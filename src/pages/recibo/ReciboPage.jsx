@@ -54,31 +54,6 @@ export default function ReciboPage() {
       if (!res) { setErro(true); return }
       setCob(res)
 
-      // Buscar nome da empresa
-      if (res.tenant_id) {
-        try {
-          const { data: config, error } = await supabase
-            .from('configuracoes')
-            .select('nome_loja')
-            .eq('tenant_id', res.tenant_id)
-            .single()
-
-          if (error) {
-            console.warn('Erro ao buscar nome da empresa:', error)
-            setNomeEmpresa('Loja')
-          } else if (config?.nome_loja?.trim()) {
-            setNomeEmpresa(config.nome_loja)
-          } else {
-            setNomeEmpresa('Loja')
-          }
-        } catch (err) {
-          console.warn('Erro ao buscar configurações:', err)
-          setNomeEmpresa('Loja')
-        }
-      } else {
-        setNomeEmpresa('Loja')
-      }
-
       // Restaurar cupom se já foi aplicado (validar se ainda está vigente)
       if (res.cupom_codigo && res.cupom_desconto_percentual && res.cupom_desconto_valor) {
         try {
@@ -134,6 +109,41 @@ export default function ReciboPage() {
 
   // Carregamento inicial
   useEffect(() => { carregarCob() }, [id])
+
+  // Carregar nome da empresa (separado para evitar race condition)
+  useEffect(() => {
+    const carregarNomeEmpresa = async () => {
+      if (!cob?.tenant_id) return
+
+      console.log('🏪 Buscando nome da empresa para tenant:', cob.tenant_id)
+
+      try {
+        const { data, error } = await supabase
+          .from('configuracoes')
+          .select('nome_loja')
+          .eq('tenant_id', cob.tenant_id)
+          .maybeSingle()
+
+        console.log('🏪 Resultado da busca:', { data, error })
+
+        if (error) {
+          console.error('❌ Erro ao buscar nome da empresa:', error)
+          return
+        }
+
+        if (data?.nome_loja?.trim()) {
+          console.log('✅ Nome da empresa encontrado:', data.nome_loja)
+          setNomeEmpresa(data.nome_loja)
+        } else {
+          console.warn('⚠️ nome_loja não encontrado ou vazio')
+        }
+      } catch (err) {
+        console.error('❌ Exceção ao buscar nome da empresa:', err)
+      }
+    }
+
+    carregarNomeEmpresa()
+  }, [cob?.tenant_id])
 
   // Auto-confirmação: MP redireciona de volta com params após pagamento
   useEffect(() => {
