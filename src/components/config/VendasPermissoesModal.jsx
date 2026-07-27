@@ -3,6 +3,7 @@ import { getVendasPermissoes, saveVendasPermissoes, VENDAS_PERMISSOES_DEFAULT } 
 
 const PERMISSOES_LABELS = {
   pode_alterar_preco: 'Alterar Preço',
+  pode_editar_preco_promocional: '🎁 Editar Preço Promocional',
   pode_alterar_colunas_cadastro: 'Alterar Colunas do Cadastro',
   pode_editar_modal: 'Editar no Modal',
   pode_excluir: 'Excluir Linhas',

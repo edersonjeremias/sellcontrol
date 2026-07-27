@@ -114,6 +114,7 @@ export async function resetUsuarioSenha(userId, novaSenha) {
 
 export const VENDAS_PERMISSOES_DEFAULT = {
   pode_alterar_preco: true,
+  pode_editar_preco_promocional: true,
   pode_alterar_colunas_cadastro: true,
   pode_editar_modal: true,
   pode_excluir: true,
