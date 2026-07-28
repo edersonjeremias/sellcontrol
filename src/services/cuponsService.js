@@ -28,6 +28,8 @@ export async function criarCupom(tenantId, cupom) {
       data_fim: cupom.data_fim,
       hora_inicio: cupom.hora_inicio || null,
       hora_fim: cupom.hora_fim || null,
+      limite_usos: cupom.limite_usos || null,
+      usos_realizados: 0,
       ativo: cupom.ativo ?? true,
     }])
     .select()
@@ -106,6 +108,47 @@ export async function validarCupom(tenantId, codigo) {
     // Se é um dia entre início e fim, está válido
   }
 
+  // Validar limite de usos
+  if (data.limite_usos !== null && data.limite_usos !== undefined) {
+    const usosRealizados = data.usos_realizados || 0
+    if (usosRealizados >= data.limite_usos) {
+      throw new Error(`Cupom esgotado (limite de ${data.limite_usos} usos atingido)`)
+    }
+  }
+
+  return data
+}
+
+// ── Incrementar uso do cupom ──
+export async function incrementarUsoCupom(cupomId) {
+  // Busca o cupom atual
+  const { data: cupom, error: fetchError } = await supabase
+    .from('cupons')
+    .select('usos_realizados')
+    .eq('id', cupomId)
+    .single()
+
+  if (fetchError) {
+    console.error('Erro ao buscar cupom:', fetchError)
+    return null
+  }
+
+  // Incrementa +1
+  const novosUsos = (cupom.usos_realizados || 0) + 1
+
+  const { data, error } = await supabase
+    .from('cupons')
+    .update({ usos_realizados: novosUsos })
+    .eq('id', cupomId)
+    .select('usos_realizados')
+    .single()
+
+  if (error) {
+    console.error('Erro ao incrementar uso do cupom:', error)
+    // Não lança erro para não quebrar o fluxo do recibo
+  }
+
+  console.log(`✅ Cupom ${cupomId} incrementado: ${novosUsos} usos`)
   return data
 }
 

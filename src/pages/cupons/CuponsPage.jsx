@@ -21,6 +21,7 @@ export default function CuponsPage() {
   const [dataFim, setDataFim] = useState('')
   const [horaInicio, setHoraInicio] = useState('')
   const [horaFim, setHoraFim] = useState('')
+  const [limiteUsos, setLimiteUsos] = useState('')
   const [ativo, setAtivo] = useState(true)
   const [salvando, setSalvando] = useState(false)
 
@@ -49,6 +50,7 @@ export default function CuponsPage() {
     setDataFim('')
     setHoraInicio('')
     setHoraFim('')
+    setLimiteUsos('')
     setAtivo(true)
     setShowForm(true)
   }
@@ -61,6 +63,7 @@ export default function CuponsPage() {
     setDataFim(cupom.data_fim)
     setHoraInicio(cupom.hora_inicio || '')
     setHoraFim(cupom.hora_fim || '')
+    setLimiteUsos(cupom.limite_usos || '')
     setAtivo(cupom.ativo)
     setShowForm(true)
   }
@@ -98,6 +101,7 @@ export default function CuponsPage() {
         data_fim: dataFim,
         hora_inicio: horaInicio || null,
         hora_fim: horaFim || null,
+        limite_usos: limiteUsos ? Number(limiteUsos) : null,
         ativo,
       }
 
@@ -238,6 +242,17 @@ export default function CuponsPage() {
                       {cupom.data_fim.split('-').reverse().join('/')}
                       {cupom.hora_fim && ` ${cupom.hora_fim}`}
                     </div>
+                    {cupom.limite_usos && (
+                      <div style={{
+                        fontSize: 12,
+                        color: (cupom.usos_realizados >= cupom.limite_usos) ? 'var(--red)' : 'var(--blue)',
+                        marginTop: 6,
+                        fontWeight: 600
+                      }}>
+                        {cupom.usos_realizados >= cupom.limite_usos ? '❌ ' : '🔢 '}
+                        Usado {cupom.usos_realizados || 0}/{cupom.limite_usos} vezes
+                      </div>
+                    )}
                   </div>
 
                   {/* Desconto */}
@@ -463,6 +478,25 @@ export default function CuponsPage() {
                     <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
                       Se vazio, vale até 23:59
                     </div>
+                  </div>
+                </div>
+
+                {/* Limite de Usos */}
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 6 }}>
+                    🔢 Limite de Usos (opcional)
+                  </label>
+                  <input
+                    type="number"
+                    value={limiteUsos}
+                    onChange={e => setLimiteUsos(e.target.value)}
+                    placeholder="Ex: 10 (vazio = ilimitado)"
+                    className="cell-input"
+                    style={{ width: '100%' }}
+                    min="1"
+                  />
+                  <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+                    Quantas vezes o cupom pode ser usado. Ex: 10 = apenas 10 clientes
                   </div>
                 </div>
 

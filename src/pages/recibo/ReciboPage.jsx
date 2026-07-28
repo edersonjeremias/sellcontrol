@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getCobrancaById, formatMoeda, dividirPagamento } from '../../services/cobrancasService'
-import { validarCupom, calcularDesconto } from '../../services/cuponsService'
+import { validarCupom, calcularDesconto, incrementarUsoCupom } from '../../services/cuponsService'
 import { supabase } from '../../lib/supabase'
 
 function fmtData(iso) {
@@ -210,6 +210,9 @@ export default function ReciboPage() {
         .eq('id', id)
 
       if (error) throw error
+
+      // Incrementar contador de usos do cupom
+      await incrementarUsoCupom(cupom.id)
 
       // Atualizar estado local
       setCupomAplicado({
