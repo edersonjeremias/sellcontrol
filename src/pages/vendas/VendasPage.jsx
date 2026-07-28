@@ -257,14 +257,14 @@ export default function VendasPage() {
       if (l.deleted || !passaFiltro(l, filtro)) return
 
       // Aplica filtro de status
-      // Cadastrados: produtos NÃO enviados (mesmo que tenha cliente sendo digitado)
-      // Vendidos: produtos ENVIADOS (status ENVIADO/VENDIDO)
-      if (statusFiltro === 'cadastrados' && l.isSent) return // Cadastrados: só não-enviados
-      if (statusFiltro === 'vendidos' && !l.isSent) return // Vendidos: só enviados
+      // Considera "tem cliente" apenas se tiver 3+ caracteres (evita sumir ao digitar 1-2 letras)
+      const temCliente = (l.cliente_nome?.trim() || '').length >= 3
+      if (statusFiltro === 'cadastrados' && temCliente) return // Cadastrados: só sem cliente (ou digitando)
+      if (statusFiltro === 'vendidos' && !temCliente) return // Vendidos: só com cliente
       // toda-live: mostra tudo
 
-      // Conta apenas produtos enviados (para o total vendido)
-      if (!l.isSent) return
+      // Conta apenas se tiver cliente (para o total vendido)
+      if (!temCliente) return
 
       qtd++
       const n = parseFloat((l.preco || '').replace(/\./g, '').replace(',', '.'))
