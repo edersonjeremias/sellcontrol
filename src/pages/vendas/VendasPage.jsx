@@ -69,7 +69,7 @@ function mapRow(row) {
     qtde:         row.qtde         || '',
     condicao:     row.condicao     || '',
     genero:       row.genero       || '',
-    isSent: ['ENVIADO', 'VENDIDO'].includes((row.status || '').toUpperCase()),
+    isSent: ['ENVIADO', 'VENDIDO'].includes((row.status || '').toUpperCase()) && row.cliente_nome?.trim(),
     liberado: false,
   }
 }
