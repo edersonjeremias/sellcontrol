@@ -169,7 +169,9 @@ export async function getVendasPorAno(tenantId) {
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    if (!v.data_live || (v.status || '').toUpperCase() === 'CANCELADO') return
+    // Conta apenas vendas ENVIADAS (não cadastrados)
+    const status = (v.status || '').toUpperCase()
+    if (!v.data_live || !['ENVIADO', 'VENDIDO'].includes(status)) return
     const ano = v.data_live.slice(0, 4)
     map[ano] = (map[ano] || 0) + (Number(v.preco) || 0)
   })
@@ -189,7 +191,9 @@ export async function getVendasPorMes(tenantId, ano) {
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    if (!v.data_live || (v.status || '').toUpperCase() === 'CANCELADO') return
+    // Conta apenas vendas ENVIADAS (não cadastrados)
+    const status = (v.status || '').toUpperCase()
+    if (!v.data_live || !['ENVIADO', 'VENDIDO'].includes(status)) return
     const m = parseInt(v.data_live.slice(5, 7)) - 1
     map[m] = (map[m] || 0) + (Number(v.preco) || 0)
   })
@@ -211,7 +215,9 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    if (!v.data_live || (v.status || '').toUpperCase() === 'CANCELADO') return
+    // Conta apenas vendas ENVIADAS (não cadastrados)
+    const status = (v.status || '').toUpperCase()
+    if (!v.data_live || !['ENVIADO', 'VENDIDO'].includes(status)) return
     const dia = v.data_live.slice(8, 10)
     map[dia] = (map[dia] || 0) + (Number(v.preco) || 0)
   })
@@ -236,7 +242,9 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    if ((v.status || '').toUpperCase() === 'CANCELADO') return
+    // Conta apenas vendas ENVIADAS (não cadastrados)
+    const status = (v.status || '').toUpperCase()
+    if (!['ENVIADO', 'VENDIDO'].includes(status)) return
     const cli = (v.cliente_nome || '').trim() || '(sem cliente)'
     map[cli] = (map[cli] || 0) + (Number(v.preco) || 0)
   })
@@ -263,7 +271,9 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
 
   const vMap = {}, cMap = {}
   ;(vendasRes.data || []).forEach(v => {
-    if (!v.data_live || (v.status || '').toUpperCase() === 'CANCELADO') return
+    // Conta apenas vendas ENVIADAS (não cadastrados)
+    const status = (v.status || '').toUpperCase()
+    if (!v.data_live || !['ENVIADO', 'VENDIDO'].includes(status)) return
     const d = v.data_live.slice(8, 10)
     vMap[d] = (vMap[d] || 0) + (Number(v.preco) || 0)
   })
@@ -343,7 +353,8 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
     const st  = (v.status || '').toUpperCase()
     if (st === 'CANCELADO') cancelados += val
     else if (st === 'DEVOLVIDO') devolucoes += val
-    else vendidoBruto += val
+    else if (['ENVIADO', 'VENDIDO'].includes(st)) vendidoBruto += val
+    // Ignora produtos apenas cadastrados (sem status ENVIADO/VENDIDO)
   })
 
   const totalCreditos = (credRes.data || []).reduce((s, c) => s + (Number(c.valor) || 0), 0)
