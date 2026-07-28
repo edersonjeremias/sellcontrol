@@ -460,7 +460,7 @@ export async function getHistoricoCreditos(tenantId, cliente = null) {
 // ── Importação ───────────────────────────────────────────────
 export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   console.log('🔍 Buscando vendas para cobrança:', { dataISO, live, tenantId: tid(tenantId) })
-  let qV = supabase.from('vendas').select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO)
+  let qV = supabase.from('vendas').select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO).eq('status', 'ENVIADO')
   if (live) qV = qV.eq('live_nome', live)
   const { data: vendas } = await qV
   console.log('📦 Vendas encontradas:', vendas?.length || 0, vendas)
