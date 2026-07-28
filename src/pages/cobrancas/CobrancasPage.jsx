@@ -11,6 +11,7 @@ import {
   sincronizarCobrancaComVendas, dividirPagamento,
   marcarVendasComoPagas,
 } from '../../services/cobrancasService'
+import { incrementarUsoCupom } from '../../services/cuponsService'
 import { getConfig } from '../../services/configService'
 
 // ── Constantes ─────────────────────────────────────────────────
@@ -278,6 +279,12 @@ export default function CobrancasPage() {
 
           // 💰 Marca todas as vendas como PAGAS
           const qtVendas = await marcarVendasComoPagas(tenantId, cobranca, 'PAGO')
+
+          // 🎁 Incrementa cupom se foi usado (apenas quando PAGAR de verdade!)
+          if (cobranca.cupom_id) {
+            await incrementarUsoCupom(cobranca.cupom_id)
+            console.log('✅ Cupom incrementado ao baixar cobrança')
+          }
 
           const at = { ...cobranca, ...campos }
           setSel(at)

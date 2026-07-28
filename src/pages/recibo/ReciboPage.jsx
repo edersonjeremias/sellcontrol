@@ -206,13 +206,14 @@ export default function ReciboPage() {
           cupom_codigo: cupom.codigo,
           cupom_desconto_percentual: cupom.percentual,
           cupom_desconto_valor: Number(desconto),
+          cupom_id: cupom.id, // Guarda o ID para incrementar depois do pagamento
         })
         .eq('id', id)
 
       if (error) throw error
 
-      // Incrementar contador de usos do cupom
-      await incrementarUsoCupom(cupom.id)
+      // ⚠️ NÃO incrementa aqui! Só incrementa quando PAGAR de verdade
+      // O incremento acontece no webhook do Mercado Pago ou ao baixar manualmente
 
       // Atualizar estado local
       setCupomAplicado({
