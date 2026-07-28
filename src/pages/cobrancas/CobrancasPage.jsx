@@ -153,6 +153,7 @@ export default function CobrancasPage() {
   const [impData,        setImpData]        = useState(HOJE)
   const [impLive,        setImpLive]        = useState('')
   const [impResultado,   setImpResultado]   = useState([])
+  const [impSelecionados, setImpSelecionados] = useState([]) // índices dos clientes selecionados
   const [importando,     setImportando]     = useState(false)
   const [gerando,        setGerando]        = useState(false)
 
@@ -459,15 +460,21 @@ export default function CobrancasPage() {
     try {
       const res = await buscarVendasParaCobranca(tenantId, impData, impLive || null)
       setImpResultado(res)
+      setImpSelecionados(res.map((_, i) => i)) // Seleciona todos por padrão
       if (!res.length) showToast('Nenhuma venda nova encontrada', 'info')
     } catch (e) { showToast('Erro: ' + e.message, 'error') }
     finally { setImportando(false) }
   }
 
   async function gerarLinks() {
+    if (impSelecionados.length === 0) {
+      showToast('Selecione pelo menos um cliente', 'error')
+      return
+    }
     setGerando(true)
     let ok = 0, err = 0
-    for (const g of impResultado) {
+    const selecionados = impResultado.filter((_, i) => impSelecionados.includes(i))
+    for (const g of selecionados) {
       try {
         const id = crypto.randomUUID()
         let link = '', idMp = ''
@@ -475,7 +482,7 @@ export default function CobrancasPage() {
           try {
             const mp = await gerarPreferenciaMp({ cliente: g.cliente, total: g.total, whatsapp: g.whatsapp, data: fmtData(g.data) || g.data, live: g.live, idCobranca: id })
             link = mp.link; idMp = mp.id_mp
-          } catch (e) { 
+          } catch (e) {
             console.warn('MP erro para cliente:', g.cliente, e.message)
             err++
           }
@@ -491,6 +498,7 @@ export default function CobrancasPage() {
     setGerando(false)
     setShowImportar(false)
     setImpResultado([])
+    setImpSelecionados([])
     showToast(`${ok} cobranças geradas${err ? ` (${err} erro(s))` : ''}`)
     carregar()
   }
@@ -605,7 +613,7 @@ export default function CobrancasPage() {
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
               </button>
-              <button className="btn-acao btn-ghost" onClick={() => { setShowImportar(true); setImpResultado([]) }} style={{ minWidth: 44, padding: '0 10px' }} title="Importar vendas">
+              <button className="btn-acao btn-ghost" onClick={() => { setShowImportar(true); setImpResultado([]); setImpSelecionados([]) }} style={{ minWidth: 44, padding: '0 10px' }} title="Importar vendas">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
@@ -862,18 +870,70 @@ export default function CobrancasPage() {
                       </span>
                     )}
                   </div>
+
+                  {/* Botão selecionar/desmarcar todos */}
+                  <div style={{ marginBottom: 8 }}>
+                    <button
+                      onClick={() => {
+                        if (impSelecionados.length === impResultado.length) {
+                          setImpSelecionados([]) // Desmarcar todos
+                        } else {
+                          setImpSelecionados(impResultado.map((_, i) => i)) // Selecionar todos
+                        }
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--blue)',
+                        fontSize: 12,
+                        cursor: 'pointer',
+                        padding: '4px 0',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      {impSelecionados.length === impResultado.length ? '❌ Desmarcar Todos' : '✅ Selecionar Todos'}
+                    </button>
+                  </div>
+
                   <div style={{ maxHeight: 220, overflowY: 'auto', scrollbarWidth: 'none', background: '#1a1a1a', borderRadius: 6, padding: 6, marginBottom: 12 }}>
                     {impResultado.map((r, i) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 8px', borderBottom: '1px solid var(--border-light)', fontSize: 13 }}>
-                        <span style={{ color: r.whatsapp ? 'var(--text-body)' : 'var(--red)' }}>
-                          {r.cliente}{!r.whatsapp && ' ⚠️'}
-                        </span>
+                      <div
+                        key={i}
+                        onClick={() => {
+                          if (impSelecionados.includes(i)) {
+                            setImpSelecionados(prev => prev.filter(idx => idx !== i))
+                          } else {
+                            setImpSelecionados(prev => [...prev, i])
+                          }
+                        }}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '5px 8px',
+                          borderBottom: '1px solid var(--border-light)',
+                          fontSize: 13,
+                          cursor: 'pointer',
+                          background: impSelecionados.includes(i) ? 'rgba(129,201,149,0.08)' : 'transparent',
+                          borderLeft: impSelecionados.includes(i) ? '3px solid var(--green)' : '3px solid transparent'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input
+                            type="checkbox"
+                            checked={impSelecionados.includes(i)}
+                            onChange={() => {}} // onChange tratado no onClick do div
+                            style={{ cursor: 'pointer', accentColor: 'var(--green)' }}
+                          />
+                          <span style={{ color: r.whatsapp ? 'var(--text-body)' : 'var(--red)' }}>
+                            {r.cliente}{!r.whatsapp && ' ⚠️'}
+                          </span>
+                        </div>
                         <span style={{ color: 'var(--green)', fontWeight: 700 }}>{formatMoeda(r.total)}</span>
                       </div>
                     ))}
                   </div>
-                  <button className="btn-acao btn-green" style={{ width: '100%', minHeight: 46, fontSize: 14, color: '#171717' }} onClick={gerarLinks} disabled={gerando}>
-                    {gerando ? 'Gerando…' : `Gerar ${impResultado.length} Link(s) de Pagamento`}
+                  <button className="btn-acao btn-green" style={{ width: '100%', minHeight: 46, fontSize: 14, color: '#171717' }} onClick={gerarLinks} disabled={gerando || impSelecionados.length === 0}>
+                    {gerando ? 'Gerando…' : `Gerar ${impSelecionados.length} Link(s) de Pagamento`}
                   </button>
                 </>
               ) : (
