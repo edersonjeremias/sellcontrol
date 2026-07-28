@@ -9,20 +9,34 @@ import {
   getResumoFinanceiro,
 } from '../../services/relatorioService'
 
-// ── Gráfico de barras simples ──────────────────────────────────
-function BarChart({ items = [], color = '#8ab4f8', height = 180 }) {
+// ── Gráfico de barras estilo VM Kids (cinza) ──────────────────────
+function BarChart({ items = [], color = '#b8b8b8', height = 280 }) {
   if (!items.length) return <p style={{ color:'var(--muted)', textAlign:'center', padding:24 }}>Sem dados</p>
   const max  = Math.max(...items.map(d => d.value || 0), 1)
-  const barH = height - 28
+  const barH = height - 60 // Espaço para label acima e abaixo
+
+  // Formata valor em milhares (ex: 9500 -> "9,5 mil")
+  const fmtMil = (val) => {
+    if (!val) return ''
+    if (val >= 1000) return `${(val/1000).toFixed(1).replace('.', ',')} mil`
+    return val.toFixed(0)
+  }
+
   return (
-    <div style={{ display:'flex', alignItems:'flex-end', gap:2, height, padding:'0 4px' }}>
+    <div style={{ display:'flex', alignItems:'flex-end', gap:4, height, padding:'0 8px', background:'#1a1a1a', borderRadius:8 }}>
       {items.map((d, i) => {
-        const h = Math.max(Math.round((d.value / max) * barH), d.value > 0 ? 2 : 0)
+        const h = Math.max(Math.round((d.value / max) * barH), d.value > 0 ? 4 : 0)
         return (
           <div key={i} title={`${d.label}: ${fmtR(d.value)}`}
-            style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%' }}>
-            <div style={{ width:'100%', height:h, background:color, borderRadius:'2px 2px 0 0' }} />
-            <div style={{ fontSize:9, color:'var(--muted)', marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:'100%', textAlign:'center' }}>{d.label}</div>
+            style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'flex-end', height:'100%', paddingBottom:24 }}>
+            {/* Valor acima da barra */}
+            <div style={{ fontSize:11, color:'#fff', fontWeight:600, marginBottom:4, minHeight:18 }}>
+              {d.value > 0 ? fmtMil(d.value) : ''}
+            </div>
+            {/* Barra */}
+            <div style={{ width:'100%', height:h, background:color, borderRadius:'4px 4px 0 0' }} />
+            {/* Dia abaixo */}
+            <div style={{ fontSize:11, color:'#999', marginTop:6, fontWeight:500 }}>{d.label}</div>
           </div>
         )
       })}
@@ -68,15 +82,44 @@ function DashCard({ title, sub, onClick, children }) {
   )
 }
 
-function ChartModal({ titulo, onClose, children }) {
+function ChartModal({ titulo, total, periodo, onClose, children }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-card" style={{ maxWidth:720, width:'95vw', maxHeight:'90vh' }} onClick={e => e.stopPropagation()}>
-        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <h3 style={{ margin:0, fontSize:16 }}>{titulo}</h3>
-          <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:18, cursor:'pointer' }}>✕</button>
+      <div className="modal-card" style={{ maxWidth:1000, width:'95vw', maxHeight:'90vh', background:'#1e1e1e' }} onClick={e => e.stopPropagation()}>
+        {/* Header estilo VM Kids */}
+        <div style={{
+          display:'flex',
+          justifyContent:'space-between',
+          alignItems:'center',
+          padding:'16px 20px',
+          borderBottom:'1px solid #333',
+          background:'#252525'
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            <h3 style={{ margin:0, fontSize:16, color:'#fff', fontWeight:600 }}>{titulo}</h3>
+            {periodo && (
+              <span style={{
+                fontSize:12,
+                color:'#999',
+                background:'#333',
+                padding:'4px 12px',
+                borderRadius:4,
+                fontWeight:500
+              }}>
+                {periodo}
+              </span>
+            )}
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+            {total !== undefined && (
+              <div style={{ fontSize:16, fontWeight:700, color:'#81c995' }}>
+                Total: {fmtR(total)}
+              </div>
+            )}
+            <button onClick={onClose} style={{ background:'none', border:'none', color:'#999', fontSize:22, cursor:'pointer', lineHeight:1 }}>✕</button>
+          </div>
         </div>
-        <div className="modal-body" style={{ padding:20, paddingBottom:20, overflowY:'auto' }}>{children}</div>
+        <div className="modal-body" style={{ padding:20, paddingBottom:20, overflowY:'auto', background:'#1e1e1e' }}>{children}</div>
       </div>
     </div>
   )
@@ -191,23 +234,41 @@ export default function DashboardFinanceiroPage() {
     const ano = parseInt(anoSel)
     const mes = parseInt(mesSel)
     try {
-      let dados, titulo
+      let dados, titulo, periodo, total
       if (tipo === 'ano') {
-        dados = await getVendasPorAno(tenantId); titulo = 'Vendas por Ano'
+        dados = await getVendasPorAno(tenantId)
+        titulo = 'Vendas por Ano'
+        periodo = null
+        total = dados.reduce((s, d) => s + (d.value || 0), 0)
       } else if (tipo === 'mes') {
-        dados = await getVendasPorMes(tenantId, ano); titulo = `Vendas por Mês — ${ano}`
+        dados = await getVendasPorMes(tenantId, ano)
+        titulo = 'Vendas por Mês'
+        periodo = String(ano)
+        total = dados.reduce((s, d) => s + (d.value || 0), 0)
       } else if (tipo === 'dia') {
-        dados = await getVendasPorDia(tenantId, ano, mes); titulo = `Vendas por Dia — ${MESES_PT[mes-1]} ${ano}`
+        dados = await getVendasPorDia(tenantId, ano, mes)
+        titulo = 'Vendas Diárias'
+        periodo = `${MESES_PT[mes-1]} de ${ano}`
+        total = dados.reduce((s, d) => s + (d.value || 0), 0)
       } else if (tipo === 'clientes') {
-        dados = await getTopClientesMes(tenantId, ano, mes); titulo = `Top 10 Clientes — ${MESES_PT[mes-1]} ${ano}`
+        dados = await getTopClientesMes(tenantId, ano, mes)
+        titulo = 'Top 10 Clientes'
+        periodo = `${MESES_PT[mes-1]} de ${ano}`
+        total = dados.reduce((s, d) => s + (d.value || 0), 0)
       } else if (tipo === 'vendas-compras') {
-        dados = await getVendasVsComprasDia(tenantId, ano, mes); titulo = `Vendas vs Compras — ${MESES_PT[mes-1]} ${ano}`
+        dados = await getVendasVsComprasDia(tenantId, ano, mes)
+        titulo = 'Vendas vs Compras'
+        periodo = `${MESES_PT[mes-1]} de ${ano}`
       } else if (tipo === 'fluxo') {
-        dados = await getFluxoCaixaMes(tenantId, ano, mes); titulo = `Fluxo de Caixa — ${MESES_PT[mes-1]} ${ano}`
+        dados = await getFluxoCaixaMes(tenantId, ano, mes)
+        titulo = 'Fluxo de Caixa'
+        periodo = `${MESES_PT[mes-1]} de ${ano}`
       } else if (tipo === 'resumo') {
-        dados = await getResumoFinanceiro(tenantId, ano, mes); titulo = `Resumo Financeiro — ${MESES_PT[mes-1]} ${ano}`
+        dados = await getResumoFinanceiro(tenantId, ano, mes)
+        titulo = 'Resumo Financeiro'
+        periodo = `${MESES_PT[mes-1]} de ${ano}`
       }
-      setModal({ tipo, titulo, dados })
+      setModal({ tipo, titulo, dados, periodo, total })
     } catch (e) { showToast('Erro ao carregar dados.', 'error'); console.error(e) }
     setCarregando(false)
   }
@@ -266,7 +327,7 @@ export default function DashboardFinanceiroPage() {
 
       {/* Modais */}
       {modal && (
-        <ChartModal titulo={modal.titulo} onClose={() => setModal(null)}>
+        <ChartModal titulo={modal.titulo} total={modal.total} periodo={modal.periodo} onClose={() => setModal(null)}>
           {modal.tipo === 'ano' && (
             <><BarChart items={modal.dados} color="#8ab4f8" height={280} /><TabelaGrafico items={modal.dados} cols={['Ano','Total']} /></>
           )}
