@@ -271,15 +271,31 @@ function TabelaRow({
 
       {/* CLIENTE */}
       <td className="col-cliente">
-        <ClienteAutocomplete
-          className="cell-input"
-          value={linha.cliente_nome}
-          tenantId={tenantId}
-          onChange={v => upd('cliente_nome', v)}
-          onSelect={(v) => onClienteSelect?.(linha._key, v)}
-          onEnterKey={onEnterNoCliente}
-          disabled={camposDesabilitados}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <ClienteAutocomplete
+            className="cell-input"
+            value={linha.cliente_nome}
+            tenantId={tenantId}
+            onChange={v => upd('cliente_nome', v)}
+            onSelect={(v) => onClienteSelect?.(linha._key, v)}
+            onEnterKey={onEnterNoCliente}
+            disabled={camposDesabilitados}
+          />
+          {linha.status_pagamento === 'PAGO' && (
+            <span style={{
+              fontSize: 10,
+              color: 'var(--green)',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              padding: '2px 6px',
+              background: 'rgba(34,197,94,0.1)',
+              borderRadius: 4,
+              border: '1px solid rgba(34,197,94,0.3)'
+            }}>
+              ✅ PAGO
+            </span>
+          )}
+        </div>
       </td>
 
       {/* STATUS — só no histórico */}

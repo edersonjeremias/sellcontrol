@@ -98,6 +98,50 @@ export async function atualizarCobranca(id, campos) {
   if (error) throw error
 }
 
+// ── Marcar vendas como pagas ──────────────────────────────────
+export async function marcarVendasComoPagas(tenantId, cobranca, statusPagamento = 'PAGO') {
+  console.log('💰 Marcando vendas como:', statusPagamento, {
+    cliente: cobranca.cliente,
+    data: cobranca.data,
+    live: cobranca.live || '(vazia)'
+  });
+
+  // Busca as vendas relacionadas a esta cobrança
+  const { data: vendas, error: eV } = await supabase
+    .from('vendas')
+    .select('id')
+    .eq('tenant_id', tid(tenantId))
+    .eq('data_live', cobranca.data)
+    .ilike('cliente_nome', cobranca.cliente.trim())
+    .eq('live_nome', cobranca.live || '')
+
+  if (eV) {
+    console.error('❌ Erro ao buscar vendas:', eV);
+    throw eV;
+  }
+
+  if (!vendas || vendas.length === 0) {
+    console.warn('⚠️ Nenhuma venda encontrada para marcar como paga');
+    return 0;
+  }
+
+  console.log('📦 Vendas encontradas:', vendas.length);
+
+  // Atualiza todas as vendas para PAGO ou NULL (se for despagar)
+  const { error: eU } = await supabase
+    .from('vendas')
+    .update({ status_pagamento: statusPagamento === 'PAGO' ? 'PAGO' : null })
+    .in('id', vendas.map(v => v.id))
+
+  if (eU) {
+    console.error('❌ Erro ao atualizar vendas:', eU);
+    throw eU;
+  }
+
+  console.log('✅ Vendas marcadas como:', statusPagamento);
+  return vendas.length;
+}
+
 export async function excluirCobranca(tenantId, cobranca) {
   try {
     let valorDevolver = 0

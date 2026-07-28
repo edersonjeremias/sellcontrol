@@ -9,6 +9,7 @@ import {
   getSaldoCliente, abaterCredito, getMapaCreditosClientes,
   buscarVendasParaCobranca, gerarPreferenciaMp,
   sincronizarCobrancaComVendas, dividirPagamento,
+  marcarVendasComoPagas,
 } from '../../services/cobrancasService'
 import { getConfig } from '../../services/configService'
 
@@ -274,11 +275,17 @@ export default function CobrancasPage() {
         try {
           const campos = { status: 'BAIXADO', data_pagamento: new Date().toISOString() }
           await atualizarCobranca(cobranca.id, campos)
+
+          // 💰 Marca todas as vendas como PAGAS
+          const qtVendas = await marcarVendasComoPagas(tenantId, cobranca, 'PAGO')
+
           const at = { ...cobranca, ...campos }
           setSel(at)
           setCobrancas(prev => prev.map(c => c.id === cobranca.id ? at : c))
-          showToast('Baixado com sucesso')
-        } catch { showToast('Erro ao baixar', 'error') }
+          showToast(`Baixado! ${qtVendas} ${qtVendas === 1 ? 'item marcado' : 'itens marcados'} como PAGO`)
+        } catch (e) {
+          showToast('Erro ao baixar: ' + e.message, 'error')
+        }
       },
     })
   }
