@@ -369,27 +369,48 @@ export default function CobrancasPage() {
 
       let novoLink = sel.link_mp
       let novoIdMp = sel.id_mp
+      let novoStatus = sel.status
+      let novaDataPagamento = sel.data_pagamento
 
       if (novoTotal > 0) {
         try {
           const mp = await gerarPreferenciaMp({ cliente: sel.cliente, total: novoTotal, whatsapp: sel.whatsapp, data: fmtData(sel.data), live: sel.live, idCobranca: sel.id })
           novoLink = mp.link; novoIdMp = mp.id_mp
-        } catch (e) { 
+        } catch (e) {
           console.warn('MP indisponível:', e.message)
           showToast('Link MP não atualizado: ' + e.message, 'warning')
         }
       } else {
+        // 💰 Total R$ 0,00 = Quitado com crédito → Marcar como PAGO automaticamente
         novoLink = 'Pago com Crédito'
+        novoStatus = 'PAGO'
+        novaDataPagamento = new Date().toISOString()
+
+        // Marca vendas como pagas
+        await marcarVendasComoPagas(tenantId, sel, 'PAGO')
+
+        // Incrementa cupom se foi usado
+        if (sel.cupom_id) {
+          await incrementarUsoCupom(sel.cupom_id)
+        }
       }
 
-      await atualizarCobranca(sel.id, { itens, total: novoTotal, link_mp: novoLink, id_mp: novoIdMp })
+      await atualizarCobranca(sel.id, {
+        itens,
+        total: novoTotal,
+        link_mp: novoLink,
+        id_mp: novoIdMp,
+        status: novoStatus,
+        data_pagamento: novaDataPagamento
+      })
+
       if (dAbater) await abaterCredito(tenantId, sel.cliente, vDesc)
 
-      const at = { ...sel, itens, total: novoTotal, link_mp: novoLink, id_mp: novoIdMp }
+      const at = { ...sel, itens, total: novoTotal, link_mp: novoLink, id_mp: novoIdMp, status: novoStatus, data_pagamento: novaDataPagamento }
       setSel(at)
       setCobrancas(prev => prev.map(c => c.id === sel.id ? at : c))
       setShowDesc(false)
-      showToast('Desconto aplicado!')
+      showToast(novoTotal === 0 ? '✅ Quitado com crédito!' : 'Desconto aplicado!')
     } catch (e) { showToast('Erro: ' + e.message, 'error') }
     finally { setAplicandoDesc(false) }
   }
