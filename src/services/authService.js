@@ -52,20 +52,50 @@ export async function getPagesForUser(userId, tenantId, role) {
   if (!tenantId) return { data: [] }
   if (!pagesResourceAvailable) return { data: [] }
 
-  // Para todos os roles (master, admin, vendedor): busca páginas por tenant
+  // Master e Admin: TODAS as páginas do tenant
+  if (role === 'master' || role === 'admin') {
+    const result = await supabase
+      .from('pages')
+      .select('id, slug, label, category, icon, order_index')
+      .eq('tenant_id', tenantId)
+      .order('order_index', { ascending: true })
+
+    if (isMissingResource(result.error)) {
+      pagesResourceAvailable = false
+      return { data: [] }
+    }
+
+    if (!result.error) return { ...result, data: normalizePages(result.data) }
+    return result
+  }
+
+  // Vendedor/Gerente/Financeiro: APENAS páginas autorizadas via pages_access
+  if (!pagesAccessResourceAvailable) return { data: [] }
+
   const result = await supabase
-    .from('pages')
-    .select('id, slug, label, category, icon, order_index')
+    .from('pages_access')
+    .select('page_id, pages!inner(id, slug, label, category, icon, order_index, tenant_id)')
+    .eq('user_id', userId)
     .eq('tenant_id', tenantId)
-    .order('order_index', { ascending: true })
 
   if (isMissingResource(result.error)) {
-    pagesResourceAvailable = false
+    pagesAccessResourceAvailable = false
     return { data: [] }
   }
 
-  if (!result.error) return { ...result, data: normalizePages(result.data) }
-  return result
+  if (result.error) {
+    console.error('Erro ao buscar páginas do usuário:', result.error)
+    return { data: [], error: result.error }
+  }
+
+  // Extrai as páginas do relacionamento
+  const pages = (result.data || [])
+    .map(item => item.pages)
+    .filter(Boolean)
+
+  console.log('🔍 DEBUG - Páginas autorizadas para usuário:', pages.map(p => p.slug))
+
+  return { data: normalizePages(pages), error: null }
 }
 
 export async function getTenantUsers(tenantId) {
