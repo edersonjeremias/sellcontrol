@@ -253,17 +253,11 @@ export default function VendasPage() {
   const totalInfo = useMemo(() => {
     let total = 0, qtd = 0
     linhas.forEach(l => {
-      // Ignora deletados
+      // Ignora deletados e linhas que não passam no filtro de busca
       if (l.deleted || !passaFiltro(l, filtro)) return
 
-      // Aplica filtro de status
-      // Considera "tem cliente" apenas se tiver 3+ caracteres (evita sumir ao digitar 1-2 letras)
-      const temCliente = (l.cliente_nome?.trim() || '').length >= 3
-      if (statusFiltro === 'cadastrados' && temCliente) return // Cadastrados: só sem cliente (ou digitando)
-      if (statusFiltro === 'vendidos' && !temCliente) return // Vendidos: só com cliente
-      // toda-live: mostra tudo
-
-      // Conta apenas se tiver cliente (para o total vendido)
+      // Conta apenas produtos com cliente (não filtra por status - filtro só ao buscar)
+      const temCliente = l.cliente_nome?.trim()
       if (!temCliente) return
 
       qtd++
@@ -271,7 +265,7 @@ export default function VendasPage() {
       if (!isNaN(n)) total += n
     })
     return { total, qtd }
-  }, [linhas, filtro, statusFiltro])
+  }, [linhas, filtro])
 
   // ── BUSCA DE PRODUTOS (quando digita no filtro) ──
   useEffect(() => {
@@ -1371,19 +1365,12 @@ export default function VendasPage() {
             onScroll={e => setScrollTop(e.target.scrollTop > 150)}>
             {!pronto || linhas.filter(l => {
               if (l.deleted || !passaFiltro(l, filtro)) return false
-              // Aplica filtro de status
-              const temCliente = l.cliente_nome?.trim()
-              if (statusFiltro === 'cadastrados' && temCliente) return false
-              if (statusFiltro === 'vendidos' && !temCliente) return false
               return true
             }).length === 0 ? (
               <div id="tabela-msg">{tabelaMsg}</div>
             ) : null}
             {pronto && linhas.filter(l => {
               if (l.deleted || !passaFiltro(l, filtro)) return false
-              const temCliente = l.cliente_nome?.trim()
-              if (statusFiltro === 'cadastrados' && temCliente) return false
-              if (statusFiltro === 'vendidos' && !temCliente) return false
               return true
             }).length > 0 && (
               <table id="tabela">
@@ -1406,12 +1393,8 @@ export default function VendasPage() {
                 </thead>
                 <tbody>
                   {linhas.map((l, idx) => {
-                    // Filtra deletados e pelo filtro de busca
+                    // Filtra deletados e pelo filtro de busca (filtro de status só ao clicar em Buscar)
                     if (l.deleted || !passaFiltro(l, filtro)) return null
-                    // Aplica filtro de status
-                    const temCliente = l.cliente_nome?.trim()
-                    if (statusFiltro === 'cadastrados' && temCliente) return null
-                    if (statusFiltro === 'vendidos' && !temCliente) return null
                     return (
                       <TabelaRow key={l._key}
                         linha={l} listas={listas} tenantId={tenantId}
