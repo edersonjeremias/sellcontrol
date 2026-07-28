@@ -114,9 +114,32 @@ export async function excluirCobranca(tenantId, cobranca) {
 // ── Sincronização ─────────────────────────────────────────────
 
 export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
-  console.log('Sincronizando cobrança:', cobranca.cliente);
+  console.log('🔄 Sincronizando cobrança:', {
+    cliente: cobranca.cliente,
+    data: cobranca.data,
+    live: cobranca.live || '(vazia)'
+  });
 
-  const { data: vendas, error: eV } = await supabase.from('vendas').select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status').eq('tenant_id', tid(tenantId)).eq('data_live', cobranca.data).ilike('cliente_nome', cobranca.cliente.trim()).eq('live_nome', cobranca.live || '')
+  const { data: vendas, error: eV } = await supabase
+    .from('vendas')
+    .select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live, cliente_nome')
+    .eq('tenant_id', tid(tenantId))
+    .eq('data_live', cobranca.data)
+    .ilike('cliente_nome', cobranca.cliente.trim())
+    .eq('live_nome', cobranca.live || '')
+
+  console.log('📦 Vendas encontradas:', vendas?.length || 0);
+  if (vendas && vendas.length > 0) {
+    console.log('🔍 Primeira venda:', {
+      produto: vendas[0].produto,
+      preco: vendas[0].preco,
+      preco_promocional: vendas[0].preco_promocional,
+      data_live: vendas[0].data_live,
+      cliente_nome: vendas[0].cliente_nome,
+      live_nome: vendas[0].live_nome
+    });
+  }
+
   if (eV) throw eV
 
   const { data: outras } = await supabase.from('cobrancas').select('id, itens').eq('tenant_id', tid(tenantId)).eq('data', cobranca.data).ilike('cliente', cobranca.cliente.trim()).eq('live', cobranca.live || '').neq('id', cobranca.id).neq('status', 'CANCELADO')

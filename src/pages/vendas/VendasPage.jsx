@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   getDadosIniciais, getListas, salvarNovoCadastro,
   getVendas, salvarVendas, estornarVenda,
-  finalizarLive, formatMoney,
+  finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
   enviarVenda,
   buscarProdutosPorTermos,
@@ -416,6 +416,35 @@ export default function VendasPage() {
         return
       }
 
+      // 🚫 BLOQUEIO: Valida preços zerados
+      const linhasComPrecoZerado = linhasRef.current.filter(l =>
+        !l.deleted &&
+        l.produto?.trim() &&
+        (parseMoney(l.preco) === 0 || parseMoney(l.preco) === null) &&
+        (parseMoney(l.custo) === 0 || parseMoney(l.custo) === null) // Não é brinde (custo também zerado)
+      )
+
+      if (linhasComPrecoZerado.length > 0) {
+        const primeiraLinha = linhasComPrecoZerado[0]
+        const produtoNome = [primeiraLinha.produto, primeiraLinha.modelo, primeiraLinha.cor].filter(Boolean).join(' ')
+        showToast(`❌ Preço R$ 0,00 não permitido!\n\n📦 ${produtoNome}\n\nPreencha o preço antes de salvar.`, 'error', 6000)
+
+        // Foca no campo de preço da linha com problema
+        setTimeout(() => {
+          const linhaElement = document.querySelector(`tr[data-key="${primeiraLinha._key}"]`)
+          if (linhaElement) {
+            const precoInput = linhaElement.querySelector('.col-preco input')
+            if (precoInput) {
+              precoInput.focus()
+              precoInput.select()
+              linhaElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+          }
+        }, 100)
+
+        return
+      }
+
       isSavingRef.current = true
 
       try {
@@ -455,6 +484,22 @@ export default function VendasPage() {
     if (!tenantId || !pronto) return
     const interval = setInterval(async () => {
       if (!hasUnsavedRef.current || isSavingRef.current || busyRef.current) return
+
+      // 🚫 BLOQUEIO: Valida preços zerados no auto-save também
+      const linhasComPrecoZerado = linhasRef.current.filter(l =>
+        !l.deleted &&
+        l.produto?.trim() &&
+        (parseMoney(l.preco) === 0 || parseMoney(l.preco) === null) &&
+        (parseMoney(l.custo) === 0 || parseMoney(l.custo) === null)
+      )
+
+      if (linhasComPrecoZerado.length > 0) {
+        console.warn('⚠️ Auto-save bloqueado: Há produtos com preço R$ 0,00')
+        const produtoNome = [linhasComPrecoZerado[0].produto, linhasComPrecoZerado[0].modelo, linhasComPrecoZerado[0].cor].filter(Boolean).join(' ')
+        showToast(`❌ Preço R$ 0,00 não permitido!\n\n📦 ${produtoNome}`, 'error', 5000)
+        return
+      }
+
       isSavingRef.current = true
       try {
         const res = await salvarVendas(tenantIdRef.current, linhasRef.current, {
