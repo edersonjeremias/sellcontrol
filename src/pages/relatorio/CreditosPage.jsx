@@ -121,6 +121,7 @@ export default function CreditosPage() {
   const [confirmDel, setConfirmDel] = useState(null)
   const [historico, setHistorico]   = useState(null)
   const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [filtro, setFiltro]         = useState('')
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -174,8 +175,15 @@ export default function CreditosPage() {
     setLoadingHistorico(false)
   }
 
-  const totalSaldo    = creditos.reduce((s, c) => s + (Number(c.saldo)||0), 0)
-  const totalOriginal = creditos.reduce((s, c) => s + (Number(c.valor)||0), 0)
+  // Filtro multi-termo (separado por vírgula)
+  const creditosFiltrados = creditos.filter(c => {
+    if (!filtro.trim()) return true
+    const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+    if (termos.length === 0) return true
+    const cliente = (c.cliente || '').toLowerCase()
+    const motivo = (c.observacao || '').toLowerCase()
+    return termos.some(termo => cliente.includes(termo) || motivo.includes(termo))
+  })
 
   return (
     <AppShell title="Créditos de Clientes" hideTitle>
@@ -183,6 +191,13 @@ export default function CreditosPage() {
       <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8, padding:'12px 16px', borderBottom:'1px solid var(--border-light)', background:'var(--header-bg)' }}>
         <span style={{ fontSize:14, fontWeight:700, color:'var(--text-header)' }}>Créditos de Clientes</span>
         <div style={{ flex:1 }} />
+        <input
+          type="text"
+          value={filtro}
+          onChange={e => setFiltro(e.target.value)}
+          placeholder="🔍 Buscar cliente... (separe por vírgula)"
+          style={{ ...S.inp, width:280 }}
+        />
         <label style={{ fontSize:12, color:'var(--muted)' }}>De</label>
         <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={S.inp} />
         <label style={{ fontSize:12, color:'var(--muted)' }}>Até</label>
@@ -190,49 +205,33 @@ export default function CreditosPage() {
         <button onClick={carregar} style={S.btn}>Filtrar</button>
       </div>
 
-      <div style={{ padding:16, display:'grid', gap:16 }}>
-        {/* Info integração */}
-        <div style={{ background:'rgba(138,180,248,0.08)', border:'1px solid rgba(138,180,248,0.3)', borderRadius:8, padding:'10px 14px', fontSize:12, color:'var(--blue)' }}>
-          Os créditos lançados aqui aparecem automaticamente na página <strong>Cobranças</strong> ao aplicar desconto para o cliente.
-        </div>
-
-        {/* Formulário */}
-        <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:16 }}>
-          <h4 style={{ margin:'0 0 14px', color:'var(--text-header)', fontSize:14 }}>
-            {editId ? 'Editar Crédito' : 'Lançar Crédito'}
-          </h4>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:10 }}>
-            <Campo label="Cliente *">
-              <ClienteAutocomplete value={form.cliente} onChange={v => ch('cliente', v)} clientes={clientes} />
-            </Campo>
-            <Campo label="Valor *">
-              <input type="number" step="0.01" value={form.valor} onChange={e => ch('valor', e.target.value)} style={S.inp} placeholder="0,00" />
-            </Campo>
-            <Campo label="Motivo / Observação">
-              <input value={form.observacao} onChange={e => ch('observacao', e.target.value)} style={S.inp} placeholder="ex: Devolução, Presente…" />
-            </Campo>
-          </div>
-          <div style={{ display:'flex', gap:8, marginTop:14 }}>
-            <button onClick={handleSalvar} style={S.btn}>{editId ? 'Atualizar' : 'Lançar Crédito'}</button>
-            {editId && <button onClick={() => { setForm(VAZIO); setEditId(null) }} style={S.sec}>Cancelar</button>}
-          </div>
-        </div>
-
-        {/* Totalizadores */}
-        {!carregando && creditos.length > 0 && (
-          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-            <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'10px 16px' }}>
-              <div style={{ fontSize:11, color:'var(--muted)' }}>Total Lançado</div>
-              <div style={{ fontSize:18, fontWeight:800, color:'var(--blue)' }}>{fmtR(totalOriginal)}</div>
-            </div>
-            <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'10px 16px' }}>
-              <div style={{ fontSize:11, color:'var(--muted)' }}>Saldo Disponível</div>
-              <div style={{ fontSize:18, fontWeight:800, color:'var(--green)' }}>{fmtR(totalSaldo)}</div>
-            </div>
+      {/* Formulário */}
+      <div style={{ padding:16, background:'var(--bg)', borderBottom:'1px solid var(--border-light)' }}>
+        {editId && (
+          <div style={{ padding:'8px 12px', background:'rgba(251,188,4,0.1)', borderLeft:'3px solid var(--yellow)', marginBottom:12, fontSize:12, color:'var(--yellow)' }}>
+            Editando crédito
           </div>
         )}
 
-        {/* Lista */}
+        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 2fr auto', gap:12, alignItems:'end' }}>
+          <Campo label="Cliente">
+            <ClienteAutocomplete value={form.cliente} onChange={v => ch('cliente', v)} clientes={clientes} />
+          </Campo>
+          <Campo label="Valor">
+            <input value={form.valor} onChange={e => ch('valor', e.target.value)} placeholder="0,00" style={S.inp} />
+          </Campo>
+          <Campo label="Motivo / Observação">
+            <input value={form.observacao} onChange={e => ch('observacao', e.target.value)} placeholder="ex. Devolução, Presente..." style={S.inp} />
+          </Campo>
+          <div style={{ display:'flex', gap:8 }}>
+            {editId && <button onClick={() => { setForm(VAZIO); setEditId(null) }} style={S.sec}>Cancelar</button>}
+            <button onClick={handleSalvar} style={S.btn}>{editId ? 'Atualizar' : 'Lançar Crédito'}</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Lista */}
+      <div style={{ padding:16 }}>
         {carregando ? <p style={{ color:'var(--muted)' }}>Carregando…</p> : (
           <div style={{ overflowX:'auto' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
@@ -244,7 +243,7 @@ export default function CreditosPage() {
                 </tr>
               </thead>
               <tbody>
-                {creditos.map(c => (
+                {creditosFiltrados.map(c => (
                   <tr key={c.id} style={{ borderBottom:'1px solid var(--border-light)' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
                     onMouseLeave={e => e.currentTarget.style.background = ''}>
@@ -267,8 +266,11 @@ export default function CreditosPage() {
                     </td>
                   </tr>
                 ))}
-                {!creditos.length && (
+                {creditos.length === 0 && (
                   <tr><td colSpan={8} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito no período.</td></tr>
+                )}
+                {creditos.length > 0 && creditosFiltrados.length === 0 && (
+                  <tr><td colSpan={8} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum resultado para "{filtro}"</td></tr>
                 )}
               </tbody>
             </table>
