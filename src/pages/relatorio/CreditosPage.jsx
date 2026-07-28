@@ -5,6 +5,7 @@ import AppShell from '../../components/ui/AppShell'
 import {
   fmtR, getCreditosClientes, salvarCredito, excluirCredito, getClientesRelatorio,
 } from '../../services/relatorioService'
+import { getHistoricoCreditos } from '../../services/cobrancasService'
 
 const S = {
   inp: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'7px 10px', fontSize:13, outline:'none' },
@@ -97,6 +98,14 @@ function ClienteAutocomplete({ value, onChange, clientes }) {
 
 const VAZIO = { cliente:'', valor:'', observacao:'' }
 
+function fmtDataHora(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const data = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`
+  const hora = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  return `${data} ${hora}`
+}
+
 export default function CreditosPage() {
   const { profile }   = useAuth()
   const { showToast } = useApp()
@@ -110,6 +119,8 @@ export default function CreditosPage() {
   const [form, setForm]             = useState(VAZIO)
   const [editId, setEditId]         = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
+  const [historico, setHistorico]   = useState(null)
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -148,6 +159,19 @@ export default function CreditosPage() {
     try { await excluirCredito(id); showToast('Excluído!', 'success'); carregar() }
     catch { showToast('Erro ao excluir.', 'error') }
     setConfirmDel(null)
+  }
+
+  async function verHistorico(cliente) {
+    setLoadingHistorico(true)
+    setHistorico({ cliente, movimentos: [] })
+    try {
+      const mov = await getHistoricoCreditos(tenantId, cliente)
+      setHistorico({ cliente, movimentos: mov })
+    } catch (err) {
+      showToast('Erro ao carregar histórico: ' + err.message, 'error')
+      setHistorico(null)
+    }
+    setLoadingHistorico(false)
   }
 
   const totalSaldo    = creditos.reduce((s, c) => s + (Number(c.saldo)||0), 0)
@@ -214,7 +238,7 @@ export default function CreditosPage() {
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead>
                 <tr>
-                  {['Data','Cliente','Valor Original','Saldo','Utilizado','Motivo',''].map(h => (
+                  {['Data','Cliente','Valor Original','Saldo','Utilizado','Motivo','',''].map(h => (
                     <th key={h} style={S.th}>{h}</th>
                   ))}
                 </tr>
@@ -231,6 +255,11 @@ export default function CreditosPage() {
                     <td style={{ ...S.td, color:'var(--muted)' }}>{fmtR(c.utilizado)}</td>
                     <td style={{ ...S.td, color:'var(--muted)' }}>{c.observacao}</td>
                     <td style={S.td}>
+                      <button onClick={() => verHistorico(c.cliente)} style={{ ...S.btn, padding:'6px 12px', fontSize:11 }}>
+                        📜 Histórico
+                      </button>
+                    </td>
+                    <td style={S.td}>
                       <div style={{ display:'flex', gap:4 }}>
                         <button onClick={() => editar(c)} style={S.ico} title="Editar">✏️</button>
                         <button onClick={() => setConfirmDel({ id:c.id, label:c.cliente })} style={S.ico} title="Excluir">🗑️</button>
@@ -239,7 +268,7 @@ export default function CreditosPage() {
                   </tr>
                 ))}
                 {!creditos.length && (
-                  <tr><td colSpan={7} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito no período.</td></tr>
+                  <tr><td colSpan={8} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito no período.</td></tr>
                 )}
               </tbody>
             </table>
@@ -259,6 +288,66 @@ export default function CreditosPage() {
             <div className="modal-footer">
               <button onClick={() => setConfirmDel(null)} style={{ ...S.sec, flex:1 }}>Cancelar</button>
               <button onClick={() => handleExcluir(confirmDel.id)} style={{ ...S.del, flex:1 }}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Histórico */}
+      {historico && (
+        <div className="modal-overlay" onClick={() => setHistorico(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth:700, maxHeight:'80vh', overflow:'auto' }}>
+            <div className="modal-header">
+              <h3>📜 Histórico de Créditos - {historico.cliente}</h3>
+            </div>
+            <div className="modal-body" style={{ padding:0 }}>
+              {loadingHistorico ? (
+                <p style={{ padding:20, color:'var(--muted)' }}>Carregando histórico...</p>
+              ) : historico.movimentos.length === 0 ? (
+                <p style={{ padding:20, color:'var(--muted)', textAlign:'center' }}>Nenhuma movimentação registrada.</p>
+              ) : (
+                <div style={{ padding:16 }}>
+                  {historico.movimentos.map((mov, idx) => (
+                    <div key={mov.id} style={{
+                      padding:16,
+                      marginBottom:12,
+                      background: mov.tipo === 'CREDITO' ? 'rgba(129,201,149,0.08)' : 'rgba(251,188,4,0.08)',
+                      border: `1px solid ${mov.tipo === 'CREDITO' ? 'rgba(129,201,149,0.3)' : 'rgba(251,188,4,0.3)'}`,
+                      borderRadius:8,
+                    }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
+                        <div>
+                          <div style={{ fontSize:13, color:'var(--muted)', marginBottom:4 }}>
+                            {fmtDataHora(mov.created_at)}
+                          </div>
+                          <div style={{ fontSize:16, fontWeight:700, color: mov.tipo === 'CREDITO' ? 'var(--green)' : 'var(--yellow)' }}>
+                            {mov.tipo === 'CREDITO' ? '➕ Crédito' : '➖ Usado'} {fmtR(mov.valor)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign:'right' }}>
+                          <div style={{ fontSize:11, color:'var(--muted)' }}>Saldo</div>
+                          <div style={{ fontSize:14, fontWeight:600, color:'var(--text-body)' }}>
+                            {fmtR(mov.saldo_anterior)} → {fmtR(mov.saldo_posterior)}
+                          </div>
+                        </div>
+                      </div>
+                      {mov.motivo && (
+                        <div style={{ fontSize:12, color:'var(--muted)', marginTop:8 }}>
+                          💬 {mov.motivo}
+                        </div>
+                      )}
+                      {mov.cobranca_id && mov.cobrancas && (
+                        <div style={{ fontSize:11, color:'var(--blue)', marginTop:6 }}>
+                          🧾 Usado em: Pedido #{mov.cobranca_id.slice(0,8)} ({fmtData(mov.cobrancas.data)})
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setHistorico(null)} style={{ ...S.btn, flex:1 }}>Fechar</button>
             </div>
           </div>
         </div>
