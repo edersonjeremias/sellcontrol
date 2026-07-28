@@ -376,9 +376,13 @@ export async function getSaldoCliente(tenantId, cliente) {
   return { saldo, motivo }
 }
 
-export async function abaterCredito(tenantId, cliente, valor) {
+export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null, motivo = null) {
+  // Busca saldo anterior
+  const saldoAnterior = await getSaldoCliente(tenantId, cliente)
+
   const { data } = await supabase.from('creditos').select('*').eq('tenant_id', tid(tenantId)).ilike('cliente', cliente.trim()).gt('saldo_restante', 0).order('created_at')
   if (!data?.length) return
+
   let f = valor
   for (const c of data) {
     if (f <= 0) break
@@ -387,11 +391,30 @@ export async function abaterCredito(tenantId, cliente, valor) {
     if (f >= s) { f -= s; await supabase.from('creditos').update({ saldo_restante: 0, valor_utilizado: u + s }).eq('id', c.id) }
     else { await supabase.from('creditos').update({ saldo_restante: s - f, valor_utilizado: u + f }).eq('id', c.id); f = 0 }
   }
+
+  // Registra no histórico
+  const saldoPosterior = saldoAnterior - valor
+  await supabase.from('creditos_historico').insert([{
+    tenant_id: tid(tenantId),
+    cliente: cliente.trim(),
+    tipo: 'DEBITO',
+    valor: valor,
+    saldo_anterior: saldoAnterior,
+    saldo_posterior: saldoPosterior,
+    motivo: motivo,
+    cobranca_id: cobrancaId
+  }])
+
+  console.log(`💳 Crédito usado: ${cliente} | R$ ${valor} | Saldo: ${saldoAnterior} → ${saldoPosterior}`)
 }
 
-export async function devolverCredito(tenantId, cliente, valor) {
+export async function devolverCredito(tenantId, cliente, valor, motivo = null) {
+  // Busca saldo anterior
+  const saldoAnterior = await getSaldoCliente(tenantId, cliente)
+
   const { data } = await supabase.from('creditos').select('*').eq('tenant_id', tid(tenantId)).ilike('cliente', cliente.trim()).gt('valor_utilizado', 0).order('created_at', { ascending: false })
   if (!data?.length) return
+
   let f = valor
   for (const c of data) {
     if (f <= 0) break
@@ -401,6 +424,37 @@ export async function devolverCredito(tenantId, cliente, valor) {
     if (f <= usado) { await supabase.from('creditos').update({ saldo_restante: s + f, valor_utilizado: Math.max(0, u - f) }).eq('id', c.id); f = 0 }
     else { await supabase.from('creditos').update({ saldo_restante: o, valor_utilizado: 0 }).eq('id', c.id); f -= usado }
   }
+
+  // Registra no histórico
+  const saldoPosterior = saldoAnterior + valor
+  await supabase.from('creditos_historico').insert([{
+    tenant_id: tid(tenantId),
+    cliente: cliente.trim(),
+    tipo: 'CREDITO',
+    valor: valor,
+    saldo_anterior: saldoAnterior,
+    saldo_posterior: saldoPosterior,
+    motivo: motivo
+  }])
+
+  console.log(`➕ Crédito devolvido: ${cliente} | R$ ${valor} | Saldo: ${saldoAnterior} → ${saldoPosterior}`)
+}
+
+// ── Histórico de créditos ────────────────────────────────────
+export async function getHistoricoCreditos(tenantId, cliente = null) {
+  let query = supabase
+    .from('creditos_historico')
+    .select('*, cobrancas(id, cliente, data)')
+    .eq('tenant_id', tid(tenantId))
+    .order('created_at', { ascending: false })
+
+  if (cliente) {
+    query = query.ilike('cliente', cliente.trim())
+  }
+
+  const { data, error } = await query
+  if (error) throw error
+  return data || []
 }
 
 // ── Importação ───────────────────────────────────────────────

@@ -404,7 +404,7 @@ export default function CobrancasPage() {
         data_pagamento: novaDataPagamento
       })
 
-      if (dAbater) await abaterCredito(tenantId, sel.cliente, vDesc)
+      if (dAbater) await abaterCredito(tenantId, sel.cliente, vDesc, sel.id, dMotivo)
 
       const at = { ...sel, itens, total: novoTotal, link_mp: novoLink, id_mp: novoIdMp, status: novoStatus, data_pagamento: novaDataPagamento }
       setSel(at)
