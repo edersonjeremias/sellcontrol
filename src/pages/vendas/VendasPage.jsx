@@ -877,9 +877,16 @@ export default function VendasPage() {
       if (field === 'cliente_nome') {
         linhaAtualizada.liberado = false
         linhaAtualizada.sacolinha = null
+        // Recalcula isSent: só deve ser true se tiver status ENVIADO/VENDIDO E cliente
+        linhaAtualizada.isSent = ['ENVIADO', 'VENDIDO'].includes((linhaAtualizada.status || '').toUpperCase()) && value?.trim()
         const novasLinhas = [...prev]
         novasLinhas[idx] = linhaAtualizada
         return calcSacolas(novasLinhas)
+      }
+
+      if (field === 'status') {
+        // Recalcula isSent quando status muda
+        linhaAtualizada.isSent = ['ENVIADO', 'VENDIDO'].includes((value || '').toUpperCase()) && linhaAtualizada.cliente_nome?.trim()
       }
 
       if (field === 'preco') linhaAtualizada.preco = value.replace(/[^\d,]/g, '')
