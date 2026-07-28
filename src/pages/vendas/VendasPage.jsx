@@ -875,10 +875,13 @@ export default function VendasPage() {
       const linhaAtualizada = { ...prev[idx], [field]: value }
 
       if (field === 'cliente_nome') {
+        console.log('📝 Atualizando cliente_nome:', { antes: prev[idx].cliente_nome, depois: value, status: linhaAtualizada.status })
         linhaAtualizada.liberado = false
         linhaAtualizada.sacolinha = null
         // Recalcula isSent: só deve ser true se tiver status ENVIADO/VENDIDO E cliente
+        const antigoIsSent = linhaAtualizada.isSent
         linhaAtualizada.isSent = ['ENVIADO', 'VENDIDO'].includes((linhaAtualizada.status || '').toUpperCase()) && value?.trim()
+        console.log('🔒 isSent atualizado:', { antes: antigoIsSent, depois: linhaAtualizada.isSent })
         const novasLinhas = [...prev]
         novasLinhas[idx] = linhaAtualizada
         return calcSacolas(novasLinhas)
