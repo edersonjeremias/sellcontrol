@@ -518,34 +518,8 @@ export default function VendasPage() {
         return
       }
 
-      // 🚫 BLOQUEIO: Valida preços zerados
-      const linhasComPrecoZerado = linhasRef.current.filter(l =>
-        !l.deleted &&
-        l.produto?.trim() &&
-        (parseMoney(l.preco) === 0 || parseMoney(l.preco) === null) &&
-        (parseMoney(l.custo) === 0 || parseMoney(l.custo) === null) // Não é brinde (custo também zerado)
-      )
-
-      if (linhasComPrecoZerado.length > 0) {
-        const primeiraLinha = linhasComPrecoZerado[0]
-        const produtoNome = [primeiraLinha.produto, primeiraLinha.modelo, primeiraLinha.cor].filter(Boolean).join(' ')
-        showToast(`Preço R$ 0,00 não permitido! Produto: ${produtoNome}`, 'error', 4000)
-
-        // Foca no campo de preço da linha com problema
-        setTimeout(() => {
-          const linhaElement = document.querySelector(`tr[data-key="${primeiraLinha._key}"]`)
-          if (linhaElement) {
-            const precoInput = linhaElement.querySelector('.col-preco input')
-            if (precoInput) {
-              precoInput.focus()
-              precoInput.select()
-              linhaElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            }
-          }
-        }, 100)
-
-        return
-      }
+      // REMOVIDO: validação de preço zerado
+      // Agora só valida ao clicar em "Salvar"
 
       isSavingRef.current = true
 
@@ -587,19 +561,8 @@ export default function VendasPage() {
     const interval = setInterval(async () => {
       if (!hasUnsavedRef.current || isSavingRef.current || busyRef.current) return
 
-      // 🚫 BLOQUEIO: Valida preços zerados no auto-save também
-      const linhasComPrecoZerado = linhasRef.current.filter(l =>
-        !l.deleted &&
-        l.produto?.trim() &&
-        (parseMoney(l.preco) === 0 || parseMoney(l.preco) === null) &&
-        (parseMoney(l.custo) === 0 || parseMoney(l.custo) === null)
-      )
-
-      if (linhasComPrecoZerado.length > 0) {
-        console.warn('⚠️ Auto-save bloqueado: Há produtos com preço R$ 0,00')
-        // Não mostra toast no auto-save para não ficar aparecendo repetidamente
-        return
-      }
+      // REMOVIDO: validação de preço zerado no auto-save
+      // Permite salvar rascunhos, validação só ao finalizar
 
       isSavingRef.current = true
       try {
@@ -1283,6 +1246,47 @@ export default function VendasPage() {
     // Valida se Live está preenchida (obrigatório)
     if (!liveNome?.trim()) {
       showToast('Preencha o campo Live antes de salvar.', 'error')
+      return
+    }
+
+    // ✅ VALIDA PREÇOS ZERADOS - só ao clicar Salvar
+    const linhasComPrecoZerado = linhasRef.current.filter(l =>
+      !l.deleted &&
+      l.produto?.trim() &&
+      (parseMoney(l.preco) === 0 || parseMoney(l.preco) === null) &&
+      (parseMoney(l.custo) === 0 || parseMoney(l.custo) === null)
+    )
+
+    if (linhasComPrecoZerado.length > 0) {
+      const primeiraLinha = linhasComPrecoZerado[0]
+      const produtoNome = [primeiraLinha.produto, primeiraLinha.modelo, primeiraLinha.cor].filter(Boolean).join(' ')
+
+      showToast(`❌ Preço R$ 0,00 não permitido! Produto: ${produtoNome}`, 'error', 5000)
+
+      // Foca, destaca e faz scroll para a linha com problema
+      setTimeout(() => {
+        const linhaElement = document.querySelector(`tr[data-key="${primeiraLinha._key}"]`)
+        if (linhaElement) {
+          // Destaca a linha com animação
+          linhaElement.style.background = 'rgba(239, 68, 68, 0.2)'
+          linhaElement.style.transition = 'background 0.3s'
+
+          setTimeout(() => {
+            linhaElement.style.background = ''
+          }, 2000)
+
+          // Foca no campo de preço
+          const precoInput = linhaElement.querySelector('.col-preco input')
+          if (precoInput) {
+            precoInput.focus()
+            precoInput.select()
+          }
+
+          // Scroll suave para o topo (traz linha para cima)
+          linhaElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 100)
+
       return
     }
 
