@@ -228,7 +228,7 @@ export default function ComissoesPage() {
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600 }}>Vendido Bruto</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600 }}>Cancelados</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600 }}>Líquido Base</th>
-                  <th className="print:hidden" style={{ padding: '10px 8px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600 }}>% Comissão</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600 }}>% Comissão</th>
                   <th style={{ padding: '10px 8px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600 }}>Valor a Pagar</th>
                 </tr>
               </thead>
@@ -240,8 +240,9 @@ export default function ComissoesPage() {
                     <td style={{ padding: '8px', textAlign: 'right', color: 'var(--blue)', fontWeight: 600 }}>{fmtR(item.bruto)}</td>
                     <td style={{ padding: '8px', textAlign: 'right', color: 'var(--red)', fontWeight: 600 }}>{fmtR(item.cancelado)}</td>
                     <td style={{ padding: '8px', textAlign: 'right', color: 'var(--green)', fontWeight: 700 }}>{fmtR(item.liquido)}</td>
-                    <td className="print:hidden" style={{ padding: '8px', textAlign: 'center' }}>
+                    <td style={{ padding: '8px', textAlign: 'center' }}>
                       <input
+                        className="print:hidden"
                         type="number"
                         value={comissoes[item.chave] || 0}
                         onChange={e => setComissao(item.chave, e.target.value)}
@@ -259,6 +260,7 @@ export default function ComissoesPage() {
                         max="100"
                         step="0.1"
                       />
+                      <span className="hidden print:inline">{comissoes[item.chave] || 0} %</span>
                     </td>
                     <td style={{ padding: '8px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700 }}>
                       {fmtR(calcValorPagar(item.liquido, item.chave))}
@@ -272,7 +274,7 @@ export default function ComissoesPage() {
                   <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--blue)', fontWeight: 700, fontSize: 14 }}>{fmtR(totais.bruto)}</th>
                   <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--red)', fontWeight: 700, fontSize: 14 }}>{fmtR(totais.cancelado)}</th>
                   <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 14 }}>{fmtR(totais.liquido)}</th>
-                  <th className="print:hidden" style={{ padding: '12px 8px' }}></th>
+                  <th style={{ padding: '12px 8px' }}></th>
                   <th style={{ padding: '12px 8px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 14 }}>{fmtR(totais.comissao)}</th>
                 </tr>
               </tfoot>
@@ -287,10 +289,23 @@ export default function ComissoesPage() {
           /* Define orientação paisagem */
           @page {
             size: A4 landscape;
-            margin: 12mm;
+            margin: 15mm 10mm;
           }
 
-          /* Esconde tudo do sistema */
+          /* Esconde elementos do sistema */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          html, body {
+            width: 297mm;
+            height: 210mm;
+            margin: 0;
+            padding: 0;
+            background: white;
+          }
+
           .app-container,
           .app-drawer,
           .app-drawer-overlay,
@@ -300,19 +315,10 @@ export default function ComissoesPage() {
             display: none !important;
           }
 
-          /* Ajusta o corpo da página */
-          body {
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-
-          /* Força o conteúdo a ocupar toda largura */
           body * {
             visibility: hidden;
           }
 
-          /* Mostra apenas o conteúdo da impressão */
           [data-print-area],
           [data-print-area] * {
             visibility: visible !important;
@@ -320,88 +326,129 @@ export default function ComissoesPage() {
 
           [data-print-area] {
             position: absolute;
-            left: 0;
-            top: 0;
-            width: 100% !important;
-            max-width: 100% !important;
+            left: 10mm;
+            top: 15mm;
+            width: 277mm;
             padding: 0 !important;
           }
 
-          /* Ajusta tabela */
+          /* Cabeçalho */
+          [data-print-area] h1 {
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            text-align: center !important;
+            margin: 0 0 6px 0 !important;
+            color: #000 !important;
+          }
+
+          [data-print-area] p {
+            font-size: 11px !important;
+            text-align: center !important;
+            margin: 0 0 12px 0 !important;
+            color: #666 !important;
+          }
+
+          /* Tabela */
           table {
             width: 100% !important;
-            font-size: 10px !important;
-            color: #000 !important;
             border-collapse: collapse !important;
-            page-break-inside: auto;
+            margin-top: 8px !important;
+            font-size: 11px !important;
+            color: #000 !important;
+            border: 1px solid #ccc !important;
           }
 
           table thead th {
-            color: #000 !important;
-            border-bottom: 2px solid #333 !important;
-            padding: 6px 4px !important;
-            font-size: 9px !important;
+            background: #f0f0f0 !important;
+            border: 1px solid #ccc !important;
+            padding: 8px 6px !important;
             text-align: center !important;
+            font-size: 10px !important;
+            font-weight: 600 !important;
+            color: #000 !important;
+            white-space: nowrap !important;
           }
 
           table tbody td {
+            border: 1px solid #ccc !important;
+            padding: 6px 6px !important;
+            font-size: 11px !important;
             color: #000 !important;
-            border-bottom: 1px solid #ddd !important;
-            padding: 4px 4px !important;
-            font-size: 10px !important;
+          }
+
+          table tbody td:nth-child(1) {
+            text-align: center !important;
+          }
+
+          table tbody td:nth-child(2) {
+            text-align: left !important;
+          }
+
+          table tbody td:nth-child(3),
+          table tbody td:nth-child(4),
+          table tbody td:nth-child(5),
+          table tbody td:nth-child(7) {
+            text-align: right !important;
+          }
+
+          table tbody td:nth-child(6) {
+            text-align: center !important;
+          }
+
+          table tfoot tr {
+            background: #f8f8f8 !important;
           }
 
           table tfoot th {
-            border-top: 3px solid #000 !important;
-            background: #f5f5f5 !important;
-            padding: 7px 4px !important;
+            border: 1px solid #999 !important;
+            border-top: 2px solid #000 !important;
+            padding: 8px 6px !important;
             font-size: 11px !important;
+            font-weight: 700 !important;
+            color: #000 !important;
           }
 
-          /* Larguras específicas para cada coluna */
+          table tfoot th:nth-child(1),
+          table tfoot th:nth-child(2) {
+            text-align: left !important;
+          }
+
+          table tfoot th:nth-child(3),
+          table tfoot th:nth-child(4),
+          table tfoot th:nth-child(5),
+          table tfoot th:nth-child(7) {
+            text-align: right !important;
+          }
+
+          table tfoot th:nth-child(6) {
+            text-align: center !important;
+          }
+
+          /* Larguras das colunas */
           table th:nth-child(1),
           table td:nth-child(1) {
-            width: 12% !important;
+            width: 10% !important;
           }
 
           table th:nth-child(2),
           table td:nth-child(2) {
-            width: 18% !important;
+            width: 15% !important;
           }
 
           table th:nth-child(3),
-          table td:nth-child(3) {
-            width: 15% !important;
-            text-align: right !important;
-          }
-
+          table td:nth-child(3),
           table th:nth-child(4),
-          table td:nth-child(4) {
-            width: 14% !important;
-            text-align: right !important;
-          }
-
+          table td:nth-child(4),
           table th:nth-child(5),
-          table td:nth-child(5) {
-            width: 15% !important;
-            text-align: right !important;
+          table td:nth-child(5),
+          table th:nth-child(7),
+          table td:nth-child(7) {
+            width: 16% !important;
           }
 
           table th:nth-child(6),
           table td:nth-child(6) {
             width: 11% !important;
-            text-align: center !important;
-          }
-
-          table th:nth-child(7),
-          table td:nth-child(7) {
-            width: 15% !important;
-            text-align: right !important;
-          }
-
-          /* Garante quebra de linha adequada */
-          tr {
-            page-break-inside: avoid;
           }
         }
       `}</style>
