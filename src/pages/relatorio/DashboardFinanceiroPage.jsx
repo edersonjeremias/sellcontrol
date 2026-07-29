@@ -329,13 +329,13 @@ export default function DashboardFinanceiroPage() {
       {modal && (
         <ChartModal titulo={modal.titulo} total={modal.total} periodo={modal.periodo} onClose={() => setModal(null)}>
           {modal.tipo === 'ano' && (
-            <><BarChart items={modal.dados} color="#8ab4f8" height={280} /><TabelaGrafico items={modal.dados} cols={['Ano','Total']} /></>
+            <BarChart items={modal.dados} color="#b8b8b8" height={320} />
           )}
           {modal.tipo === 'mes' && (
-            <><BarChart items={modal.dados} color="#81c995" height={280} /><TabelaGrafico items={modal.dados} cols={['Mês','Total']} /></>
+            <BarChart items={modal.dados} color="#b8b8b8" height={320} />
           )}
           {modal.tipo === 'dia' && (
-            <><BarChart items={modal.dados} color="#c58af9" height={280} /><TabelaGrafico items={modal.dados} cols={['Dia','Total']} /></>
+            <BarChart items={modal.dados} color="#b8b8b8" height={320} />
           )}
           {modal.tipo === 'clientes' && (
             <div>
