@@ -77,35 +77,21 @@ function mapRow(row) {
 function calcSacolas(linhas) {
   const usados = new Set()
   const mapa   = {}
-
-  // Primeira passada: preserva sacolinhas existentes
   linhas.forEach(l => {
-    if (l.deleted || !l.cliente_nome?.trim()) return
+    if (l.deleted || !l.cliente_nome?.trim()) return   // inclui isSent para reservar seus números
     const c = l.cliente_nome.trim().toLowerCase()
     if (l.sacolinha && !isNaN(l.sacolinha)) {
       usados.add(Number(l.sacolinha))
       if (!mapa[c]) mapa[c] = Number(l.sacolinha)
     }
   })
-
-  // Segunda passada: atribui novos números apenas para quem não tem
   return linhas.map(l => {
     if (l.deleted || l.isSent) return l
     if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
-
     const c = l.cliente_nome.trim().toLowerCase()
-
-    // Se já tem sacolinha, mantém
-    if (l.sacolinha && !isNaN(l.sacolinha)) return l
-
-    // Se cliente já tem número atribuído, usa o mesmo
     if (mapa[c]) return { ...l, sacolinha: mapa[c] }
-
-    // Caso contrário, atribui novo número
-    let n = 1
-    while (usados.has(n)) n++
-    usados.add(n)
-    mapa[c] = n
+    let n = 1; while (usados.has(n)) n++
+    usados.add(n); mapa[c] = n
     return { ...l, sacolinha: n }
   })
 }
@@ -181,6 +167,11 @@ export default function VendasPage() {
   const [modalClienteErro,  setModalClienteErro]  = useState(null) // { key, nome }
   const [confirmacao,       setConfirmacao]       = useState(null)
 
+  // ── Backup e Status de Salvamento ──
+  const [saveStatus, setSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
+  const [lastSaveTime, setLastSaveTime] = useState(null)
+  const [showRecoverModal, setShowRecoverModal] = useState(false)
+
   // ── Modo Histórico ── (REMOVIDO)
 
   // ── Refs ──
@@ -213,6 +204,100 @@ export default function VendasPage() {
     if (!tenantId) return
     localStorage.setItem(`sc_cols_${tenantId}`, JSON.stringify(colsConfig))
   }, [colsConfig, tenantId])
+
+  // ══════════════════════════════════════════════════════════
+  // PROTEÇÃO CONTRA PERDA DE DADOS
+  // ══════════════════════════════════════════════════════════
+
+  // 1. BACKUP AUTOMÁTICO em localStorage
+  useEffect(() => {
+    if (!tenantId || linhas.length === 0) return
+
+    const backupData = {
+      linhas,
+      dataLive,
+      liveNome,
+      timestamp: new Date().toISOString()
+    }
+
+    try {
+      localStorage.setItem(`sc_vendas_backup_${tenantId}`, JSON.stringify(backupData))
+      console.log('✅ Backup automático salvo:', linhas.length, 'linhas')
+    } catch (err) {
+      console.error('❌ Erro ao salvar backup:', err)
+    }
+  }, [linhas, dataLive, liveNome, tenantId])
+
+  // 2. AVISO ao sair/atualizar página
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // Só avisa se tiver dados não salvos
+      if (linhas.length > 0 && linhas.some(l => !l.deleted && l.produto?.trim())) {
+        e.preventDefault()
+        e.returnValue = 'Você tem produtos digitados. Tem certeza que quer sair?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [linhas])
+
+  // 3. VERIFICAR backup ao carregar página
+  useEffect(() => {
+    if (!tenantId || linhas.length > 0) return
+
+    try {
+      const backup = localStorage.getItem(`sc_vendas_backup_${tenantId}`)
+      if (!backup) return
+
+      const backupData = JSON.parse(backup)
+      const backupTime = new Date(backupData.timestamp)
+      const now = new Date()
+      const diffMinutes = (now - backupTime) / 1000 / 60
+
+      // Se backup tem menos de 2 horas, oferece recuperação
+      if (diffMinutes < 120 && backupData.linhas?.length > 0) {
+        setShowRecoverModal(true)
+        console.log('🔄 Backup encontrado:', backupData.linhas.length, 'linhas')
+      }
+    } catch (err) {
+      console.error('❌ Erro ao verificar backup:', err)
+    }
+  }, [tenantId, linhas.length])
+
+  // Função para recuperar backup
+  const recuperarBackup = useCallback(() => {
+    try {
+      const backup = localStorage.getItem(`sc_vendas_backup_${tenantId}`)
+      if (!backup) return
+
+      const backupData = JSON.parse(backup)
+      setLinhas(backupData.linhas || [])
+      setDataLive(backupData.dataLive || dataLive)
+      setLiveNome(backupData.liveNome || '')
+      setShowRecoverModal(false)
+
+      showToast('✅ Dados recuperados com sucesso!', 'success')
+      console.log('✅ Backup recuperado:', backupData.linhas.length, 'linhas')
+    } catch (err) {
+      console.error('❌ Erro ao recuperar backup:', err)
+      showToast('Erro ao recuperar dados do backup', 'error')
+    }
+  }, [tenantId, dataLive, showToast])
+
+  // Função para descartar backup
+  const descartarBackup = useCallback(() => {
+    try {
+      localStorage.removeItem(`sc_vendas_backup_${tenantId}`)
+      setShowRecoverModal(false)
+      console.log('🗑️ Backup descartado')
+    } catch (err) {
+      console.error('❌ Erro ao descartar backup:', err)
+    }
+  }, [tenantId])
+
+  // ══════════════════════════════════════════════════════════
 
   // ── setBusy helper ──
   const setBusy = useCallback((v, msg = '') => {
@@ -871,12 +956,6 @@ export default function VendasPage() {
   const handleFieldChange = useCallback((key, field, value) => {
     console.log('🔧 handleFieldChange:', { key, field, value })
 
-    // BLOQUEIA digitação se não tiver LIVE selecionada
-    if (!liveNome?.trim() && field !== 'cliente_nome') {
-      showToast('⚠️ Selecione a LIVE antes de começar a digitar!', 'warning', 3000)
-      return
-    }
-
     // Usa _key para identificar a linha (não depende de índice visual)
     setLinhas(prev => {
       const idx = prev.findIndex(l => l._key === key)
@@ -1241,19 +1320,17 @@ export default function VendasPage() {
       // Salva as vendas com os status atualizados
       await salvarVendas(tenantId, linhasAtualizadas, dataLive, liveNome)
 
-      // Remove itens vendidos da visualização e ZERA as sacolinhas das linhas restantes
+      // Remove itens vendidos da visualização
       const itensVendidos = linhasAtualizadas.filter(l => l.status === 'Vendido').length
-      const linhasRestantes = linhasAtualizadas
-        .filter(l => l.status !== 'Vendido')
-        .map(l => ({ ...l, sacolinha: null })) // ZERA sacolinhas após salvar com Live
+      const linhasRestantes = linhasAtualizadas.filter(l => l.status !== 'Vendido')
 
       setLinhas(linhasRestantes)
       setHasUnsaved(false)
 
       if (itensVendidos > 0) {
-        showToast(`✅ ${itensVendidos} item(ns) marcado(s) como Vendido e removido(s) da tela! Numeração zerada.`, 'success')
+        showToast(`✅ ${itensVendidos} item(ns) marcado(s) como Vendido e removido(s) da tela!`, 'success')
       } else {
-        showToast('Vendas salvas! Numeração de sacolinhas zerada.', 'success')
+        showToast('Vendas salvas!', 'success')
       }
     } catch (err) {
       console.error('Erro ao salvar vendas:', err)
@@ -1367,6 +1444,14 @@ export default function VendasPage() {
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
               <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
+
+              {/* INDICADOR DE STATUS */}
+              {!liveNome?.trim() && (
+                <div style={{ padding:'8px 16px', background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.3)', borderRadius:6, color:'#f59e0b', fontSize:13, fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
+                  ⚠️ Selecione a LIVE para começar
+                </div>
+              )}
+
               <div className="save-group">
                 <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
               </div>
@@ -1570,6 +1655,33 @@ export default function VendasPage() {
               style={{ marginTop:18, width:'100%', padding:'9px 0', background:'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.12)', borderRadius:7, color:'#e6edf3', fontWeight:700, fontSize:14, cursor:'pointer' }}>
               Fechar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RECUPERAR BACKUP */}
+      {showRecoverModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.7)', zIndex:999, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'#1a2232', border:'2px solid #f59e0b', borderRadius:12, padding:'28px 32px', width:450, boxShadow:'0 12px 40px rgba(0,0,0,.8)' }}>
+            <div style={{ fontSize:20, fontWeight:800, color:'#f59e0b', marginBottom:12, display:'flex', alignItems:'center', gap:10 }}>
+              <span style={{ fontSize:28 }}>⚠️</span>
+              Dados Não Salvos Encontrados!
+            </div>
+            <div style={{ fontSize:14, color:'#c9d1d9', marginBottom:20, lineHeight:1.6 }}>
+              Encontramos produtos que você digitou anteriormente mas não foram salvos.
+              <br/><br/>
+              <strong>Deseja recuperar esses dados?</strong>
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={descartarBackup}
+                style={{ flex:1, padding:'12px 0', background:'transparent', border:'1px solid rgba(255,255,255,.2)', borderRadius:7, color:'#8b949e', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+                ❌ Descartar
+              </button>
+              <button onClick={recuperarBackup}
+                style={{ flex:2, padding:'12px 0', background:'#1d6f42', border:'1px solid rgba(34,197,94,.3)', borderRadius:7, color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer' }}>
+                ✅ Recuperar Dados
+              </button>
+            </div>
           </div>
         </div>
       )}
