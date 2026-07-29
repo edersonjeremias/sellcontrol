@@ -194,9 +194,9 @@ export default function ComissoesPage() {
       </div>
 
       {/* Conteúdo principal */}
-      <div style={{ padding: 16 }}>
+      <div style={{ padding: 16 }} data-print-area>
         {/* Cabeçalho para impressão - só aparece ao imprimir */}
-        <div className="hidden print:block" style={{ marginBottom: 20, textAlign: 'center' }}>
+        <div className="hidden print:block" style={{ marginBottom: 16, textAlign: 'center' }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: '#000', marginBottom: 4 }}>
             Relatório de Comissões
           </h1>
@@ -276,23 +276,90 @@ export default function ComissoesPage() {
       {/* Estilos para impressão */}
       <style>{`
         @media print {
+          /* Esconde tudo do sistema */
+          .app-container,
+          .app-drawer,
+          .app-drawer-overlay,
+          .app-header,
+          nav,
+          header {
+            display: none !important;
+          }
+
+          /* Ajusta o corpo da página */
           body {
             background: white !important;
+            margin: 0 !important;
+            padding: 10mm !important;
           }
+
+          /* Força o conteúdo a ocupar toda largura */
+          body * {
+            visibility: hidden;
+          }
+
+          /* Mostra apenas o conteúdo da impressão */
+          [data-print-area],
+          [data-print-area] * {
+            visibility: visible !important;
+          }
+
+          [data-print-area] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+
+          /* Ajusta tabela */
           table {
+            width: 100% !important;
+            font-size: 11px !important;
             color: #000 !important;
+            border-collapse: collapse !important;
           }
+
           table th {
             color: #000 !important;
             border-bottom: 2px solid #333 !important;
+            padding: 6px 4px !important;
+            font-size: 10px !important;
           }
+
           table td {
             color: #000 !important;
             border-bottom: 1px solid #ddd !important;
+            padding: 5px 4px !important;
+            font-size: 11px !important;
           }
+
           table tfoot th {
             border-top: 3px solid #000 !important;
             background: #f5f5f5 !important;
+            padding: 8px 4px !important;
+          }
+
+          /* Ajusta larguras das colunas */
+          table th:nth-child(1),
+          table td:nth-child(1) {
+            width: 12% !important;
+          }
+
+          table th:nth-child(2),
+          table td:nth-child(2) {
+            width: 20% !important;
+          }
+
+          table th:nth-child(3),
+          table td:nth-child(3),
+          table th:nth-child(4),
+          table td:nth-child(4),
+          table th:nth-child(5),
+          table td:nth-child(5),
+          table th:nth-child(6),
+          table td:nth-child(6) {
+            width: 17% !important;
           }
         }
       `}</style>
