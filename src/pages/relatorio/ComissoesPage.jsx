@@ -204,7 +204,10 @@ export default function ComissoesPage() {
       {/* Conteúdo principal */}
       <div style={{ padding: '8px 16px' }} data-print-area>
         {/* Cabeçalho para impressão - só aparece ao imprimir */}
-        <div className="hidden print:block" style={{ marginBottom: 12, paddingBottom: 8, borderBottom: '2px solid #000' }}>
+        <div className="hidden print:block" style={{ marginBottom: 16, textAlign: 'center' }}>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#000', margin: '0 0 4px 0' }}>
+            Relatório de Comissões - VM Kids
+          </h1>
           <p style={{ fontSize: 11, color: '#666', margin: 0 }}>
             Período: {fmtData(dataInicio)} a {fmtData(dataFim)}
             {vendedoraSel && ` | Vendedora: ${vendedoraSel}`}
@@ -281,6 +284,12 @@ export default function ComissoesPage() {
       {/* Estilos para impressão */}
       <style>{`
         @media print {
+          /* Define orientação paisagem */
+          @page {
+            size: A4 landscape;
+            margin: 12mm;
+          }
+
           /* Esconde tudo do sistema */
           .app-container,
           .app-drawer,
@@ -295,7 +304,7 @@ export default function ComissoesPage() {
           body {
             background: white !important;
             margin: 0 !important;
-            padding: 10mm !important;
+            padding: 0 !important;
           }
 
           /* Força o conteúdo a ocupar toda largura */
@@ -315,37 +324,41 @@ export default function ComissoesPage() {
             top: 0;
             width: 100% !important;
             max-width: 100% !important;
+            padding: 0 !important;
           }
 
           /* Ajusta tabela */
           table {
             width: 100% !important;
-            font-size: 11px !important;
+            font-size: 10px !important;
             color: #000 !important;
             border-collapse: collapse !important;
+            page-break-inside: auto;
           }
 
-          table th {
+          table thead th {
             color: #000 !important;
             border-bottom: 2px solid #333 !important;
             padding: 6px 4px !important;
-            font-size: 10px !important;
+            font-size: 9px !important;
+            text-align: center !important;
           }
 
-          table td {
+          table tbody td {
             color: #000 !important;
             border-bottom: 1px solid #ddd !important;
-            padding: 5px 4px !important;
-            font-size: 11px !important;
+            padding: 4px 4px !important;
+            font-size: 10px !important;
           }
 
           table tfoot th {
             border-top: 3px solid #000 !important;
             background: #f5f5f5 !important;
-            padding: 8px 4px !important;
+            padding: 7px 4px !important;
+            font-size: 11px !important;
           }
 
-          /* Ajusta larguras das colunas */
+          /* Larguras específicas para cada coluna */
           table th:nth-child(1),
           table td:nth-child(1) {
             width: 12% !important;
@@ -353,18 +366,42 @@ export default function ComissoesPage() {
 
           table th:nth-child(2),
           table td:nth-child(2) {
-            width: 20% !important;
+            width: 18% !important;
           }
 
           table th:nth-child(3),
-          table td:nth-child(3),
+          table td:nth-child(3) {
+            width: 15% !important;
+            text-align: right !important;
+          }
+
           table th:nth-child(4),
-          table td:nth-child(4),
+          table td:nth-child(4) {
+            width: 14% !important;
+            text-align: right !important;
+          }
+
           table th:nth-child(5),
-          table td:nth-child(5),
+          table td:nth-child(5) {
+            width: 15% !important;
+            text-align: right !important;
+          }
+
           table th:nth-child(6),
           table td:nth-child(6) {
-            width: 17% !important;
+            width: 11% !important;
+            text-align: center !important;
+          }
+
+          table th:nth-child(7),
+          table td:nth-child(7) {
+            width: 15% !important;
+            text-align: right !important;
+          }
+
+          /* Garante quebra de linha adequada */
+          tr {
+            page-break-inside: avoid;
           }
         }
       `}</style>
