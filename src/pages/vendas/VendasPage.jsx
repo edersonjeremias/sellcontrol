@@ -1260,10 +1260,17 @@ export default function VendasPage() {
     if (linhasComPrecoZerado.length > 0) {
       const primeiraLinha = linhasComPrecoZerado[0]
       const produtoNome = [primeiraLinha.produto, primeiraLinha.modelo, primeiraLinha.cor].filter(Boolean).join(' ')
+      const codigo = primeiraLinha.codigo || 'sem código'
 
-      showToast(`❌ Preço R$ 0,00 não permitido! Produto: ${produtoNome}`, 'error', 5000)
+      // MOVE a linha para o TOPO da tabela
+      setLinhas(prev => {
+        const outras = prev.filter(l => l._key !== primeiraLinha._key)
+        return [primeiraLinha, ...outras]
+      })
 
-      // Foca, destaca e faz scroll para a linha com problema
+      showToast(`❌ Preço R$ 0,00 não permitido! Cód: ${codigo} | ${produtoNome}`, 'error', 6000)
+
+      // Foca, destaca e faz scroll para o topo
       setTimeout(() => {
         const linhaElement = document.querySelector(`tr[data-key="${primeiraLinha._key}"]`)
         if (linhaElement) {
@@ -1273,7 +1280,7 @@ export default function VendasPage() {
 
           setTimeout(() => {
             linhaElement.style.background = ''
-          }, 2000)
+          }, 3000)
 
           // Foca no campo de preço
           const precoInput = linhaElement.querySelector('.col-preco input')
@@ -1282,10 +1289,10 @@ export default function VendasPage() {
             precoInput.select()
           }
 
-          // Scroll suave para o topo (traz linha para cima)
-          linhaElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          // Scroll para o topo
+          scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
         }
-      }, 100)
+      }, 150)
 
       return
     }
