@@ -186,119 +186,114 @@ export default function ComissoesPage() {
   return (
     <AppShell title="Relatório de Comissões" hideTitle>
       {/* Header - esconde na impressão */}
-      <div className="print:hidden flex items-center flex-wrap gap-2 px-4 py-3 border-b" style={{ borderColor: 'var(--border-light)', background: 'var(--header-bg)' }}>
-        <span className="text-sm font-bold" style={{ color: 'var(--text-header)' }}>Relatório de Comissões</span>
-        <div className="flex-1" />
+      <div className="print:hidden" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--border-light)', background: 'var(--header-bg)' }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-header)' }}>Relatório de Comissões</span>
+        <div style={{ flex: 1 }} />
 
-        <label className="text-xs" style={{ color: 'var(--muted)' }}>De:</label>
-        <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} style={S.inp} className="print:hidden" />
+        <label style={{ fontSize: 12, color: 'var(--muted)' }}>De:</label>
+        <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} style={S.inp} />
 
-        <label className="text-xs" style={{ color: 'var(--muted)' }}>Até:</label>
-        <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inp} className="print:hidden" />
+        <label style={{ fontSize: 12, color: 'var(--muted)' }}>Até:</label>
+        <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inp} />
 
-        <label className="text-xs" style={{ color: 'var(--muted)' }}>Vendedora:</label>
-        <select value={vendedoraSel} onChange={e => setVendedoraSel(e.target.value)} style={{ ...S.inp, width: 150 }} className="print:hidden">
+        <label style={{ fontSize: 12, color: 'var(--muted)' }}>Vendedora:</label>
+        <select value={vendedoraSel} onChange={e => setVendedoraSel(e.target.value)} style={{ ...S.inp, width: 150 }}>
           <option value="">Todas</option>
           {vendedoras.map(v => <option key={v} value={v}>{v}</option>)}
         </select>
 
-        <button onClick={buscar} disabled={carregando} className="print:hidden px-4 py-2 text-xs font-semibold text-white rounded-md" style={{ background: 'var(--blue)', cursor: carregando ? 'wait' : 'pointer' }}>
+        <button onClick={buscar} disabled={carregando} style={{
+          background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 6,
+          padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: carregando ? 'wait' : 'pointer'
+        }}>
           {carregando ? 'Buscando...' : '🔍 Buscar'}
         </button>
 
         {dados.length > 0 && (
-          <button onClick={imprimirPDF} className="print:hidden px-4 py-2 text-xs font-semibold text-white rounded-md" style={{ background: '#9b59b6' }}>
+          <button onClick={imprimirPDF} style={{
+            background: '#9b59b6', color: '#fff', border: 'none', borderRadius: 6,
+            padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer'
+          }}>
             💾 Salvar PDF
           </button>
         )}
       </div>
 
       {/* Conteúdo principal */}
-      <div className="p-4">
+      <div style={{ padding: '8px 16px' }} data-print-area>
         {/* Cabeçalho para impressão - só aparece ao imprimir */}
-        <div className="hidden print:block text-center mb-6 pb-4 border-b-2 border-gray-300 print:text-black">
-          <h1 className="text-lg font-bold text-black mb-1 print:text-black">
+        <div className="hidden print:block" style={{ marginBottom: 16, textAlign: 'center' }}>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#000', margin: '0 0 4px 0' }}>
             Relatório de Comissões{nomeEmpresa && ` - ${nomeEmpresa}`}
           </h1>
-          <p className="text-xs text-gray-600 print:text-black">
+          <p style={{ fontSize: 11, color: '#666', margin: 0 }}>
             Período: {fmtData(dataInicio)} a {fmtData(dataFim)}
             {vendedoraSel && ` | Vendedora: ${vendedoraSel}`}
           </p>
         </div>
 
         {dados.length === 0 ? (
-          <div className="text-center py-10" style={{ color: 'var(--muted)' }}>
+          <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
             {carregando ? 'Carregando...' : 'Selecione o período e clique em Buscar'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full max-w-4xl mx-auto border-collapse text-xs print:text-black print:border-gray-400">
-              <thead className="bg-gray-800 print:bg-gray-200 print:text-black" style={{ colorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
-                <tr>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2 text-left text-white print:text-black text-[11px] font-semibold">Data</th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2 text-left text-white print:text-black text-[11px] font-semibold">Vendedora</th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2 text-right text-white print:text-black text-[11px] font-semibold">Vendido Bruto</th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2 text-right text-white print:text-black text-[11px] font-semibold">Cancelados</th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2 text-right text-white print:text-black text-[11px] font-semibold">Líquido Base</th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2 text-center text-white print:text-black text-[11px] font-semibold">% Com.</th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2 text-right text-white print:text-black text-[11px] font-semibold">Valor a Pagar</th>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
+                  <th style={{ padding: '8px 6px', textAlign: 'left', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Data</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'left', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Vendedora</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Vendido Bruto</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Cancelados</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Líquido Base</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>% Com.</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Valor a Pagar</th>
                 </tr>
               </thead>
               <tbody>
                 {dados.map(item => (
-                  <tr key={item.chave}>
-                    <td className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-1.5 text-[11px]" style={{ color: 'var(--text-body)' }}>{fmtData(item.data)}</td>
-                    <td className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-1.5 text-[11px]" style={{ color: 'var(--text-body)' }}>{item.vendedora}</td>
-                    <td className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-1.5 text-right text-[11px] font-semibold" style={{ color: 'var(--blue)' }}>
-                      <span className="print:text-black">{fmtR(item.bruto)}</span>
-                    </td>
-                    <td className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-1.5 text-right text-[11px] font-semibold" style={{ color: 'var(--red)' }}>
-                      <span className="print:text-black">{fmtR(item.cancelado)}</span>
-                    </td>
-                    <td className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-1.5 text-right text-[11px] font-bold" style={{ color: 'var(--green)' }}>
-                      <span className="print:text-black">{fmtR(item.liquido)}</span>
-                    </td>
-                    <td className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-1.5 text-center">
+                  <tr key={item.chave} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '6px', color: 'var(--text-body)', fontSize: 11 }}>{fmtData(item.data)}</td>
+                    <td style={{ padding: '6px', color: 'var(--text-body)', fontSize: 11 }}>{item.vendedora}</td>
+                    <td style={{ padding: '6px', textAlign: 'right', color: 'var(--blue)', fontWeight: 600, fontSize: 11 }}>{fmtR(item.bruto)}</td>
+                    <td style={{ padding: '6px', textAlign: 'right', color: 'var(--red)', fontWeight: 600, fontSize: 11 }}>{fmtR(item.cancelado)}</td>
+                    <td style={{ padding: '6px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 11 }}>{fmtR(item.liquido)}</td>
+                    <td style={{ padding: '6px', textAlign: 'center' }}>
                       <input
+                        className="print:hidden"
                         type="number"
                         value={comissoes[item.chave] || 0}
                         onChange={e => setComissao(item.chave, e.target.value)}
-                        className="w-16 p-1 border rounded text-center text-[11px] print:border-none print:bg-transparent print:p-0 print:w-auto print:inline-block print:appearance-none print:text-black"
                         style={{
+                          width: 60,
                           background: 'var(--input-bg)',
-                          borderColor: 'var(--input-border)',
-                          color: 'var(--input-text)'
+                          border: '1px solid var(--input-border)',
+                          borderRadius: 4,
+                          color: 'var(--input-text)',
+                          padding: '4px 6px',
+                          fontSize: 11,
+                          textAlign: 'center'
                         }}
                         min="0"
                         max="100"
                         step="0.1"
                       />
-                      <span className="print:inline text-[11px] print:text-black"> %</span>
+                      <span className="hidden print:inline" style={{ fontSize: 11 }}>{comissoes[item.chave] || 0} %</span>
                     </td>
-                    <td className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-1.5 text-right text-[11px] font-bold" style={{ color: 'var(--yellow)' }}>
-                      <span className="print:text-black">{fmtR(calcValorPagar(item.liquido, item.chave))}</span>
+                    <td style={{ padding: '6px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 11 }}>
+                      {fmtR(calcValorPagar(item.liquido, item.chave))}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-blue-50 print:bg-gray-100" style={{ colorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
-                <tr className="border-t-2 border-gray-400">
-                  <th colSpan="2" className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2.5 text-left text-xs font-bold" style={{ color: 'var(--text-header)' }}>
-                    <span className="print:text-black">TOTAIS:</span>
-                  </th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2.5 text-right text-xs font-bold" style={{ color: 'var(--blue)' }}>
-                    <span className="print:text-black">{fmtR(totais.bruto)}</span>
-                  </th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2.5 text-right text-xs font-bold" style={{ color: 'var(--red)' }}>
-                    <span className="print:text-black">{fmtR(totais.cancelado)}</span>
-                  </th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2.5 text-right text-xs font-bold" style={{ color: 'var(--green)' }}>
-                    <span className="print:text-black">{fmtR(totais.liquido)}</span>
-                  </th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2.5"></th>
-                  <th className="border border-gray-300 print:border-gray-400 print:text-black print:p-2 px-2 py-2.5 text-right text-xs font-bold" style={{ color: 'var(--yellow)' }}>
-                    <span className="print:text-black">{fmtR(totais.comissao)}</span>
-                  </th>
+              <tfoot>
+                <tr style={{ borderTop: '3px solid var(--border-light)', background: 'rgba(138,180,248,0.05)' }}>
+                  <th colSpan="2" style={{ padding: '10px 6px', textAlign: 'left', color: 'var(--text-header)', fontWeight: 700, fontSize: 12 }}>TOTAIS:</th>
+                  <th style={{ padding: '10px 6px', textAlign: 'right', color: 'var(--blue)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.bruto)}</th>
+                  <th style={{ padding: '10px 6px', textAlign: 'right', color: 'var(--red)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.cancelado)}</th>
+                  <th style={{ padding: '10px 6px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.liquido)}</th>
+                  <th style={{ padding: '10px 6px' }}></th>
+                  <th style={{ padding: '10px 6px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.comissao)}</th>
                 </tr>
               </tfoot>
             </table>
@@ -306,17 +301,25 @@ export default function ComissoesPage() {
         )}
       </div>
 
-      {/* Estilos mínimos para impressão */}
+      {/* Estilos para impressão */}
       <style>{`
         @media print {
+          /* Define orientação retrato (vertical) */
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 8mm;
           }
 
+          /* Esconde elementos do sistema */
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: white;
           }
 
           .app-container,
@@ -328,10 +331,157 @@ export default function ComissoesPage() {
             display: none !important;
           }
 
-          table {
-            table-layout: fixed !important;
+          body * {
+            visibility: hidden;
           }
 
+          [data-print-area],
+          [data-print-area] * {
+            visibility: visible !important;
+          }
+
+          [data-print-area] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100% !important;
+            padding: 0 !important;
+          }
+
+          /* Cabeçalho */
+          [data-print-area] h1 {
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            text-align: center !important;
+            margin: 0 0 3px 0 !important;
+            color: #000 !important;
+          }
+
+          [data-print-area] p {
+            font-size: 8px !important;
+            text-align: center !important;
+            margin: 0 0 6px 0 !important;
+            color: #666 !important;
+          }
+
+          /* Tabela - 100% flexível */
+          table {
+            width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            margin-top: 4px !important;
+            font-size: 8px !important;
+            color: #000 !important;
+            border: 1px solid #999 !important;
+          }
+
+          table thead th {
+            background: #f0f0f0 !important;
+            border: 1px solid #999 !important;
+            padding: 3px 2px !important;
+            text-align: center !important;
+            font-size: 7px !important;
+            font-weight: 600 !important;
+            color: #000 !important;
+            line-height: 1.1 !important;
+            word-wrap: break-word !important;
+          }
+
+          table tbody td {
+            border: 1px solid #999 !important;
+            padding: 3px 2px !important;
+            font-size: 8px !important;
+            color: #000 !important;
+            line-height: 1.2 !important;
+            word-wrap: break-word !important;
+            overflow: hidden !important;
+          }
+
+          table tbody td:nth-child(1) {
+            text-align: center !important;
+          }
+
+          table tbody td:nth-child(2) {
+            text-align: left !important;
+          }
+
+          table tbody td:nth-child(3),
+          table tbody td:nth-child(4),
+          table tbody td:nth-child(5),
+          table tbody td:nth-child(7) {
+            text-align: right !important;
+          }
+
+          table tbody td:nth-child(6) {
+            text-align: center !important;
+          }
+
+          table tfoot tr {
+            background: #f8f8f8 !important;
+          }
+
+          table tfoot th {
+            border: 1px solid #999 !important;
+            border-top: 2px solid #000 !important;
+            padding: 4px 2px !important;
+            font-size: 8px !important;
+            font-weight: 700 !important;
+            color: #000 !important;
+          }
+
+          table tfoot th:nth-child(1),
+          table tfoot th:nth-child(2) {
+            text-align: left !important;
+          }
+
+          table tfoot th:nth-child(3),
+          table tfoot th:nth-child(4),
+          table tfoot th:nth-child(5),
+          table tfoot th:nth-child(7) {
+            text-align: right !important;
+          }
+
+          table tfoot th:nth-child(6) {
+            text-align: center !important;
+          }
+
+          /* Larguras em percentual - flexíveis e responsivas */
+          table th:nth-child(1),
+          table td:nth-child(1) {
+            width: 10% !important;
+          }
+
+          table th:nth-child(2),
+          table td:nth-child(2) {
+            width: 13% !important;
+          }
+
+          table th:nth-child(3),
+          table td:nth-child(3) {
+            width: 18% !important;
+          }
+
+          table th:nth-child(4),
+          table td:nth-child(4) {
+            width: 16% !important;
+          }
+
+          table th:nth-child(5),
+          table td:nth-child(5) {
+            width: 18% !important;
+          }
+
+          table th:nth-child(6),
+          table td:nth-child(6) {
+            width: 7% !important;
+          }
+
+          table th:nth-child(7),
+          table td:nth-child(7) {
+            width: 18% !important;
+          }
+
+          /* Garante quebra de linha adequada */
           tr {
             page-break-inside: avoid;
           }
