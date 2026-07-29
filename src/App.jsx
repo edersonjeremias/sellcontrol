@@ -68,6 +68,7 @@ import ContatosPage                   from './pages/contatos/ContatosPage'
 import DashboardFinanceiroPage        from './pages/relatorio/DashboardFinanceiroPage'
 import ContasPagarPage                from './pages/relatorio/ContasPagarPage'
 import CreditosPage                   from './pages/relatorio/CreditosPage'
+import ComissoesPage                  from './pages/relatorio/ComissoesPage'
 import NotificacoesPage               from './pages/notificacoes/NotificacoesPageKanban'
 import CuponsPage                     from './pages/cupons/CuponsPage'
 import DebugPage                      from './pages/DebugPage'
@@ -107,6 +108,7 @@ export default function App() {
             <Route path="/dashboard-financeiro"  element={<RequireAuth><DashboardFinanceiroPage /></RequireAuth>} />
             <Route path="/contas-pagar"          element={<RequireAuth><ContasPagarPage /></RequireAuth>} />
             <Route path="/creditos-clientes"     element={<RequireAuth><CreditosPage /></RequireAuth>} />
+            <Route path="/comissoes"             element={<RequireAuth><ComissoesPage /></RequireAuth>} />
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
             <Route path="/portal/:slug" element={<PortalApp />} />
             <Route path="/portal" element={<PortalApp />} />
