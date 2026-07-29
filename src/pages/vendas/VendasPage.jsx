@@ -430,7 +430,7 @@ export default function VendasPage() {
       if (linhasComPrecoZerado.length > 0) {
         const primeiraLinha = linhasComPrecoZerado[0]
         const produtoNome = [primeiraLinha.produto, primeiraLinha.modelo, primeiraLinha.cor].filter(Boolean).join(' ')
-        showToast(`❌ Preço R$ 0,00 não permitido!\n\n📦 ${produtoNome}\n\nPreencha o preço antes de salvar.`, 'error', 6000)
+        showToast(`Preço R$ 0,00 não permitido! Produto: ${produtoNome}`, 'error', 4000)
 
         // Foca no campo de preço da linha com problema
         setTimeout(() => {
@@ -498,8 +498,7 @@ export default function VendasPage() {
 
       if (linhasComPrecoZerado.length > 0) {
         console.warn('⚠️ Auto-save bloqueado: Há produtos com preço R$ 0,00')
-        const produtoNome = [linhasComPrecoZerado[0].produto, linhasComPrecoZerado[0].modelo, linhasComPrecoZerado[0].cor].filter(Boolean).join(' ')
-        showToast(`❌ Preço R$ 0,00 não permitido!\n\n📦 ${produtoNome}`, 'error', 5000)
+        // Não mostra toast no auto-save para não ficar aparecendo repetidamente
         return
       }
 
