@@ -36,6 +36,24 @@ export default function ComissoesPage() {
   const [vendedoras, setVendedoras] = useState([])
   const [comissoes, setComissoes] = useState({}) // { "chave": percentual }
   const [carregando, setCarregando] = useState(false)
+  const [nomeEmpresa, setNomeEmpresa] = useState('')
+
+  // Busca nome da empresa
+  useEffect(() => {
+    if (!tenantId) return
+    const fetchEmpresa = async () => {
+      const { data } = await supabase
+        .from('tenants')
+        .select('name')
+        .eq('id', tid(tenantId))
+        .single()
+
+      if (data) {
+        setNomeEmpresa(data.name)
+      }
+    }
+    fetchEmpresa()
+  }, [tenantId])
 
   // Busca lista de vendedoras (lives) únicas
   useEffect(() => {
@@ -206,7 +224,7 @@ export default function ComissoesPage() {
         {/* Cabeçalho para impressão - só aparece ao imprimir */}
         <div className="hidden print:block" style={{ marginBottom: 16, textAlign: 'center' }}>
           <h1 style={{ fontSize: 18, fontWeight: 700, color: '#000', margin: '0 0 4px 0' }}>
-            Relatório de Comissões - VM Kids
+            Relatório de Comissões{nomeEmpresa && ` - ${nomeEmpresa}`}
           </h1>
           <p style={{ fontSize: 11, color: '#666', margin: 0 }}>
             Período: {fmtData(dataInicio)} a {fmtData(dataFim)}
