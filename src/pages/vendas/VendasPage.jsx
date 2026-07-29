@@ -77,21 +77,35 @@ function mapRow(row) {
 function calcSacolas(linhas) {
   const usados = new Set()
   const mapa   = {}
+
+  // Primeira passada: preserva sacolinhas existentes
   linhas.forEach(l => {
-    if (l.deleted || !l.cliente_nome?.trim()) return   // inclui isSent para reservar seus números
+    if (l.deleted || !l.cliente_nome?.trim()) return
     const c = l.cliente_nome.trim().toLowerCase()
     if (l.sacolinha && !isNaN(l.sacolinha)) {
       usados.add(Number(l.sacolinha))
       if (!mapa[c]) mapa[c] = Number(l.sacolinha)
     }
   })
+
+  // Segunda passada: atribui novos números apenas para quem não tem
   return linhas.map(l => {
     if (l.deleted || l.isSent) return l
     if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
+
     const c = l.cliente_nome.trim().toLowerCase()
+
+    // Se já tem sacolinha, mantém
+    if (l.sacolinha && !isNaN(l.sacolinha)) return l
+
+    // Se cliente já tem número atribuído, usa o mesmo
     if (mapa[c]) return { ...l, sacolinha: mapa[c] }
-    let n = 1; while (usados.has(n)) n++
-    usados.add(n); mapa[c] = n
+
+    // Caso contrário, atribui novo número
+    let n = 1
+    while (usados.has(n)) n++
+    usados.add(n)
+    mapa[c] = n
     return { ...l, sacolinha: n }
   })
 }
@@ -857,6 +871,12 @@ export default function VendasPage() {
   const handleFieldChange = useCallback((key, field, value) => {
     console.log('🔧 handleFieldChange:', { key, field, value })
 
+    // BLOQUEIA digitação se não tiver LIVE selecionada
+    if (!liveNome?.trim() && field !== 'cliente_nome') {
+      showToast('⚠️ Selecione a LIVE antes de começar a digitar!', 'warning', 3000)
+      return
+    }
+
     // Usa _key para identificar a linha (não depende de índice visual)
     setLinhas(prev => {
       const idx = prev.findIndex(l => l._key === key)
@@ -1221,17 +1241,19 @@ export default function VendasPage() {
       // Salva as vendas com os status atualizados
       await salvarVendas(tenantId, linhasAtualizadas, dataLive, liveNome)
 
-      // Remove itens vendidos da visualização
+      // Remove itens vendidos da visualização e ZERA as sacolinhas das linhas restantes
       const itensVendidos = linhasAtualizadas.filter(l => l.status === 'Vendido').length
-      const linhasRestantes = linhasAtualizadas.filter(l => l.status !== 'Vendido')
+      const linhasRestantes = linhasAtualizadas
+        .filter(l => l.status !== 'Vendido')
+        .map(l => ({ ...l, sacolinha: null })) // ZERA sacolinhas após salvar com Live
 
       setLinhas(linhasRestantes)
       setHasUnsaved(false)
 
       if (itensVendidos > 0) {
-        showToast(`✅ ${itensVendidos} item(ns) marcado(s) como Vendido e removido(s) da tela!`, 'success')
+        showToast(`✅ ${itensVendidos} item(ns) marcado(s) como Vendido e removido(s) da tela! Numeração zerada.`, 'success')
       } else {
-        showToast('Vendas salvas!', 'success')
+        showToast('Vendas salvas! Numeração de sacolinhas zerada.', 'success')
       }
     } catch (err) {
       console.error('Erro ao salvar vendas:', err)
