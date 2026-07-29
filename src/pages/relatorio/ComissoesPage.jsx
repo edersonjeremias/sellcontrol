@@ -66,13 +66,13 @@ export default function ComissoesPage() {
 
     setCarregando(true)
     try {
+      // Busca vendas ENVIADAS/VENDIDAS e também CANCELADAS
       let query = supabase
         .from('vendas')
         .select('data_live, live_nome, preco, preco_promocional, status')
         .eq('tenant_id', tid(tenantId))
         .gte('data_live', dataInicio)
         .lte('data_live', dataFim)
-        .in('status', ['ENVIADO', 'Vendido', 'VENDIDO', 'CANCELADO'])
 
       if (vendedoraSel) {
         query = query.eq('live_nome', vendedoraSel)
@@ -85,6 +85,14 @@ export default function ComissoesPage() {
       // Agrupar por data + vendedora
       const grouped = {}
       ;(vendas || []).forEach(v => {
+        const status = (v.status || '').toUpperCase()
+
+        // Só conta vendas enviadas/vendidas ou canceladas
+        const isVendido = ['ENVIADO', 'VENDIDO'].includes(status)
+        const isCancelado = status === 'CANCELADO' || status.includes('CANCEL')
+
+        if (!isVendido && !isCancelado) return // Ignora vendas apenas cadastradas
+
         const key = `${v.data_live}|${v.live_nome || '(sem live)'}`
         if (!grouped[key]) {
           grouped[key] = {
@@ -97,11 +105,11 @@ export default function ComissoesPage() {
 
         // Usa preço promocional se existir, senão usa preço normal
         const valor = Number(v.preco_promocional || v.preco) || 0
-        grouped[key].bruto += valor
 
-        const status = (v.status || '').toUpperCase()
-        if (status === 'CANCELADO' || status.includes('CANCEL')) {
+        if (isCancelado) {
           grouped[key].cancelado += valor
+        } else if (isVendido) {
+          grouped[key].bruto += valor
         }
       })
 
@@ -194,13 +202,10 @@ export default function ComissoesPage() {
       </div>
 
       {/* Conteúdo principal */}
-      <div style={{ padding: 16 }} data-print-area>
+      <div style={{ padding: '8px 16px' }} data-print-area>
         {/* Cabeçalho para impressão - só aparece ao imprimir */}
-        <div className="hidden print:block" style={{ marginBottom: 16, textAlign: 'center' }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#000', marginBottom: 4 }}>
-            Relatório de Comissões
-          </h1>
-          <p style={{ fontSize: 12, color: '#666' }}>
+        <div className="hidden print:block" style={{ marginBottom: 12, paddingBottom: 8, borderBottom: '2px solid #000' }}>
+          <p style={{ fontSize: 11, color: '#666', margin: 0 }}>
             Período: {fmtData(dataInicio)} a {fmtData(dataFim)}
             {vendedoraSel && ` | Vendedora: ${vendedoraSel}`}
           </p>
