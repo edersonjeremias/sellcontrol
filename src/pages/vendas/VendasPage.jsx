@@ -26,6 +26,13 @@ function gerarId() {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
 
+// Formata data ISO (YYYY-MM-DD) para DD/MM/YYYY
+function formatarData(dataISO) {
+  if (!dataISO) return ''
+  const [ano, mes, dia] = dataISO.split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
 function novaLinha(codigo = '') {
   return {
     _key: gerarId(), // KEY ÚNICA E ESTÁVEL
@@ -607,7 +614,7 @@ export default function VendasPage() {
       return
     }
 
-    // ✅ AUTO-SAVE ANTES DE BUSCAR (evita perder dados digitados)
+    // 🚫 BLOQUEIA BUSCA SE TEM DADOS E MUDOU DATA/LIVE
     const linhasComDados = linhasRef.current.filter(l =>
       !l.deleted &&
       !l.isSent &&
@@ -615,11 +622,38 @@ export default function VendasPage() {
     )
 
     if (linhasComDados.length > 0) {
+      // Pega data/live da primeira linha com dados
+      const primeiraLinha = linhasComDados[0]
+      const dataDasLinhas = primeiraLinha.data_live
+      const liveDasLinhas = primeiraLinha.live_nome
+
+      // ✅ VALIDAÇÃO 1: Mudou a DATA?
+      if (dataDasLinhas && dataDasLinhas !== dataLive) {
+        showToast(
+          `🚫 Você tem produtos não salvos do dia ${formatarData(dataDasLinhas)}. Salve a Live antes de buscar outra data!`,
+          'error',
+          6000
+        )
+        return // BLOQUEIA busca
+      }
+
+      // ✅ VALIDAÇÃO 2: Mudou a LIVE?
+      if (liveDasLinhas && liveDasLinhas.trim() !== (liveNome || '').trim()) {
+        showToast(
+          `🚫 Você tem produtos não salvos da Live "${liveDasLinhas}". Salve a Live antes de buscar outra!`,
+          'error',
+          6000
+        )
+        return // BLOQUEIA busca
+      }
+
+      // ✅ VALIDAÇÃO 3: Live preenchida?
       if (!liveNome?.trim()) {
         showToast('⚠️ Preencha a LIVE antes de buscar (há dados não salvos)', 'warning', 4000)
         return
       }
 
+      // ✅ Se passou validações, salva automaticamente (mesma data/live)
       try {
         setBusy(true, 'Salvando dados antes de buscar...')
         await salvarVendas(tenantId, linhasComDados, dataLive, liveNome)
