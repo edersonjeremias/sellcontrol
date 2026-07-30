@@ -139,7 +139,8 @@ export default function VendasPage() {
     return hoje.toISOString().split('T')[0] // Formato YYYY-MM-DD
   })
   const [liveNome,    setLiveNome]    = useState('')
-  const [statusFiltro, setStatusFiltro] = useState('cadastrados') // 'cadastrados' | 'vendidos' | 'toda-live'
+  // ✅ SEMPRE BUSCA TODA A LIVE (sem filtro de status)
+  const statusFiltro = 'toda-live'
   const [busy,        setBusyState]   = useState(false)
   const [busyMsg,     setBusyMsg]     = useState('')
   const [hasUnsaved,  setHasUnsaved]  = useState(false)
@@ -416,14 +417,6 @@ export default function VendasPage() {
     }
   }, [filtro, tenantId])
 
-  // ── Força statusFiltro para pendentes se não for Master/Admin e não tiver permissão ──
-  useEffect(() => {
-    const isMasterOuAdmin = profile?.role === 'master' || profile?.role === 'admin'
-    if (!isMasterOuAdmin && !permissoes.pode_editar_enviadas && statusFiltro !== 'pendentes') {
-      setStatusFiltro('pendentes')
-    }
-  }, [permissoes.pode_editar_enviadas, profile?.role])
-
   // ── INIT ──
   useEffect(() => {
     async function init() {
@@ -617,22 +610,8 @@ export default function VendasPage() {
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
-      let rows = []
-
-      // Filtra conforme status selecionado
-      if (statusFiltro === 'cadastrados') {
-        // 📦 CADASTRADOS: Busca tudo, mas vai filtrar depois para mostrar só sem cliente
-        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
-      } else if (statusFiltro === 'vendidos') {
-        // ✅ VENDIDOS: Apenas com cliente
-        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: true })
-      } else if (statusFiltro === 'toda-live') {
-        // 🎯 TODA A LIVE: TUDO (com e sem cliente)
-        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
-      } else {
-        // Fallback padrão: cadastrados
-        rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
-      }
+      // 🎯 SEMPRE BUSCA TODA A LIVE (com e sem cliente)
+      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
 
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
@@ -641,20 +620,11 @@ export default function VendasPage() {
       setHasUnsaved(false)
 
       if (!novas.length) {
-        const msg = statusFiltro === 'pendentes'
-          ? 'Nenhuma venda pendente encontrada. Use o campo de busca para encontrar produtos ou clique em + Novo.'
-          : statusFiltro === 'sessao'
-          ? 'Nenhum produto encontrado para esta sessão. Clique em + Novo para começar.'
-          : statusFiltro === 'enviadas'
-          ? 'Nenhuma venda enviada encontrada para os filtros selecionados.'
-          : statusFiltro === 'cadastrados'
-          ? 'Nenhum produto cadastrado encontrado para esta data.'
-          : 'Nenhuma venda encontrada.'
-        setTabelaMsg(msg)
+        setTabelaMsg('Nenhuma venda encontrada para esta data/live.')
       }
     } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
     finally { setBusy(false) }
-  }, [tenantId, dataLive, liveNome, statusFiltro])
+  }, [tenantId, dataLive, liveNome])
 
   const novo = useCallback(() => {
     if (busy) return
@@ -1418,19 +1388,6 @@ export default function VendasPage() {
               <AutocompleteInput value={liveNome} onChange={setLiveNome}
                 list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
             </div>
-            {/* Filtro Status - sempre aparece para Master/Admin, ou se tiver permissão */}
-            {(profile?.role === 'master' || profile?.role === 'admin' || permissoes.pode_editar_enviadas) && (
-              <div className="field">
-                <label>Status</label>
-                <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}
-                  style={{ width: '100%', height: 40, padding: '0 12px', borderRadius: 6, border: '1px solid var(--input-border)',
-                           background: 'var(--input-bg)', color: 'var(--input-text)', fontSize: 14, cursor: 'pointer' }}>
-                  <option value="cadastrados">📦 Apenas Cadastrados (sem cliente)</option>
-                  <option value="vendidos">✅ Vendidos (com cliente)</option>
-                  <option value="toda-live">🎯 Toda a Live (tudo)</option>
-                </select>
-              </div>
-            )}
             <div className="total-container">
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>
               <div className="total-valor">
