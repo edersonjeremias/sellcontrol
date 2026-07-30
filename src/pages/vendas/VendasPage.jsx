@@ -607,6 +607,30 @@ export default function VendasPage() {
       return
     }
 
+    // ✅ AUTO-SAVE ANTES DE BUSCAR (evita perder dados digitados)
+    const linhasComDados = linhasRef.current.filter(l =>
+      !l.deleted &&
+      !l.isSent &&
+      l.produto?.trim()
+    )
+
+    if (linhasComDados.length > 0) {
+      if (!liveNome?.trim()) {
+        showToast('⚠️ Preencha a LIVE antes de buscar (há dados não salvos)', 'warning', 4000)
+        return
+      }
+
+      try {
+        setBusy(true, 'Salvando dados antes de buscar...')
+        await salvarVendas(tenantId, linhasComDados, dataLive, liveNome)
+        showToast('✅ Dados salvos automaticamente', 'success', 2000)
+      } catch (err) {
+        setBusy(false)
+        showToast('❌ Erro ao salvar dados. Busca cancelada para não perder informações.', 'error', 5000)
+        return // NÃO busca se falhou ao salvar
+      }
+    }
+
     setBusy(true, 'Buscando dados...')
     setTabelaMsg('Buscando registros...')
     try {
