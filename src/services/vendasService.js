@@ -119,7 +119,7 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
   let query = supabase
     .from('vendas').select('*')
     .eq('tenant_id', tid)
-    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })  // ✅ Ordena por ID (sequencial, garante ordem exata)
 
   if (dataLive)         query = query.eq('data_live', dataLive)
   if (liveNome?.trim()) query = query.eq('live_nome', liveNome.trim())
