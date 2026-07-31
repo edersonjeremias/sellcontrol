@@ -142,8 +142,12 @@ export default function VendasPage() {
   const [config,      setConfig]      = useState({ codigo_automatico: false, proximo_codigo: 100, modo_promocao: false })
   const [permissoes,  setPermissoes]  = useState({ pode_editar_enviadas: true })
   const [dataLive,    setDataLive]    = useState(() => {
+    // Usa data LOCAL (não UTC) para evitar diferença de timezone
     const hoje = new Date()
-    return hoje.toISOString().split('T')[0] // Formato YYYY-MM-DD
+    const ano = hoje.getFullYear()
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0')
+    const dia = String(hoje.getDate()).padStart(2, '0')
+    return `${ano}-${mes}-${dia}` // YYYY-MM-DD
   })
   const [liveNome,    setLiveNome]    = useState('')
   // ✅ SEMPRE BUSCA TODA A LIVE (sem filtro de status)
