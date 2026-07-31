@@ -30,7 +30,15 @@ function safeQuery(promise) {
 export async function getDadosIniciais(tenantId = null) {
   const tid = TENANT_ID(tenantId)
   const [livesRes, bloqRes, cobRes] = await Promise.all([
-    safeQuery(supabase.from('lives').select('nome').eq('tenant_id', tid).order('nome').limit(50000)),
+    // Busca lives ÚNICAS da tabela vendas
+    safeQuery(supabase
+      .from('vendas')
+      .select('live_nome')
+      .eq('tenant_id', tid)
+      .not('live_nome', 'is', null)
+      .not('live_nome', 'eq', '')
+      .order('live_nome')
+      .limit(50000)),
     safeQuery(supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
       .eq('tenant_id', tid).eq('bloqueado', true).limit(50000)),
     // Cobrancas pendentes = dívidas ativas do cliente
@@ -40,7 +48,9 @@ export async function getDadosIniciais(tenantId = null) {
       .in('status', ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE'])),
   ])
 
-  const lives = livesRes.data?.map(l => l.nome) || []
+  // Remove duplicatas e filtra vazios
+  const livesUnicas = [...new Set(livesRes.data?.map(l => l.live_nome).filter(Boolean) || [])]
+  const lives = livesUnicas.sort()
   const bloqueados = {}
 
   bloqRes.data?.forEach(c => {
