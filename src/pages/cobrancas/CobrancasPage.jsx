@@ -15,7 +15,9 @@ import { incrementarUsoCupom } from '../../services/cuponsService'
 import { getConfig } from '../../services/configService'
 
 // ── Constantes ─────────────────────────────────────────────────
-const HOJE = new Date().toISOString().slice(0, 10)
+// Usa data LOCAL (não UTC) para evitar diferença de timezone
+const hoje = new Date()
+const HOJE = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
 
 const COR_STATUS = {
   PENDENTE:  'var(--muted)',
