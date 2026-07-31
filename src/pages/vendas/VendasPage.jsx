@@ -442,6 +442,7 @@ export default function VendasPage() {
           total_produtos: lst?.produtos?.length || 0,
           primeiros_5_clientes: lst?.clientes?.slice(0, 5)
         })
+        console.log('🔍 DEBUG Lives carregadas:', db?.lives) // DEBUG TEMPORÁRIO
         setGlobalDB(db)
         setListas(lst)
         setConfig({
