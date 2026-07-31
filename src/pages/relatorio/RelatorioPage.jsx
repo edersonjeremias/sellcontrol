@@ -38,6 +38,7 @@ export default function RelatorioPage() {
   const [dataIni, setDataIni]       = useState(primeiroDiaMes)
   const [dataFim, setDataFim]       = useState(ultimoDiaMes)
   const [busca, setBusca]           = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('todos') // 'todos' | 'vendidos' | 'cadastrados'
   const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
   const [carregando, setCarregando] = useState(false)
 
@@ -56,16 +57,28 @@ export default function RelatorioPage() {
 
   // Filtro de busca aplicado CLIENT-SIDE em tempo real (sem chamada ao servidor)
   const vendas = useMemo(() => {
+    let resultado = vendasBase
+
+    // ✅ Filtro por STATUS
+    if (filtroStatus === 'vendidos') {
+      resultado = resultado.filter(v => v.cliente_nome?.trim())
+    } else if (filtroStatus === 'cadastrados') {
+      resultado = resultado.filter(v => !v.cliente_nome?.trim())
+    }
+
+    // ✅ Filtro por BUSCA
     const termo = busca.trim().toLowerCase()
-    if (!termo) return vendasBase
-    // Suporta múltiplos termos separados por vírgula OU espaço
-    const termos = termo.split(/[,\s]+/).filter(Boolean)
-    return vendasBase.filter(v => {
-      const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.cliente_nome, v.live_nome, v.codigo]
-        .join(' ').toLowerCase()
-      return termos.every(t => txt.includes(t))
-    })
-  }, [vendasBase, busca])
+    if (termo) {
+      const termos = termo.split(/[,\s]+/).filter(Boolean)
+      resultado = resultado.filter(v => {
+        const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.cliente_nome, v.live_nome, v.codigo]
+          .join(' ').toLowerCase()
+        return termos.every(t => txt.includes(t))
+      })
+    }
+
+    return resultado
+  }, [vendasBase, busca, filtroStatus])
 
   const totalLiquido = vendas.reduce((s, v) => {
     const st = (v.status || '').toUpperCase()
@@ -82,6 +95,11 @@ export default function RelatorioPage() {
         <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={S.inp} />
         <label style={{ fontSize:12, color:'var(--muted)' }}>Até</label>
         <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inp} />
+        <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ ...S.inp, minWidth:140 }}>
+          <option value="todos">Todos</option>
+          <option value="vendidos">✅ Vendidos</option>
+          <option value="cadastrados">📦 Cadastrados</option>
+        </select>
         <button onClick={carregar} style={S.btn}>Filtrar</button>
       </div>
 
