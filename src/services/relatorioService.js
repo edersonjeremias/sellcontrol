@@ -133,7 +133,9 @@ export async function getCreditosClientes(tenantId, { dataInicio, dataFim } = {}
 }
 
 export async function salvarCredito(tenantId, credito) {
-  const valor = Number(credito.valor) || 0
+  // Aceita vírgula como separador decimal (padrão Brasil)
+  const valorStr = String(credito.valor || '0').replace(',', '.')
+  const valor = Number(valorStr) || 0
   if (credito.id) {
     const { error } = await supabase.from('creditos')
       .update({ cliente: credito.cliente || '', valor_original: valor, motivo: credito.observacao || 'Crédito da Loja' })

@@ -369,10 +369,32 @@ export async function getMapaCreditosClientes(tenantId) {
 }
 
 export async function getSaldoCliente(tenantId, cliente) {
-  const { data } = await supabase.from('creditos').select('*').eq('tenant_id', tid(tenantId)).ilike('cliente', cliente.trim())
+  // Normaliza nome removendo pontos/underscores para match flexível (bruhcorreia = bruh.correia)
+  const clienteNorm = cliente.trim().toLowerCase().replace(/[._-]/g, '')
+
+  const { data } = await supabase
+    .from('creditos')
+    .select('*')
+    .eq('tenant_id', tid(tenantId))
+
   if (!data?.length) return { saldo: 0, motivo: '' }
+
+  // Filtra client-side com normalização
+  const creditos = data.filter(c => {
+    const cNorm = (c.cliente || '').toLowerCase().replace(/[._-]/g, '')
+    return cNorm === clienteNorm
+  })
+
+  if (!creditos.length) return { saldo: 0, motivo: '' }
+
   let saldo = 0, motivo = ''
-  data.forEach(c => { const s = Number(c.saldo_restante) || 0; if (s > 0) { saldo += s; motivo = c.motivo || 'Crédito da Loja' } })
+  creditos.forEach(c => {
+    const s = Number(c.saldo_restante) || 0
+    if (s > 0) {
+      saldo += s
+      motivo = c.motivo || 'Crédito da Loja'
+    }
+  })
   return { saldo, motivo }
 }
 
@@ -380,8 +402,23 @@ export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null,
   // Busca saldo anterior
   const saldoAnterior = await getSaldoCliente(tenantId, cliente)
 
-  const { data } = await supabase.from('creditos').select('*').eq('tenant_id', tid(tenantId)).ilike('cliente', cliente.trim()).gt('saldo_restante', 0).order('created_at')
-  if (!data?.length) return
+  // Busca todos os créditos e filtra com normalização
+  const clienteNorm = cliente.trim().toLowerCase().replace(/[._-]/g, '')
+  const { data: todosCreditos } = await supabase
+    .from('creditos')
+    .select('*')
+    .eq('tenant_id', tid(tenantId))
+    .gt('saldo_restante', 0)
+    .order('created_at')
+
+  if (!todosCreditos?.length) return
+
+  const data = todosCreditos.filter(c => {
+    const cNorm = (c.cliente || '').toLowerCase().replace(/[._-]/g, '')
+    return cNorm === clienteNorm
+  })
+
+  if (!data.length) return
 
   let f = valor
   for (const c of data) {
