@@ -33,6 +33,23 @@ export default function MeuFrete() {
 
       if (romsError) throw romsError
 
+      // Busca itens (vendas) de cada romaneio e filtra romaneios vazios
+      const romsComItens = []
+      for (const rom of romsData || []) {
+        const numeroRomaneio = parseInt(rom.numero.replace(/\D/g, ''))
+
+        const { data: itens, error: itensError } = await supabase
+          .from('vendas')
+          .select('id, codigo, produto, modelo, cor, tamanho, preco, status')
+          .eq('tenant_id', tenantId)
+          .eq('numero_pedido', numeroRomaneio)
+          .order('codigo')
+
+        if (!itensError && itens && itens.length > 0) {
+          romsComItens.push({ ...rom, itens })
+        }
+      }
+
       const { data: endsData, error: endsError } = await supabase
         .from('enderecos_clientes')
         .select('*')
@@ -42,7 +59,7 @@ export default function MeuFrete() {
 
       if (endsError) throw endsError
 
-      setRomaneios(romsData || [])
+      setRomaneios(romsComItens)
       setEnderecos(endsData || [])
 
       if (endsData?.length > 0) {
@@ -316,6 +333,60 @@ export default function MeuFrete() {
                   </div>
                 </div>
 
+                {/* LISTA DE PEÇAS */}
+                {rom.itens && rom.itens.length > 0 && (
+                  <div style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 12,
+                  }}>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, fontWeight: 600 }}>
+                      📦 ITENS DESTE ROMANEIO ({rom.itens.length}):
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {rom.itens.map((item, idx) => (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'start',
+                            padding: '6px 8px',
+                            background: 'rgba(255,255,255,0.03)',
+                            borderRadius: 6,
+                            fontSize: 13,
+                          }}
+                        >
+                          <div style={{ color: '#e8eaed', flex: 1 }}>
+                            <span style={{ color: 'var(--p-blue)', fontWeight: 600 }}>#{item.codigo}</span>
+                            {' '}
+                            {item.produto || '-'}
+                            {item.modelo && ` ${item.modelo}`}
+                            {item.cor && ` ${item.cor}`}
+                            {item.tamanho && ` • ${item.tamanho}`}
+                          </div>
+                          <div style={{ color: 'var(--p-green)', fontWeight: 600, marginLeft: 8 }}>
+                            R$ {Number(item.preco || 0).toFixed(2)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: '1px solid rgba(255,255,255,0.1)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      color: 'var(--p-green)',
+                      fontWeight: 700,
+                    }}>
+                      <span>TOTAL DOS PRODUTOS:</span>
+                      <span>R$ {rom.itens.reduce((sum, i) => sum + (Number(i.preco) || 0), 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+
                 {rom.status === 'pronto' && (
                   <button
                     onClick={() => handleCotarFrete(rom)}
@@ -376,12 +447,50 @@ export default function MeuFrete() {
                     borderRadius: 8,
                     padding: 12,
                   }}>
-                    <div style={{ color: 'var(--p-green)', fontWeight: 700 }}>
+                    <div style={{ color: 'var(--p-green)', fontWeight: 700, marginBottom: 4 }}>
                       ✓ Frete Pago
                     </div>
-                    <div style={{ color: '#9aa0a6', fontSize: 13, marginTop: 4 }}>
+                    <div style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 10 }}>
                       Seu pedido está sendo preparado para envio!
                     </div>
+                    {rom.transportadora && (
+                      <div style={{ color: '#e8eaed', fontSize: 13, marginBottom: 10 }}>
+                        📦 {rom.transportadora} - {rom.servico}<br />
+                        💰 Frete: R$ {(rom.valor_frete || 0).toFixed(2)} • ⏱️ {rom.prazo_entrega || 0} dia(s)
+                      </div>
+                    )}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const pag = await buscarPagamentoRomaneio(rom.id)
+                          if (pag) {
+                            alert(`📄 RECIBO DE PAGAMENTO\n\n` +
+                              `Romaneio: ${rom.numero}\n` +
+                              `Valor Frete: R$ ${(rom.valor_frete || 0).toFixed(2)}\n` +
+                              `Status: ${pag.status === 'aprovado' ? '✓ APROVADO' : pag.status}\n` +
+                              `Pago em: ${pag.pago_em ? new Date(pag.pago_em).toLocaleString('pt-BR') : '-'}\n` +
+                              `ID Transação: ${pag.gateway_transaction_id || '-'}`)
+                          } else {
+                            showToast('Recibo não encontrado', 'error')
+                          }
+                        } catch (err) {
+                          showToast('Erro ao buscar recibo', 'error')
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(76,175,80,0.2)',
+                        color: 'var(--p-green)',
+                        border: '1px solid rgba(76,175,80,0.5)',
+                        borderRadius: 6,
+                        padding: '10px',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🧾 Ver Recibo
+                    </button>
                   </div>
                 )}
               </div>
