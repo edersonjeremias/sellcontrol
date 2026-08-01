@@ -79,11 +79,13 @@ export async function getListas(tenantId = null) {
   const tid = TENANT_ID(tenantId)
 
   // 🔥 PAGINAÇÃO: Busca em 2 páginas para garantir que pega TUDO
+  // IMPORTANTE: .limit() é necessário para sobrescrever o limite padrão de 1000 do Supabase!
   const fetchAll = async (table, column) => {
     const [page1, page2] = await Promise.all([
-      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(0, 4999),
-      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(5000, 9999)
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).limit(5000).range(0, 4999),
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).limit(5000).range(5000, 9999)
     ])
+    console.log(`📦 ${table} paginação:`, { page1: page1.data?.length || 0, page2: page2.data?.length || 0, total: (page1.data?.length || 0) + (page2.data?.length || 0) })
     return [...(page1.data || []), ...(page2.data || [])]
   }
 
