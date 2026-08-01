@@ -81,27 +81,8 @@ function mapRow(row) {
   }
 }
 
-function calcSacolas(linhas) {
-  const usados = new Set()
-  const mapa   = {}
-  linhas.forEach(l => {
-    if (l.deleted || !l.cliente_nome?.trim()) return   // inclui isSent para reservar seus números
-    const c = l.cliente_nome.trim().toLowerCase()
-    if (l.sacolinha && !isNaN(l.sacolinha)) {
-      usados.add(Number(l.sacolinha))
-      if (!mapa[c]) mapa[c] = Number(l.sacolinha)
-    }
-  })
-  return linhas.map(l => {
-    if (l.deleted || l.isSent) return l
-    if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
-    const c = l.cliente_nome.trim().toLowerCase()
-    if (mapa[c]) return { ...l, sacolinha: mapa[c] }
-    let n = 1; while (usados.has(n)) n++
-    usados.add(n); mapa[c] = n
-    return { ...l, sacolinha: n }
-  })
-}
+// ✅ IMPORTANTE: Esta função é chamada DENTRO do componente para ter acesso ao sacolinhasCacheRef
+// Não pode ser movida para fora!
 
 // Removido: não queremos reordenar as linhas automaticamente
 // As linhas devem permanecer na posição onde o usuário as criou
@@ -187,6 +168,7 @@ export default function VendasPage() {
   // ── Modo Histórico ── (REMOVIDO)
 
   // ── Refs ──
+  const sacolinhasCacheRef = useRef({ usados: new Set(), mapa: {} }) // Cache global de sacolinhas (persiste com filtros!)
   const scrollRef    = useRef(null)
   const linhasRef    = useRef(linhas)
   const globalDBRef  = useRef(globalDB)
@@ -207,6 +189,41 @@ export default function VendasPage() {
   useEffect(() => { globalDBRef.current = globalDB },     [globalDB])
   useEffect(() => { busyRef.current = busy },             [busy])
   useEffect(() => { hasUnsavedRef.current = hasUnsaved }, [hasUnsaved])
+
+  // ── Função calcSacolas usando cache global ──
+  const calcSacolas = useCallback((linhas) => {
+    const cache = sacolinhasCacheRef.current
+
+    // 1️⃣ Atualiza o cache com as sacolinhas existentes nas linhas
+    linhas.forEach(l => {
+      if (l.deleted || !l.cliente_nome?.trim()) return
+      const c = l.cliente_nome.trim().toLowerCase()
+      if (l.sacolinha && !isNaN(l.sacolinha)) {
+        cache.usados.add(Number(l.sacolinha))
+        if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
+      }
+    })
+
+    // 2️⃣ Calcula sacolinhas para linhas sem sacolinha
+    return linhas.map(l => {
+      if (l.deleted || l.isSent) return l
+      if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
+
+      const c = l.cliente_nome.trim().toLowerCase()
+
+      // Se cliente já tem sacolinha no cache, usa ela
+      if (cache.mapa[c]) return { ...l, sacolinha: cache.mapa[c] }
+
+      // Busca próximo número disponível
+      let n = 1
+      while (cache.usados.has(n)) n++
+
+      // Atualiza cache e retorna
+      cache.usados.add(n)
+      cache.mapa[c] = n
+      return { ...l, sacolinha: n }
+    })
+  }, [])
 
   useEffect(() => {
     if (!tenantId) return
@@ -685,6 +702,9 @@ export default function VendasPage() {
     try {
       // 🎯 SEMPRE BUSCA TODA A LIVE (com e sem cliente)
       const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
+
+      // ✅ RESETA cache de sacolinhas ao buscar nova live
+      sacolinhasCacheRef.current = { usados: new Set(), mapa: {} }
 
       const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
       setLinhas(novas)
