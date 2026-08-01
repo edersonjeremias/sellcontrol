@@ -44,7 +44,12 @@ BEGIN
       NULLIF(TRIM(COALESCE(v.marca,   '')), ''),
       NULLIF(TRIM(COALESCE(v.tamanho, '')), '')
     ))                                                      AS descricao_completa,
-    v.preco                                                 AS valor,
+    -- ✅ Usa PROMOÇÃO se existir E > 0, senão usa PREÇO normal
+    CASE
+      WHEN v.preco_promocional IS NOT NULL AND v.preco_promocional > 0
+      THEN v.preco_promocional
+      ELSE v.preco
+    END                                                     AS valor,
     COALESCE(p.status_entrega, '')                          AS status_peca,
     v.created_at                                            AS data_insercao,
     NULL::TEXT                                              AS observacao,
