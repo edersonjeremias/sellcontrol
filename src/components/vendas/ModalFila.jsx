@@ -9,12 +9,6 @@ export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
     setFilas({ fila1: linha.fila1 || '', fila2: linha.fila2 || '', fila3: linha.fila3 || '' })
   }, [linha])
 
-  // 🐛 DEBUG: Verificar se clientes está chegando
-  console.log('🔍 ModalFila - Lista de clientes:', {
-    total: clientes?.length || 0,
-    primeiros_5: clientes?.slice(0, 5)
-  })
-
   if (!linha) return null
 
   function trocar(num) {
@@ -26,9 +20,9 @@ export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
 
   return (
     <div className="modal-overlay" style={{ background: 'transparent', backdropFilter: 'none' }}>
-      <div className="modal-card mini">
+      <div className="modal-card mini" style={{ overflow: 'visible' }}>
         <div className="modal-header"><h3>Fila de Espera</h3></div>
-        <div className="modal-body">
+        <div className="modal-body" style={{ overflow: 'visible' }}>
           {[1, 2, 3].map(n => (
             <div className="modal-field" key={n} style={{ marginBottom: 12 }}>
               <label>Fila {n}</label>
