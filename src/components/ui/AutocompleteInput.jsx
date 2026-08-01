@@ -45,19 +45,6 @@ export default function AutocompleteInput({
 
   const visible = open && filtered.length > 0 && (showOnFocus || value?.trim())
 
-  // 🐛 DEBUG: Autocomplete
-  if (value?.trim()) {
-    console.log('🔍 AutocompleteInput DEBUG:', {
-      value,
-      list_length: list?.length || 0,
-      filtered_length: filtered.length,
-      open,
-      visible,
-      showOnFocus,
-      primeiros_filtrados: filtered.slice(0, 5)
-    })
-  }
-
   useEffect(() => {
     if (activeIdx >= 0 && listRef.current) {
       const items = listRef.current.querySelectorAll('li')

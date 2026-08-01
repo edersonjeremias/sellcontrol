@@ -100,12 +100,6 @@ function TabelaRow({
   podeEditarEnviadas = true,
   podeEstornar = true,
 }) {
-  console.log('🔄 TabelaRow RENDER:', {
-    linha_key: linha._key,
-    preco_promocional: linha.preco_promocional,
-    codigo: linha.codigo
-  })
-
   const upd = (field, val) => onFieldChange(linha._key, field, val)
 
   // Estado LOCAL para preco_promocional (uncontrolled)
