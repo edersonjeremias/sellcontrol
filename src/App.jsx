@@ -61,7 +61,8 @@ import RastreioPage from './pages/rastreio/RastreioPage'
 import ImpressaoSacolinhaPage from './pages/impressao/ImpressaoSacolinhaPage'
 import ImpressaoPedidosPage          from './pages/impressao/ImpressaoPedidosPage'
 import ImpressaoSacolinhaClientePage from './pages/impressao/ImpressaoSacolinhaClientePage'
-import EtiquetasPage                 from './pages/impressao/EtiquetasPage'
+import EtiquetasProdutosPage         from './pages/impressao/EtiquetasPage'
+import EtiquetasEnvioPage            from './pages/etiquetas/EtiquetasPage'
 import PortalApp                     from './pages/portal/PortalApp'
 import RelatorioPage                  from './pages/relatorio/RelatorioPage'
 import ContatosPage                   from './pages/contatos/ContatosPage'
@@ -100,7 +101,8 @@ export default function App() {
             <Route path="/impressao-sacolinha" element={<RequireAuth><ImpressaoSacolinhaPage /></RequireAuth>} />
             <Route path="/impressao-pedidos"          element={<RequireAuth><ImpressaoPedidosPage /></RequireAuth>} />
             <Route path="/impressao-sacolinha-cliente" element={<RequireAuth><ImpressaoSacolinhaClientePage /></RequireAuth>} />
-            <Route path="/etiquetas" element={<RequireAuth><EtiquetasPage /></RequireAuth>} />
+            <Route path="/etiquetas" element={<RequireAuth><EtiquetasProdutosPage /></RequireAuth>} />
+            <Route path="/etiquetas-envio" element={<RequireAuth><EtiquetasEnvioPage /></RequireAuth>} />
             <Route path="/relatorio"              element={<RequireAuth><RelatorioPage /></RequireAuth>} />
             <Route path="/contatos"              element={<RequireAuth><ContatosPage /></RequireAuth>} />
             <Route path="/notificacoes"          element={<RequireAuth><NotificacoesPage /></RequireAuth>} />
