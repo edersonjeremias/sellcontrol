@@ -19,7 +19,7 @@ export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
   }
 
   return (
-    <div className="modal-overlay" style={{ background: 'rgba(0, 0, 0, 0.5)' }}>
+    <div className="modal-overlay" style={{ background: 'transparent' }}>
       <div className="modal-card mini">
         <div className="modal-header"><h3>Fila de Espera</h3></div>
         <div className="modal-body">
