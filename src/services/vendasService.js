@@ -77,20 +77,29 @@ export async function getDadosIniciais(tenantId = null) {
 // ── getListas (alias: getListasAutocomplete) ───────────────────
 export async function getListas(tenantId = null) {
   const tid = TENANT_ID(tenantId)
-  // ✅ Usa range para pegar TODOS os registros (até 10.000)
+
+  // 🔥 PAGINAÇÃO: Busca em 2 páginas para garantir que pega TUDO
+  const fetchAll = async (table, column) => {
+    const [page1, page2] = await Promise.all([
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(0, 4999),
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(5000, 9999)
+    ])
+    return [...(page1.data || []), ...(page2.data || [])]
+  }
+
   const [prod, mod, cor, marc, cli] = await Promise.all([
-    supabase.from('listas_produtos').select('nome').eq('tenant_id', tid).order('nome').range(0, 9999),
-    supabase.from('listas_modelos') .select('nome').eq('tenant_id', tid).order('nome').range(0, 9999),
-    supabase.from('listas_cores')   .select('nome').eq('tenant_id', tid).order('nome').range(0, 9999),
-    supabase.from('listas_marcas')  .select('nome').eq('tenant_id', tid).order('nome').range(0, 9999),
-    supabase.from('clientes')       .select('instagram').eq('tenant_id', tid).order('instagram').range(0, 9999),
+    fetchAll('listas_produtos', 'nome'),
+    fetchAll('listas_modelos', 'nome'),
+    fetchAll('listas_cores', 'nome'),
+    fetchAll('listas_marcas', 'nome'),
+    fetchAll('clientes', 'instagram'),
   ])
   return {
-    produtos: prod.data?.map(r => r.nome)     || [],
-    modelos:  mod.data?.map(r => r.nome)      || [],
-    cores:    cor.data?.map(r => r.nome)      || [],
-    marcas:   marc.data?.map(r => r.nome)     || [],
-    clientes: cli.data?.map(r => r.instagram) || [],
+    produtos: prod.map(r => r.nome),
+    modelos:  mod.map(r => r.nome),
+    cores:    cor.map(r => r.nome),
+    marcas:   marc.map(r => r.nome),
+    clientes: cli.map(r => r.instagram),
   }
 }
 export { getListas as getListasAutocomplete }
