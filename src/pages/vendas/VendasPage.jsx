@@ -302,8 +302,12 @@ export default function VendasPage() {
   const descartarBackup = useCallback(() => {
     try {
       localStorage.removeItem(`sc_vendas_backup_${tenantId}`)
+      // Limpa também o localStorage normal para começar vazio
+      localStorage.removeItem(`sc_vendas_${tenantId}`)
       setShowRecoverModal(false)
-      console.log('🗑️ Backup descartado')
+      setLinhas([]) // Garante que linhas fica vazio
+      setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
+      console.log('🗑️ Backup descartado e localStorage limpo')
     } catch (err) {
       console.error('❌ Erro ao descartar backup:', err)
     }
@@ -456,7 +460,7 @@ export default function VendasPage() {
         })
         setPermissoes(perms)
         setPronto(true)
-        setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
+        setTabelaMsg('📋 Para começar: Preencha Data + Nome da Live → Clique "+ Novo" (nova live) ou "Buscar" (live existente)')
       } catch (err) {
         console.error('❌ Erro ao iniciar:', err)
         showToast('Erro ao iniciar o sistema.', 'error')
@@ -468,17 +472,15 @@ export default function VendasPage() {
     init()
   }, [tenantId])
 
-  // ── Restaurar estado ao montar (navegação entre páginas) ──
+  // ── NÃO restaurar estado automaticamente ──
+  // Página sempre começa VAZIA
+  // Usuário escolhe:
+  // - Clicar "+ Novo" para começar nova live
+  // - Clicar "Buscar" para carregar live existente
+  // - Clicar "Recuperar Dados" se aparecer o modal de backup
   useEffect(() => {
-    if (!tenantId) return
-    const saved = storageLoad(tenantId)
-    if (!saved) return
-    // Removido o preenchimento automático de dataLive e liveNome para não filtrar a busca inicial
-    if (saved.linhas?.length) {
-      setLinhas(saved.linhas)
-      setPronto(true)
-      setTabelaMsg('')
-    }
+    // REMOVIDO: não carrega mais automaticamente do localStorage
+    // Sempre começa vazio
   }, [tenantId])
 
   // ── Persistir estado sempre que mudar ──
