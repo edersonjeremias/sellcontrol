@@ -9,6 +9,7 @@ import {
 } from '../../services/pedidosService'
 import { getClientes } from '../../services/clientesService'
 import { criarNotificacaoCancelamentoConversa } from '../../services/notificacoesConversasService'
+import { supabase } from '../../lib/supabase'
 
 const STATUS_COR = {
   'Separado':      '#81c995',
@@ -193,6 +194,7 @@ export default function PedidosPage() {
   // Modal dimensões para gerar romaneio
   const [showDimensoesModal, setShowDimensoesModal] = useState(false)
   const [dimensoes, setDimensoes] = useState({ peso: '', altura: '', largura: '', comprimento: '' })
+  const [modoEdicao, setModoEdicao] = useState(false) // true = editando romaneio existente
 
   const carregarClientes = useCallback(async () => {
     if (!tenantId) return
@@ -268,8 +270,7 @@ export default function PedidosPage() {
 
     itens.forEach(i => {
       if (dirty.has(i.id)) {
-        const updated = { ...i, ...dirty.get(i.id) }
-        dirtyWithFull.set(i.id, updated)
+        let updated = { ...i, ...dirty.get(i.id) }
 
         // Usa o status original salvo no handleChange
         const statusAntigo = originalStatus.get(i.id) || i.status
@@ -281,6 +282,15 @@ export default function PedidosPage() {
           statusOriginalSalvo: originalStatus.get(i.id),
           mudouParaCancelado: statusNovo === 'Cancelado' && statusAntigo !== 'Cancelado'
         })
+
+        // ✅ REMOVE DO ROMANEIO se perdeu status
+        // Lógica: tinha romaneio E status virou vazio
+        if (i.numero_pedido && statusNovo === '') {
+          console.log('🗑️ Removendo item do romaneio (status ficou vazio):', i.id)
+          updated = { ...updated, numero_pedido: null }
+        }
+
+        dirtyWithFull.set(i.id, updated)
 
         // Detecta mudança para Cancelado
         if (dirty.get(i.id).status === 'Cancelado' && statusAntigo !== 'Cancelado') {
@@ -342,36 +352,112 @@ export default function PedidosPage() {
     setShowDimensoesModal(true)
   }, [tenantId, itens])
 
-  // Confirma e gera romaneio COM dimensões
+  // Confirma e gera romaneio COM dimensões (criar OU editar)
   const handleConfirmarGerar = useCallback(async () => {
     if (!tenantId) return
-    const semPedido = itens.filter(i => !i.numero_pedido)
-    if (!semPedido.length) {
-      setErr('Todos os itens já possuem romaneio.')
-      return
-    }
 
     setShowDimensoesModal(false)
     setLoading(true)
-    try {
-      // Usa nova função que salva dimensões
-      const numPedido = await criarRomaneioComDimensoes(tenantId, semPedido, dimensoes)
-      showMsg(`Romaneio #${numPedido} gerado com sucesso!`)
 
-      // Atualiza estado local
-      const semIds = new Set(semPedido.map(i => i.id))
-      const sepIds = new Set(semPedido.filter(i => i.status === 'Separado').map(i => i.id))
-      setItens(prev => prev.map(i => {
-        if (!semIds.has(i.id)) return i
-        return { ...i, numero_pedido: numPedido, ...(sepIds.has(i.id) ? { status: 'Enviado' } : {}) }
-      }))
-      setDirty(new Map())
+    try {
+      if (modoEdicao) {
+        // MODO EDIÇÃO: atualiza romaneio existente
+        if (!romAddVal) {
+          setErr('Digite o número do romaneio para editar')
+          return
+        }
+
+        await atualizarDimensoesRomaneio(tenantId, romAddVal, dimensoes)
+        showMsg(`Romaneio #${romAddVal} atualizado!`)
+        setModoEdicao(false)
+      } else {
+        // MODO CRIAÇÃO: cria novo romaneio
+        const semPedido = itens.filter(i => !i.numero_pedido)
+        if (!semPedido.length) {
+          setErr('Todos os itens já possuem romaneio.')
+          return
+        }
+
+        const numPedido = await criarRomaneioComDimensoes(tenantId, semPedido, dimensoes)
+        showMsg(`Romaneio #${numPedido} gerado com sucesso!`)
+
+        // Atualiza estado local
+        const semIds = new Set(semPedido.map(i => i.id))
+        const sepIds = new Set(semPedido.filter(i => i.status === 'Separado').map(i => i.id))
+        setItens(prev => prev.map(i => {
+          if (!semIds.has(i.id)) return i
+          return { ...i, numero_pedido: numPedido, ...(sepIds.has(i.id) ? { status: 'Enviado' } : {}) }
+        }))
+        setDirty(new Map())
+      }
     } catch (e) {
-      setErr(e.message || 'Erro ao gerar romaneio')
+      setErr(e.message || 'Erro ao salvar romaneio')
     } finally {
       setLoading(false)
     }
-  }, [tenantId, itens, dimensoes, showMsg])
+  }, [tenantId, itens, dimensoes, showMsg, modoEdicao, romAddVal])
+
+  // Busca romaneio e carrega itens
+  const handleBuscarRomaneio = useCallback(async () => {
+    if (!tenantId || !romAddVal) {
+      setErr('Digite o número do romaneio')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const data = await buscarPedidoParaReimprimir(tenantId, romAddVal)
+      setItens(data)
+      setDirty(new Map())
+      showMsg(`Romaneio #${romAddVal} carregado!`)
+    } catch (e) {
+      setErr(e.message || 'Erro ao buscar romaneio')
+    } finally {
+      setLoading(false)
+    }
+  }, [tenantId, romAddVal, showMsg])
+
+  // Abre modal para EDITAR dimensões de romaneio existente
+  const handleEditarRomaneio = useCallback(async () => {
+    if (!tenantId || !romAddVal) {
+      setErr('Digite o número do romaneio para editar')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Busca dimensões atuais do romaneio
+      const { data, error } = await supabase
+        .from('romaneios')
+        .select('peso, altura, largura, comprimento')
+        .eq('tenant_id', tenantId)
+        .ilike('numero', `%${romAddVal}%`)
+        .limit(1)
+        .single()
+
+      if (error) throw error
+
+      if (!data) {
+        setErr(`Romaneio #${romAddVal} não encontrado`)
+        return
+      }
+
+      // Carrega dimensões no form
+      setDimensoes({
+        peso: data.peso ? String(data.peso) : '',
+        altura: data.altura ? String(data.altura) : '',
+        largura: data.largura ? String(data.largura) : '',
+        comprimento: data.comprimento ? String(data.comprimento) : '',
+      })
+
+      setModoEdicao(true)
+      setShowDimensoesModal(true)
+    } catch (e) {
+      setErr(e.message || 'Erro ao buscar romaneio')
+    } finally {
+      setLoading(false)
+    }
+  }, [tenantId, romAddVal])
 
   const handleAdicionarAoRomaneio = useCallback(async () => {
     if (!tenantId || !romAddVal) return
@@ -551,8 +637,18 @@ export default function PedidosPage() {
             onChange={e => setRomAddVal(e.target.value)}
             placeholder="Nº Romaneio"
             style={{ ...SI, width: 105, minWidth: 0 }}
-            onKeyDown={e => e.key === 'Enter' && handleAdicionarAoRomaneio()}
+            onKeyDown={e => e.key === 'Enter' && handleBuscarRomaneio()}
           />
+          <button className="btn-acao btn-blue" disabled={loading || !romAddVal}
+            onClick={handleBuscarRomaneio} style={{ flex: 'none', minWidth: 90 }}
+            title="Buscar itens deste romaneio">
+            🔍 Buscar
+          </button>
+          <button className="btn-acao btn-yellow" disabled={loading || !romAddVal}
+            onClick={handleEditarRomaneio} style={{ flex: 'none', minWidth: 90 }}
+            title="Editar peso e dimensões deste romaneio">
+            ✏️ Editar
+          </button>
           <button className="btn-acao btn-ghost" disabled={loading || !romAddVal}
             onClick={handleAdicionarAoRomaneio} style={{ flex: 'none', minWidth: 130 }}>
             + Adicionar ao Rom.
@@ -615,7 +711,7 @@ export default function PedidosPage() {
               padding: 24, minWidth: 400, maxWidth: 500,
             }} onClick={e => e.stopPropagation()}>
               <h3 style={{ margin: '0 0 16px 0', color: 'var(--blue)', fontSize: 18 }}>
-                📦 Informações da Caixa
+                {modoEdicao ? `✏️ Editar Romaneio #${romAddVal}` : '📦 Informações da Caixa'}
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -697,7 +793,7 @@ export default function PedidosPage() {
                       fontWeight: 700, cursor: 'pointer',
                     }}
                   >
-                    ✅ Gerar Romaneio
+                    {modoEdicao ? '✅ Salvar Alterações' : '✅ Gerar Romaneio'}
                   </button>
                 </div>
               </div>
