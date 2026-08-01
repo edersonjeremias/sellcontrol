@@ -3,6 +3,7 @@ import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import { supabase } from '../../lib/supabase'
 import { calcularFrete, salvarCotacoes, buscarCotacoes } from '../../services/melhorEnvioService'
+import { criarPagamentoPIX, buscarPagamentoRomaneio } from '../../services/mercadoPagoService'
 
 export default function MeuFrete() {
   const { cliente, tenantId } = usePortalAuth()
@@ -15,6 +16,8 @@ export default function MeuFrete() {
   const [cotacoes, setCotacoes] = useState([])
   const [enderecos, setEnderecos] = useState([])
   const [enderecoSelecionado, setEnderecoSelecionado] = useState(null)
+  const [pagamentoPIX, setPagamentoPIX] = useState(null)
+  const [showPIX, setShowPIX] = useState(false)
 
   const carregar = useCallback(async () => {
     if (!tenantId || !cliente?.instagram) return
@@ -125,6 +128,8 @@ export default function MeuFrete() {
     }
 
     try {
+      const romaneio = romaneios.find(r => r.id === romaneioSelecionado)
+
       await supabase
         .from('romaneios')
         .update({
@@ -137,13 +142,47 @@ export default function MeuFrete() {
         })
         .eq('id', romaneioSelecionado)
 
-      showToast('Frete escolhido! Aguarde a geração do pagamento.', 'success')
+      const pix = await criarPagamentoPIX(romaneioSelecionado, cotacao.valor, {
+        numeroRomaneio: romaneio?.numero,
+        email: cliente?.email || 'cliente@email.com',
+        nome: cliente?.nome || 'Cliente',
+      })
+
+      setPagamentoPIX(pix)
+      setShowPIX(true)
       setRomaneioSelecionado(null)
       setCotacoes([])
-      carregar()
+      showToast('PIX gerado! Escaneie o QR Code para pagar.', 'success')
     } catch (err) {
-      showToast('Erro ao escolher frete', 'error')
+      showToast(err.message || 'Erro ao gerar PIX', 'error')
       console.error(err)
+    }
+  }
+
+  const handleVerPIX = async (romaneio) => {
+    try {
+      const pagamento = await buscarPagamentoRomaneio(romaneio.id)
+      if (!pagamento || !pagamento.pix_qr_code) {
+        showToast('PIX não encontrado ou expirado', 'error')
+        return
+      }
+
+      setPagamentoPIX({
+        qr_code: pagamento.pix_qr_code,
+        qr_code_base64: pagamento.pix_qr_code_base64,
+        expiracao: new Date(pagamento.pix_expiracao),
+      })
+      setShowPIX(true)
+    } catch (err) {
+      showToast('Erro ao carregar PIX', 'error')
+      console.error(err)
+    }
+  }
+
+  const copiarPIX = () => {
+    if (pagamentoPIX?.qr_code) {
+      navigator.clipboard.writeText(pagamentoPIX.qr_code)
+      showToast('Código PIX copiado!', 'success')
     }
   }
 
@@ -310,9 +349,23 @@ export default function MeuFrete() {
                     <div style={{ color: '#9aa0a6', fontSize: 13 }}>
                       Valor: R$ {(rom.valor_frete || 0).toFixed(2)} • Prazo: {rom.prazo_entrega || 0} dia(s) útil(is)
                     </div>
-                    <div style={{ color: 'var(--p-yellow)', fontSize: 12, marginTop: 8 }}>
-                      ⏳ Aguardando geração do pagamento PIX
-                    </div>
+                    <button
+                      onClick={() => handleVerPIX(rom)}
+                      style={{
+                        width: '100%',
+                        background: 'var(--p-yellow)',
+                        color: '#0f0f0f',
+                        border: 'none',
+                        borderRadius: 6,
+                        padding: '10px',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        cursor: 'pointer',
+                        marginTop: 10,
+                      }}
+                    >
+                      💳 Ver PIX
+                    </button>
                   </div>
                 )}
 
@@ -420,6 +473,105 @@ export default function MeuFrete() {
               }}
             >
               Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showPIX && pagamentoPIX && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.9)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+          }}
+          onClick={() => setShowPIX(false)}
+        >
+          <div
+            style={{
+              background: '#1a2230',
+              border: '2px solid var(--p-blue)',
+              borderRadius: 16,
+              padding: 24,
+              maxWidth: 400,
+              width: '100%',
+              textAlign: 'center',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 16px 0', color: 'var(--p-blue)' }}>
+              💳 Pagar com PIX
+            </h3>
+
+            <div style={{
+              background: '#fff',
+              padding: 16,
+              borderRadius: 12,
+              marginBottom: 16,
+            }}>
+              {pagamentoPIX.qr_code_base64 ? (
+                <img
+                  src={`data:image/png;base64,${pagamentoPIX.qr_code_base64}`}
+                  alt="QR Code PIX"
+                  style={{ width: '100%', maxWidth: 250, margin: '0 auto', display: 'block' }}
+                />
+              ) : (
+                <div style={{ color: '#333', padding: 20 }}>
+                  QR Code não disponível
+                </div>
+              )}
+            </div>
+
+            <p style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 16 }}>
+              Escaneie o QR Code com o app do seu banco ou copie o código abaixo:
+            </p>
+
+            <button
+              onClick={copiarPIX}
+              style={{
+                width: '100%',
+                background: 'var(--p-blue)',
+                color: '#0f0f0f',
+                border: 'none',
+                borderRadius: 8,
+                padding: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                marginBottom: 12,
+              }}
+            >
+              📋 Copiar Código PIX
+            </button>
+
+            {pagamentoPIX.expiracao && (
+              <p style={{ color: 'var(--p-yellow)', fontSize: 12, marginBottom: 16 }}>
+                ⏰ Válido até {new Date(pagamentoPIX.expiracao).toLocaleString('pt-BR')}
+              </p>
+            )}
+
+            <p style={{ color: '#9aa0a6', fontSize: 12, marginBottom: 16 }}>
+              Após o pagamento, o status será atualizado automaticamente em alguns minutos.
+            </p>
+
+            <button
+              onClick={() => setShowPIX(false)}
+              style={{
+                width: '100%',
+                background: 'rgba(255,255,255,0.05)',
+                color: '#9aa0a6',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 8,
+                padding: '10px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Fechar
             </button>
           </div>
         </div>
