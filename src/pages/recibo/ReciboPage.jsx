@@ -54,52 +54,68 @@ export default function ReciboPage() {
       if (!res) { setErro(true); return }
       setCob(res)
 
-      // Restaurar cupom se já foi aplicado (validar se ainda está vigente)
+      // Restaurar cupom se já foi aplicado
       if (res.cupom_codigo && res.cupom_desconto_percentual && res.cupom_desconto_valor) {
-        try {
-          // Validar se o cupom ainda está válido
-          const cupom = await validarCupom(res.tenant_id, res.cupom_codigo)
+        const totalOriginal = Number(res.total) + Number(res.cupom_desconto_valor)
 
-          // Cupom ainda válido - restaurar
-          const totalOriginal = Number(res.total) + Number(res.cupom_desconto_valor)
+        // ✅ Se JÁ ESTÁ PAGO, sempre mostra o cupom (mesmo que expirado!)
+        if (res.status === 'PAGO' || res.status === 'BAIXADO') {
           setCupomAplicado({
             codigo: res.cupom_codigo,
             percentual: res.cupom_desconto_percentual,
             desconto: res.cupom_desconto_valor,
             totalOriginal,
             totalFinal: Number(res.total),
-            data_inicio: cupom.data_inicio,
-            data_fim: cupom.data_fim,
-            hora_inicio: cupom.hora_inicio,
-            hora_fim: cupom.hora_fim,
+            data_inicio: null,
+            data_fim: null,
+            hora_inicio: null,
+            hora_fim: null,
           })
-        } catch (err) {
-          // Cupom expirado ou inválido - remover do banco
-          await supabase
-            .from('cobrancas')
-            .update({
-              cupom_codigo: null,
-              cupom_desconto_percentual: null,
-              cupom_desconto_valor: null,
-              total: Number(res.total) + Number(res.cupom_desconto_valor)
+        } else {
+          // Status PENDENTE → validar se cupom ainda está vigente
+          try {
+            const cupom = await validarCupom(res.tenant_id, res.cupom_codigo)
+
+            // Cupom ainda válido - restaurar
+            setCupomAplicado({
+              codigo: res.cupom_codigo,
+              percentual: res.cupom_desconto_percentual,
+              desconto: res.cupom_desconto_valor,
+              totalOriginal,
+              totalFinal: Number(res.total),
+              data_inicio: cupom.data_inicio,
+              data_fim: cupom.data_fim,
+              hora_inicio: cupom.hora_inicio,
+              hora_fim: cupom.hora_fim,
             })
-            .eq('id', id)
+          } catch (err) {
+            // Cupom expirado - remover do banco (só se PENDENTE!)
+            await supabase
+              .from('cobrancas')
+              .update({
+                cupom_codigo: null,
+                cupom_desconto_percentual: null,
+                cupom_desconto_valor: null,
+                total: totalOriginal
+              })
+              .eq('id', id)
 
-          // Recarregar cobrança atualizada
-          const { data: cobAtualizada } = await supabase
-            .from('cobrancas')
-            .select('*')
-            .eq('id', id)
-            .single()
+            // Recarregar cobrança atualizada
+            const { data: cobAtualizada } = await supabase
+              .from('cobrancas')
+              .select('*')
+              .eq('id', id)
+              .single()
 
-          if (cobAtualizada) {
-            setCob(cobAtualizada)
+            if (cobAtualizada) {
+              setCob(cobAtualizada)
+            }
+
+            // Limpar estado local
+            setCupomAplicado(null)
+            setCodigoCupom('')
+            setErroCupom('Cupom expirado! O desconto foi removido. Você pode inserir outro cupom válido.')
           }
-
-          // Limpar estado local (permitir que cliente tente inserir novamente)
-          setCupomAplicado(null)
-          setCodigoCupom('')
-          setErroCupom('Cupom expirado! O desconto foi removido. Você pode inserir outro cupom válido.')
         }
       }
     } catch {
@@ -402,20 +418,23 @@ export default function ReciboPage() {
                 <span style={{ color: '#81c995', fontSize: 14, fontWeight: 600 }}>
                   🎟️ {cupomAplicado.codigo} ({cupomAplicado.percentual}%)
                 </span>
-                <button
-                  onClick={handleRemoverCupom}
-                  style={{
-                    padding: '2px 8px',
-                    fontSize: 11,
-                    background: 'rgba(242,139,130,0.1)',
-                    color: '#f28b82',
-                    border: '1px solid rgba(242,139,130,0.3)',
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Remover
-                </button>
+                {/* Só mostra botão remover se NÃO estiver pago */}
+                {!pago && (
+                  <button
+                    onClick={handleRemoverCupom}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: 11,
+                      background: 'rgba(242,139,130,0.1)',
+                      color: '#f28b82',
+                      border: '1px solid rgba(242,139,130,0.3)',
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Remover
+                  </button>
+                )}
               </div>
               <span style={{ fontSize: 16, fontWeight: 700, color: '#81c995' }}>
                 - {formatMoeda(cupomAplicado.desconto)}
@@ -439,14 +458,14 @@ export default function ReciboPage() {
         )}
 
         {/* Pagamento dividido */}
-        {!pago && div && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
+        {div && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: '#9aa0a6', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Pagamento dividido em 2 partes
+              💳 Pagamento dividido em 2 partes
             </div>
 
             {/* Parte 1 */}
-            {div_p1_pago ? (
+            {div_p1_pago || pago ? (
               <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(129,201,149,0.12)', borderRadius: 8, border: '1px solid rgba(129,201,149,0.3)', color: '#81c995', fontWeight: 700, fontSize: 14 }}>
                 ✅ Parte 1 — R$ {Number(div.valor_p1).toFixed(2).replace('.', ',')} — Pago
               </div>
@@ -457,7 +476,7 @@ export default function ReciboPage() {
             )}
 
             {/* Parte 2 */}
-            {div_p2_pago ? (
+            {div_p2_pago || pago ? (
               <div style={{ textAlign: 'center', padding: '12px', background: 'rgba(129,201,149,0.12)', borderRadius: 8, border: '1px solid rgba(129,201,149,0.3)', color: '#81c995', fontWeight: 700, fontSize: 14 }}>
                 ✅ Parte 2 — R$ {Number(div.valor_p2).toFixed(2).replace('.', ',')} — Pago
               </div>
@@ -467,13 +486,13 @@ export default function ReciboPage() {
               </a>
             )}
 
-            {/* Botão verificar pagamento */}
-            {!verificando && !verificado && (
+            {/* Botão verificar pagamento (só se NÃO pago) */}
+            {!pago && !verificando && !verificado && (
               <button onClick={handleVerificar} style={estilos.btnVerificar}>
                 🔄 Já paguei — Verificar Pagamento
               </button>
             )}
-            {verificando && (
+            {!pago && verificando && (
               <div style={{ textAlign: 'center', color: '#9aa0a6', fontSize: 13, padding: '8px 0' }}>
                 Verificando pagamento…
               </div>
