@@ -1205,15 +1205,10 @@ export default function VendasPage() {
       condicao: o.condicao,
       custo: o.custo
     }
-    setLinhas(prev => {
-      const idx = prev.findIndex(r => r._key === rowKey)
-      if (idx < 0) return [...prev, copia]
-      const next = [...prev]
-      next.splice(idx + 1, 0, copia)
-      return next
-    })
+    // ✅ Adiciona no TOPO da lista (não logo abaixo)
+    setLinhas(prev => [copia, ...prev])
     salvarAgora()
-  }, [salvarAgora])
+  }, [salvarAgora, config.codigo_automatico, getProximoCodigo])
 
   const handleExcluir = useCallback((rowKey) => {
     setConfirmacao({

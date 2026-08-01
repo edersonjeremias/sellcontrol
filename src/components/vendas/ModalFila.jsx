@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import AutocompleteInput from './AutocompleteInput'
+import AutocompleteInput from '../ui/AutocompleteInput'
 
 export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
   const [filas, setFilas] = useState({ fila1: '', fila2: '', fila3: '' })
@@ -19,7 +19,7 @@ export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" style={{ background: 'rgba(0, 0, 0, 0.5)' }}>
       <div className="modal-card mini">
         <div className="modal-header"><h3>Fila de Espera</h3></div>
         <div className="modal-body">
