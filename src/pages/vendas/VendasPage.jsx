@@ -684,6 +684,9 @@ export default function VendasPage() {
       setFiltro('') // Limpa filtro
       setHasUnsaved(false)
 
+      // 🧹 LIMPA localStorage - dados buscados JÁ ESTÃO salvos no banco!
+      localStorage.removeItem(`sc_vendas_${tenantId}`)
+
       if (!novas.length) {
         setTabelaMsg('Nenhuma venda encontrada para esta data/live.')
       }
@@ -1372,6 +1375,9 @@ export default function VendasPage() {
 
       setLinhas(linhasRestantes)
       setHasUnsaved(false)
+
+      // 🧹 LIMPA localStorage - dados foram salvos no banco!
+      localStorage.removeItem(`sc_vendas_${tenantId}`)
 
       if (itensVendidos > 0) {
         showToast(`✅ ${itensVendidos} item(ns) marcado(s) como Vendido e removido(s) da tela!`, 'success')
