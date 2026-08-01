@@ -6,17 +6,34 @@ import { supabase } from '../../lib/supabase'
 // Função para buscar CEP via ViaCEP
 async function buscarCep(cep, setForm, showToast) {
   const c = cep.replace(/\D/g, '')
-  if (c.length !== 8) return
+  console.log('🔍 buscarCep - CEP digitado:', cep, '→ Limpo:', c)
+
+  if (c.length !== 8) {
+    console.log('❌ CEP incompleto, precisa 8 dígitos')
+    return
+  }
 
   try {
+    console.log('📡 Buscando no ViaCEP:', `https://viacep.com.br/ws/${c}/json/`)
     showToast('Buscando CEP...', 'info')
+
     const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
     const data = await res.json()
 
+    console.log('✅ Resposta ViaCEP:', data)
+
     if (data.erro) {
+      console.log('❌ CEP não encontrado')
       showToast('CEP não encontrado', 'error')
       return
     }
+
+    console.log('✅ Preenchendo campos:', {
+      rua: data.logradouro,
+      bairro: data.bairro,
+      cidade: data.localidade,
+      estado: data.uf
+    })
 
     setForm(f => ({
       ...f,
@@ -25,8 +42,10 @@ async function buscarCep(cep, setForm, showToast) {
       cidade: data.localidade || '',
       estado: data.uf || '',
     }))
+
     showToast('Endereço preenchido!', 'success')
   } catch (err) {
+    console.error('❌ Erro ao buscar CEP:', err)
     showToast('Erro ao buscar CEP', 'error')
   }
 }
