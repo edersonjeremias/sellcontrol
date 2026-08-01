@@ -42,7 +42,7 @@ export default function EtiquetasPage() {
 
     setGerando(romaneio.id)
     try {
-      const result = await gerarEtiqueta([romaneio.melhor_envio_order_id])
+      const result = await gerarEtiqueta(tenantId, [romaneio.melhor_envio_order_id])
 
       await supabase
         .from('romaneios')
@@ -68,7 +68,7 @@ export default function EtiquetasPage() {
     }
 
     try {
-      const pdfUrl = await imprimirEtiqueta([romaneio.melhor_envio_order_id])
+      const pdfUrl = await imprimirEtiqueta(tenantId, [romaneio.melhor_envio_order_id])
 
       await supabase
         .from('romaneios')

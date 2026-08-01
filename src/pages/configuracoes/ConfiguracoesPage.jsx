@@ -45,9 +45,12 @@ function AbaConfiguracoes({ tenantId, showToast }) {
     link_frete: '',
     codigo_automatico: false,
     proximo_codigo: 100,
+    token_melhor_envio: '',
+    melhor_envio_api_url: 'https://sandbox.melhorenvio.com.br',
   })
   const [salvando, setSalvando] = useState(false)
   const [mostrarToken, setMostrarToken] = useState(false)
+  const [mostrarTokenME, setMostrarTokenME] = useState(false)
   const [pacotes, setPacotes]   = useState([])
   const [novoPacote, setNovoPacote] = useState('')
   const [salvandoPacote, setSalvandoPacote] = useState(false)
@@ -64,6 +67,8 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           link_frete: cfg.link_frete || '',
           codigo_automatico: cfg.codigo_automatico || false,
           proximo_codigo: cfg.proximo_codigo || 100,
+          token_melhor_envio: cfg.token_melhor_envio || '',
+          melhor_envio_api_url: cfg.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br',
         })
         setPacotes(cfg.pacotes || [])
       }
@@ -333,6 +338,82 @@ function AbaConfiguracoes({ tenantId, showToast }) {
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
           Encontre em mercadopago.com.br → Seu negócio → Configurações → Credenciais de produção
+        </div>
+      </div>
+
+      {/* ── Melhor Envio ── */}
+      <div style={{ marginBottom: 28, paddingTop: 20, borderTop: '2px solid var(--border-light)' }}>
+        <label style={{ fontSize: 14, color: 'var(--blue)', display: 'block', marginBottom: 12, fontWeight: 700 }}>
+          📦 Melhor Envio - Integração de Frete
+        </label>
+
+        {/* Ambiente */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+            Ambiente
+          </label>
+          <select
+            value={form.melhor_envio_api_url}
+            onChange={e => setForm(p => ({ ...p, melhor_envio_api_url: e.target.value }))}
+            style={SI}
+          >
+            <option value="https://sandbox.melhorenvio.com.br">🧪 Sandbox (Teste - não cobra)</option>
+            <option value="https://melhorenvio.com.br">🚀 Produção (Real - cobra valores)</option>
+          </select>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+            Use Sandbox para testes. Produção para envios reais.
+          </div>
+        </div>
+
+        {/* Token */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+            Token de Acesso
+          </label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type={mostrarTokenME ? 'text' : 'password'}
+              value={form.token_melhor_envio}
+              onChange={e => setForm(p => ({ ...p, token_melhor_envio: e.target.value }))}
+              placeholder="eyJ0eXAiOiJKV1QiLCJhbGc..."
+              style={{ ...SI, flex: 1, fontFamily: 'monospace', fontSize: 11 }}
+              autoComplete="off"
+            />
+            <button
+              onClick={() => setMostrarTokenME(v => !v)}
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--border-light)', borderRadius: 6, padding: '0 12px', cursor: 'pointer', color: 'var(--muted)', fontSize: 13 }}
+            >
+              {mostrarTokenME ? '🙈' : '👁️'}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
+            {form.melhor_envio_api_url.includes('sandbox')
+              ? 'Sandbox: https://sandbox.melhorenvio.com.br → Menu → Gerenciar → Aplicações'
+              : 'Produção: https://melhorenvio.com.br → Menu → Gerenciar → Aplicações'
+            }
+          </div>
+        </div>
+
+        {/* Aviso */}
+        <div style={{
+          padding: 12,
+          background: form.melhor_envio_api_url.includes('sandbox')
+            ? 'rgba(139, 180, 248, 0.1)'
+            : 'rgba(251, 191, 36, 0.1)',
+          border: form.melhor_envio_api_url.includes('sandbox')
+            ? '1px solid rgba(139, 180, 248, 0.3)'
+            : '1px solid rgba(251, 191, 36, 0.3)',
+          borderRadius: 6
+        }}>
+          <div style={{
+            fontSize: 12,
+            color: form.melhor_envio_api_url.includes('sandbox') ? 'var(--blue)' : 'var(--yellow)'
+          }}>
+            {form.melhor_envio_api_url.includes('sandbox')
+              ? '🧪 Modo Teste: Os envios não serão cobrados. Use para testar a integração.'
+              : '⚠️ Modo Produção: Os envios serão COBRADOS de verdade. Certifique-se de ter saldo na conta.'
+            }
+          </div>
         </div>
       </div>
 

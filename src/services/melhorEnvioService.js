@@ -1,20 +1,65 @@
 import { supabase } from '../lib/supabase'
+import { getConfig } from './configService'
 
-const MELHOR_ENVIO_API_URL = import.meta.env.VITE_MELHOR_ENVIO_API_URL || 'https://sandbox.melhorenvio.com.br'
-const MELHOR_ENVIO_TOKEN = import.meta.env.VITE_MELHOR_ENVIO_TOKEN
+// Cache do token para evitar múltiplas consultas
+let tokenCache = {
+  tenantId: null,
+  token: null,
+  apiUrl: null,
+  timestamp: 0
+}
+
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
+/**
+ * Busca configurações do Melhor Envio do banco de dados
+ * @param {string} tenantId - ID do tenant
+ * @returns {Promise<{token: string, apiUrl: string}>}
+ */
+async function getMelhorEnvioConfig(tenantId) {
+  // Verifica cache
+  const now = Date.now()
+  if (tokenCache.tenantId === tenantId &&
+      tokenCache.token &&
+      (now - tokenCache.timestamp) < CACHE_TTL) {
+    return {
+      token: tokenCache.token,
+      apiUrl: tokenCache.apiUrl
+    }
+  }
+
+  // Busca do banco
+  const config = await getConfig(tenantId)
+
+  if (!config?.token_melhor_envio) {
+    throw new Error('Token do Melhor Envio não configurado. Vá em Configurações para adicionar.')
+  }
+
+  // Atualiza cache
+  tokenCache = {
+    tenantId,
+    token: config.token_melhor_envio,
+    apiUrl: config.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br',
+    timestamp: now
+  }
+
+  return {
+    token: tokenCache.token,
+    apiUrl: tokenCache.apiUrl
+  }
+}
 
 /**
  * Calcula frete para um romaneio
+ * @param {string} tenantId - ID do tenant
  * @param {Object} params - Parâmetros da cotação
  * @param {Object} params.from - Endereço de origem { postal_code, address, number, district, city, state_abbr }
  * @param {Object} params.to - Endereço de destino { postal_code, address, number, district, city, state_abbr }
  * @param {Object} params.package - Dimensões { height, width, length, weight }
  * @returns {Promise<Array>} - Lista de opções de frete
  */
-export async function calcularFrete({ from, to, package: pkg }) {
-  if (!MELHOR_ENVIO_TOKEN) {
-    throw new Error('Token do Melhor Envio não configurado. Configure VITE_MELHOR_ENVIO_TOKEN no .env')
-  }
+export async function calcularFrete(tenantId, { from, to, package: pkg }) {
+  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
 
   const payload = {
     from,
@@ -23,12 +68,12 @@ export async function calcularFrete({ from, to, package: pkg }) {
   }
 
   try {
-    const response = await fetch(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/calculate`, {
+    const response = await fetch(`${apiUrl}/api/v2/me/shipment/calculate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     })
@@ -86,22 +131,21 @@ export async function buscarCotacoes(romaneioId) {
 
 /**
  * Compra uma etiqueta de envio
+ * @param {string} tenantId - ID do tenant
  * @param {string} serviceId - ID do serviço escolhido (da cotação)
  * @param {Object} orderData - Dados completos do pedido
  * @returns {Promise<Object>} - Dados do pedido criado
  */
-export async function comprarEtiqueta(serviceId, orderData) {
-  if (!MELHOR_ENVIO_TOKEN) {
-    throw new Error('Token do Melhor Envio não configurado')
-  }
+export async function comprarEtiqueta(tenantId, serviceId, orderData) {
+  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
 
   try {
-    const response = await fetch(`${MELHOR_ENVIO_API_URL}/api/v2/me/cart`, {
+    const response = await fetch(`${apiUrl}/api/v2/me/cart`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         service: serviceId,
@@ -116,12 +160,12 @@ export async function comprarEtiqueta(serviceId, orderData) {
 
     const cart = await response.json()
 
-    const checkoutResponse = await fetch(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/checkout`, {
+    const checkoutResponse = await fetch(`${apiUrl}/api/v2/me/shipment/checkout`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         orders: [cart.id],
@@ -142,21 +186,20 @@ export async function comprarEtiqueta(serviceId, orderData) {
 
 /**
  * Gera etiqueta de envio (após pagamento confirmado)
+ * @param {string} tenantId - ID do tenant
  * @param {Array} orderIds - IDs dos pedidos
  * @returns {Promise<Object>} - URL da etiqueta gerada
  */
-export async function gerarEtiqueta(orderIds) {
-  if (!MELHOR_ENVIO_TOKEN) {
-    throw new Error('Token do Melhor Envio não configurado')
-  }
+export async function gerarEtiqueta(tenantId, orderIds) {
+  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
 
   try {
-    const response = await fetch(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/generate`, {
+    const response = await fetch(`${apiUrl}/api/v2/me/shipment/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         orders: orderIds,
@@ -177,21 +220,20 @@ export async function gerarEtiqueta(orderIds) {
 
 /**
  * Imprime etiqueta (retorna URL do PDF)
+ * @param {string} tenantId - ID do tenant
  * @param {Array} orderIds - IDs dos pedidos
  * @returns {Promise<string>} - URL do PDF da etiqueta
  */
-export async function imprimirEtiqueta(orderIds) {
-  if (!MELHOR_ENVIO_TOKEN) {
-    throw new Error('Token do Melhor Envio não configurado')
-  }
+export async function imprimirEtiqueta(tenantId, orderIds) {
+  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
 
   try {
-    const response = await fetch(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/print`, {
+    const response = await fetch(`${apiUrl}/api/v2/me/shipment/print`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify({
         orders: orderIds,
@@ -213,20 +255,19 @@ export async function imprimirEtiqueta(orderIds) {
 
 /**
  * Rastreia um envio
+ * @param {string} tenantId - ID do tenant
  * @param {string} trackingCode - Código de rastreio
  * @returns {Promise<Object>} - Dados do rastreamento
  */
-export async function rastrearEnvio(trackingCode) {
-  if (!MELHOR_ENVIO_TOKEN) {
-    throw new Error('Token do Melhor Envio não configurado')
-  }
+export async function rastrearEnvio(tenantId, trackingCode) {
+  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
 
   try {
-    const response = await fetch(`${MELHOR_ENVIO_API_URL}/api/v2/me/shipment/tracking?orders=${trackingCode}`, {
+    const response = await fetch(`${apiUrl}/api/v2/me/shipment/tracking?orders=${trackingCode}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'Authorization': `Bearer ${MELHOR_ENVIO_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
     })
 

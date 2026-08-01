@@ -102,7 +102,7 @@ export default function MeuFrete() {
           weight: romaneio.peso || 1,
         }
 
-        const cotacoesAPI = await calcularFrete({
+        const cotacoesAPI = await calcularFrete(tenantId, {
           from: enderecoOrigem,
           to: enderecoDestino,
           package: pacote,
