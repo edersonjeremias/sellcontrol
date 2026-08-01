@@ -270,8 +270,17 @@ export default function ReciboPage() {
         hora_fim: cupom.hora_fim,
       })
 
-      // Atualizar total e link na cobrança
-      setCob(prev => ({ ...prev, total: Number(totalFinal), link_mp: novoLink, id_mp: novoIdMp }))
+      // Atualizar total, link E campos do cupom na cobrança
+      setCob(prev => ({
+        ...prev,
+        total: Number(totalFinal),
+        link_mp: novoLink,
+        id_mp: novoIdMp,
+        cupom_codigo: cupom.codigo,
+        cupom_desconto_percentual: cupom.percentual,
+        cupom_desconto_valor: Number(desconto),
+        cupom_id: cupom.id
+      }))
 
       setCodigoCupom('')
     } catch (err) {
