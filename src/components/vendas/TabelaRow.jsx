@@ -270,6 +270,7 @@ function TabelaRow({
             className="cell-input"
             value={linha.cliente_nome}
             tenantId={tenantId}
+            list={listas?.clientes || []}
             onChange={v => upd('cliente_nome', v)}
             onSelect={(v) => onClienteSelect?.(linha._key, v)}
             onEnterKey={onEnterNoCliente}

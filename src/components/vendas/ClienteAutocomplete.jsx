@@ -1,56 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
-import { searchClientes } from '../../services/clientesService'
 import { navigateNext } from '../ui/AutocompleteInput'
 
 export default function ClienteAutocomplete({
   value = '',
-  tenantId,
   onChange,
   onSelect,
   onEnterKey,
   className = '',
   disabled = false,
+  list = [],  // ✅ Recebe lista de clientes já carregada
 }) {
   const [open, setOpen] = useState(false)
-  const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
   const inputRef = useRef(null)
   const listRef = useRef(null)
-  const searchTimeoutRef = useRef(null)
 
-  // Busca sob demanda quando usuário digita
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    const trimmed = value?.trim()
-    if (!trimmed || trimmed.length < 2) {
-      setResults([])
-      return
-    }
-
-    searchTimeoutRef.current = setTimeout(async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await searchClientes(tenantId, trimmed, 20)
-        if (!error && data) {
-          setResults(data.map(c => c.instagram))
-        }
-      } catch (err) {
-        console.error('Erro ao buscar clientes:', err)
-      } finally {
-        setLoading(false)
-      }
-    }, 300) // 300ms de debounce
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [value, tenantId])
+  // ✅ Filtra localmente (MUITO mais rápido!)
+  const results = (list || []).filter(item =>
+    !value?.trim() || item.toLowerCase().includes(value.toLowerCase())
+  ).slice(0, 50)  // Máximo 50 sugestões
 
   useEffect(() => {
     if (activeIdx >= 0 && listRef.current) {
@@ -131,16 +99,7 @@ export default function ClienteAutocomplete({
         }}
         onKeyDown={handleKeyDown}
       />
-      {loading && open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, padding: '8px 12px',
-          background: 'var(--card-bg)', border: '1px solid var(--border-light)',
-          borderRadius: 8, marginTop: 4, fontSize: 12, color: 'var(--muted)'
-        }}>
-          Buscando...
-        </div>
-      )}
-      {visible && !loading && (
+      {visible && (
         <ul className="autocomplete-list" ref={listRef}>
           {results.map((item, i) => (
             <li

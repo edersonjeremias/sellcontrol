@@ -79,6 +79,7 @@ export default function LinhaVenda({
         <ClienteAutocomplete
           value={linha.cliente_nome}
           tenantId={tenantId}
+          list={listas?.clientes || []}
           onChange={v => upd('cliente_nome', v)}
           onSelect={v => onClienteChange?.(v)}
           onEnterKey={onNovaLinha}

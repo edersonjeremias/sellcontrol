@@ -198,7 +198,7 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
   // Busca todas as vendas e filtra por termos
   const { data: vendas, error } = await supabase
     .from('vendas')
-    .select('produto, modelo, cor, marca, tamanho, preco, codigo')
+    .select('produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, cliente_instagram')
     .eq('tenant_id', tid)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -207,9 +207,9 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
   if (error) { console.error('❌ Erro ao buscar:', error); throw error }
   if (!vendas?.length) return []
 
-  // Filtra produtos que correspondem a TODOS os termos
+  // Filtra produtos que correspondem a TODOS os termos (busca em TODOS os campos!)
   const produtos = vendas.filter(v => {
-    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo]
+    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo, v.cliente_nome, v.cliente_instagram]
       .join(' ')
       .toLowerCase()
     const match = termos.every(termo => txt.includes(termo))
