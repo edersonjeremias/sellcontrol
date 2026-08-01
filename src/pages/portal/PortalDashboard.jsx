@@ -5,9 +5,11 @@ import MinhaSacolinha from './MinhaSacolinha'
 import MeuCadastro    from './MeuCadastro'
 import MeuContato     from './MeuContato'
 import MeusEnderecos  from './MeusEnderecos'
+import MeuFrete       from './MeuFrete'
 
 const TABS = [
   { id: 'sacola',    label: '🛍 Sacolinha' },
+  { id: 'frete',     label: '🚚 Frete'     },
   { id: 'enderecos', label: '📍 Endereços' },
   { id: 'contato',   label: '✉ Contato'    },
   { id: 'cadastro',  label: '👤 Cadastro'  },
@@ -74,6 +76,7 @@ export default function PortalDashboard({ nomeEmpresa = 'Portal' }) {
       {/* Conteúdo - SEM padding extra */}
       <div style={{ marginTop: '104px' }}>
         {aba === 'sacola'    && <MinhaSacolinha />}
+        {aba === 'frete'     && <MeuFrete />}
         {aba === 'enderecos' && <MeusEnderecos />}
         {aba === 'contato'   && <MeuContato onAtualizar={() => setTotalNovas(0)} />}
         {aba === 'cadastro'  && <MeuCadastro />}
