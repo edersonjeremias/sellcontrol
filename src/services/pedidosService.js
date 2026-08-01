@@ -155,13 +155,18 @@ export async function criarRomaneioComDimensoes(tenantId, itensSemPedido, dimens
   const clienteInstagram = itensSemPedido[0]?.cliente_nome || ''
 
   // 3. Cria registro na tabela romaneios
+  // Converte peso aceitando vírgula ou ponto (padrão Brasil)
+  const pesoConvertido = dimensoes.peso
+    ? Number(String(dimensoes.peso).replace(',', '.'))
+    : null
+
   const { data: romaneio, error: romError } = await supabase
     .from('romaneios')
     .insert([{
       tenant_id: tenantId,
       numero: numeroRomaneio,
       cliente_instagram: clienteInstagram,
-      peso: dimensoes.peso ? Number(dimensoes.peso) : null,
+      peso: pesoConvertido,
       altura: dimensoes.altura ? Number(dimensoes.altura) : null,
       largura: dimensoes.largura ? Number(dimensoes.largura) : null,
       comprimento: dimensoes.comprimento ? Number(dimensoes.comprimento) : null,
@@ -229,4 +234,47 @@ export async function criarRomaneioComDimensoes(tenantId, itensSemPedido, dimens
   }
 
   return numeroPedido
+}
+
+/**
+ * Atualiza peso e dimensões de um romaneio existente
+ * @param {string} tenantId - ID do tenant
+ * @param {number} numeroRomaneio - Número do romaneio (ROM-001 → 1)
+ * @param {Object} dimensoes - { peso, altura, largura, comprimento }
+ * @returns {Promise<void>}
+ */
+export async function atualizarDimensoesRomaneio(tenantId, numeroRomaneio, dimensoes) {
+  // Converte peso aceitando vírgula ou ponto
+  const pesoConvertido = dimensoes.peso
+    ? Number(String(dimensoes.peso).replace(',', '.'))
+    : null
+
+  // Busca romaneio pelo número
+  const { data: romaneios, error: buscarError } = await supabase
+    .from('romaneios')
+    .select('id, numero')
+    .eq('tenant_id', tenantId)
+    .ilike('numero', `%${numeroRomaneio}%`)
+    .limit(1)
+
+  if (buscarError) throw buscarError
+  if (!romaneios || romaneios.length === 0) {
+    throw new Error(`Romaneio ${numeroRomaneio} não encontrado`)
+  }
+
+  const romaneioId = romaneios[0].id
+
+  // Atualiza dimensões
+  const { error: updateError } = await supabase
+    .from('romaneios')
+    .update({
+      peso: pesoConvertido,
+      altura: dimensoes.altura ? Number(dimensoes.altura) : null,
+      largura: dimensoes.largura ? Number(dimensoes.largura) : null,
+      comprimento: dimensoes.comprimento ? Number(dimensoes.comprimento) : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', romaneioId)
+
+  if (updateError) throw updateError
 }

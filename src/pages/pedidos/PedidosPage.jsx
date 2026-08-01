@@ -5,6 +5,7 @@ import {
   STATUS_PEDIDO_OPTS, calcTotal,
   buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir,
   atribuirRomaneio, adicionarSeparadosAoRomaneio, criarRomaneioComDimensoes,
+  atualizarDimensoesRomaneio,
 } from '../../services/pedidosService'
 import { getClientes } from '../../services/clientesService'
 import { criarNotificacaoCancelamentoConversa } from '../../services/notificacoesConversasService'
