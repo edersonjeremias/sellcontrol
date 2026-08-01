@@ -20,6 +20,16 @@ export default function ClienteAutocomplete({
     !value?.trim() || item.toLowerCase().includes(value.toLowerCase())
   ).slice(0, 50)  // Máximo 50 sugestões
 
+  // DEBUG: Log quando digita
+  if (value?.trim()) {
+    console.log('🔍 ClienteAutocomplete filtro:', {
+      digitado: value,
+      total_lista: list?.length || 0,
+      encontrados: results.length,
+      primeiros_3: results.slice(0, 3)
+    })
+  }
+
   useEffect(() => {
     if (activeIdx >= 0 && listRef.current) {
       const items = listRef.current.querySelectorAll('li')
