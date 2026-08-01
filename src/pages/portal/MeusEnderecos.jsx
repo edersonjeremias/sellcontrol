@@ -3,6 +3,40 @@ import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import { supabase } from '../../lib/supabase'
 
+// Função para buscar CEP via ViaCEP
+async function buscarCep(cep, setForm, showToast) {
+  const c = cep.replace(/\D/g, '')
+  if (c.length !== 8) return
+
+  try {
+    showToast('Buscando CEP...', 'info')
+    const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+    const data = await res.json()
+
+    if (data.erro) {
+      showToast('CEP não encontrado', 'error')
+      return
+    }
+
+    setForm(f => ({
+      ...f,
+      rua: data.logradouro || '',
+      bairro: data.bairro || '',
+      cidade: data.localidade || '',
+      estado: data.uf || '',
+    }))
+    showToast('Endereço preenchido!', 'success')
+  } catch (err) {
+    showToast('Erro ao buscar CEP', 'error')
+  }
+}
+
+// Máscara de CEP
+function maskCep(v) {
+  return v.replace(/\D/g, '').slice(0, 8)
+    .replace(/(\d{5})(\d)/, '$1-$2')
+}
+
 export default function MeusEnderecos() {
   const { cliente, tenantId } = usePortalAuth()
   const { showToast } = usePortalToast()
@@ -11,6 +45,8 @@ export default function MeusEnderecos() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [salvando, setSalvando] = useState(false)
+  const [erros, setErros] = useState({})
   const [form, setForm] = useState({
     apelido: '',
     destinatario: '',
@@ -53,6 +89,7 @@ export default function MeusEnderecos() {
   // Abrir modal para novo endereço
   const handleNovo = () => {
     setEditando(null)
+    setErros({})
     setForm({
       apelido: '',
       destinatario: cliente?.nome || '',
@@ -72,22 +109,32 @@ export default function MeusEnderecos() {
   // Abrir modal para editar
   const handleEditar = (end) => {
     setEditando(end.id)
+    setErros({})
     setForm({ ...end })
     setShowModal(true)
   }
 
   // Salvar endereço
   const handleSalvar = async () => {
-    // Validações
-    if (!form.destinatario?.trim()) return showToast('Preencha o destinatário', 'error')
-    if (!form.telefone?.trim()) return showToast('Preencha o telefone', 'error')
-    if (!form.cep?.trim()) return showToast('Preencha o CEP', 'error')
-    if (!form.rua?.trim()) return showToast('Preencha a rua', 'error')
-    if (!form.numero?.trim()) return showToast('Preencha o número', 'error')
-    if (!form.bairro?.trim()) return showToast('Preencha o bairro', 'error')
-    if (!form.cidade?.trim()) return showToast('Preencha a cidade', 'error')
-    if (!form.estado?.trim()) return showToast('Preencha o estado', 'error')
+    // Validações com marcação visual
+    const novosErros = {}
+    if (!form.destinatario?.trim()) novosErros.destinatario = true
+    if (!form.telefone?.trim()) novosErros.telefone = true
+    if (!form.cep?.trim()) novosErros.cep = true
+    if (!form.rua?.trim()) novosErros.rua = true
+    if (!form.numero?.trim()) novosErros.numero = true
+    if (!form.bairro?.trim()) novosErros.bairro = true
+    if (!form.cidade?.trim()) novosErros.cidade = true
+    if (!form.estado?.trim()) novosErros.estado = true
 
+    setErros(novosErros)
+
+    if (Object.keys(novosErros).length > 0) {
+      showToast('⚠️ Preencha todos os campos obrigatórios (marcados em vermelho)', 'error')
+      return
+    }
+
+    setSalvando(true)
     try {
       const dados = {
         tenant_id: tenantId,
@@ -135,10 +182,13 @@ export default function MeusEnderecos() {
       }
 
       setShowModal(false)
+      setErros({})
       carregar()
     } catch (err) {
       showToast('Erro ao salvar endereço', 'error')
       console.error(err)
+    } finally {
+      setSalvando(false)
     }
   }
 
@@ -407,17 +457,20 @@ export default function MeusEnderecos() {
 
               <div>
                 <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                  Destinatário *
+                  Destinatário * {erros.destinatario && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                 </label>
                 <input
                   type="text"
                   value={form.destinatario}
-                  onChange={e => setForm(p => ({ ...p, destinatario: e.target.value }))}
+                  onChange={e => {
+                    setForm(p => ({ ...p, destinatario: e.target.value }))
+                    if (erros.destinatario) setErros(e => ({ ...e, destinatario: false }))
+                  }}
                   placeholder="Nome completo"
                   style={{
                     width: '100%',
                     background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: erros.destinatario ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '10px',
                     color: '#e8eaed',
@@ -428,17 +481,20 @@ export default function MeusEnderecos() {
 
               <div>
                 <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                  Telefone *
+                  Telefone * {erros.telefone && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                 </label>
                 <input
                   type="tel"
                   value={form.telefone}
-                  onChange={e => setForm(p => ({ ...p, telefone: e.target.value }))}
+                  onChange={e => {
+                    setForm(p => ({ ...p, telefone: e.target.value }))
+                    if (erros.telefone) setErros(e => ({ ...e, telefone: false }))
+                  }}
                   placeholder="(11) 99999-9999"
                   style={{
                     width: '100%',
                     background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: erros.telefone ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '10px',
                     color: '#e8eaed',
@@ -449,17 +505,23 @@ export default function MeusEnderecos() {
 
               <div>
                 <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                  CEP *
+                  CEP * {erros.cep && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                 </label>
                 <input
                   type="text"
                   value={form.cep}
-                  onChange={e => setForm(p => ({ ...p, cep: e.target.value }))}
+                  onChange={e => {
+                    const masked = maskCep(e.target.value)
+                    setForm(p => ({ ...p, cep: masked }))
+                    if (erros.cep) setErros(e => ({ ...e, cep: false }))
+                  }}
+                  onBlur={e => buscarCep(e.target.value, setForm, showToast)}
                   placeholder="00000-000"
+                  inputMode="numeric"
                   style={{
                     width: '100%',
                     background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: erros.cep ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '10px',
                     color: '#e8eaed',
@@ -470,17 +532,20 @@ export default function MeusEnderecos() {
 
               <div>
                 <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                  Rua *
+                  Rua * {erros.rua && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                 </label>
                 <input
                   type="text"
                   value={form.rua}
-                  onChange={e => setForm(p => ({ ...p, rua: e.target.value }))}
+                  onChange={e => {
+                    setForm(p => ({ ...p, rua: e.target.value }))
+                    if (erros.rua) setErros(e => ({ ...e, rua: false }))
+                  }}
                   placeholder="Rua, Avenida..."
                   style={{
                     width: '100%',
                     background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: erros.rua ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '10px',
                     color: '#e8eaed',
@@ -492,17 +557,20 @@ export default function MeusEnderecos() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8 }}>
                 <div>
                   <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                    Número *
+                    Número * {erros.numero && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                   </label>
                   <input
                     type="text"
                     value={form.numero}
-                    onChange={e => setForm(p => ({ ...p, numero: e.target.value }))}
+                    onChange={e => {
+                      setForm(p => ({ ...p, numero: e.target.value }))
+                      if (erros.numero) setErros(e => ({ ...e, numero: false }))
+                    }}
                     placeholder="123"
                     style={{
                       width: '100%',
                       background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      border: erros.numero ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                       borderRadius: 8,
                       padding: '10px',
                       color: '#e8eaed',
@@ -535,17 +603,20 @@ export default function MeusEnderecos() {
 
               <div>
                 <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                  Bairro *
+                  Bairro * {erros.bairro && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                 </label>
                 <input
                   type="text"
                   value={form.bairro}
-                  onChange={e => setForm(p => ({ ...p, bairro: e.target.value }))}
+                  onChange={e => {
+                    setForm(p => ({ ...p, bairro: e.target.value }))
+                    if (erros.bairro) setErros(e => ({ ...e, bairro: false }))
+                  }}
                   placeholder="Centro"
                   style={{
                     width: '100%',
                     background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: erros.bairro ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '10px',
                     color: '#e8eaed',
@@ -557,17 +628,20 @@ export default function MeusEnderecos() {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
                 <div>
                   <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                    Cidade *
+                    Cidade * {erros.cidade && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                   </label>
                   <input
                     type="text"
                     value={form.cidade}
-                    onChange={e => setForm(p => ({ ...p, cidade: e.target.value }))}
+                    onChange={e => {
+                      setForm(p => ({ ...p, cidade: e.target.value }))
+                      if (erros.cidade) setErros(e => ({ ...e, cidade: false }))
+                    }}
                     placeholder="São Paulo"
                     style={{
                       width: '100%',
                       background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      border: erros.cidade ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                       borderRadius: 8,
                       padding: '10px',
                       color: '#e8eaed',
@@ -578,18 +652,21 @@ export default function MeusEnderecos() {
 
                 <div>
                   <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
-                    Estado *
+                    Estado * {erros.estado && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
                   </label>
                   <input
                     type="text"
                     value={form.estado}
-                    onChange={e => setForm(p => ({ ...p, estado: e.target.value.toUpperCase() }))}
+                    onChange={e => {
+                      setForm(p => ({ ...p, estado: e.target.value.toUpperCase() }))
+                      if (erros.estado) setErros(e => ({ ...e, estado: false }))
+                    }}
                     placeholder="SP"
                     maxLength={2}
                     style={{
                       width: '100%',
                       background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
+                      border: erros.estado ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                       borderRadius: 8,
                       padding: '10px',
                       color: '#e8eaed',
@@ -636,18 +713,20 @@ export default function MeusEnderecos() {
                 </button>
                 <button
                   onClick={handleSalvar}
+                  disabled={salvando}
                   style={{
                     flex: 1,
-                    background: 'var(--p-blue)',
+                    background: salvando ? 'rgba(138,180,248,0.5)' : 'var(--p-blue)',
                     color: '#0f0f0f',
                     border: 'none',
                     borderRadius: 8,
                     padding: '12px',
                     fontWeight: 700,
-                    cursor: 'pointer',
+                    cursor: salvando ? 'wait' : 'pointer',
+                    opacity: salvando ? 0.7 : 1,
                   }}
                 >
-                  {editando ? 'Salvar' : 'Adicionar'}
+                  {salvando ? '⏳ Salvando...' : editando ? 'Salvar' : 'Adicionar'}
                 </button>
               </div>
             </div>
