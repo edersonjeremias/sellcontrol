@@ -190,13 +190,19 @@ export default function VendasPage() {
   useEffect(() => { busyRef.current = busy },             [busy])
   useEffect(() => { hasUnsavedRef.current = hasUnsaved }, [hasUnsaved])
 
-  // ── Função calcSacolas usando cache global ──
+  // ── Função calcSacolas usando cache global (APENAS DA LIVE ATUAL!) ──
   const calcSacolas = useCallback((linhas) => {
     const cache = sacolinhasCacheRef.current
+    const liveAtual = liveNomeRef.current
+    const dataAtual = dataLiveRef.current
 
-    // 1️⃣ Atualiza o cache com as sacolinhas existentes nas linhas
+    // 1️⃣ Atualiza o cache APENAS com sacolinhas da LIVE ATUAL
     linhas.forEach(l => {
       if (l.deleted || !l.cliente_nome?.trim()) return
+
+      // ✅ FILTRO: Só considera se for da mesma live!
+      if (l.data_live !== dataAtual || l.live_nome !== liveAtual) return
+
       const c = l.cliente_nome.trim().toLowerCase()
       if (l.sacolinha && !isNaN(l.sacolinha)) {
         cache.usados.add(Number(l.sacolinha))
@@ -211,7 +217,7 @@ export default function VendasPage() {
 
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // Se cliente já tem sacolinha no cache, usa ela
+      // Se cliente já tem sacolinha no cache (DA LIVE ATUAL), usa ela
       if (cache.mapa[c]) return { ...l, sacolinha: cache.mapa[c] }
 
       // Busca próximo número disponível
