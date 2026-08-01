@@ -238,34 +238,36 @@ export default function ReciboPage() {
         }
       }
 
-      // Salvar cupom aplicado na cobrança + novo link
-      console.log('🎟️ Salvando cupom no banco:', {
-        id,
+      // Salvar cupom aplicado na cobrança + novo link via API (usa service_role para bypassar RLS)
+      console.log('🎟️ Salvando cupom no banco via API:', {
+        cobrancaId: id,
         cupom_codigo: cupom.codigo,
         cupom_desconto_percentual: cupom.percentual,
         cupom_desconto_valor: Number(desconto),
         total: Number(totalFinal)
       })
 
-      const { error, data: updateResult } = await supabase
-        .from('cobrancas')
-        .update({
+      const apiResponse = await fetch('/api/aplicar-cupom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cobrancaId: id,
           cupom_codigo: cupom.codigo,
           cupom_desconto_percentual: cupom.percentual,
           cupom_desconto_valor: Number(desconto),
-          cupom_id: cupom.id, // Guarda o ID para incrementar depois do pagamento
+          cupom_id: cupom.id,
           total: Number(totalFinal),
           link_mp: novoLink,
           id_mp: novoIdMp
         })
-        .eq('id', id)
-        .select()
+      })
 
-      console.log('✅ Resultado UPDATE cupom:', { error, updateResult })
+      const apiResult = await apiResponse.json()
+      console.log('✅ Resultado API aplicar-cupom:', apiResult)
 
-      if (error) {
-        console.error('❌ ERRO ao salvar cupom:', error)
-        throw error
+      if (!apiResponse.ok || !apiResult.ok) {
+        console.error('❌ ERRO ao salvar cupom via API:', apiResult)
+        throw new Error(apiResult.error || 'Erro ao aplicar cupom')
       }
 
       // ⚠️ NÃO incrementa aqui! Só incrementa quando PAGAR de verdade
