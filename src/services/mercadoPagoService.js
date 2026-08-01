@@ -1,19 +1,58 @@
 import { supabase } from '../lib/supabase'
+import { getConfig } from './configService'
 
-const MERCADO_PAGO_ACCESS_TOKEN = import.meta.env.VITE_MERCADO_PAGO_ACCESS_TOKEN
 const MERCADO_PAGO_API_URL = 'https://api.mercadopago.com'
+
+// Cache do token para evitar múltiplas consultas
+let mpTokenCache = {
+  tenantId: null,
+  token: null,
+  timestamp: 0
+}
+
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
+/**
+ * Busca token do Mercado Pago do banco de dados
+ * @param {string} tenantId - ID do tenant
+ * @returns {Promise<string>}
+ */
+async function getMercadoPagoToken(tenantId) {
+  // Verifica cache
+  const now = Date.now()
+  if (mpTokenCache.tenantId === tenantId &&
+      mpTokenCache.token &&
+      (now - mpTokenCache.timestamp) < CACHE_TTL) {
+    return mpTokenCache.token
+  }
+
+  // Busca do banco
+  const config = await getConfig(tenantId)
+
+  if (!config?.mp_access_token) {
+    throw new Error('Token do Mercado Pago não configurado. Vá em Configurações para adicionar.')
+  }
+
+  // Atualiza cache
+  mpTokenCache = {
+    tenantId,
+    token: config.mp_access_token,
+    timestamp: now
+  }
+
+  return mpTokenCache.token
+}
 
 /**
  * Cria pagamento PIX para um romaneio
+ * @param {string} tenantId - ID do tenant
  * @param {string} romaneioId - ID do romaneio
  * @param {number} valor - Valor do frete
  * @param {Object} dados - Dados adicionais (email, cpf do cliente)
  * @returns {Promise<Object>} - Dados do pagamento criado (QR Code, etc)
  */
-export async function criarPagamentoPIX(romaneioId, valor, dados = {}) {
-  if (!MERCADO_PAGO_ACCESS_TOKEN) {
-    throw new Error('Token do Mercado Pago não configurado. Configure VITE_MERCADO_PAGO_ACCESS_TOKEN no .env')
-  }
+export async function criarPagamentoPIX(tenantId, romaneioId, valor, dados = {}) {
+  const token = await getMercadoPagoToken(tenantId)
 
   try {
     const payload = {
@@ -35,7 +74,7 @@ export async function criarPagamentoPIX(romaneioId, valor, dados = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
       body: JSON.stringify(payload),
     })
@@ -81,19 +120,18 @@ export async function criarPagamentoPIX(romaneioId, valor, dados = {}) {
 
 /**
  * Consulta status de um pagamento
+ * @param {string} tenantId - ID do tenant
  * @param {string} paymentId - ID do pagamento no Mercado Pago
  * @returns {Promise<Object>} - Status do pagamento
  */
-export async function consultarPagamento(paymentId) {
-  if (!MERCADO_PAGO_ACCESS_TOKEN) {
-    throw new Error('Token do Mercado Pago não configurado')
-  }
+export async function consultarPagamento(tenantId, paymentId) {
+  const token = await getMercadoPagoToken(tenantId)
 
   try {
     const response = await fetch(`${MERCADO_PAGO_API_URL}/v1/payments/${paymentId}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+        'Authorization': `Bearer ${token}`,
       },
     })
 
@@ -168,12 +206,13 @@ export async function atualizarStatusPagamento(romaneioId, status, dadosAdiciona
 
 /**
  * Verifica e atualiza status de pagamentos pendentes
+ * @param {string} tenantId - ID do tenant
  * Deve ser chamado periodicamente ou via webhook
  */
-export async function verificarPagamentosPendentes() {
+export async function verificarPagamentosPendentes(tenantId) {
   const { data: pendentes, error } = await supabase
     .from('pagamentos_frete')
-    .select('*, romaneios(id)')
+    .select('*, romaneios(id, tenant_id)')
     .eq('status', 'pendente')
     .not('gateway_transaction_id', 'is', null)
 
@@ -181,7 +220,8 @@ export async function verificarPagamentosPendentes() {
 
   for (const pag of pendentes || []) {
     try {
-      const statusMP = await consultarPagamento(pag.gateway_transaction_id)
+      const tid = pag.romaneios?.tenant_id || tenantId
+      const statusMP = await consultarPagamento(tid, pag.gateway_transaction_id)
 
       if (statusMP.status === 'approved') {
         await atualizarStatusPagamento(pag.romaneio_id, 'aprovado', {
@@ -200,16 +240,17 @@ export async function verificarPagamentosPendentes() {
 
 /**
  * Processa webhook do Mercado Pago
+ * @param {string} tenantId - ID do tenant
  * @param {Object} notification - Dados da notificação
  */
-export async function processarWebhook(notification) {
+export async function processarWebhook(tenantId, notification) {
   if (notification.type !== 'payment') return
 
   try {
     const paymentId = notification.data?.id
     if (!paymentId) return
 
-    const statusMP = await consultarPagamento(paymentId)
+    const statusMP = await consultarPagamento(tenantId, paymentId)
 
     const { data: pagamento } = await supabase
       .from('pagamentos_frete')

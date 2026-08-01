@@ -142,7 +142,7 @@ export default function MeuFrete() {
         })
         .eq('id', romaneioSelecionado)
 
-      const pix = await criarPagamentoPIX(romaneioSelecionado, cotacao.valor, {
+      const pix = await criarPagamentoPIX(tenantId, romaneioSelecionado, cotacao.valor, {
         numeroRomaneio: romaneio?.numero,
         email: cliente?.email || 'cliente@email.com',
         nome: cliente?.nome || 'Cliente',
