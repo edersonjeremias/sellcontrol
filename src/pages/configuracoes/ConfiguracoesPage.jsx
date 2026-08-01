@@ -113,6 +113,13 @@ function AbaConfiguracoes({ tenantId, showToast }) {
   async function salvar() {
     setSalvando(true)
     try {
+      // 🐛 DEBUG: Log para rastrear o bug do token
+      console.log('🔍 SALVANDO CONFIGURAÇÕES:', {
+        mp_access_token: form.mp_access_token?.substring(0, 20) + '...',
+        whatsapp: form.whatsapp,
+        nome_loja: form.nome_loja,
+      })
+
       await saveConfig(tenantId, form)
       invalidateMpTokenCache()
       showToast('Configurações salvas!')

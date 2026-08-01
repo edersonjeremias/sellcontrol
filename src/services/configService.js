@@ -13,6 +13,14 @@ export async function getConfig(tenantId) {
 }
 
 export async function saveConfig(tenantId, campos) {
+  // 🐛 DEBUG: Log para rastrear o bug do token
+  console.log('📤 configService.saveConfig recebeu:', {
+    mp_access_token: campos.mp_access_token?.substring(0, 20) + '...',
+    whatsapp: campos.whatsapp,
+    nome_loja: campos.nome_loja,
+    tenant_id: tenantId,
+  })
+
   const { error } = await supabase
     .from('configuracoes')
     .upsert(
