@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getCobrancaById, formatMoeda, dividirPagamento } from '../../services/cobrancasService'
+import { getCobrancaById, formatMoeda, dividirPagamento, gerarPreferenciaMp } from '../../services/cobrancasService'
 import { validarCupom, calcularDesconto, incrementarUsoCupom } from '../../services/cuponsService'
 import { supabase } from '../../lib/supabase'
 
@@ -199,7 +199,30 @@ export default function ReciboPage() {
       const totalAtual = cupomAplicado ? cupomAplicado.totalOriginal : Number(cob.total)
       const { desconto, totalFinal } = calcularDesconto(totalAtual, cupom.percentual)
 
-      // Salvar cupom aplicado na cobrança
+      // ✅ Gerar NOVO link do Mercado Pago com valor atualizado
+      let novoLink = cob.link_mp
+      let novoIdMp = cob.id_mp
+
+      if (Number(totalFinal) > 0 && cob.cliente && cob.data) {
+        try {
+          const mp = await gerarPreferenciaMp({
+            cliente: cob.cliente,
+            total: Number(totalFinal),
+            whatsapp: cob.whatsapp || '',
+            data: cob.data,
+            live: cob.live || '',
+            idCobranca: id,
+            tenantId: cob.tenant_id
+          })
+          novoLink = mp.link
+          novoIdMp = mp.id_mp
+        } catch (err) {
+          console.error('Erro ao gerar novo link MP:', err)
+          setErroCupom('Cupom aplicado, mas erro ao gerar link de pagamento: ' + err.message)
+        }
+      }
+
+      // Salvar cupom aplicado na cobrança + novo link
       const { error } = await supabase
         .from('cobrancas')
         .update({
@@ -207,6 +230,9 @@ export default function ReciboPage() {
           cupom_desconto_percentual: cupom.percentual,
           cupom_desconto_valor: Number(desconto),
           cupom_id: cupom.id, // Guarda o ID para incrementar depois do pagamento
+          total: Number(totalFinal),
+          link_mp: novoLink,
+          id_mp: novoIdMp
         })
         .eq('id', id)
 
@@ -228,8 +254,8 @@ export default function ReciboPage() {
         hora_fim: cupom.hora_fim,
       })
 
-      // Atualizar total na cobrança
-      setCob(prev => ({ ...prev, total: Number(totalFinal) }))
+      // Atualizar total e link na cobrança
+      setCob(prev => ({ ...prev, total: Number(totalFinal), link_mp: novoLink, id_mp: novoIdMp }))
 
       setCodigoCupom('')
     } catch (err) {
