@@ -4,11 +4,13 @@ import { portalGetConversas } from '../../services/conversasService'
 import MinhaSacolinha from './MinhaSacolinha'
 import MeuCadastro    from './MeuCadastro'
 import MeuContato     from './MeuContato'
+import MeusEnderecos  from './MeusEnderecos'
 
 const TABS = [
-  { id: 'sacola',   label: '🛍 Sacolinha' },
-  { id: 'contato',  label: '✉ Contato'    },
-  { id: 'cadastro', label: '👤 Cadastro'  },
+  { id: 'sacola',    label: '🛍 Sacolinha' },
+  { id: 'enderecos', label: '📍 Endereços' },
+  { id: 'contato',   label: '✉ Contato'    },
+  { id: 'cadastro',  label: '👤 Cadastro'  },
 ]
 
 export default function PortalDashboard({ nomeEmpresa = 'Portal' }) {
@@ -71,9 +73,10 @@ export default function PortalDashboard({ nomeEmpresa = 'Portal' }) {
 
       {/* Conteúdo - SEM padding extra */}
       <div style={{ marginTop: '104px' }}>
-        {aba === 'sacola'   && <MinhaSacolinha />}
-        {aba === 'contato'  && <MeuContato onAtualizar={() => setTotalNovas(0)} />}
-        {aba === 'cadastro' && <MeuCadastro />}
+        {aba === 'sacola'    && <MinhaSacolinha />}
+        {aba === 'enderecos' && <MeusEnderecos />}
+        {aba === 'contato'   && <MeuContato onAtualizar={() => setTotalNovas(0)} />}
+        {aba === 'cadastro'  && <MeuCadastro />}
       </div>
     </div>
   )
