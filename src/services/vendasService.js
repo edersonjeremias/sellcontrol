@@ -78,15 +78,19 @@ export async function getDadosIniciais(tenantId = null) {
 export async function getListas(tenantId = null) {
   const tid = TENANT_ID(tenantId)
 
-  // 🔥 PAGINAÇÃO: Busca em 2 páginas para garantir que pega TUDO
-  // IMPORTANTE: .limit() é necessário para sobrescrever o limite padrão de 1000 do Supabase!
+  // 🔥 PAGINAÇÃO: Supabase tem limite MÁXIMO de 1000 por query!
+  // Solução: Buscar em chunks de 1000 (parallel)
   const fetchAll = async (table, column) => {
-    const [page1, page2] = await Promise.all([
-      supabase.from(table).select(column).eq('tenant_id', tid).order(column).limit(5000).range(0, 4999),
-      supabase.from(table).select(column).eq('tenant_id', tid).order(column).limit(5000).range(5000, 9999)
+    const [p1, p2, p3, p4, p5] = await Promise.all([
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(0, 999),
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(1000, 1999),
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(2000, 2999),
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(3000, 3999),
+      supabase.from(table).select(column).eq('tenant_id', tid).order(column).range(4000, 4999),
     ])
-    console.log(`📦 ${table} paginação:`, { page1: page1.data?.length || 0, page2: page2.data?.length || 0, total: (page1.data?.length || 0) + (page2.data?.length || 0) })
-    return [...(page1.data || []), ...(page2.data || [])]
+    const all = [...(p1.data || []), ...(p2.data || []), ...(p3.data || []), ...(p4.data || []), ...(p5.data || [])]
+    console.log(`📦 ${table}:`, { p1: p1.data?.length || 0, p2: p2.data?.length || 0, p3: p3.data?.length || 0, total: all.length })
+    return all
   }
 
   const [prod, mod, cor, marc, cli] = await Promise.all([
