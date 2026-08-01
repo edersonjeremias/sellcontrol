@@ -32,7 +32,16 @@ export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
                   list={clientes}
                   onChange={v => setFilas(prev => ({ ...prev, [`fila${n}`]: v }))}
                   onSelect={v => setFilas(prev => ({ ...prev, [`fila${n}`]: v }))}
-                  style={{ height: 44, padding: '0 14px', border: '1px solid var(--border-light)', borderRadius: 8, background: 'var(--input-bg)', color: 'var(--input-text)', width: '100%' }}
+                  style={{
+                    height: 36,
+                    padding: '0 10px',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 6,
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-body)',
+                    width: '100%',
+                    fontSize: 14
+                  }}
                 />
                 <button className="btn-acao btn-green" onClick={() => trocar(n)}
                   style={{ minWidth: 44, padding: 0, flex: 'none' }} title="Passar para Cliente Principal">
