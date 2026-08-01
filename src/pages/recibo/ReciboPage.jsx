@@ -239,7 +239,15 @@ export default function ReciboPage() {
       }
 
       // Salvar cupom aplicado na cobrança + novo link
-      const { error } = await supabase
+      console.log('🎟️ Salvando cupom no banco:', {
+        id,
+        cupom_codigo: cupom.codigo,
+        cupom_desconto_percentual: cupom.percentual,
+        cupom_desconto_valor: Number(desconto),
+        total: Number(totalFinal)
+      })
+
+      const { error, data: updateResult } = await supabase
         .from('cobrancas')
         .update({
           cupom_codigo: cupom.codigo,
@@ -251,8 +259,14 @@ export default function ReciboPage() {
           id_mp: novoIdMp
         })
         .eq('id', id)
+        .select()
 
-      if (error) throw error
+      console.log('✅ Resultado UPDATE cupom:', { error, updateResult })
+
+      if (error) {
+        console.error('❌ ERRO ao salvar cupom:', error)
+        throw error
+      }
 
       // ⚠️ NÃO incrementa aqui! Só incrementa quando PAGAR de verdade
       // O incremento acontece no webhook do Mercado Pago ou ao baixar manualmente
