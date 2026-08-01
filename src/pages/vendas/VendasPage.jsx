@@ -376,8 +376,15 @@ export default function VendasPage() {
       if (!temCliente) return
 
       qtd++
-      const n = parseFloat((l.preco || '').replace(/\./g, '').replace(',', '.'))
-      if (!isNaN(n)) total += n
+
+      // ✅ Usa PROMOÇÃO se existir, senão usa PREÇO normal
+      const precoPromocional = parseFloat((l.preco_promocional || '').replace(/\./g, '').replace(',', '.'))
+      const precoNormal = parseFloat((l.preco || '').replace(/\./g, '').replace(',', '.'))
+
+      // Se tem promoção E é maior que zero, usa promoção; senão usa preço normal
+      const precoFinal = (precoPromocional > 0) ? precoPromocional : precoNormal
+
+      if (!isNaN(precoFinal)) total += precoFinal
     })
     return { total, qtd }
   }, [linhas, filtro])
