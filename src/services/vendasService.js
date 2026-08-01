@@ -234,10 +234,10 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
         tamanho: p.tamanho || '',
         preco: p.preco != null ? formatMoney(p.preco) : '',
         codigo: p.codigo || '',
-        cliente_nome: '',
+        cliente_nome: p.cliente_nome || '',  // ✅ Mantém cliente original!
         data_live: '',
         live_nome: '',
-        sacolinha: null,
+        sacolinha: null,  // Será calculado depois
         status: '',
         fila1: '', fila2: '', fila3: '',
         isNew: true,
