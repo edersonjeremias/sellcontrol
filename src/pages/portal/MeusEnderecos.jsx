@@ -3,54 +3,7 @@ import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import { supabase } from '../../lib/supabase'
 
-// Função para buscar CEP via ViaCEP
-async function buscarCep(cep, setForm, showToast) {
-  const c = cep.replace(/\D/g, '')
-  console.log('🔍 buscarCep - CEP digitado:', cep, '→ Limpo:', c)
-
-  if (c.length !== 8) {
-    console.log('❌ CEP incompleto, precisa 8 dígitos')
-    return
-  }
-
-  try {
-    console.log('📡 Buscando no ViaCEP:', `https://viacep.com.br/ws/${c}/json/`)
-    showToast('Buscando CEP...', 'info')
-
-    const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
-    const data = await res.json()
-
-    console.log('✅ Resposta ViaCEP:', data)
-
-    if (data.erro) {
-      console.log('❌ CEP não encontrado')
-      showToast('CEP não encontrado', 'error')
-      return
-    }
-
-    console.log('✅ Preenchendo campos:', {
-      rua: data.logradouro,
-      bairro: data.bairro,
-      cidade: data.localidade,
-      estado: data.uf
-    })
-
-    setForm(f => ({
-      ...f,
-      rua: data.logradouro || '',
-      bairro: data.bairro || '',
-      cidade: data.localidade || '',
-      estado: data.uf || '',
-    }))
-
-    showToast('Endereço preenchido!', 'success')
-  } catch (err) {
-    console.error('❌ Erro ao buscar CEP:', err)
-    showToast('Erro ao buscar CEP', 'error')
-  }
-}
-
-// Máscara de CEP
+// Máscara de CEP (função pura, pode ficar fora)
 function maskCep(v) {
   return v.replace(/\D/g, '').slice(0, 8)
     .replace(/(\d{5})(\d)/, '$1-$2')
@@ -79,6 +32,53 @@ export default function MeusEnderecos() {
     estado: '',
     padrao: false,
   })
+
+  // Buscar CEP via ViaCEP
+  const buscarCep = useCallback(async (cep) => {
+    const c = cep.replace(/\D/g, '')
+    console.log('🔍 buscarCep - CEP digitado:', cep, '→ Limpo:', c)
+
+    if (c.length !== 8) {
+      console.log('❌ CEP incompleto, precisa 8 dígitos')
+      return
+    }
+
+    try {
+      console.log('📡 Buscando no ViaCEP:', `https://viacep.com.br/ws/${c}/json/`)
+      showToast('Buscando CEP...', 'info')
+
+      const res = await fetch(`https://viacep.com.br/ws/${c}/json/`)
+      const data = await res.json()
+
+      console.log('✅ Resposta ViaCEP:', data)
+
+      if (data.erro) {
+        console.log('❌ CEP não encontrado')
+        showToast('CEP não encontrado', 'error')
+        return
+      }
+
+      console.log('✅ Preenchendo campos:', {
+        rua: data.logradouro,
+        bairro: data.bairro,
+        cidade: data.localidade,
+        estado: data.uf
+      })
+
+      setForm(f => ({
+        ...f,
+        rua: data.logradouro || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || '',
+      }))
+
+      showToast('Endereço preenchido!', 'success')
+    } catch (err) {
+      console.error('❌ Erro ao buscar CEP:', err)
+      showToast('Erro ao buscar CEP', 'error')
+    }
+  }, [showToast])
 
   // Buscar endereços do cliente
   const carregar = useCallback(async () => {
@@ -534,7 +534,7 @@ export default function MeusEnderecos() {
                     setForm(p => ({ ...p, cep: masked }))
                     if (erros.cep) setErros(e => ({ ...e, cep: false }))
                   }}
-                  onBlur={e => buscarCep(e.target.value, setForm, showToast)}
+                  onBlur={e => buscarCep(e.target.value)}
                   placeholder="00000-000"
                   inputMode="numeric"
                   style={{
