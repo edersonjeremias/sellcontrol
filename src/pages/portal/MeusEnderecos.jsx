@@ -11,7 +11,7 @@ function maskCep(v) {
 
 export default function MeusEnderecos() {
   const { cliente, tenantId } = usePortalAuth()
-  const { showToast } = usePortalToast()
+  const showToast = usePortalToast()
 
   const [enderecos, setEnderecos] = useState([])
   const [loading, setLoading] = useState(true)
