@@ -80,7 +80,7 @@ function saudacaoHora() {
 
 export async function getProducaoData(tenantId = null) {
   const tid = TENANT_ID(tenantId)
-  const [pedidosRes, clientesRes, devedoresRes] = await Promise.all([
+  const [pedidosRes, clientesRes, devedoresRes, romaneiosRes] = await Promise.all([
     supabase
       .from('producao_pedidos')
       .select('*')
@@ -92,6 +92,11 @@ export async function getProducaoData(tenantId = null) {
       .select('cliente')
       .eq('tenant_id', tid)
       .not('status', 'in', '("PAGO","BAIXADO","CANCELADO")'),
+    supabase
+      .from('romaneios')
+      .select('numero, status, transportadora, codigo_rastreio')
+      .eq('tenant_id', tid)
+      .in('status', ['frete_pago', 'etiqueta_gerada', 'despachado']),
   ])
 
   if (pedidosRes.error) throw pedidosRes.error
@@ -107,10 +112,26 @@ export async function getProducaoData(tenantId = null) {
     (devedoresRes.data || []).map((d) => (d.cliente || '').trim().toLowerCase())
   )
 
+  const romaneioMap = new Map()
+  ;(romaneiosRes.data || []).forEach((rom) => {
+    const romNum = String(rom.numero || '').replace(/\D/g, '')
+    if (romNum) {
+      romaneioMap.set(romNum, {
+        status: rom.status,
+        transportadora: rom.transportadora,
+        codigo_rastreio: rom.codigo_rastreio,
+        frete_pago: ['frete_pago', 'etiqueta_gerada', 'despachado'].includes(rom.status),
+      })
+    }
+  })
+
   const today = new Date()
   let rows = (pedidosRes.data || []).map((row) => {
     const clienteKey = (row.cliente_nome || '').replace(/^@/, '').trim().toLowerCase()
     const clientInfo = clientMap.get(clienteKey) || { whatsapp: '', bloqueado: false }
+
+    const romaneioNum = String(row.romaneio || '').replace(/\D/g, '')
+    const romaneioInfo = romaneioNum ? romaneioMap.get(romaneioNum) : null
 
     const isFinal = FINAL_ENTREGA.has(row.status_entrega || '') || (row.status_prod || '') === 'Repetido'
     const endDate = isFinal ? (row.data_enviado || row.data_pronto || today) : today
@@ -125,6 +146,9 @@ export async function getProducaoData(tenantId = null) {
       atrasado: !isFinal && diasUteis >= 5,
       bloqueado: !!clientInfo.bloqueado,
       whatsapp: clientInfo.whatsapp,
+      romaneio_frete_pago: romaneioInfo?.frete_pago || false,
+      romaneio_status: romaneioInfo?.status || null,
+      romaneio_transportadora: romaneioInfo?.transportadora || null,
     }
   })
 

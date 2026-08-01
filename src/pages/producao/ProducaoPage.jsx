@@ -572,11 +572,27 @@ export default function ProducaoPage() {
                       )}
 
                       {showDelivery && (
-                        <td>
+                        <td style={{ position: 'relative' }}>
                           <input className="prod-v2-cell" style={{ width: 48, borderColor: bc(row.id,'romaneio') }}
                             value={row.romaneio || ''}
                             onChange={(e) => updRow(row.id, { romaneio: e.target.value })}
                             onBlur={(e) => handleRomaneioBlur(row, e.target.value)} />
+                          {row.romaneio_frete_pago && (
+                            <span style={{
+                              position: 'absolute',
+                              top: 2,
+                              right: 2,
+                              background: '#22c55e',
+                              color: '#0f0f0f',
+                              fontSize: 9,
+                              fontWeight: 700,
+                              padding: '1px 4px',
+                              borderRadius: 3,
+                              lineHeight: 1,
+                            }} title={`Frete pago via ${row.romaneio_transportadora || 'transportadora'}`}>
+                              ✓ PAGO
+                            </span>
+                          )}
                         </td>
                       )}
 
