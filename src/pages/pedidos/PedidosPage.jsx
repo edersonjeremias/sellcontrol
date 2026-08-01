@@ -4,7 +4,7 @@ import AppShell from '../../components/ui/AppShell'
 import {
   STATUS_PEDIDO_OPTS, calcTotal,
   buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir,
-  atribuirRomaneio, adicionarSeparadosAoRomaneio,
+  atribuirRomaneio, adicionarSeparadosAoRomaneio, criarRomaneioComDimensoes,
 } from '../../services/pedidosService'
 import { getClientes } from '../../services/clientesService'
 import { criarNotificacaoCancelamentoConversa } from '../../services/notificacoesConversasService'
@@ -189,6 +189,10 @@ export default function PedidosPage() {
   const [printData, setPrintData] = useState(null)
   const [romAddVal, setRomAddVal] = useState('')
 
+  // Modal dimensões para gerar romaneio
+  const [showDimensoesModal, setShowDimensoesModal] = useState(false)
+  const [dimensoes, setDimensoes] = useState({ peso: '', altura: '', largura: '', comprimento: '' })
+
   const carregarClientes = useCallback(async () => {
     if (!tenantId) return
     const { data } = await getClientes(tenantId)
@@ -324,19 +328,36 @@ export default function PedidosPage() {
     }
   }, [tenantId, dirty, itens, originalStatus, showMsg])
 
-  const handleGerarPedido = useCallback(async () => {
+  // Abre modal para pedir peso/dimensões ANTES de gerar romaneio
+  const handleGerarPedido = useCallback(() => {
     if (!tenantId) return
     const semPedido = itens.filter(i => !i.numero_pedido)
     if (!semPedido.length) {
       setErr('Todos os itens já possuem romaneio.')
       return
     }
-    if (!window.confirm(`Gerar romaneio para ${semPedido.length} item(s) sem número?`)) return
+    // Abre modal para pedir dimensões
+    setDimensoes({ peso: '', altura: '', largura: '', comprimento: '' })
+    setShowDimensoesModal(true)
+  }, [tenantId, itens])
+
+  // Confirma e gera romaneio COM dimensões
+  const handleConfirmarGerar = useCallback(async () => {
+    if (!tenantId) return
+    const semPedido = itens.filter(i => !i.numero_pedido)
+    if (!semPedido.length) {
+      setErr('Todos os itens já possuem romaneio.')
+      return
+    }
+
+    setShowDimensoesModal(false)
     setLoading(true)
     try {
-      const numPedido = await gerarPedido(tenantId, semPedido)
-      showMsg(`Romaneio #${numPedido} gerado!`)
-      // Atualiza estado local sem recarregar a tela
+      // Usa nova função que salva dimensões
+      const numPedido = await criarRomaneioComDimensoes(tenantId, semPedido, dimensoes)
+      showMsg(`Romaneio #${numPedido} gerado com sucesso!`)
+
+      // Atualiza estado local
       const semIds = new Set(semPedido.map(i => i.id))
       const sepIds = new Set(semPedido.filter(i => i.status === 'Separado').map(i => i.id))
       setItens(prev => prev.map(i => {
@@ -349,7 +370,7 @@ export default function PedidosPage() {
     } finally {
       setLoading(false)
     }
-  }, [tenantId, itens, showMsg])
+  }, [tenantId, itens, dimensoes, showMsg])
 
   const handleAdicionarAoRomaneio = useCallback(async () => {
     if (!tenantId || !romAddVal) return
@@ -580,6 +601,107 @@ export default function PedidosPage() {
 
         {printData && (
           <PrintModal data={printData} onClose={() => setPrintData(null)} />
+        )}
+
+        {/* Modal Dimensões Romaneio */}
+        {showDimensoesModal && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }} onClick={() => setShowDimensoesModal(false)}>
+            <div style={{
+              background: '#1a2230', border: '2px solid var(--blue)', borderRadius: 12,
+              padding: 24, minWidth: 400, maxWidth: 500,
+            }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ margin: '0 0 16px 0', color: 'var(--blue)', fontSize: 18 }}>
+                📦 Informações da Caixa
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                    Peso (kg) *
+                  </label>
+                  <input
+                    type="text"
+                    value={dimensoes.peso}
+                    onChange={e => setDimensoes(p => ({ ...p, peso: e.target.value }))}
+                    placeholder="Ex: 2.5 ou 2,5"
+                    style={{ ...SI, width: '100%' }}
+                    autoFocus
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                      Altura (cm) *
+                    </label>
+                    <input
+                      type="number"
+                      value={dimensoes.altura}
+                      onChange={e => setDimensoes(p => ({ ...p, altura: e.target.value }))}
+                      placeholder="15"
+                      style={{ ...SI, width: '100%' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                      Largura (cm) *
+                    </label>
+                    <input
+                      type="number"
+                      value={dimensoes.largura}
+                      onChange={e => setDimensoes(p => ({ ...p, largura: e.target.value }))}
+                      placeholder="20"
+                      style={{ ...SI, width: '100%' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                      Comprimento (cm) *
+                    </label>
+                    <input
+                      type="number"
+                      value={dimensoes.comprimento}
+                      onChange={e => setDimensoes(p => ({ ...p, comprimento: e.target.value }))}
+                      placeholder="10"
+                      style={{ ...SI, width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>
+                  * Campos obrigatórios para cálculo de frete
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button
+                    onClick={() => setShowDimensoesModal(false)}
+                    style={{
+                      flex: 1, padding: '10px', background: 'var(--btn-cancel-bg)',
+                      color: 'var(--btn-cancel-text)', border: 'none', borderRadius: 6,
+                      fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleConfirmarGerar}
+                    style={{
+                      flex: 1, padding: '10px', background: 'var(--blue)',
+                      color: '#0f0f0f', border: 'none', borderRadius: 6,
+                      fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    ✅ Gerar Romaneio
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </AppShell>
