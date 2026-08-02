@@ -64,8 +64,9 @@ export default function ClienteAutocomplete({
       setOpen(false); setActiveIdx(-1); return
     }
     if (e.key === 'Tab') {
-      if (visible) {
-        const chosen = activeIdx >= 0 ? results[activeIdx] : results[0]
+      if (visible && activeIdx >= 0) {
+        // ✅ Só seleciona se tiver navegado com setas
+        const chosen = results[activeIdx]
         if (chosen) select(chosen)
       }
       setOpen(false); setActiveIdx(-1)
@@ -73,8 +74,9 @@ export default function ClienteAutocomplete({
     }
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (visible) {
-        const chosen = activeIdx >= 0 ? results[activeIdx] : results[0]
+      if (visible && activeIdx >= 0) {
+        // ✅ Só seleciona se tiver navegado com setas
+        const chosen = results[activeIdx]
         if (chosen) {
           select(chosen)
           if (onEnterKey) {
@@ -85,6 +87,7 @@ export default function ClienteAutocomplete({
           return
         }
       }
+      // ✅ Se não tem nada selecionado, só navega sem preencher
       if (onEnterKey) {
         onEnterKey()
       } else {
