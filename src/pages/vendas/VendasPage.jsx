@@ -230,7 +230,8 @@ export default function VendasPage() {
       if (l.data_live !== dataAtual || l.live_nome !== liveAtual) return
 
       const c = l.cliente_nome.trim().toLowerCase()
-      if (l.sacolinha && !isNaN(l.sacolinha)) {
+      // ✅ Só confia em sacolinhas de linhas ENVIADAS (evita contaminar cache com dados antigos)
+      if (l.sacolinha && !isNaN(l.sacolinha) && (l.isSent || l.status === 'ENVIADO')) {
         cache.usados.add(Number(l.sacolinha))
         if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
       }

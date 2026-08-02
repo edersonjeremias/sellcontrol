@@ -153,6 +153,10 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
   const { data, error } = await query
   if (error) throw error
   let rows = data || []
+
+  // ✅ Filtra linhas deletadas (não retorna do banco)
+  rows = rows.filter(row => !row.deleted)
+
   if (somentePendentes) {
     rows = rows.filter(row => String(row.status || '').trim().toUpperCase() !== 'ENVIADO')
   }
