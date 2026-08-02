@@ -192,9 +192,27 @@ export default function VendasPage() {
 
   // ✅ Reseta cache de sacolinhas ao mudar Data ou Live
   useEffect(() => {
-    console.log('🔄 Data/Live mudou - resetando cache de sacolinhas')
+    console.log('🔄 Data/Live mudou - resetando cache e sacolinhas')
     sacolinhasCacheRef.current = { usados: new Set(), mapa: {} }
-    setLinhas(prev => calcSacolas(prev))
+
+    setLinhas(prev => {
+      const dataAtual = dataLiveRef.current
+      const liveAtual = liveNomeRef.current
+
+      // ✅ Limpa sacolinhas das linhas da live atual (ou sem data/live)
+      const linhasLimpas = prev.map(l => {
+        // Linha nova (sem data_live) ou da live atual → limpa sacolinha
+        if (!l.data_live || !l.live_nome ||
+            (l.data_live === dataAtual && l.live_nome === liveAtual)) {
+          return { ...l, sacolinha: null }
+        }
+        // Linha de outra live → mantém sacolinha original
+        return l
+      })
+
+      // Recalcula sacolinhas com cache limpo
+      return calcSacolas(linhasLimpas)
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataLive, liveNome])
 
