@@ -1232,8 +1232,26 @@ export default function VendasPage() {
       condicao: o.condicao,
       custo: o.custo
     }
-    // ✅ Adiciona no TOPO da lista (não logo abaixo)
-    setLinhas(prev => [copia, ...prev])
+
+    // ✅ Procura linha vazia para preencher
+    const linhaVaziaIdx = linhasRef.current.findIndex(l =>
+      !l.deleted &&
+      !l.isSent &&
+      !l.produto?.trim() &&
+      !l.cliente_nome?.trim() &&
+      !l.codigo?.toString().trim()
+    )
+
+    if (linhaVaziaIdx >= 0) {
+      // ✅ Preencher linha vazia existente
+      setLinhas(prev => prev.map((l, idx) =>
+        idx === linhaVaziaIdx ? { ...l, ...copia, _key: l._key } : l
+      ))
+    } else {
+      // ✅ Criar nova linha no topo
+      setLinhas(prev => [copia, ...prev])
+    }
+
     salvarAgora()
   }, [salvarAgora, config.codigo_automatico, getProximoCodigo])
 
