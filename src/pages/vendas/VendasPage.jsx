@@ -190,6 +190,14 @@ export default function VendasPage() {
   useEffect(() => { busyRef.current = busy },             [busy])
   useEffect(() => { hasUnsavedRef.current = hasUnsaved }, [hasUnsaved])
 
+  // ✅ Reseta cache de sacolinhas ao mudar Data ou Live
+  useEffect(() => {
+    console.log('🔄 Data/Live mudou - resetando cache de sacolinhas')
+    sacolinhasCacheRef.current = { usados: new Set(), mapa: {} }
+    setLinhas(prev => calcSacolas(prev))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataLive, liveNome])
+
   // ── Função calcSacolas usando cache global (APENAS DA LIVE ATUAL!) ──
   const calcSacolas = useCallback((linhas) => {
     const cache = sacolinhasCacheRef.current

@@ -6,6 +6,7 @@ export default function ClienteAutocomplete({
   onChange,
   onSelect,
   onEnterKey,
+  onBlur,
   className = '',
   disabled = false,
   list = [],  // ✅ Recebe lista de clientes já carregada
@@ -109,6 +110,7 @@ export default function ClienteAutocomplete({
         onFocus={() => { setOpen(true); setActiveIdx(-1) }}
         onBlur={() => {
           setTimeout(() => { setOpen(false); setActiveIdx(-1) }, 150)
+          onBlur?.()
         }}
         onKeyDown={handleKeyDown}
       />

@@ -274,6 +274,7 @@ function TabelaRow({
             onChange={v => upd('cliente_nome', v)}
             onSelect={(v) => onClienteSelect?.(linha._key, v)}
             onEnterKey={onEnterNoCliente}
+            onBlur={() => onClienteBlur?.(linha._key)}
             disabled={camposDesabilitados}
           />
           {linha.status_pagamento === 'PAGO' && (
