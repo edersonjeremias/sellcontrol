@@ -221,7 +221,8 @@ export default function VendasPage() {
     // ✅ Reconstrói cache do ZERO baseado APENAS em linhas ATIVAS (não deletadas)
     const cache = { usados: new Set(), mapa: {} }
 
-    console.log('🔄 calcSacolas: reconstruindo cache com', linhas.length, 'linhas')
+    console.error('🔄 calcSacolas: reconstruindo cache com', linhas.length, 'linhas')
+    console.error('📌 CACHE ATUAL:', sacolinhasCacheRef.current)
 
     // 1️⃣ Constrói cache com sacolinhas que EXISTEM em linhas NÃO DELETADAS
     linhas.forEach(l => {
@@ -232,11 +233,11 @@ export default function VendasPage() {
       if (l.sacolinha && !isNaN(l.sacolinha)) {
         cache.usados.add(Number(l.sacolinha))
         if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
-        console.log('✅ Cache: cliente', c, '→ sacolinha', l.sacolinha)
+        console.error('✅ Cache: cliente', c, '→ sacolinha', l.sacolinha)
       }
     })
 
-    console.log('📦 Cache construído:', {
+    console.error('📦 Cache construído:', {
       sacolinhas_usadas: Array.from(cache.usados).sort((a,b) => a-b),
       total_clientes: Object.keys(cache.mapa).length
     })
@@ -255,7 +256,7 @@ export default function VendasPage() {
       let n = 1
       while (cache.usados.has(n)) n++
 
-      console.log('🆕 Nova sacolinha:', c, '→', n, '| Usadas:', Array.from(cache.usados).sort((a,b) => a-b).join(', '))
+      console.error('🆕 Nova sacolinha:', c, '→', n, '| Usadas:', Array.from(cache.usados).sort((a,b) => a-b).join(', '))
 
       // Atualiza cache e retorna
       cache.usados.add(n)
