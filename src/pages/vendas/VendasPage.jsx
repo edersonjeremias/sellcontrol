@@ -231,15 +231,11 @@ export default function VendasPage() {
       if (l.data_live !== dataAtual || l.live_nome !== liveAtual) return
 
       const c = l.cliente_nome.trim().toLowerCase()
-      // ✅ Preserva sacolinha se:
-      // - Linha ENVIADA (confiável do banco)
-      // - OU linha NOVA sem ID (criada nesta sessão, não veio do banco)
+      // ✅ SEMPRE preserva sacolinhas existentes (não recalcula ao deletar outras linhas)
+      // Sacolinhas antigas do banco já foram limpas no handleBuscar
       if (l.sacolinha && !isNaN(l.sacolinha)) {
-        const preservar = l.isSent || l.status === 'ENVIADO' || !l.id
-        if (preservar) {
-          cache.usados.add(Number(l.sacolinha))
-          if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
-        }
+        cache.usados.add(Number(l.sacolinha))
+        if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
       }
     })
 
@@ -749,7 +745,16 @@ export default function VendasPage() {
       // ✅ RESETA cache de sacolinhas ao buscar nova live
       sacolinhasCacheRef.current = { usados: new Set(), mapa: {} }
 
-      const novas = ordenarLinhas(calcSacolas(rows.map(mapRow)))
+      // ✅ Limpa sacolinhas de linhas NÃO ENVIADAS do banco (podem estar antigas/erradas)
+      // Depois de calcular, SEMPRE preserva sacolinhas (não recalcula ao deletar)
+      const linhasMapeadas = rows.map(mapRow).map(l => {
+        // Preserva sacolinha apenas de linhas ENVIADAS
+        if (l.isSent || l.status === 'ENVIADO') return l
+        // Limpa sacolinha de linhas não enviadas (será recalculada uma vez)
+        return { ...l, sacolinha: null }
+      })
+
+      const novas = ordenarLinhas(calcSacolas(linhasMapeadas))
       setLinhas(novas)
       skipFilterEffectRef.current = true  // Evita que useEffect execute ao limpar filtro
       setFiltro('') // Limpa filtro
