@@ -218,21 +218,15 @@ export default function VendasPage() {
 
   // ── Função calcSacolas usando cache global (APENAS DA LIVE ATUAL!) ──
   const calcSacolas = useCallback((linhas) => {
-    // ✅ Reconstrói cache do ZERO baseado apenas nas linhas atuais (não usa cache antigo!)
-    const cache = { usados: new Set(), mapa: {} }
-    const liveAtual = liveNomeRef.current
-    const dataAtual = dataLiveRef.current
+    // ✅ USA cache global existente (NUNCA reconstrói do zero!)
+    const cache = sacolinhasCacheRef.current
 
-    // 1️⃣ Reconstrói o cache APENAS com sacolinhas da LIVE ATUAL
+    // 1️⃣ Atualiza cache com sacolinhas que já existem nas linhas
     linhas.forEach(l => {
       if (l.deleted || !l.cliente_nome?.trim()) return
-
-      // ✅ FILTRO: Só considera se for da mesma live!
-      if (l.data_live !== dataAtual || l.live_nome !== liveAtual) return
-
       const c = l.cliente_nome.trim().toLowerCase()
-      // ✅ SEMPRE preserva sacolinhas existentes (não recalcula ao deletar outras linhas)
-      // Sacolinhas antigas do banco já foram limpas no handleBuscar
+
+      // Se linha já tem sacolinha, garante que está no cache
       if (l.sacolinha && !isNaN(l.sacolinha)) {
         cache.usados.add(Number(l.sacolinha))
         if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
@@ -246,21 +240,19 @@ export default function VendasPage() {
 
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // Se cliente já tem sacolinha no cache (DA LIVE ATUAL), usa ela
+      // Se cliente já tem sacolinha no cache, usa ela (NUNCA MUDA!)
       if (cache.mapa[c]) return { ...l, sacolinha: cache.mapa[c] }
 
       // Busca próximo número disponível
       let n = 1
       while (cache.usados.has(n)) n++
 
-      // Atualiza cache e retorna
+      // Atualiza cache PERMANENTEMENTE e retorna
       cache.usados.add(n)
       cache.mapa[c] = n
       return { ...l, sacolinha: n }
     })
 
-    // ✅ Atualiza ref com cache reconstruído
-    sacolinhasCacheRef.current = cache
     return novasLinhas
   }, [])
 
