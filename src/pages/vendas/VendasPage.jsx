@@ -218,15 +218,15 @@ export default function VendasPage() {
 
   // ── Função calcSacolas usando cache global (APENAS DA LIVE ATUAL!) ──
   const calcSacolas = useCallback((linhas) => {
-    // ✅ USA cache global existente (NUNCA reconstrói do zero!)
-    const cache = sacolinhasCacheRef.current
+    // ✅ Reconstrói cache do ZERO baseado APENAS em linhas ATIVAS (não deletadas)
+    const cache = { usados: new Set(), mapa: {} }
 
-    // 1️⃣ Atualiza cache com sacolinhas que já existem nas linhas
+    // 1️⃣ Constrói cache com sacolinhas que EXISTEM em linhas NÃO DELETADAS
     linhas.forEach(l => {
       if (l.deleted || !l.cliente_nome?.trim()) return
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // Se linha já tem sacolinha, garante que está no cache
+      // Se linha já tem sacolinha, adiciona ao cache
       if (l.sacolinha && !isNaN(l.sacolinha)) {
         cache.usados.add(Number(l.sacolinha))
         if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
@@ -240,19 +240,21 @@ export default function VendasPage() {
 
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // Se cliente já tem sacolinha no cache, usa ela (NUNCA MUDA!)
+      // Se cliente já tem sacolinha, usa ela (NUNCA MUDA!)
       if (cache.mapa[c]) return { ...l, sacolinha: cache.mapa[c] }
 
-      // Busca próximo número disponível
+      // Busca MENOR número disponível (reutiliza sacolinhas deletadas!)
       let n = 1
       while (cache.usados.has(n)) n++
 
-      // Atualiza cache PERMANENTEMENTE e retorna
+      // Atualiza cache e retorna
       cache.usados.add(n)
       cache.mapa[c] = n
       return { ...l, sacolinha: n }
     })
 
+    // ✅ Atualiza cache global
+    sacolinhasCacheRef.current = cache
     return novasLinhas
   }, [])
 
