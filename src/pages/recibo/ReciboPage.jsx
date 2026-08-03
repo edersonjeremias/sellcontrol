@@ -52,6 +52,53 @@ export default function ReciboPage() {
     try {
       const res = await getCobrancaById(id)
       if (!res) { setErro(true); return }
+
+      // ✅ Busca status ATUAL dos itens no banco (para detectar cancelamentos posteriores)
+      if (res.itens && Array.isArray(res.itens) && res.itens.length > 0 && res.tenant_id) {
+        try {
+          // Extrai códigos únicos dos itens (assume formato: "1234 Produto...")
+          const codigos = res.itens
+            .map(item => {
+              const match = item.descricao?.match(/^\d+/)
+              return match ? match[0] : null
+            })
+            .filter(Boolean)
+
+          if (codigos.length > 0) {
+            // Busca status atual no banco
+            const { data: vendasAtuais } = await supabase
+              .from('vendas')
+              .select('codigo, status')
+              .eq('tenant_id', res.tenant_id)
+              .in('codigo', codigos)
+
+            if (vendasAtuais && vendasAtuais.length > 0) {
+              // Mapa código → status atual
+              const statusMap = {}
+              vendasAtuais.forEach(v => {
+                statusMap[String(v.codigo)] = v.status
+              })
+
+              // Atualiza campo cancelado nos itens
+              res.itens = res.itens.map(item => {
+                const match = item.descricao?.match(/^\d+/)
+                if (match) {
+                  const codigo = match[0]
+                  const statusAtual = statusMap[codigo]
+                  // Marca como cancelado se status atual é "Cancelado"
+                  if (statusAtual && String(statusAtual).toUpperCase().includes('CANCELADO')) {
+                    return { ...item, cancelado: true }
+                  }
+                }
+                return item
+              })
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao buscar status dos itens:', err)
+        }
+      }
+
       setCob(res)
 
       // Restaurar cupom se já foi aplicado
