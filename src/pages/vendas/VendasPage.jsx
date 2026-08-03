@@ -220,43 +220,46 @@ export default function VendasPage() {
   const calcSacolas = useCallback((linhas) => {
     // ✅ Reconstrói cache do ZERO baseado APENAS em linhas ATIVAS (não deletadas)
     const cache = { usados: new Set(), mapa: {} }
+    const linhasComProblema = new Set() // IDs de linhas com sacolinha duplicada
 
-    console.error('🔄 calcSacolas: reconstruindo cache com', linhas.length, 'linhas')
-    console.error('📌 CACHE ATUAL:', sacolinhasCacheRef.current)
-
-    // 1️⃣ Constrói cache com sacolinhas que EXISTEM em linhas NÃO DELETADAS
+    // 1️⃣ Constrói cache e DETECTA DUPLICATAS
     linhas.forEach(l => {
       if (l.deleted || !l.cliente_nome?.trim()) return
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // Se linha já tem sacolinha, adiciona ao cache
+      // Se linha já tem sacolinha, valida se não é duplicata
       if (l.sacolinha && !isNaN(l.sacolinha)) {
-        cache.usados.add(Number(l.sacolinha))
-        if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
-        console.error('✅ Cache: cliente', c, '→ sacolinha', l.sacolinha)
+        const num = Number(l.sacolinha)
+
+        // ⚠️ DUPLICATA DETECTADA: outro cliente já usa esta sacolinha!
+        if (cache.usados.has(num)) {
+          linhasComProblema.add(l._key || l.id) // Marca para recalcular
+          return
+        }
+
+        cache.usados.add(num)
+        cache.mapa[c] = num
       }
     })
 
-    console.error('📦 Cache construído:', {
-      sacolinhas_usadas: Array.from(cache.usados).sort((a,b) => a-b),
-      total_clientes: Object.keys(cache.mapa).length
-    })
-
-    // 2️⃣ Calcula sacolinhas para linhas sem sacolinha
+    // 2️⃣ Calcula sacolinhas (novas + duplicatas corrigidas)
     const novasLinhas = linhas.map(l => {
       if (l.deleted || l.isSent) return l
       if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
 
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // Se cliente já tem sacolinha, usa ela (NUNCA MUDA!)
-      if (cache.mapa[c]) return { ...l, sacolinha: cache.mapa[c] }
+      // ⚠️ Se linha tem problema de duplicata, FORÇA recálculo
+      const precisaRecalcular = linhasComProblema.has(l._key || l.id)
 
-      // Busca MENOR número disponível (reutiliza sacolinhas deletadas!)
+      // Se cliente já tem sacolinha válida e NÃO é duplicata, usa ela
+      if (!precisaRecalcular && cache.mapa[c]) {
+        return { ...l, sacolinha: cache.mapa[c] }
+      }
+
+      // Busca MENOR número disponível
       let n = 1
       while (cache.usados.has(n)) n++
-
-      console.error('🆕 Nova sacolinha:', c, '→', n, '| Usadas:', Array.from(cache.usados).sort((a,b) => a-b).join(', '))
 
       // Atualiza cache e retorna
       cache.usados.add(n)
@@ -1383,9 +1386,15 @@ export default function VendasPage() {
   const iniciarFinalizacao = useCallback(async () => {
     if (busy) return
 
+    // Valida se DATA está preenchida (obrigatório)
+    if (!dataLive) {
+      showToast('⚠️ Preencha o campo DATA antes de salvar!', 'error')
+      return
+    }
+
     // Valida se Live está preenchida (obrigatório)
     if (!liveNome?.trim()) {
-      showToast('Preencha o campo Live antes de salvar.', 'error')
+      showToast('⚠️ Preencha o campo LIVE antes de salvar!', 'error')
       return
     }
 
