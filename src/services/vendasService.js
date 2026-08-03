@@ -29,18 +29,34 @@ function safeQuery(promise) {
 
 export async function getDadosIniciais(tenantId = null) {
   const tid = TENANT_ID(tenantId)
+
+  // Função auxiliar para buscar TUDO com paginação
+  const fetchAllPaginated = async (query) => {
+    let todos = []
+    let pag = 0
+    const LOTE = 1000
+
+    while (true) {
+      const { data } = await query.range(pag * LOTE, (pag + 1) * LOTE - 1)
+      if (!data || data.length === 0) break
+      todos = todos.concat(data)
+      if (data.length < LOTE) break
+      pag++
+    }
+    return { data: todos }
+  }
+
   const [livesRes, bloqRes, cobRes] = await Promise.all([
     // Busca lives ÚNICAS da tabela vendas
-    safeQuery(supabase
+    safeQuery(fetchAllPaginated(supabase
       .from('vendas')
       .select('live_nome')
       .eq('tenant_id', tid)
       .not('live_nome', 'is', null)
       .not('live_nome', 'eq', '')
-      .order('live_nome')
-      .limit(50000)),
-    safeQuery(supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
-      .eq('tenant_id', tid).eq('bloqueado', true).limit(50000)),
+      .order('live_nome'))),
+    safeQuery(fetchAllPaginated(supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
+      .eq('tenant_id', tid).eq('bloqueado', true))),
     // Cobrancas pendentes = dívidas ativas do cliente
     safeQuery(supabase.from('cobrancas')
       .select('cliente, total, data')

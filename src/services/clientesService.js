@@ -1,13 +1,27 @@
 import { supabase } from '../lib/supabase'
 
 export async function getClientes(tenantId) {
-  const { data, error } = await supabase
-    .from('clientes')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .order('instagram')
-    .limit(50000)
-  return { data: data || [], error }
+  let todos = []
+  let pag = 0
+  const LOTE = 1000
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('instagram')
+      .range(pag * LOTE, (pag + 1) * LOTE - 1)
+
+    if (error) return { data: [], error }
+    if (!data || data.length === 0) break
+
+    todos = todos.concat(data)
+    if (data.length < LOTE) break // Última página
+    pag++
+  }
+
+  return { data: todos, error: null }
 }
 
 // Busca clientes por termo (busca sob demanda para autocomplete)
