@@ -231,10 +231,15 @@ export default function VendasPage() {
       if (l.data_live !== dataAtual || l.live_nome !== liveAtual) return
 
       const c = l.cliente_nome.trim().toLowerCase()
-      // ✅ Só confia em sacolinhas de linhas ENVIADAS (evita contaminar cache com dados antigos)
-      if (l.sacolinha && !isNaN(l.sacolinha) && (l.isSent || l.status === 'ENVIADO')) {
-        cache.usados.add(Number(l.sacolinha))
-        if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
+      // ✅ Preserva sacolinha se:
+      // - Linha ENVIADA (confiável do banco)
+      // - OU linha NOVA sem ID (criada nesta sessão, não veio do banco)
+      if (l.sacolinha && !isNaN(l.sacolinha)) {
+        const preservar = l.isSent || l.status === 'ENVIADO' || !l.id
+        if (preservar) {
+          cache.usados.add(Number(l.sacolinha))
+          if (!cache.mapa[c]) cache.mapa[c] = Number(l.sacolinha)
+        }
       }
     })
 
