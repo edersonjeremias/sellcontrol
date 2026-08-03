@@ -107,7 +107,7 @@ export default function ClienteAutocomplete({
         disabled={disabled}
         autoComplete="off"
         onChange={e => { onChange(e.target.value); setOpen(true); setActiveIdx(-1) }}
-        onFocus={() => { setOpen(true); setActiveIdx(-1) }}
+        onFocus={() => { setActiveIdx(-1) }}
         onBlur={() => {
           setTimeout(() => { setOpen(false); setActiveIdx(-1) }, 150)
           onBlur?.()
