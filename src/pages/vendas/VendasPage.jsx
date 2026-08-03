@@ -471,7 +471,13 @@ export default function VendasPage() {
     const timer = setTimeout(async () => {
       console.log('🚀 Executando busca após debounce')
       try {
-        const resultados = await buscarProdutosPorTermos(tenantId, filtro)
+        // ✅ Passa data_live e live_nome para buscar SÓ da live atual
+        const resultados = await buscarProdutosPorTermos(
+          tenantId,
+          filtro,
+          dataLiveRef.current,
+          liveNomeRef.current
+        )
         console.log('📥 Resultados recebidos:', resultados.length)
 
         // Adiciona resultados no início de linhas com flag _fromSearch

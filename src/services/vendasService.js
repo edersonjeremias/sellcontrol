@@ -195,23 +195,29 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
 
 // ── buscarProdutosPorTermos ────────────────────────────────────
 // Busca produtos únicos na tabela vendas baseado em termos de busca
-// Retorna produtos SEM cliente (para adicionar à venda)
-export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
+// ✅ Busca APENAS da live atual (data_live + live_nome)
+export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLive, liveNome) {
   const tid = TENANT_ID(tenantId)
-  console.log('🔍 buscarProdutosPorTermos chamada:', { termosStr, tid })
+  console.log('🔍 buscarProdutosPorTermos chamada:', { termosStr, dataLive, liveNome, tid })
   if (!termosStr?.trim()) return []
 
   const termos = termosStr.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
   console.log('📝 Termos de busca:', termos)
   if (termos.length === 0) return []
 
-  // Busca todas as vendas e filtra por termos
-  const { data: vendas, error } = await supabase
+  // ✅ Busca APENAS produtos da live atual (data_live + live_nome)
+  let query = supabase
     .from('vendas')
-    .select('produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, cliente_instagram')
+    .select('produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome')
     .eq('tenant_id', tid)
     .order('created_at', { ascending: false })
     .limit(500)
+
+  // ✅ Filtra por data e live (APENAS live atual!)
+  if (dataLive) query = query.eq('data_live', dataLive)
+  if (liveNome?.trim()) query = query.eq('live_nome', liveNome.trim())
+
+  const { data: vendas, error } = await query
 
   console.log('📦 Vendas retornadas do banco:', vendas?.length || 0)
   if (error) { console.error('❌ Erro ao buscar:', error); throw error }
@@ -219,7 +225,7 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr) {
 
   // Filtra produtos que correspondem a TODOS os termos (busca em TODOS os campos!)
   const produtos = vendas.filter(v => {
-    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo, v.cliente_nome, v.cliente_instagram]
+    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo, v.cliente_nome]
       .join(' ')
       .toLowerCase()
     const match = termos.every(termo => txt.includes(termo))
