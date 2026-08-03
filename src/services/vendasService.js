@@ -223,9 +223,12 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
   if (error) { console.error('❌ Erro ao buscar:', error); throw error }
   if (!vendas?.length) return []
 
-  // Filtra produtos que correspondem a TODOS os termos (busca em TODOS os campos!)
+  // Filtra produtos que correspondem a TODOS os termos E não têm cliente
   const produtos = vendas.filter(v => {
-    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo, v.cliente_nome]
+    // ✅ Busca SÓ produtos SEM cliente (disponíveis para venda)
+    if (v.cliente_nome?.trim()) return false
+
+    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo]
       .join(' ')
       .toLowerCase()
     const match = termos.every(termo => txt.includes(termo))
@@ -250,7 +253,7 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
         tamanho: p.tamanho || '',
         preco: p.preco != null ? formatMoney(p.preco) : '',
         codigo: p.codigo || '',
-        cliente_nome: p.cliente_nome || '',  // ✅ Mantém cliente original!
+        cliente_nome: '',  // ✅ Sempre vazio (produtos sem cliente)
         data_live: '',
         live_nome: '',
         sacolinha: null,  // Será calculado depois
