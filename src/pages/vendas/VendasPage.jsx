@@ -218,11 +218,12 @@ export default function VendasPage() {
 
   // ── Função calcSacolas usando cache global (APENAS DA LIVE ATUAL!) ──
   const calcSacolas = useCallback((linhas) => {
-    const cache = sacolinhasCacheRef.current
+    // ✅ Reconstrói cache do ZERO baseado apenas nas linhas atuais (não usa cache antigo!)
+    const cache = { usados: new Set(), mapa: {} }
     const liveAtual = liveNomeRef.current
     const dataAtual = dataLiveRef.current
 
-    // 1️⃣ Atualiza o cache APENAS com sacolinhas da LIVE ATUAL
+    // 1️⃣ Reconstrói o cache APENAS com sacolinhas da LIVE ATUAL
     linhas.forEach(l => {
       if (l.deleted || !l.cliente_nome?.trim()) return
 
@@ -238,7 +239,7 @@ export default function VendasPage() {
     })
 
     // 2️⃣ Calcula sacolinhas para linhas sem sacolinha
-    return linhas.map(l => {
+    const novasLinhas = linhas.map(l => {
       if (l.deleted || l.isSent) return l
       if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
 
@@ -256,6 +257,10 @@ export default function VendasPage() {
       cache.mapa[c] = n
       return { ...l, sacolinha: n }
     })
+
+    // ✅ Atualiza ref com cache reconstruído
+    sacolinhasCacheRef.current = cache
+    return novasLinhas
   }, [])
 
   useEffect(() => {
