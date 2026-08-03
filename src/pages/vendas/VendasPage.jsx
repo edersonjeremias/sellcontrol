@@ -745,14 +745,8 @@ export default function VendasPage() {
       // ✅ RESETA cache de sacolinhas ao buscar nova live
       sacolinhasCacheRef.current = { usados: new Set(), mapa: {} }
 
-      // ✅ Limpa sacolinhas de linhas NÃO ENVIADAS do banco (podem estar antigas/erradas)
-      // Depois de calcular, SEMPRE preserva sacolinhas (não recalcula ao deletar)
-      const linhasMapeadas = rows.map(mapRow).map(l => {
-        // Preserva sacolinha apenas de linhas ENVIADAS
-        if (l.isSent || l.status === 'ENVIADO') return l
-        // Limpa sacolinha de linhas não enviadas (será recalculada uma vez)
-        return { ...l, sacolinha: null }
-      })
+      // ✅ PRESERVA sacolinhas do banco (NUNCA zera!)
+      const linhasMapeadas = rows.map(mapRow)
 
       const novas = ordenarLinhas(calcSacolas(linhasMapeadas))
       setLinhas(novas)
