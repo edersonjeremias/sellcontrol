@@ -1262,6 +1262,7 @@ export default function VendasPage() {
       marca: o.marca,
       tamanho: o.tamanho,
       preco: o.preco,
+      preco_promocional: o.preco_promocional,
       genero: o.genero,
       condicao: o.condicao,
       custo: o.custo
