@@ -57,26 +57,37 @@ export default function ReciboPage() {
       if (res.itens && Array.isArray(res.itens) && res.itens.length > 0 && res.tenant_id) {
         try {
           // Extrai códigos únicos dos itens (assume formato: "1234 Produto...")
-          const codigos = res.itens
+          const codigosStr = res.itens
             .map(item => {
               const match = item.descricao?.match(/^\d+/)
               return match ? match[0] : null
             })
             .filter(Boolean)
 
-          if (codigos.length > 0) {
-            // Busca status atual no banco
+          // Converte para número E string (pois não sabemos o tipo do campo no banco)
+          const codigosNum = codigosStr.map(c => parseInt(c, 10)).filter(c => !isNaN(c))
+
+          if (codigosStr.length > 0 && codigosNum.length > 0) {
+            // Busca por código numérico OU string
             const { data: vendasAtuais } = await supabase
               .from('vendas')
               .select('codigo, status')
               .eq('tenant_id', res.tenant_id)
-              .in('codigo', codigos)
+              .or(`codigo.in.(${codigosNum.join(',')}),codigo.in.(${codigosStr.map(c => `"${c}"`).join(',')})`)
+
+            console.log('🔍 Buscando itens cancelados:', {
+              codigos: codigosNum,
+              encontrados: vendasAtuais?.length || 0,
+              itens: vendasAtuais
+            })
 
             if (vendasAtuais && vendasAtuais.length > 0) {
-              // Mapa código → status atual
+              // Mapa código → status atual (normaliza para string)
               const statusMap = {}
               vendasAtuais.forEach(v => {
-                statusMap[String(v.codigo)] = v.status
+                const cod = String(v.codigo)
+                statusMap[cod] = v.status
+                console.log(`📌 Código ${cod} → status: ${v.status}`)
               })
 
               // Atualiza campo cancelado nos itens
@@ -87,6 +98,7 @@ export default function ReciboPage() {
                   const statusAtual = statusMap[codigo]
                   // Marca como cancelado se status atual é "Cancelado"
                   if (statusAtual && String(statusAtual).toUpperCase().includes('CANCELADO')) {
+                    console.log(`❌ Marcando como cancelado: ${item.descricao}`)
                     return { ...item, cancelado: true }
                   }
                 }
