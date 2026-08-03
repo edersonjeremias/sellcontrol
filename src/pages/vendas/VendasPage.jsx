@@ -1031,12 +1031,13 @@ export default function VendasPage() {
 
       if (field === 'cliente_nome') {
         linhaAtualizada.liberado = false
-        linhaAtualizada.sacolinha = null
+        linhaAtualizada.sacolinha = null  // ✅ Limpa sacolinha (será recalculada no onBlur)
         // Recalcula isSent: só deve ser true se tiver status ENVIADO/VENDIDO E cliente
         linhaAtualizada.isSent = ['ENVIADO', 'VENDIDO'].includes((linhaAtualizada.status || '').toUpperCase()) && value?.trim()
         const novasLinhas = [...prev]
         novasLinhas[idx] = linhaAtualizada
-        return calcSacolas(novasLinhas)
+        // ❌ NÃO recalcula sacolinhas aqui (espera onBlur)
+        return novasLinhas
       }
 
       if (field === 'status') {
@@ -1108,7 +1109,9 @@ export default function VendasPage() {
     salvarAgora()
 
     if (!nome) {
-      console.log('⚠️ Nome vazio, ignorando validação')
+      console.log('⚠️ Nome vazio, recalculando sacolinhas')
+      // ✅ Recalcula sacolinhas (limpa a sacolinha desta linha)
+      setLinhas(prev => calcSacolas(prev))
       return
     }
 
@@ -1148,7 +1151,11 @@ export default function VendasPage() {
       return
     }
 
-    console.log('✓ Cliente válido, verificando bloqueio')
+    console.log('✓ Cliente válido, recalculando sacolinhas')
+    // ✅ Recalcula sacolinhas após validação (antes do modal de bloqueio)
+    setLinhas(prev => calcSacolas(prev))
+
+    console.log('✓ Verificando bloqueio')
     showBloqueioModal(key, nome)
   }, [salvarAgora])
 
