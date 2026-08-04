@@ -46,16 +46,8 @@ export async function getDadosIniciais(tenantId = null) {
     return { data: todos }
   }
 
-  const [livesRes, livesTableRes, bloqRes, cobRes] = await Promise.all([
-    // Busca lives ÚNICAS da tabela vendas
-    safeQuery(fetchAllPaginated(supabase
-      .from('vendas')
-      .select('live_nome')
-      .eq('tenant_id', tid)
-      .not('live_nome', 'is', null)
-      .not('live_nome', 'eq', '')
-      .order('live_nome'))),
-    // Busca lives da tabela lives (cadastradas mas podem não ter vendas ainda)
+  const [livesTableRes, bloqRes, cobRes] = await Promise.all([
+    // 🚀 OTIMIZADO: Busca SOMENTE da tabela lives (auto-populada ao salvar vendas)
     safeQuery(supabase
       .from('lives')
       .select('nome')
@@ -70,11 +62,8 @@ export async function getDadosIniciais(tenantId = null) {
       .in('status', ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE'])),
   ])
 
-  // Combina lives da tabela lives + lives usadas em vendas
-  const livesVendas = livesRes.data?.map(l => l.live_nome).filter(Boolean) || []
-  const livesTabela = livesTableRes.data?.map(l => l.nome).filter(Boolean) || []
-  const livesUnicas = [...new Set([...livesTabela, ...livesVendas])]
-  const lives = livesUnicas.sort()
+  // Lives vem direto da tabela otimizada
+  const lives = (livesTableRes.data?.map(l => l.nome).filter(Boolean) || []).sort()
   const bloqueados = {}
 
   bloqRes.data?.forEach(c => {
@@ -385,6 +374,16 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     const { error } = await supabase.from('vendas').delete().in('id', toDelete)
     if (error) throw error
   }
+
+  // 🚀 AUTO-POPULAR TABELA LIVES (otimização de performance)
+  if (liveNome && liveNome.trim()) {
+    try {
+      await salvarNovaLive(tenantId, liveNome.trim())
+    } catch {
+      // Silenciosamente ignora erro (live já existe ou outro problema não crítico)
+    }
+  }
+
   return { ok: true, novosIds }
 }
 
@@ -411,6 +410,12 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
       })
       .eq('id', linha.id)
     if (error) throw error
+
+    // Auto-popular lives
+    if (liveNome && liveNome.trim()) {
+      try { await salvarNovaLive(tenantId, liveNome.trim()) } catch {}
+    }
+
     return { ok: true, id: linha.id }
   }
   const { data, error } = await supabase.from('vendas').insert({
@@ -427,6 +432,12 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
     fila1: linha.fila1 || '', fila2: linha.fila2 || '', fila3: linha.fila3 || '',
   }).select('id').single()
   if (error) throw error
+
+  // Auto-popular lives
+  if (liveNome && liveNome.trim()) {
+    try { await salvarNovaLive(tenantId, liveNome.trim()) } catch {}
+  }
+
   return { ok: true, id: data.id }
 }
 export { enviarVenda as enviarVendaIndividual }

@@ -339,35 +339,19 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
 export async function getLivesParaCobranca(tenantId) {
   const t = tid(tenantId)
 
-  // Busca lives cadastradas na tabela lives
-  const { data: livesData } = await supabase.from('lives').select('nome').eq('tenant_id', t)
+  // 🚀 OTIMIZADO: Busca SOMENTE da tabela lives (auto-populada ao salvar vendas)
+  // Antes: varria TODAS as vendas (1000+ queries para bases grandes)
+  // Agora: 1 query simples na tabela lives (~10-50 registros)
+  const { data: livesData } = await supabase
+    .from('lives')
+    .select('nome')
+    .eq('tenant_id', t)
+    .order('nome')
 
-  // Busca lives ÚNICAS das vendas usando DISTINCT (mais eficiente)
-  // Nota: Supabase não tem DISTINCT direto, mas podemos usar GROUP BY via RPC ou buscar tudo
-  // Por segurança, vamos buscar com paginação
-  let todasVendas = []
-  let pag = 0
-  const LOTE = 1000
-
-  while (true) {
-    const { data } = await supabase
-      .from('vendas')
-      .select('live_nome')
-      .eq('tenant_id', t)
-      .not('live_nome', 'is', null)
-      .not('live_nome', 'eq', '')
-      .range(pag * LOTE, (pag + 1) * LOTE - 1)
-
-    if (!data || data.length === 0) break
-    todasVendas = todasVendas.concat(data)
-    if (data.length < LOTE) break
-    pag++
-  }
-
-  const nomes = new Set()
-  livesData?.forEach(l => { if (l.nome) nomes.add(l.nome.trim()) })
-  todasVendas.forEach(v => { if (v.live_nome) nomes.add(v.live_nome.trim()) })
-  return Array.from(nomes).filter(n => n !== "").sort()
+  return (livesData?.map(l => l.nome).filter(Boolean) || [])
+    .map(n => n.trim())
+    .filter(n => n !== "")
+    .sort()
 }
 
 export async function getClientesParaCobranca(tenantId) {
