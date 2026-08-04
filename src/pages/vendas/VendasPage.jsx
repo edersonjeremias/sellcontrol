@@ -491,11 +491,15 @@ export default function VendasPage() {
         // Adiciona resultados no início de linhas com flag _fromSearch
         if (resultados.length > 0) {
           setLinhas(prev => {
-            // Remove produtos antigos da busca E produtos duplicados (mesmo código)
-            const codigosBusca = new Set(resultados.map(r => r.codigo).filter(Boolean))
-            const semBusca = prev.filter(l => !l._fromSearch && !codigosBusca.has(l.codigo))
-            // Adiciona novos resultados no início
-            const novosResultados = resultados.map(r => ({ ...r, _fromSearch: true }))
+            // ✅ Remove APENAS produtos antigos da busca (não remove linhas com dados do usuário!)
+            const semBusca = prev.filter(l => !l._fromSearch)
+
+            // ✅ Filtra resultados para NÃO duplicar linhas que o usuário já está editando
+            const idsExistentes = new Set(prev.filter(l => l.id).map(l => l.id))
+            const novosResultados = resultados
+              .filter(r => !r.id || !idsExistentes.has(r.id))
+              .map(r => ({ ...r, _fromSearch: true }))
+
             return [...novosResultados, ...semBusca]
           })
         }

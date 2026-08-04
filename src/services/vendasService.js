@@ -224,7 +224,7 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
   // ✅ Busca APENAS produtos da live atual (data_live + live_nome)
   let query = supabase
     .from('vendas')
-    .select('produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome')
+    .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, sacolinha')
     .eq('tenant_id', tid)
     .order('created_at', { ascending: false })
     .limit(500)
@@ -239,12 +239,9 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
   if (error) { console.error('❌ Erro ao buscar:', error); throw error }
   if (!vendas?.length) return []
 
-  // Filtra produtos que correspondem a TODOS os termos E não têm cliente
+  // ✅ Filtra produtos que correspondem a TODOS os termos (COM OU SEM cliente)
   const produtos = vendas.filter(v => {
-    // ✅ Busca SÓ produtos SEM cliente (disponíveis para venda)
-    if (v.cliente_nome?.trim()) return false
-
-    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo]
+    const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo, v.cliente_nome || '']
       .join(' ')
       .toLowerCase()
     const match = termos.every(termo => txt.includes(termo))
@@ -254,38 +251,31 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
 
   console.log('🎯 Produtos após filtro:', produtos.length)
 
-  // Agrupa por combinação única (remove duplicados)
-  const unicos = new Map()
-  produtos.forEach(p => {
-    const chave = `${p.produto}|${p.modelo}|${p.cor}|${p.marca}|${p.tamanho}|${p.codigo}`
-    if (!unicos.has(chave)) {
-      unicos.set(chave, {
-        _key: `busca-${Date.now()}-${Math.random()}`,
-        id: null,
-        produto: p.produto || '',
-        modelo: p.modelo || '',
-        cor: p.cor || '',
-        marca: p.marca || '',
-        tamanho: p.tamanho || '',
-        preco: p.preco != null ? formatMoney(p.preco) : '',
-        codigo: p.codigo || '',
-        cliente_nome: '',  // ✅ Sempre vazio (produtos sem cliente)
-        data_live: '',
-        live_nome: '',
-        sacolinha: null,  // Será calculado depois
-        status: '',
-        fila1: '', fila2: '', fila3: '',
-        isNew: true,
-        deleted: false,
-        isSent: false,
-        liberado: false,
-        _isBuscaResult: true, // Flag para identificar que é resultado de busca
-      })
-    }
-  })
+  // ✅ Retorna produtos DO BANCO (preserva ID, cliente e sacolinha)
+  const resultado = produtos.map(p => ({
+    _key: `busca-${p.id || Date.now()}-${Math.random()}`,
+    id: p.id || null,
+    produto: p.produto || '',
+    modelo: p.modelo || '',
+    cor: p.cor || '',
+    marca: p.marca || '',
+    tamanho: p.tamanho || '',
+    preco: p.preco != null ? formatMoney(p.preco) : '',
+    codigo: p.codigo || '',
+    cliente_nome: p.cliente_nome || '',  // ✅ Preserva cliente original!
+    data_live: dataLive || '',
+    live_nome: liveNome || '',
+    sacolinha: p.sacolinha || null,  // ✅ Preserva sacolinha original!
+    status: '',
+    fila1: '', fila2: '', fila3: '',
+    isNew: false,  // ✅ Produto do banco não é novo
+    deleted: false,
+    isSent: false,
+    liberado: false,
+    _fromSearch: true, // ✅ Flag para identificar que veio da busca do filtro
+  }))
 
-  const resultado = Array.from(unicos.values())
-  console.log('✨ Resultado final da busca:', resultado.length, 'produtos únicos')
+  console.log('✨ Resultado final da busca:', resultado.length, 'produtos')
   return resultado
 }
 
