@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
-  getDadosIniciais, getListas, salvarNovoCadastro,
+  getDadosIniciais, getListas, salvarNovoCadastro, salvarNovaLive,
   getVendas, salvarVendas, estornarVenda,
   finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
@@ -156,6 +156,9 @@ export default function VendasPage() {
   const [modalEdicaoKey,    setModalEdicaoKey]    = useState(null)
   const [modalFilaKey,      setModalFilaKey]      = useState(null)
   const [showModalCadastro, setShowModalCadastro] = useState(false)
+  const [showModalLive,     setShowModalLive]     = useState(false)
+  const [novaLiveNome,      setNovaLiveNome]      = useState('')
+  const [salvandoLive,      setSalvandoLive]      = useState(false)
   const [alerta,            setAlerta]            = useState(null)
   const [modalClienteErro,  setModalClienteErro]  = useState(null) // { key, nome }
   const [confirmacao,       setConfirmacao]       = useState(null)
@@ -1199,6 +1202,31 @@ export default function VendasPage() {
     setModalClienteErro(null)
   }, [modalClienteErro])
 
+  // ── Salvar Nova Live ──
+  const salvarLive = useCallback(async () => {
+    if (!novaLiveNome.trim() || salvandoLive) return
+    setSalvandoLive(true)
+    try {
+      await salvarNovaLive(tenantId, novaLiveNome.trim())
+      await new Promise(resolve => setTimeout(resolve, 300))
+
+      // Recarrega dados iniciais (que agora inclui lives da tabela lives)
+      const novosDB = await getDadosIniciais(tenantId)
+      setGlobalDB(novosDB)
+
+      // Define a live recém-criada como selecionada
+      setLiveNome(novaLiveNome.trim())
+
+      showToast('Live cadastrada com sucesso!', 'success')
+      setShowModalLive(false)
+      setNovaLiveNome('')
+    } catch (err) {
+      showToast(err?.message || 'Erro ao cadastrar live', 'error')
+    } finally {
+      setSalvandoLive(false)
+    }
+  }, [novaLiveNome, salvandoLive, tenantId, showToast])
+
   // Sem useCallback para garantir closure sempre atualizada
   function handleClienteSelect(key, nome, inputEl) {
     const l = linhasRef.current.find(linha => linha._key === key)
@@ -1569,10 +1597,18 @@ export default function VendasPage() {
               <input type="date" value={dataLive} onChange={e => setDataLive(e.target.value)}
                 onClick={e => { try { e.target.showPicker() } catch {} }} />
             </div>
-            <div className="field">
-              <label>Live</label>
-              <AutocompleteInput value={liveNome} onChange={setLiveNome}
-                list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
+            <div className="field" style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+              <div style={{ flex: 1 }}>
+                <label>Live</label>
+                <AutocompleteInput value={liveNome} onChange={setLiveNome}
+                  list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
+              </div>
+              <button
+                className="btn-acao btn-ghost"
+                onClick={() => { setNovaLiveNome(''); setShowModalLive(true) }}
+                style={{ minWidth: 32, height: 32, padding: 0, fontSize: 18, flexShrink: 0 }}
+                title="Cadastrar nova Live"
+              >+</button>
             </div>
             <div className="total-container">
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>
@@ -1753,6 +1789,78 @@ export default function VendasPage() {
           onFechar={() => setShowModalCadastro(false)}
         />
       )}
+
+      {/* MODAL NOVA LIVE */}
+      {showModalLive && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setShowModalLive(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 24, maxWidth: 400, width: '90%', border: '1px solid var(--border)' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 18, color: 'var(--text-header)' }}>📺 Nova Live</h3>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>Nome da Live</label>
+              <input
+                type="text"
+                value={novaLiveNome}
+                onChange={e => setNovaLiveNome(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && novaLiveNome.trim() && !salvandoLive) {
+                    salvarLive()
+                  }
+                }}
+                placeholder="Ex: Live de Natal 2026"
+                autoFocus
+                disabled={salvandoLive}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 6,
+                  color: 'var(--text-body)',
+                  fontSize: 14
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setShowModalLive(false)}
+                disabled={salvandoLive}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  background: 'transparent',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 8,
+                  color: 'var(--muted)',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarLive}
+                disabled={!novaLiveNome.trim() || salvandoLive}
+                style={{
+                  flex: 1,
+                  padding: '12px 24px',
+                  background: novaLiveNome.trim() && !salvandoLive ? 'var(--green)' : 'var(--muted)',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: '#171717',
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: novaLiveNome.trim() && !salvandoLive ? 'pointer' : 'not-allowed'
+                }}
+              >
+                {salvandoLive ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
       {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} hideConfirm={confirmacao.hideConfirm} />}
 

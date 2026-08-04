@@ -134,6 +134,33 @@ export async function getListas(tenantId = null) {
 }
 export { getListas as getListasAutocomplete }
 
+// ── salvarNovaLive ─────────────────────────────────────────────
+export async function salvarNovaLive(tenantId = null, nomeLive) {
+  const tid = TENANT_ID(tenantId)
+  const nome = nomeLive.trim()
+  if (!nome) throw new Error('Nome da live em branco.')
+
+  // Verifica se já existe
+  const { data: existe } = await supabase
+    .from('lives')
+    .select('id')
+    .eq('tenant_id', tid)
+    .eq('nome', nome)
+    .maybeSingle()
+
+  if (existe) {
+    console.log('Live já existe:', nome)
+    return // Não é erro, apenas já existe
+  }
+
+  const { error } = await supabase
+    .from('lives')
+    .insert([{ tenant_id: tid, nome }])
+
+  if (error) throw error
+  console.log('✅ Live salva:', nome)
+}
+
 // ── salvarNovoCadastro ─────────────────────────────────────────
 export async function salvarNovoCadastro(tenantId = null, tipo, valor, celular) {
   const tid = TENANT_ID(tenantId)
