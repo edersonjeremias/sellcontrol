@@ -223,9 +223,21 @@ export default function VendasPage() {
   const calcSacolas = useCallback((linhas) => {
     const cache = { usados: new Set(), mapa: {} } // mapa: cliente -> sacolinha
 
+    // 🔑 ORDENA linhas: BANCO PRIMEIRO (com ID), depois NOVAS (sem ID)
+    // Isso garante que clientes já salvos mantenham suas sacolinhas
+    const linhasOrdenadas = [...linhas].sort((a, b) => {
+      // Linhas do banco (com ID) vêm primeiro
+      if (a.id && !b.id) return -1
+      if (!a.id && b.id) return 1
+      // Entre linhas do banco, ordena por ID (mais antiga primeiro)
+      if (a.id && b.id) return a.id - b.id
+      // Linhas novas mantêm ordem original
+      return 0
+    })
+
     // 1️⃣ PRIMEIRA PASSADA: Constrói cache baseado nas sacolinhas EXISTENTES
     // Regra: O MESMO CLIENTE sempre usa a MESMA SACOLINHA
-    linhas.forEach(l => {
+    linhasOrdenadas.forEach(l => {
       if (l.deleted || l.isSent || !l.cliente_nome?.trim()) return
       const c = l.cliente_nome.trim().toLowerCase()
 
@@ -251,7 +263,7 @@ export default function VendasPage() {
       }
     })
 
-    // 2️⃣ SEGUNDA PASSADA: Atribui sacolinhas
+    // 2️⃣ SEGUNDA PASSADA: Atribui sacolinhas (processa linhas na ORDEM ORIGINAL!)
     const novasLinhas = linhas.map(l => {
       if (l.deleted || l.isSent) return l
       if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
