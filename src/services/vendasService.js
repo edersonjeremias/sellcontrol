@@ -46,7 +46,7 @@ export async function getDadosIniciais(tenantId = null) {
     return { data: todos }
   }
 
-  const [livesRes, bloqRes, cobRes] = await Promise.all([
+  const [livesRes, livesTableRes, bloqRes, cobRes] = await Promise.all([
     // Busca lives ÚNICAS da tabela vendas
     safeQuery(fetchAllPaginated(supabase
       .from('vendas')
@@ -55,6 +55,12 @@ export async function getDadosIniciais(tenantId = null) {
       .not('live_nome', 'is', null)
       .not('live_nome', 'eq', '')
       .order('live_nome'))),
+    // Busca lives da tabela lives (cadastradas mas podem não ter vendas ainda)
+    safeQuery(supabase
+      .from('lives')
+      .select('nome')
+      .eq('tenant_id', tid)
+      .order('nome')),
     safeQuery(fetchAllPaginated(supabase.from('clientes').select('instagram, bloqueado, msg_bloqueio')
       .eq('tenant_id', tid).eq('bloqueado', true))),
     // Cobrancas pendentes = dívidas ativas do cliente
@@ -64,8 +70,10 @@ export async function getDadosIniciais(tenantId = null) {
       .in('status', ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE'])),
   ])
 
-  // Remove duplicatas e filtra vazios
-  const livesUnicas = [...new Set(livesRes.data?.map(l => l.live_nome).filter(Boolean) || [])]
+  // Combina lives da tabela lives + lives usadas em vendas
+  const livesVendas = livesRes.data?.map(l => l.live_nome).filter(Boolean) || []
+  const livesTabela = livesTableRes.data?.map(l => l.nome).filter(Boolean) || []
+  const livesUnicas = [...new Set([...livesTabela, ...livesVendas])]
   const lives = livesUnicas.sort()
   const bloqueados = {}
 
