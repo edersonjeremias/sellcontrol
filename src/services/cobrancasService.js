@@ -338,24 +338,14 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
 // ── Lives e Clientes ───────────────────────────────────────────
 export async function getLivesParaCobranca(tenantId) {
   const t = tid(tenantId)
-  console.log('🔍 getLivesParaCobranca - tenantId:', t)
-
   const [resL, resV] = await Promise.all([
     supabase.from('lives').select('nome').eq('tenant_id', t),
     supabase.from('vendas').select('live_nome').eq('tenant_id', t).not('live_nome', 'is', null)
   ])
-
-  console.log('📋 Lives da tabela lives:', resL.data)
-  console.log('📋 Lives da tabela vendas:', resV.data?.length, 'registros')
-
   const nomes = new Set()
   resL.data?.forEach(l => { if (l.nome) nomes.add(l.nome.trim()) })
   resV.data?.forEach(v => { if (v.live_nome) nomes.add(v.live_nome.trim()) })
-
-  const resultado = Array.from(nomes).filter(n => n !== "").sort()
-  console.log('✅ Lives finais para dropdown:', resultado)
-
-  return resultado
+  return Array.from(nomes).filter(n => n !== "").sort()
 }
 
 export async function getClientesParaCobranca(tenantId) {
