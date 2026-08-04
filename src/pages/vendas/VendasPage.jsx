@@ -221,50 +221,53 @@ export default function VendasPage() {
 
   // ── Função calcSacolas usando cache global (APENAS DA LIVE ATUAL!) ──
   const calcSacolas = useCallback((linhas) => {
-    // ✅ Reconstrói cache do ZERO baseado APENAS em linhas ATIVAS (não deletadas)
-    const cache = { usados: new Set(), mapa: {} }
-    const linhasComProblema = new Set() // IDs de linhas com sacolinha duplicada
+    const cache = { usados: new Set(), mapa: {} } // mapa: cliente -> sacolinha
 
-    // 1️⃣ Constrói cache e DETECTA DUPLICATAS
+    // 1️⃣ PRIMEIRA PASSADA: Constrói cache baseado nas sacolinhas EXISTENTES
+    // Regra: O MESMO CLIENTE sempre usa a MESMA SACOLINHA
     linhas.forEach(l => {
-      if (l.deleted || !l.cliente_nome?.trim()) return
+      if (l.deleted || l.isSent || !l.cliente_nome?.trim()) return
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // Se linha já tem sacolinha, valida se não é duplicata
+      // ✅ Se cliente JÁ está no cache, pula (usa o número já definido)
+      if (cache.mapa[c] !== undefined) return
+
+      // Se linha tem sacolinha válida do banco
       if (l.sacolinha && !isNaN(l.sacolinha)) {
         const num = Number(l.sacolinha)
 
-        // ⚠️ DUPLICATA DETECTADA: outro cliente já usa esta sacolinha!
-        if (cache.usados.has(num)) {
-          linhasComProblema.add(l._key || l.id) // Marca para recalcular
-          return
-        }
+        // ⚠️ Verifica se OUTRO CLIENTE já está usando esta sacolinha
+        const outroDonoDaSacolinha = Object.keys(cache.mapa).find(
+          cliente => cache.mapa[cliente] === num && cliente !== c
+        )
 
-        cache.usados.add(num)
-        cache.mapa[c] = num
+        if (!outroDonoDaSacolinha) {
+          // Sacolinha livre (ou já pertence a este cliente), pode usar
+          cache.mapa[c] = num
+          cache.usados.add(num)
+        }
+        // Se outro cliente já usa esta sacolinha, NÃO adiciona ao cache
+        // (será recalculada na 2ª passada)
       }
     })
 
-    // 2️⃣ Calcula sacolinhas (novas + duplicatas corrigidas)
+    // 2️⃣ SEGUNDA PASSADA: Atribui sacolinhas
     const novasLinhas = linhas.map(l => {
       if (l.deleted || l.isSent) return l
       if (!l.cliente_nome?.trim()) return { ...l, sacolinha: null }
 
       const c = l.cliente_nome.trim().toLowerCase()
 
-      // ⚠️ Se linha tem problema de duplicata, FORÇA recálculo
-      const precisaRecalcular = linhasComProblema.has(l._key || l.id)
-
-      // Se cliente já tem sacolinha válida e NÃO é duplicata, usa ela
-      if (!precisaRecalcular && cache.mapa[c]) {
+      // ✅ Se cliente já tem sacolinha no cache, TODAS as linhas dele usam a mesma
+      if (cache.mapa[c] !== undefined) {
         return { ...l, sacolinha: cache.mapa[c] }
       }
 
-      // Busca MENOR número disponível
+      // Cliente não tem sacolinha: busca menor número disponível
       let n = 1
       while (cache.usados.has(n)) n++
 
-      // Atualiza cache e retorna
+      // Atualiza cache (TODAS as linhas deste cliente usarão este número)
       cache.usados.add(n)
       cache.mapa[c] = n
       return { ...l, sacolinha: n }
