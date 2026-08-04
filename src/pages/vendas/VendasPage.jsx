@@ -1597,18 +1597,18 @@ export default function VendasPage() {
               <input type="date" value={dataLive} onChange={e => setDataLive(e.target.value)}
                 onClick={e => { try { e.target.showPicker() } catch {} }} />
             </div>
-            <div className="field" style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
-              <div style={{ flex: 1 }}>
-                <label>Live</label>
+            <div className="field">
+              <label>Live</label>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                 <AutocompleteInput value={liveNome} onChange={setLiveNome}
                   list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
+                <button
+                  className="btn-acao btn-ghost"
+                  onClick={() => { setNovaLiveNome(''); setShowModalLive(true) }}
+                  style={{ minWidth: 32, height: 32, padding: 0, fontSize: 18, flexShrink: 0 }}
+                  title="Cadastrar nova Live"
+                >+</button>
               </div>
-              <button
-                className="btn-acao btn-ghost"
-                onClick={() => { setNovaLiveNome(''); setShowModalLive(true) }}
-                style={{ minWidth: 32, height: 32, padding: 0, fontSize: 18, flexShrink: 0 }}
-                title="Cadastrar nova Live"
-              >+</button>
             </div>
             <div className="total-container">
               <label style={{ fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px', color:'var(--muted)' }}>Total Vendido</label>
