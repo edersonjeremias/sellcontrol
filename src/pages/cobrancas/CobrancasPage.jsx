@@ -196,7 +196,10 @@ export default function CobrancasPage() {
 
   useEffect(() => {
     if (!tenantId) return
-    getLivesParaCobranca(tenantId).then(setListaLives)
+    getLivesParaCobranca(tenantId).then(lives => {
+      console.log('🎬 Lives carregadas no dropdown:', lives)
+      setListaLives(lives)
+    })
     getConfig(tenantId).then(setConfig).catch(() => {})
     getClientesParaCobranca(tenantId).then(setListaClientes)
     getMapaCreditosClientes(tenantId).then(setCreditosMap).catch(() => {})
