@@ -352,7 +352,7 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
       preco_promocional: parseMoney(l.preco_promocional),
       codigo: l.codigo || '',
       cliente_nome: l.cliente_nome || '',
-      data_live: temCliente ? (dataLive || '') : '',
+      data_live: temCliente ? (dataLive || null) : null,
       live_nome: temCliente ? (liveNome || '') : '',
       sacolinha: l.sacolinha ?? null, status: l.status || '',
       fila1: l.fila1 || '', fila2: l.fila2 || '', fila3: l.fila3 || '',

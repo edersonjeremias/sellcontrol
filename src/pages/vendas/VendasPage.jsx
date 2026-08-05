@@ -336,28 +336,8 @@ export default function VendasPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [linhas])
 
-  // 3. VERIFICAR backup ao carregar página
-  useEffect(() => {
-    if (!tenantId || linhas.length > 0) return
-
-    try {
-      const backup = localStorage.getItem(`sc_vendas_backup_${tenantId}`)
-      if (!backup) return
-
-      const backupData = JSON.parse(backup)
-      const backupTime = new Date(backupData.timestamp)
-      const now = new Date()
-      const diffMinutes = (now - backupTime) / 1000 / 60
-
-      // Se backup tem menos de 2 horas, oferece recuperação
-      if (diffMinutes < 120 && backupData.linhas?.length > 0) {
-        setShowRecoverModal(true)
-        console.log('🔄 Backup encontrado:', backupData.linhas.length, 'linhas')
-      }
-    } catch (err) {
-      console.error('❌ Erro ao verificar backup:', err)
-    }
-  }, [tenantId, linhas.length])
+  // 3. VERIFICAR backup ao carregar página - DESABILITADO
+  // Modal de backup removido (não é mais necessário)
 
   // Função para recuperar backup
   const recuperarBackup = useCallback(() => {
