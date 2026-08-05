@@ -1027,6 +1027,229 @@ function AbaImportarDados({ showToast }) {
   )
 }
 
+// ── Aba: Usuários da Empresa ───────────────────────────────────
+function AbaUsuarios({ showToast }) {
+  const [tenants, setTenants] = useState([])
+  const [tenantId, setTenantId] = useState('')
+  const [usuarios, setUsuarios] = useState([])
+  const [tenantPages, setTenantPages] = useState([])
+  const [userPageIds, setUserPageIds] = useState([])
+  const [selectedUserId, setSelectedUserId] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    getAllTenants().then(({ data }) => setTenants(data))
+  }, [])
+
+  useEffect(() => {
+    if (!tenantId) {
+      setUsuarios([])
+      setTenantPages([])
+      setSelectedUserId(null)
+      return
+    }
+    carregarUsuarios()
+    carregarPaginas()
+  }, [tenantId])
+
+  async function carregarUsuarios() {
+    setLoading(true)
+    try {
+      const { data } = await supabase
+        .from('users_perfil')
+        .select('id, nome, email, username, role')
+        .eq('tenant_id', tenantId)
+        .order('nome')
+      setUsuarios(data || [])
+    } catch (e) {
+      showToast('Erro ao carregar usuários: ' + e.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function carregarPaginas() {
+    const { data } = await getTenantPages(tenantId)
+    setTenantPages(data || [])
+  }
+
+  async function selecionarUsuario(userId) {
+    setSelectedUserId(userId)
+    // Busca páginas do usuário
+    const { data } = await supabase
+      .from('pages_access')
+      .select('page_id, pages!inner(id)')
+      .eq('user_id', userId)
+      .eq('tenant_id', tenantId)
+
+    const pageIds = (data || []).map(item => item.pages.id)
+    setUserPageIds(pageIds)
+  }
+
+  function togglePage(pageId) {
+    setUserPageIds(prev =>
+      prev.includes(pageId) ? prev.filter(id => id !== pageId) : [...prev, pageId]
+    )
+  }
+
+  async function salvarPermissoes() {
+    if (!selectedUserId) return
+    setSaving(true)
+    try {
+      // Remove todas as permissões antigas
+      await supabase
+        .from('pages_access')
+        .delete()
+        .eq('user_id', selectedUserId)
+        .eq('tenant_id', tenantId)
+
+      // Insere novas permissões
+      if (userPageIds.length > 0) {
+        const rows = userPageIds.map(pageId => ({
+          user_id: selectedUserId,
+          tenant_id: tenantId,
+          page_id: pageId
+        }))
+        const { error } = await supabase.from('pages_access').insert(rows)
+        if (error) throw error
+      }
+
+      showToast('Permissões salvas!')
+    } catch (e) {
+      showToast('Erro: ' + e.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const usuarioSelecionado = usuarios.find(u => u.id === selectedUserId)
+
+  return (
+    <div style={{ padding: '20px 0', maxWidth: 900 }}>
+      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
+        Gerencie usuários e suas permissões de páginas por empresa.
+      </p>
+
+      {/* Seletor de empresa */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Empresa</label>
+        <select value={tenantId} onChange={e => setTenantId(e.target.value)} style={SI}>
+          <option value="">-- Selecione uma empresa --</option>
+          {tenants.map(t => (
+            <option key={t.tenant_id} value={t.tenant_id}>{t.nome_loja}</option>
+          ))}
+        </select>
+      </div>
+
+      {tenantId && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+
+          {/* Coluna: Lista de usuários */}
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: 'var(--blue)' }}>
+              Usuários da empresa
+            </h3>
+            {loading ? (
+              <p style={{ color: 'var(--muted)', fontSize: 13 }}>Carregando...</p>
+            ) : usuarios.length === 0 ? (
+              <p style={{ color: 'var(--muted)', fontSize: 13 }}>Nenhum usuário encontrado</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {usuarios.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => selecionarUsuario(u.id)}
+                    style={{
+                      background: selectedUserId === u.id ? 'rgba(59,130,246,0.15)' : 'var(--card-bg)',
+                      border: selectedUserId === u.id ? '1px solid var(--blue)' : '1px solid var(--border-light)',
+                      borderRadius: 6,
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-body)' }}>
+                      {u.nome || u.email}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+                      {u.email} · {u.role}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Coluna: Páginas do usuário selecionado */}
+          <div>
+            {selectedUserId ? (
+              <>
+                <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: 'var(--blue)' }}>
+                  Páginas de {usuarioSelecionado?.nome || usuarioSelecionado?.email}
+                </h3>
+
+                {tenantPages.length === 0 ? (
+                  <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+                    Esta empresa não tem páginas configuradas. Vá em "Páginas por Empresa" primeiro.
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {tenantPages.map(p => (
+                        <label
+                          key={p.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: '8px 10px',
+                            background: 'var(--card-bg)',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'var(--card-bg)'}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={userPageIds.includes(p.id)}
+                            onChange={() => togglePage(p.id)}
+                            style={{ accentColor: 'var(--blue)', width: 16, height: 16, cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: 13, color: 'var(--text-body)', flex: 1 }}>{p.label}</span>
+                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{p.category}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <button
+                      className="btn-acao btn-blue"
+                      onClick={salvarPermissoes}
+                      disabled={saving}
+                      style={{ width: '100%', minHeight: 40, fontSize: 14, color: '#171717', fontWeight: 700 }}
+                    >
+                      {saving ? 'Salvando…' : 'Salvar Permissões'}
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
+                Selecione um usuário à esquerda
+              </div>
+            )}
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Página principal ───────────────────────────────────────────
 export default function MasterEmpresasPage() {
   const { showToast } = useApp()
@@ -1038,10 +1261,12 @@ export default function MasterEmpresasPage() {
         <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 4 }}>
           <TabBtn label="Empresa"             active={aba === 'empresa'}  onClick={() => setAba('empresa')} />
           <TabBtn label="Páginas por Empresa" active={aba === 'paginas'}  onClick={() => setAba('paginas')} />
+          <TabBtn label="Usuários da Empresa" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
           <TabBtn label="Importar Dados"      active={aba === 'importar'} onClick={() => setAba('importar')} />
         </div>
         {aba === 'empresa'  && <AbaEmpresa showToast={showToast} />}
         {aba === 'paginas'  && <AbaPaginas showToast={showToast} />}
+        {aba === 'usuarios' && <AbaUsuarios showToast={showToast} />}
         {aba === 'importar' && <AbaImportarDados showToast={showToast} />}
       </section>
     </AppShell>
