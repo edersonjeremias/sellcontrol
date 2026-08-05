@@ -254,16 +254,14 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
     .limit(500)
 
   // Se TEM data/live na busca, filtra pela live específica
-  // Se NÃO TEM data/live, busca produtos disponíveis (sem cliente E sem data/live)
+  // Se NÃO TEM data/live, busca produtos disponíveis (sem cliente OU sem data)
   if (dataLive && liveNome?.trim()) {
     query = query
       .eq('data_live', dataLive)
       .eq('live_nome', liveNome.trim())
   } else {
-    // Busca produtos SEM cliente E sem data/live (produtos disponíveis)
-    query = query
-      .or('cliente_nome.is.null,cliente_nome.eq.')
-      .or('data_live.is.null,data_live.eq.')
+    // Busca produtos disponíveis: SEM cliente OU com data_live NULL
+    query = query.or('cliente_nome.is.null,cliente_nome.eq.,data_live.is.null')
   }
 
   const { data: vendas, error } = await query
