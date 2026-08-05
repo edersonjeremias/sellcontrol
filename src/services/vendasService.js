@@ -245,7 +245,7 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
   console.log('📝 Termos de busca:', termos)
   if (termos.length === 0) return []
 
-  // ✅ Busca APENAS produtos da live atual (data_live + live_nome)
+  // ✅ Busca produtos disponíveis (SEM cliente) ou da live atual
   let query = supabase
     .from('vendas')
     .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, sacolinha')
@@ -253,9 +253,14 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
     .order('created_at', { ascending: false })
     .limit(500)
 
-  // ✅ Filtra por data e live (APENAS live atual!)
-  if (dataLive) query = query.eq('data_live', dataLive)
-  if (liveNome?.trim()) query = query.eq('live_nome', liveNome.trim())
+  // Se tem data/live, filtra pela live específica
+  // Senão, busca APENAS produtos SEM cliente (disponíveis)
+  if (dataLive && liveNome?.trim()) {
+    query = query.eq('data_live', dataLive).eq('live_nome', liveNome.trim())
+  } else {
+    // Busca produtos SEM cliente (disponíveis para venda)
+    query = query.or('cliente_nome.is.null,cliente_nome.eq.')
+  }
 
   const { data: vendas, error } = await query
 
@@ -263,7 +268,7 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
   if (error) { console.error('❌ Erro ao buscar:', error); throw error }
   if (!vendas?.length) return []
 
-  // ✅ Filtra produtos que correspondem a TODOS os termos (COM OU SEM cliente)
+  // ✅ Filtra produtos que correspondem a TODOS os termos
   const produtos = vendas.filter(v => {
     const txt = [v.produto, v.modelo, v.cor, v.marca, v.tamanho, v.codigo, v.cliente_nome || '']
       .join(' ')

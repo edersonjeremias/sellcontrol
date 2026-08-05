@@ -51,15 +51,25 @@ export default function EditarVendasPage() {
     setBusy(true)
     try {
       const rows = await getVendas(tenantId, dataFiltro || null, liveFiltro || null, {
-        apenasComCliente: false,
-        cliente: clienteFiltro || null
+        apenasComCliente: false
       })
-      setVendas(rows)
-      if (rows.length === 0) {
+
+      // Filtra por cliente no frontend (se preenchido)
+      let vendas = rows
+      if (clienteFiltro?.trim()) {
+        const clienteLower = clienteFiltro.toLowerCase()
+        vendas = rows.filter(v =>
+          (v.cliente_nome || '').toLowerCase().includes(clienteLower)
+        )
+      }
+
+      setVendas(vendas)
+      if (vendas.length === 0) {
         showToast('Nenhuma venda encontrada', 'info')
       }
     } catch (err) {
       showToast('Erro ao buscar vendas', 'error')
+      console.error('Erro ao buscar vendas:', err)
     } finally {
       setBusy(false)
     }
