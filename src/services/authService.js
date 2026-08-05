@@ -56,8 +56,8 @@ export async function getPagesForUser(userId, tenantId, role) {
   if (!tenantId) return { data: [] }
   if (!pagesResourceAvailable) return { data: [] }
 
-  // Master e Admin: TODAS as páginas do tenant
-  if (role === 'master' || role === 'admin') {
+  // APENAS Master: TODAS as páginas do tenant
+  if (role === 'master') {
     const result = await supabase
       .from('pages')
       .select('id, slug, label, category, icon, order_index')
@@ -73,7 +73,7 @@ export async function getPagesForUser(userId, tenantId, role) {
     return result
   }
 
-  // Vendedor/Gerente/Financeiro: APENAS páginas autorizadas via pages_access
+  // Admin/Vendedor/Gerente/Financeiro: APENAS páginas autorizadas via pages_access
   if (!pagesAccessResourceAvailable) return { data: [] }
 
   const result = await supabase
