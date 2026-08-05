@@ -127,7 +127,7 @@ export default function RelatorioPage() {
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
                 <thead>
                   <tr>
-                    {['Data','Live','Cliente','Produto','Modelo','Cor','Tam','Cód.','Sacolinha','Preço','Status'].map(h => (
+                    {['Data','Live','Cliente','Produto','Modelo','Marca','Cor','Tam','Cód.','Sacolinha','Preço','Status'].map(h => (
                       <th key={h} style={S.th}>{h}</th>
                     ))}
                   </tr>
@@ -142,6 +142,7 @@ export default function RelatorioPage() {
                       <td style={S.td}>{v.cliente_nome}</td>
                       <td style={S.td}>{v.produto}</td>
                       <td style={S.td}>{v.modelo}</td>
+                      <td style={S.td}>{v.marca}</td>
                       <td style={S.td}>{v.cor}</td>
                       <td style={S.td}>{v.tamanho}</td>
                       <td style={S.td}>{v.codigo}</td>
@@ -156,7 +157,7 @@ export default function RelatorioPage() {
                   ))}
                   {!vendas.length && (
                     <tr>
-                      <td colSpan={10} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>
+                      <td colSpan={12} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>
                         {busca.trim()
                           ? `Nenhum resultado para "${busca.trim()}"`
                           : 'Nenhum registro encontrado no período.'}
