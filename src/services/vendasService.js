@@ -245,7 +245,7 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
   console.log('📝 Termos de busca:', termos)
   if (termos.length === 0) return []
 
-  // ✅ Busca produtos disponíveis (SEM cliente) ou da live atual
+  // ✅ Busca produtos disponíveis (SEM cliente E sem data/live)
   let query = supabase
     .from('vendas')
     .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, sacolinha')
@@ -253,13 +253,17 @@ export async function buscarProdutosPorTermos(tenantId = null, termosStr, dataLi
     .order('created_at', { ascending: false })
     .limit(500)
 
-  // Se tem data/live, filtra pela live específica
-  // Senão, busca APENAS produtos SEM cliente (disponíveis)
+  // Se TEM data/live na busca, filtra pela live específica
+  // Se NÃO TEM data/live, busca produtos disponíveis (sem cliente E sem data/live)
   if (dataLive && liveNome?.trim()) {
-    query = query.eq('data_live', dataLive).eq('live_nome', liveNome.trim())
+    query = query
+      .eq('data_live', dataLive)
+      .eq('live_nome', liveNome.trim())
   } else {
-    // Busca produtos SEM cliente (disponíveis para venda)
-    query = query.or('cliente_nome.is.null,cliente_nome.eq.')
+    // Busca produtos SEM cliente E sem data/live (produtos disponíveis)
+    query = query
+      .or('cliente_nome.is.null,cliente_nome.eq.')
+      .or('data_live.is.null,data_live.eq.')
   }
 
   const { data: vendas, error } = await query
@@ -339,6 +343,9 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     )
     if (!temProduto) return
 
+    // ✅ Só preenche data_live e live_nome se tiver cliente
+    const temCliente = !!(l.cliente_nome || '').trim()
+
     const row = {
       tenant_id: tid,
       produto: l.produto || '', modelo: l.modelo || '', cor: l.cor || '',
@@ -347,7 +354,8 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
       preco_promocional: parseMoney(l.preco_promocional),
       codigo: l.codigo || '',
       cliente_nome: l.cliente_nome || '',
-      data_live: dataLive || null, live_nome: liveNome || '',
+      data_live: temCliente ? (dataLive || '') : '',
+      live_nome: temCliente ? (liveNome || '') : '',
       sacolinha: l.sacolinha ?? null, status: l.status || '',
       fila1: l.fila1 || '', fila2: l.fila2 || '', fila3: l.fila3 || '',
     }
