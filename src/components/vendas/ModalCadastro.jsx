@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ✅ Função para capitalizar primeira letra
 function capitalizar(texto) {
@@ -7,11 +7,16 @@ function capitalizar(texto) {
 }
 
 export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas = {} }) {
-  const [tipo,        setTipo]        = useState('cliente')
-  const [valor,       setValor]       = useState('')
-  const [celular,     setCelular]     = useState('')
-  const [itemSelecionado, setItemSelecionado] = useState('')
-  const [salvando,    setSalvando]    = useState(false)
+  const [tipo, setTipo] = useState('produto')
+  const [valor, setValor] = useState('')
+  const [celular, setCelular] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [searchVal, setSearchVal] = useState('')
+  const [showDrop, setShowDrop] = useState(false)
+  const [itemSelecionado, setItemSelecionado] = useState(null)
+  const [activeIdx, setActiveIdx] = useState(-1)
+
+  const searchRef = useRef(null)
 
   const isCliente = tipo === 'cliente'
   const deveCapitalizar = ['produto', 'modelo', 'cor', 'marca'].includes(tipo)
@@ -27,12 +32,46 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas 
     return []
   })()
 
-  // Limpa seleção ao trocar tipo
+  // Filtra itens baseado na busca
+  const itensFiltrados = searchVal.trim()
+    ? isCliente
+      ? itensDisponiveis.filter(c =>
+          c.instagram.toLowerCase().includes(searchVal.toLowerCase())
+        )
+      : itensDisponiveis.filter(item =>
+          item.toLowerCase().includes(searchVal.toLowerCase())
+        )
+    : []
+
+  // Limpa ao trocar tipo
   useEffect(() => {
-    setItemSelecionado('')
+    resetForm()
+  }, [tipo])
+
+  const resetForm = useCallback(() => {
+    setItemSelecionado(null)
     setValor('')
     setCelular('')
-  }, [tipo])
+    setSearchVal('')
+    setShowDrop(false)
+    setActiveIdx(-1)
+    setTimeout(() => searchRef.current?.focus(), 50)
+  }, [])
+
+  const selecionarItem = useCallback((item) => {
+    if (isCliente) {
+      setItemSelecionado(item.instagram)
+      setValor(item.instagram)
+      setCelular(item.whatsapp || '')
+      setSearchVal(item.instagram)
+    } else {
+      setItemSelecionado(item)
+      setValor(item)
+      setSearchVal(item)
+    }
+    setShowDrop(false)
+    setActiveIdx(-1)
+  }, [isCliente])
 
   async function salvar() {
     const valorLimpo = valor.trim()
@@ -44,35 +83,18 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas 
     setSalvando(true)
     try {
       if (estaEditando) {
-        // Modo edição
         await onAtualizar?.(tipo, itemSelecionado, valorLimpo, celularLimpo)
       } else {
-        // Modo criação
         await onSalvar?.(tipo, valorLimpo, celularLimpo)
       }
-      setValor('')
-      setCelular('')
-      setItemSelecionado('')
+      resetForm()
     } finally {
       setSalvando(false)
     }
   }
 
-  function handleSelecaoItem(nomeItem) {
-    setItemSelecionado(nomeItem)
-    setValor(nomeItem)
-
-    // Se for cliente, busca o WhatsApp
-    if (tipo === 'cliente' && nomeItem) {
-      const cliente = (listas.clientes || []).find(c => c.instagram === nomeItem)
-      if (cliente) {
-        setCelular(cliente.whatsapp || '')
-      }
-    }
-  }
-
   function handleValorChange(e) {
-    let texto = e.target.value.trimStart() // Remove espaços do início
+    let texto = e.target.value.trimStart()
     if (deveCapitalizar && texto) {
       texto = capitalizar(texto)
     }
@@ -82,14 +104,24 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas 
   return (
     <div className="modal-overlay">
       <div className="modal-card mini">
-        <div className="modal-header">
+        {/* Header */}
+        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>{estaEditando ? 'Editar Cadastro' : 'Novo Cadastro'}</h3>
+          <button onClick={resetForm} style={{
+            background: 'var(--btn-cancel-bg)', color: 'var(--btn-cancel-text)',
+            border: 'none', borderRadius: 6, cursor: 'pointer',
+            fontWeight: 600, fontSize: '0.78rem', padding: '0 12px', height: 30,
+          }}>
+            + Novo
+          </button>
         </div>
+
         <div className="modal-body">
+          {/* Tipo */}
           <div className="modal-field">
-            <label>Onde deseja cadastrar?</label>
+            <label>Tipo de Cadastro</label>
             <select value={tipo} onChange={e => setTipo(e.target.value)}
-              style={{ padding: 12, border: '1px solid var(--border-light)', borderRadius: 8, fontSize: 15, background: 'var(--input-bg)', color: 'var(--input-text)' }}>
+              style={{ padding: 12, border: '1px solid var(--border-light)', borderRadius: 8, fontSize: 15, background: 'var(--input-bg)', color: 'var(--input-text)', width: '100%' }}>
               <option value="produto">Produto</option>
               <option value="modelo">Modelo</option>
               <option value="cor">Cor</option>
@@ -98,58 +130,107 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas 
             </select>
           </div>
 
-          {/* Seleção de item existente para editar */}
-          {tipo !== 'cliente' && itensDisponiveis.length > 0 && (
-            <div className="modal-field" style={{ marginTop: 15 }}>
-              <label>Selecione para editar (opcional)</label>
-              <select
-                value={itemSelecionado}
-                onChange={e => handleSelecaoItem(e.target.value)}
-                style={{ padding: 12, border: '1px solid var(--border-light)', borderRadius: 8, fontSize: 15, background: 'var(--input-bg)', color: 'var(--input-text)' }}
-              >
-                <option value="">➕ Criar novo</option>
-                {itensDisponiveis.map((item, idx) => (
-                  <option key={idx} value={item}>✏️ {item}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Busca para selecionar item existente */}
+          <div className="modal-field" style={{ marginTop: 15, position: 'relative' }}>
+            <label>Buscar para Editar (opcional)</label>
+            <input
+              ref={searchRef}
+              value={searchVal}
+              onChange={e => { setSearchVal(e.target.value); setShowDrop(true); setActiveIdx(-1) }}
+              onFocus={() => setShowDrop(true)}
+              onBlur={() => setTimeout(() => setShowDrop(false), 150)}
+              onKeyDown={e => {
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  setActiveIdx(i => (i + 1) >= itensFiltrados.length ? 0 : i + 1)
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  setActiveIdx(i => (i - 1) < 0 ? itensFiltrados.length - 1 : i - 1)
+                } else if (e.key === 'Enter') {
+                  e.preventDefault()
+                  if (activeIdx >= 0 && itensFiltrados[activeIdx]) {
+                    selecionarItem(itensFiltrados[activeIdx])
+                  }
+                } else if (e.key === 'Escape') {
+                  setShowDrop(false)
+                  setActiveIdx(-1)
+                }
+              }}
+              placeholder="Digite para buscar..."
+              autoComplete="off"
+              className="cell-input"
+              style={{ width: '100%' }}
+            />
+            {showDrop && itensFiltrados.length > 0 && (
+              <ul className="autocomplete-list" style={{
+                position: 'absolute',
+                top: 'calc(100% + 4px)',
+                left: 0,
+                right: 0,
+                zIndex: 200,
+                background: 'var(--card-bg)',
+                border: '1px solid var(--border-light)',
+                borderRadius: 8,
+                maxHeight: 200,
+                overflowY: 'auto',
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              }}>
+                {itensFiltrados.map((item, idx) => {
+                  const nome = isCliente ? item.instagram : item
+                  return (
+                    <li key={nome}
+                      className={idx === activeIdx ? 'dropdown-item-active' : ''}
+                      onMouseDown={() => selecionarItem(item)}
+                      onMouseEnter={() => setActiveIdx(idx)}
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        borderBottom: idx < itensFiltrados.length - 1 ? '1px solid var(--border-light)' : 'none',
+                        background: idx === activeIdx ? 'var(--blue)' : 'transparent',
+                        color: idx === activeIdx ? '#171717' : 'var(--text-body)',
+                        fontSize: 14,
+                      }}
+                    >
+                      {nome}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
 
-          {/* Para clientes, lista é diferente */}
-          {tipo === 'cliente' && itensDisponiveis.length > 0 && (
-            <div className="modal-field" style={{ marginTop: 15 }}>
-              <label>Selecione para editar (opcional)</label>
-              <select
-                value={itemSelecionado}
-                onChange={e => handleSelecaoItem(e.target.value)}
-                style={{ padding: 12, border: '1px solid var(--border-light)', borderRadius: 8, fontSize: 15, background: 'var(--input-bg)', color: 'var(--input-text)' }}
-              >
-                <option value="">➕ Criar novo</option>
-                {itensDisponiveis.map((cliente, idx) => (
-                  <option key={idx} value={cliente.instagram}>✏️ {cliente.instagram}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div style={{ borderTop: '1px solid var(--border-light)', margin: '15px 0' }} />
 
-          <div className="modal-field" style={{ marginTop: 15 }}>
+          {/* Campo principal */}
+          <div className="modal-field">
             <label>{isCliente ? 'Instagram (@usuario)' : 'Nome do item'}</label>
             <input className="cell-input" value={valor} placeholder="Digite..."
               onChange={handleValorChange}
-              onKeyDown={e => e.key === 'Enter' && salvar()} />
+              onKeyDown={e => e.key === 'Enter' && !isCliente && salvar()}
+              style={{ width: '100%' }} />
           </div>
 
+          {/* WhatsApp (só para cliente) */}
           {isCliente && (
             <div className="modal-field" style={{ marginTop: 15 }}>
               <label>WhatsApp (apenas números)</label>
               <input className="cell-input" value={celular} placeholder="Apenas números..."
-                onChange={e => setCelular(e.target.value.replace(/\D/g, '').trimStart())} />
+                onChange={e => setCelular(e.target.value.replace(/\D/g, '').trimStart())}
+                onKeyDown={e => e.key === 'Enter' && salvar()}
+                style={{ width: '100%' }} />
             </div>
           )}
         </div>
+
+        {/* Footer */}
         <div className="modal-footer">
-          <button className="btn-cancel"  onClick={onFechar} disabled={salvando}>Cancelar</button>
-          <button className="btn-confirm" onClick={salvar}   disabled={salvando}>
+          <button className="btn-cancel" onClick={onFechar} disabled={salvando}>
+            Cancelar
+          </button>
+          <button className="btn-confirm" onClick={salvar} disabled={salvando}>
             {salvando ? 'Salvando...' : (estaEditando ? 'Atualizar' : 'Salvar no Banco')}
           </button>
         </div>
