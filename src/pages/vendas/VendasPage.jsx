@@ -144,6 +144,7 @@ export default function VendasPage() {
   const lastRealtimeKeyRef = useRef('')
   const focusReturnRef = useRef(null)  // guarda o input de cliente que disparou o bloqueio
   const skipFilterEffectRef = useRef(false)  // flag para evitar loop ao limpar filtro
+  const isRecoveringBackupRef = useRef(false)  // flag para não resetar cache ao recuperar backup
 
   // ── Configurações de colunas ──
   const [colsConfig,    setColsConfig]    = useState({ custo: false, condicao: false, genero: false, preco_promocional: false })
@@ -194,6 +195,13 @@ export default function VendasPage() {
 
   // ✅ Reseta cache de sacolinhas ao mudar Data ou Live
   useEffect(() => {
+    // ✅ Se está recuperando backup, não reseta cache (já foi restaurado)
+    if (isRecoveringBackupRef.current) {
+      console.log('⏩ Recuperando backup - cache já restaurado, pulando reset')
+      isRecoveringBackupRef.current = false
+      return
+    }
+
     console.log('🔄 Data/Live mudou - resetando cache e sacolinhas')
     sacolinhasCacheRef.current = { usados: new Set(), mapa: {} }
 
@@ -392,6 +400,9 @@ export default function VendasPage() {
       if (!backup) return
 
       const backupData = JSON.parse(backup)
+
+      // ✅ IMPORTANTE: seta flag ANTES de mudar data/live para evitar reset do cache
+      isRecoveringBackupRef.current = true
 
       // ✅ Restaura cache de sacolinhas ANTES de setar linhas
       if (backupData.sacolinhasCache) {
