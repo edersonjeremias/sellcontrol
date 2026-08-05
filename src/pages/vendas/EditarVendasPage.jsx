@@ -277,7 +277,7 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
         <div className="modal-header">
           <h3>Editar Venda</h3>
         </div>
-        <div className="modal-body">
+        <div className="modal-body" onClick={e => e.stopPropagation()}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Data</label>
@@ -336,9 +336,14 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Cliente</label>
-              <input type="text" value={form.cliente_nome} onChange={e => handleChange('cliente_nome', e.target.value)} list="dlClientes"
+              <input type="text" value={form.cliente_nome}
+                onChange={e => { e.stopPropagation(); handleChange('cliente_nome', e.target.value); }}
+                onClick={e => e.stopPropagation()}
+                onFocus={e => e.stopPropagation()}
+                onKeyDown={e => e.stopPropagation()}
+                list="dlClientes"
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
-              <datalist id="dlClientes">{listas.clientes?.map(c => <option key={c} value={c} />)}</datalist>
+              <datalist id="dlClientes">{listas.clientes?.map(c => <option key={typeof c === 'string' ? c : c.instagram} value={typeof c === 'string' ? c : c.instagram} />)}</datalist>
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Status</label>
