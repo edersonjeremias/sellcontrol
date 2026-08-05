@@ -106,19 +106,33 @@ export async function getListas(tenantId = null) {
     return all
   }
 
+  // Busca clientes com instagram E whatsapp
+  const fetchClientes = async () => {
+    const [p1, p2, p3, p4, p5] = await Promise.all([
+      supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid).order('instagram').range(0, 999),
+      supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid).order('instagram').range(1000, 1999),
+      supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid).order('instagram').range(2000, 2999),
+      supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid).order('instagram').range(3000, 3999),
+      supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid).order('instagram').range(4000, 4999),
+    ])
+    const all = [...(p1.data || []), ...(p2.data || []), ...(p3.data || []), ...(p4.data || []), ...(p5.data || [])]
+    console.log(`📦 clientes:`, { p1: p1.data?.length || 0, p2: p2.data?.length || 0, p3: p3.data?.length || 0, total: all.length })
+    return all
+  }
+
   const [prod, mod, cor, marc, cli] = await Promise.all([
     fetchAll('listas_produtos', 'nome'),
     fetchAll('listas_modelos', 'nome'),
     fetchAll('listas_cores', 'nome'),
     fetchAll('listas_marcas', 'nome'),
-    fetchAll('clientes', 'instagram'),
+    fetchClientes(),
   ])
   return {
     produtos: prod.map(r => r.nome),
     modelos:  mod.map(r => r.nome),
     cores:    cor.map(r => r.nome),
     marcas:   marc.map(r => r.nome),
-    clientes: cli.map(r => r.instagram),
+    clientes: cli, // Agora retorna objetos { instagram, whatsapp }
   }
 }
 export { getListas as getListasAutocomplete }
