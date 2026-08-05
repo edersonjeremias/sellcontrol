@@ -204,6 +204,30 @@ export async function atualizarCadastro(tenantId = null, tipo, nomeAntigo, nomeN
   return { ok: true }
 }
 
+// ── excluirCadastro ────────────────────────────────────────────
+export async function excluirCadastro(tenantId = null, tipo, nome) {
+  const tid = TENANT_ID(tenantId)
+  if (!nome?.trim()) throw new Error('Nome não informado.')
+
+  if (tipo === 'cliente') {
+    const { error } = await supabase.from('clientes')
+      .delete()
+      .eq('tenant_id', tid)
+      .eq('instagram', nome)
+    if (error) throw error
+    return { ok: true }
+  }
+
+  const tabela = { produto:'listas_produtos', modelo:'listas_modelos', cor:'listas_cores', marca:'listas_marcas' }[tipo]
+  if (!tabela) throw new Error('Tipo inválido.')
+  const { error } = await supabase.from(tabela)
+    .delete()
+    .eq('tenant_id', tid)
+    .eq('nome', nome)
+  if (error) throw error
+  return { ok: true }
+}
+
 // ── getVendas ──────────────────────────────────────────────────
 export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) {
   const tid = TENANT_ID(tenantId)

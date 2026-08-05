@@ -6,7 +6,7 @@ function capitalizar(texto) {
   return texto.charAt(0).toUpperCase() + texto.slice(1)
 }
 
-export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas = {} }) {
+export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFechar, listas = {} }) {
   const [tipo, setTipo] = useState('produto')
   const [valor, setValor] = useState('')
   const [celular, setCelular] = useState('')
@@ -15,6 +15,7 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas 
   const [showDrop, setShowDrop] = useState(false)
   const [itemSelecionado, setItemSelecionado] = useState(null)
   const [activeIdx, setActiveIdx] = useState(-1)
+  const [showConfirmacao, setShowConfirmacao] = useState(false)
 
   const searchRef = useRef(null)
 
@@ -99,6 +100,19 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas 
       texto = capitalizar(texto)
     }
     setValor(texto)
+  }
+
+  async function handleExcluir() {
+    if (!itemSelecionado) return
+
+    setSalvando(true)
+    try {
+      await onExcluir?.(tipo, itemSelecionado)
+      setShowConfirmacao(false)
+      resetForm()
+    } finally {
+      setSalvando(false)
+    }
   }
 
   return (
@@ -226,15 +240,100 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onFechar, listas 
         </div>
 
         {/* Footer */}
-        <div className="modal-footer">
-          <button className="btn-cancel" onClick={onFechar} disabled={salvando}>
-            Cancelar
-          </button>
+        <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn-cancel" onClick={onFechar} disabled={salvando}>
+              Cancelar
+            </button>
+            {estaEditando && (
+              <button
+                onClick={() => setShowConfirmacao(true)}
+                disabled={salvando}
+                style={{
+                  background: 'rgba(242,139,130,0.1)',
+                  border: '1px solid var(--red)',
+                  color: 'var(--red)',
+                  borderRadius: 6,
+                  padding: '8px 16px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+              >
+                Excluir
+              </button>
+            )}
+          </div>
           <button className="btn-confirm" onClick={salvar} disabled={salvando}>
             {salvando ? 'Salvando...' : (estaEditando ? 'Atualizar' : 'Salvar no Banco')}
           </button>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showConfirmacao && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'var(--card-bg)',
+            borderRadius: 12,
+            padding: 24,
+            maxWidth: 400,
+            width: '90%',
+            border: '1px solid var(--border-light)',
+          }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 18, color: 'var(--text-header)' }}>
+              Confirmar Exclusão
+            </h3>
+            <p style={{ margin: '0 0 24px', color: 'var(--text-body)', fontSize: 14 }}>
+              Deseja realmente excluir <strong style={{ color: 'var(--red)' }}>{itemSelecionado}</strong>?
+              <br />
+              <span style={{ color: 'var(--muted)', fontSize: 12 }}>Esta ação não pode ser desfeita.</span>
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowConfirmacao(false)}
+                disabled={salvando}
+                style={{
+                  background: 'var(--btn-cancel-bg)',
+                  color: 'var(--btn-cancel-text)',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '8px 16px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleExcluir}
+                disabled={salvando}
+                style={{
+                  background: 'var(--red)',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '8px 16px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+              >
+                {salvando ? 'Excluindo...' : 'Sim, Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

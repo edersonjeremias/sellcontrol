@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
-  getDadosIniciais, getListas, salvarNovoCadastro, atualizarCadastro, salvarNovaLive,
+  getDadosIniciais, getListas, salvarNovoCadastro, atualizarCadastro, excluirCadastro, salvarNovaLive,
   salvarVendas, estornarVenda,
   finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
@@ -1687,6 +1687,25 @@ export default function VendasPage() {
               setShowModalCadastro(false)
             } catch (err) {
               showToast(err?.message || 'Erro ao atualizar.', 'error')
+              throw err
+            }
+          }}
+          onExcluir={async (tipo, nome) => {
+            try {
+              console.log('🗑️ Excluindo cadastro:', { tipo, nome })
+              await excluirCadastro(tenantId, tipo, nome)
+
+              console.log('⏳ Aguardando 500ms para propagação no banco...')
+              await new Promise(resolve => setTimeout(resolve, 500))
+
+              console.log('🔄 Recarregando listas...')
+              const novasListas = await getListas(tenantId)
+              setListas(novasListas)
+
+              showToast('✅ Cadastro excluído!', 'success')
+              setShowModalCadastro(false)
+            } catch (err) {
+              showToast(err?.message || 'Erro ao excluir.', 'error')
               throw err
             }
           }}
