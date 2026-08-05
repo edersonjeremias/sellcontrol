@@ -37,10 +37,10 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
   const itensFiltrados = searchVal.trim()
     ? isCliente
       ? itensDisponiveis.filter(c =>
-          c.instagram.toLowerCase().includes(searchVal.toLowerCase())
+          c && c.instagram && c.instagram.toLowerCase().includes(searchVal.toLowerCase())
         )
       : itensDisponiveis.filter(item =>
-          item.toLowerCase().includes(searchVal.toLowerCase())
+          item && item.toLowerCase().includes(searchVal.toLowerCase())
         )
     : []
 
