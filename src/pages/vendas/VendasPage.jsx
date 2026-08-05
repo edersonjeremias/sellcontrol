@@ -310,6 +310,11 @@ export default function VendasPage() {
       linhas,
       dataLive,
       liveNome,
+      // ✅ Salva cache também (converte Set para Array para JSON)
+      sacolinhasCache: {
+        usados: Array.from(sacolinhasCacheRef.current.usados || []),
+        mapa: sacolinhasCacheRef.current.mapa || {}
+      },
       timestamp: new Date().toISOString()
     }
 
@@ -387,6 +392,17 @@ export default function VendasPage() {
       if (!backup) return
 
       const backupData = JSON.parse(backup)
+
+      // ✅ Restaura cache de sacolinhas ANTES de setar linhas
+      if (backupData.sacolinhasCache) {
+        // Reconstrói o Set de usados (JSON não preserva Set)
+        sacolinhasCacheRef.current = {
+          usados: new Set(backupData.sacolinhasCache.usados || []),
+          mapa: backupData.sacolinhasCache.mapa || {}
+        }
+        console.log('✅ Cache de sacolinhas restaurado:', sacolinhasCacheRef.current)
+      }
+
       setLinhas(backupData.linhas || [])
       setDataLive(backupData.dataLive || dataLive)
       setLiveNome(backupData.liveNome || '')
