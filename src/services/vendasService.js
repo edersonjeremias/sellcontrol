@@ -450,6 +450,13 @@ export async function estornarVenda(id) {
   return { ok: true }
 }
 
+// ── excluirVenda ───────────────────────────────────────────────
+export async function excluirVenda(id) {
+  const { error } = await supabase.from('vendas').delete().eq('id', id)
+  if (error) throw error
+  return { ok: true }
+}
+
 // ── getVendasEnviadas ──────────────────────────────────────────
 export async function getVendasEnviadas(tenantId = null, filtros = {}) {
   const tid = TENANT_ID(tenantId)

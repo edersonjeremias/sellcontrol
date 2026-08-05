@@ -49,6 +49,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import DashboardPage from './pages/DashboardPage'
 import VendasPage from './pages/vendas/VendasPage'
+import EditarVendasPage from './pages/vendas/EditarVendasPage'
 import ProducaoPage from './pages/producao/ProducaoPage'
 import AdminPage from './pages/AdminPage'
 import MasterEmpresasPage from './pages/MasterEmpresasPage'
@@ -88,6 +89,7 @@ export default function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
             <Route path="/vendas" element={<RequireAuth><VendasPage /></RequireAuth>} />
+            <Route path="/editar-vendas" element={<RequireAuth><EditarVendasPage /></RequireAuth>} />
             <Route path="/producao" element={<RequireAuth><ProducaoPage /></RequireAuth>} />
             <Route path="/admin" element={<RequireAuth><RequireRole allowed={['master','admin']}><AdminPage /></RequireRole></RequireAuth>} />
             <Route path="/master/empresas" element={<RequireAuth><RequireRole allowed={['master']}><MasterEmpresasPage /></RequireRole></RequireAuth>} />

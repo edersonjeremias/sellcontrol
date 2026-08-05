@@ -9,6 +9,7 @@ const SLUG_TO_CATEGORY = {
   'dashboard':                   'Principal',
   'notificacoes':                'Principal',
   'vendas':                      'Vendas',
+  'editar-vendas':               'Vendas',
   'cobrancas':                   'Financeiro',
   'cupons':                      'Vendas',
   'relatorio':                   'Financeiro',
@@ -63,6 +64,8 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
       label: item.label,
       category: SLUG_TO_CATEGORY[item.slug] || 'Outros',
     })),
+    // Editar Vendas - link manual (não vem de menuItems)
+    { to: '/editar-vendas', label: 'Editar Vendas', category: 'Vendas' },
     // Configurações e Empresas são links especiais (não vêm de menuItems)
     ...(['admin', 'master'].includes(profile?.role)
       ? [{ to: '/configuracoes', label: 'Configurações', category: 'Admin' }]
