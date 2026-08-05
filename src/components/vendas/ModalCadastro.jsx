@@ -7,7 +7,7 @@ function capitalizar(texto) {
 }
 
 export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFechar, listas = {} }) {
-  const [tipo, setTipo] = useState('produto')
+  const [tipo, setTipo] = useState('cliente')
   const [valor, setValor] = useState('')
   const [celular, setCelular] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -116,8 +116,13 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
   }
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-card mini">
+    <div className="modal-overlay" onClick={(e) => {
+      // Só fecha se clicar fora do modal (no overlay)
+      if (e.target.classList.contains('modal-overlay')) {
+        onFechar()
+      }
+    }}>
+      <div className="modal-card mini" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>{estaEditando ? 'Editar Cadastro' : 'Novo Cadastro'}</h3>
