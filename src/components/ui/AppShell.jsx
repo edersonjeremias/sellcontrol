@@ -57,19 +57,14 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     prev[cat] ? { ...prev, [cat]: false } : { [cat]: true }
   )
 
-  // Monta links com categoria
+  // Monta links com categoria - TODAS as páginas vêm de menuItems (pages_access)
   const allLinks = [
     ...menuItems.map(item => ({
       to: `/${item.slug}`,
       label: item.label,
       category: SLUG_TO_CATEGORY[item.slug] || 'Outros',
     })),
-    // Editar Vendas - link manual (não vem de menuItems)
-    { to: '/editar-vendas', label: 'Editar Vendas', category: 'Vendas' },
-    // Configurações e Empresas são links especiais (não vêm de menuItems)
-    ...(['admin', 'master'].includes(profile?.role)
-      ? [{ to: '/configuracoes', label: 'Configurações', category: 'Admin' }]
-      : []),
+    // Master → Empresas é uma página administrativa especial (apenas para master)
     ...(profile?.role === 'master'
       ? [{ to: '/master/empresas', label: 'Empresas', category: 'Admin' }]
       : []),
