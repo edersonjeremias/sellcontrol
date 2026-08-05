@@ -178,6 +178,32 @@ export async function salvarNovoCadastro(tenantId = null, tipo, valor, celular) 
   return { ok: true }
 }
 
+// ── atualizarCadastro ──────────────────────────────────────────
+export async function atualizarCadastro(tenantId = null, tipo, nomeAntigo, nomeNovo, celular) {
+  const tid = TENANT_ID(tenantId)
+  const novoNome = nomeNovo.trim()
+  if (!novoNome) throw new Error('Valor em branco.')
+
+  if (tipo === 'cliente') {
+    if (!celular?.trim()) throw new Error('Preencha o WhatsApp.')
+    const { error } = await supabase.from('clientes')
+      .update({ instagram: novoNome, whatsapp: celular.trim() })
+      .eq('tenant_id', tid)
+      .eq('instagram', nomeAntigo)
+    if (error) throw error
+    return { ok: true }
+  }
+
+  const tabela = { produto:'listas_produtos', modelo:'listas_modelos', cor:'listas_cores', marca:'listas_marcas' }[tipo]
+  if (!tabela) throw new Error('Tipo inválido.')
+  const { error } = await supabase.from(tabela)
+    .update({ nome: novoNome })
+    .eq('tenant_id', tid)
+    .eq('nome', nomeAntigo)
+  if (error) throw error
+  return { ok: true }
+}
+
 // ── getVendas ──────────────────────────────────────────────────
 export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) {
   const tid = TENANT_ID(tenantId)

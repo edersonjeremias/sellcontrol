@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
-  getDadosIniciais, getListas, salvarNovoCadastro, salvarNovaLive,
+  getDadosIniciais, getListas, salvarNovoCadastro, atualizarCadastro, salvarNovaLive,
   salvarVendas, estornarVenda,
   finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
@@ -1651,6 +1651,7 @@ export default function VendasPage() {
       })()}
       {showModalCadastro && (
         <ModalCadastro
+          listas={listas}
           onSalvar={async (tipo, val, wpp) => {
             try {
               console.log('💾 Salvando novo cadastro:', { tipo, val, wpp })
@@ -1659,27 +1660,33 @@ export default function VendasPage() {
               console.log('⏳ Aguardando 500ms para propagação no banco...')
               await new Promise(resolve => setTimeout(resolve, 500))
 
-              console.log('🔄 Recarregando lista de clientes...')
+              console.log('🔄 Recarregando listas...')
               const novasListas = await getListas(tenantId)
               setListas(novasListas)
 
-              console.log('✅ Lista atualizada. Total de clientes:', novasListas.clientes.length)
-              console.log('✅ Cliente recém-cadastrado na lista?', novasListas.clientes.includes(val))
-
-              if (!novasListas.clientes.includes(val)) {
-                console.error('⚠️ PROBLEMA: Cliente não apareceu na lista após cadastro!')
-                console.log('🔍 Tentando recarregar novamente...')
-                await new Promise(resolve => setTimeout(resolve, 1000))
-                const novasListasTentativa2 = await getListas(tenantId)
-                setListas(novasListasTentativa2)
-                console.log('🔄 2ª tentativa - Total:', novasListasTentativa2.clientes.length)
-                console.log('🔄 2ª tentativa - Cliente na lista?', novasListasTentativa2.clientes.includes(val))
-              }
-
-              showToast('Cadastro realizado! Lista atualizada.', 'success')
-              setShowModalCadastro(false) // Fecha modal automaticamente
+              showToast('✅ Cadastro realizado!', 'success')
+              setShowModalCadastro(false)
             } catch (err) {
-              showToast(err?.message || 'Erro ao cadastrar. Verifique o banco.', 'error')
+              showToast(err?.message || 'Erro ao cadastrar.', 'error')
+              throw err
+            }
+          }}
+          onAtualizar={async (tipo, nomeAntigo, nomeNovo, wpp) => {
+            try {
+              console.log('🔄 Atualizando cadastro:', { tipo, nomeAntigo, nomeNovo, wpp })
+              await atualizarCadastro(tenantId, tipo, nomeAntigo, nomeNovo, wpp)
+
+              console.log('⏳ Aguardando 500ms para propagação no banco...')
+              await new Promise(resolve => setTimeout(resolve, 500))
+
+              console.log('🔄 Recarregando listas...')
+              const novasListas = await getListas(tenantId)
+              setListas(novasListas)
+
+              showToast('✅ Cadastro atualizado!', 'success')
+              setShowModalCadastro(false)
+            } catch (err) {
+              showToast(err?.message || 'Erro ao atualizar.', 'error')
               throw err
             }
           }}
