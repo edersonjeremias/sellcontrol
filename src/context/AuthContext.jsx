@@ -5,18 +5,6 @@ import { getUserProfile, getPagesForUser, createGoogleUserProfile } from '../ser
 
 const AuthContext = createContext(null)
 
-const DEFAULT_PAGES = [
-  { slug: 'dashboard',           label: 'Dashboard',           category: 'Principal', icon: 'dashboard',      order_index: 10 },
-  { slug: 'notificacoes',        label: 'Notificações',        category: 'Principal', icon: 'notifications',  order_index: 15 },
-  { slug: 'vendas',              label: 'Vendas',              category: 'Operações', icon: 'sell',           order_index: 20 },
-  { slug: 'producao',            label: 'Produção',            category: 'Operações', icon: 'factory',        order_index: 30 },
-  { slug: 'expedicao',           label: 'Expedição',           category: 'Operações', icon: 'local_shipping', order_index: 35 },
-  { slug: 'impressao-sacolinha', label: 'Impressão Sacolinha', category: 'Operações', icon: 'local_offer',    order_index: 40 },
-  { slug: 'impressao-pedidos',           label: 'Impressão Pedidos',          category: 'Operações', icon: 'receipt_long',   order_index: 45 },
-  { slug: 'impressao-sacolinha-cliente', label: 'Impressão Sacol. Cliente',   category: 'Operações', icon: 'shopping_bag',   order_index: 50 },
-  { slug: 'etiquetas',                  label: 'Etiquetas',                  category: 'Operações', icon: 'label',          order_index: 55 },
-]
-
 // Captura o hash ANTES de o Supabase limpá-lo da URL.
 // Supabase limpa o hash de forma assíncrona, então esta verificação
 // a nível de módulo pega o valor original no carregamento inicial da página.
@@ -27,14 +15,14 @@ export function AuthProvider({ children }) {
   const [loading,    setLoading]    = useState(true)
   const [session,    setSession]    = useState(null)
   const [profile,    setProfile]    = useState(null)
-  const [menuItems,  setMenuItems]  = useState(DEFAULT_PAGES)
+  const [menuItems,  setMenuItems]  = useState([])
   const [isRecovery, setIsRecovery] = useState(_recoveryOnLoad)
   const initializedRef              = useRef(false)
 
   const loadProfile = useCallback(async (user) => {
     if (!user) {
       setProfile(null)
-      setMenuItems(DEFAULT_PAGES)
+      setMenuItems([])
       return null
     }
     const { data, error } = await getUserProfile(user.id)
@@ -47,13 +35,13 @@ export function AuthProvider({ children }) {
         const created = await createGoogleUserProfile(user, tenantId)
         if (created) {
           setProfile(created)
-          setMenuItems(DEFAULT_PAGES)
+          setMenuItems([])
           return created
         }
       }
       console.error('Perfil não encontrado', error)
       setProfile(null)
-      setMenuItems(DEFAULT_PAGES)
+      setMenuItems([])
       return null
     }
     // Verifica se o usuário está ativo
@@ -61,7 +49,7 @@ export function AuthProvider({ children }) {
       console.warn('Usuário inativo - fazendo logout')
       await supabase.auth.signOut()
       setProfile(null)
-      setMenuItems(DEFAULT_PAGES)
+      setMenuItems([])
       return null
     }
 
@@ -69,25 +57,15 @@ export function AuthProvider({ children }) {
     const pagesRes = await getPagesForUser(data.id, data.tenant_id, data.role)
     if (pagesRes.error) {
       console.error('Erro ao carregar menu', pagesRes.error)
-      // Master tem acesso a tudo se houver erro
-      setMenuItems(data.role === 'master' ? DEFAULT_PAGES : [])
+      setMenuItems([])
     } else {
       const fetched = pagesRes.data || []
       console.log('🔍 DEBUG - Páginas retornadas do banco:', fetched)
       console.log('🔍 DEBUG - Total de páginas:', fetched.length)
       console.log('🔍 DEBUG - Slugs:', fetched.map(p => p.slug))
 
-      if (data.role === 'master') {
-        // Master: merge páginas configuradas com páginas padrão
-        const bySlug = new Map(DEFAULT_PAGES.map((item) => [item.slug, item]))
-        fetched.forEach((item) => bySlug.set(item.slug, item))
-        const merged = Array.from(bySlug.values())
-          .sort((a, b) => (a.order_index || 999) - (b.order_index || 999))
-        setMenuItems(merged)
-      } else {
-        // Admin/Vendedor: APENAS páginas configuradas para a empresa
-        setMenuItems(fetched)
-      }
+      // Todas as roles (master, admin, vendedor) usam apenas as páginas do banco
+      setMenuItems(fetched)
     }
     return data
   }, [])
@@ -117,7 +95,7 @@ export function AuthProvider({ children }) {
         // Supabase confirmou que é um fluxo de reset — bloqueia login normal
         setSession(sess)
         setProfile(null)
-        setMenuItems(DEFAULT_PAGES)
+        setMenuItems([])
         setIsRecovery(true)
         if (isMounted) setLoading(false)
 
@@ -133,7 +111,7 @@ export function AuthProvider({ children }) {
       } else if (event === 'SIGNED_OUT') {
         setSession(null)
         setProfile(null)
-        setMenuItems(DEFAULT_PAGES)
+        setMenuItems([])
         setIsRecovery(false)
         if (isMounted) setLoading(false)
       }
@@ -200,7 +178,7 @@ export function AuthProvider({ children }) {
   const signOut = useCallback(async () => {
     const result = await supabase.auth.signOut()
     setProfile(null)
-    setMenuItems(DEFAULT_PAGES)
+    setMenuItems([])
     setSession(null)
     setIsRecovery(false)
     initializedRef.current = false

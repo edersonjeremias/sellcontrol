@@ -23,6 +23,7 @@ export const ALL_PAGES = [
   { slug: 'clientes',                    label: 'Cadastro de Cliente',       category: 'Vendas',     icon: 'people',         order_index: 36 },
   { slug: 'contatos',                    label: 'CRM — Contatos',            category: 'Vendas',     icon: 'forum',          order_index: 37 },
   { slug: 'cupons',                      label: 'Cupons de Desconto',        category: 'Vendas',     icon: 'confirmation_number', order_index: 38 },
+  { slug: 'configuracoes',               label: 'Configurações',             category: 'Admin',      icon: 'settings',       order_index: 90 },
 ]
 
 // Debug: verificar se cupons está presente (remover após deploy)
