@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   getDadosIniciais, getListas, salvarNovoCadastro, salvarNovaLive,
-  getVendas, salvarVendas, estornarVenda,
+  salvarVendas, estornarVenda,
   finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
   enviarVenda,
@@ -388,7 +388,7 @@ export default function VendasPage() {
       localStorage.removeItem(`sc_vendas_${tenantId}`)
       setShowRecoverModal(false)
       setLinhas([]) // Garante que linhas fica vazio
-      setTabelaMsg('Clique em + Novo para começar ou Buscar para carregar registros.')
+      setTabelaMsg('Clique em + Novo para adicionar produtos.')
       console.log('🗑️ Backup descartado e localStorage limpo')
     } catch (err) {
       console.error('❌ Erro ao descartar backup:', err)
@@ -560,7 +560,7 @@ export default function VendasPage() {
         })
         setPermissoes(perms)
         setPronto(true)
-        setTabelaMsg('📋 Para começar: Preencha Data + Nome da Live → Clique "+ Novo" (nova live) ou "Buscar" (live existente)')
+        setTabelaMsg('📋 Para começar: Preencha Data + Nome da Live → Clique "+ Novo" para adicionar produtos')
       } catch (err) {
         console.error('❌ Erro ao iniciar:', err)
         showToast('Erro ao iniciar o sistema.', 'error')
@@ -700,105 +700,6 @@ export default function VendasPage() {
   }, [tenantId, pronto, showToast])
 
   // ── AÇÕES PRINCIPAIS ──
-  const atualizarDados = useCallback(async () => {
-    if (busyRef.current || !tenantId) return
-    setBusy(true, 'Sincronizando...')
-    try {
-      const [db, lst] = await Promise.all([getDadosIniciais(tenantId), getListas(tenantId)])
-      globalDBRef.current = db
-      setGlobalDB(db); setListas(lst)
-      showToast('Sincronização concluída!', 'success')
-    } catch { showToast('Erro ao sincronizar.', 'error') }
-    finally { setBusy(false) }
-  }, [tenantId])
-
-  const buscar = useCallback(async () => {
-    if (busyRef.current || !tenantId) return
-
-    // Validação: exige data preenchida
-    if (!dataLive?.trim()) {
-      showToast('Preencha a data antes de buscar.', 'error')
-      return
-    }
-
-    // 🚫 BLOQUEIA BUSCA SE TEM DADOS E MUDOU DATA/LIVE
-    const linhasComDados = linhasRef.current.filter(l =>
-      !l.deleted &&
-      !l.isSent &&
-      l.produto?.trim()
-    )
-
-    if (linhasComDados.length > 0) {
-      // Pega data/live da primeira linha com dados
-      const primeiraLinha = linhasComDados[0]
-      const dataDasLinhas = primeiraLinha.data_live
-      const liveDasLinhas = primeiraLinha.live_nome
-
-      // ✅ VALIDAÇÃO 1: Mudou a DATA?
-      if (dataDasLinhas && dataDasLinhas !== dataLive) {
-        showToast(
-          `🚫 Você tem produtos não salvos do dia ${formatarData(dataDasLinhas)}. Salve a Live antes de buscar outra data!`,
-          'error',
-          6000
-        )
-        return // BLOQUEIA busca
-      }
-
-      // ✅ VALIDAÇÃO 2: Mudou a LIVE?
-      if (liveDasLinhas && liveDasLinhas.trim() !== (liveNome || '').trim()) {
-        showToast(
-          `🚫 Você tem produtos não salvos da Live "${liveDasLinhas}". Salve a Live antes de buscar outra!`,
-          'error',
-          6000
-        )
-        return // BLOQUEIA busca
-      }
-
-      // ✅ VALIDAÇÃO 3: Live preenchida?
-      if (!liveNome?.trim()) {
-        showToast('⚠️ Preencha a LIVE antes de buscar (há dados não salvos)', 'warning', 4000)
-        return
-      }
-
-      // ✅ Se passou validações, salva automaticamente (mesma data/live)
-      try {
-        setBusy(true, 'Salvando dados antes de buscar...')
-        await salvarVendas(tenantId, linhasComDados, dataLive, liveNome)
-        showToast('✅ Dados salvos automaticamente', 'success', 2000)
-      } catch (err) {
-        setBusy(false)
-        showToast('❌ Erro ao salvar dados. Busca cancelada para não perder informações.', 'error', 5000)
-        return // NÃO busca se falhou ao salvar
-      }
-    }
-
-    setBusy(true, 'Buscando dados...')
-    setTabelaMsg('Buscando registros...')
-    try {
-      // 🎯 SEMPRE BUSCA TODA A LIVE (com e sem cliente)
-      const rows = await getVendas(tenantId, dataLive || null, liveNome || null, { apenasComCliente: false })
-
-      // ✅ RESETA cache de sacolinhas ao buscar nova live
-      sacolinhasCacheRef.current = { usados: new Set(), mapa: {} }
-
-      // ✅ PRESERVA sacolinhas do banco (NUNCA zera!)
-      const linhasMapeadas = rows.map(mapRow)
-
-      const novas = ordenarLinhas(calcSacolas(linhasMapeadas))
-      setLinhas(novas)
-      skipFilterEffectRef.current = true  // Evita que useEffect execute ao limpar filtro
-      setFiltro('') // Limpa filtro
-      setHasUnsaved(false)
-
-      // 🧹 LIMPA localStorage - dados buscados JÁ ESTÃO salvos no banco!
-      localStorage.removeItem(`sc_vendas_${tenantId}`)
-
-      if (!novas.length) {
-        setTabelaMsg('Nenhuma venda encontrada para esta data/live.')
-      }
-    } catch { setTabelaMsg('Erro ao buscar dados.'); showToast('Erro ao buscar dados.', 'error') }
-    finally { setBusy(false) }
-  }, [tenantId, dataLive, liveNome])
 
   const novo = useCallback(() => {
     if (busy) return
@@ -1269,7 +1170,7 @@ export default function VendasPage() {
   // ── SALVAR LINHA (aviãozinho) ──
   const handleEnviar = useCallback(async (rowKey) => {
     const l = linhasRef.current.find(r => r._key === rowKey)
-    if (!l) { showToast('Linha não encontrada. Clique em Buscar e tente novamente.', 'error'); return }
+    if (!l) { showToast('Linha não encontrada.', 'error'); return }
     if (l.isSent) { showToast('Esta venda já foi finalizada!', 'info'); return }
     const dl = dataLiveRef.current
     const ln = liveNomeRef.current
@@ -1505,7 +1406,7 @@ export default function VendasPage() {
           setConfirmacao(null)
           setLinhas([])
           setHasUnsaved(false)
-          setTabelaMsg('Mesa limpa. Clique em + Novo para começar ou Buscar para carregar registros.')
+          setTabelaMsg('Mesa limpa. Clique em + Novo para adicionar produtos.')
           showToast('Mesa limpa!', 'success')
         },
         onNao: () => setConfirmacao(null),
@@ -1633,13 +1534,6 @@ export default function VendasPage() {
               </div>
             </div>
             <div className="actions">
-              <button className="btn-acao btn-ghost" onClick={atualizarDados} disabled={busy}
-                style={{ minWidth:44, padding:'0 10px' }} title="Sincronizar dados">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                </svg>
-              </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowSettings(true)}
                 style={{ minWidth:44, padding:'0 10px' }} title="Configurações de colunas">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1648,7 +1542,6 @@ export default function VendasPage() {
               </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
-              <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
 
               {/* INDICADOR DE STATUS */}
               {!liveNome?.trim() && (
