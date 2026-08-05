@@ -51,11 +51,26 @@ export const ROLES = [
 ]
 
 export async function getUsuarios(tenantId) {
-  const { data, error } = await supabase
+  // Primeiro, busca todos os user_ids que estão na tabela portal_clientes
+  const { data: clientesPortal } = await supabase
+    .from('portal_clientes')
+    .select('user_id')
+
+  const idsClientesPortal = (clientesPortal || []).map(c => c.user_id).filter(Boolean)
+
+  // Busca usuários do tenant
+  let query = supabase
     .from('users_perfil')
     .select('id, nome, email, username, role, ativo, created_at')
     .eq('tenant_id', tenantId)
-    .order('nome')
+
+  // Se houver clientes do portal, exclui esses IDs
+  if (idsClientesPortal.length > 0) {
+    query = query.not('id', 'in', `(${idsClientesPortal.join(',')})`)
+  }
+
+  const { data, error } = await query.order('nome')
+
   if (error) throw error
   return data || []
 }
