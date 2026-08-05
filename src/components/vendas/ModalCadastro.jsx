@@ -155,10 +155,19 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
             <input
               ref={searchRef}
               value={searchVal}
-              onChange={e => { setSearchVal(e.target.value); setShowDrop(true); setActiveIdx(-1) }}
-              onFocus={() => setShowDrop(true)}
-              onBlur={() => setTimeout(() => setShowDrop(false), 150)}
+              onChange={e => {
+                e.stopPropagation()
+                setSearchVal(e.target.value)
+                setShowDrop(true)
+                setActiveIdx(-1)
+              }}
+              onFocus={(e) => {
+                e.stopPropagation()
+                setShowDrop(true)
+              }}
+              onClick={(e) => e.stopPropagation()}
               onKeyDown={e => {
+                e.stopPropagation()
                 if (e.key === 'ArrowDown') {
                   e.preventDefault()
                   setActiveIdx(i => (i + 1) >= itensFiltrados.length ? 0 : i + 1)
@@ -227,8 +236,15 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
           <div className="modal-field">
             <label>{isCliente ? 'Instagram (@usuario)' : 'Nome do item'}</label>
             <input className="cell-input" value={valor} placeholder="Digite..."
-              onChange={handleValorChange}
-              onKeyDown={e => e.key === 'Enter' && !isCliente && salvar()}
+              onChange={(e) => {
+                e.stopPropagation()
+                handleValorChange(e)
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={e => {
+                e.stopPropagation()
+                if (e.key === 'Enter' && !isCliente) salvar()
+              }}
               style={{ width: '100%' }} />
           </div>
 
@@ -237,8 +253,15 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
             <div className="modal-field" style={{ marginTop: 15 }}>
               <label>WhatsApp (apenas números)</label>
               <input className="cell-input" value={celular} placeholder="Apenas números..."
-                onChange={e => setCelular(e.target.value.replace(/\D/g, '').trimStart())}
-                onKeyDown={e => e.key === 'Enter' && salvar()}
+                onChange={(e) => {
+                  e.stopPropagation()
+                  setCelular(e.target.value.replace(/\D/g, '').trimStart())
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={e => {
+                  e.stopPropagation()
+                  if (e.key === 'Enter') salvar()
+                }}
                 style={{ width: '100%' }} />
             </div>
           )}
