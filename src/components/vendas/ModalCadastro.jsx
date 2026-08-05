@@ -39,9 +39,11 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
   // Filtra itens baseado na busca
   const itensFiltrados = searchVal.trim()
     ? isCliente
-      ? itensDisponiveis.filter(c =>
-          c && c.instagram && c.instagram.toLowerCase().includes(searchVal.toLowerCase())
-        )
+      ? itensDisponiveis.filter(c => {
+          // Lista pode ser array de strings ou array de objetos
+          const nome = typeof c === 'string' ? c : (c?.instagram || '')
+          return nome && nome.toLowerCase().includes(searchVal.toLowerCase())
+        })
       : itensDisponiveis.filter(item =>
           item && item.toLowerCase().includes(searchVal.toLowerCase())
         )
@@ -64,10 +66,14 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
 
   const selecionarItem = useCallback((item) => {
     if (isCliente) {
-      setItemSelecionado(item.instagram)
-      setValor(item.instagram)
-      setCelular(item.whatsapp || '')
-      setSearchVal(item.instagram)
+      // Item pode ser string ou objeto
+      const instagram = typeof item === 'string' ? item : item.instagram
+      const whatsapp = typeof item === 'string' ? '' : (item.whatsapp || '')
+
+      setItemSelecionado(instagram)
+      setValor(instagram)
+      setCelular(whatsapp)
+      setSearchVal(instagram)
     } else {
       setItemSelecionado(item)
       setValor(item)
@@ -211,7 +217,10 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
               }}>
                 {itensFiltrados.length > 0 ? (
                   itensFiltrados.map((item, idx) => {
-                    const nome = isCliente ? item.instagram : item
+                    // Item pode ser string ou objeto
+                    const nome = isCliente
+                      ? (typeof item === 'string' ? item : item.instagram)
+                      : item
                     return (
                       <li key={nome}
                         className={idx === activeIdx ? 'dropdown-item-active' : ''}
