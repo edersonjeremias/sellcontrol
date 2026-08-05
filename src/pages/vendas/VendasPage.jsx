@@ -336,8 +336,49 @@ export default function VendasPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [linhas])
 
-  // 3. VERIFICAR backup ao carregar página - DESABILITADO
-  // Modal de backup removido (não é mais necessário)
+  // 3. VERIFICAR backup ao carregar página
+  const backupCheckedRef = useRef(false)
+  useEffect(() => {
+    if (!tenantId || backupCheckedRef.current) return
+    backupCheckedRef.current = true
+
+    try {
+      const backup = localStorage.getItem(`sc_vendas_backup_${tenantId}`)
+      if (!backup) return
+
+      const backupData = JSON.parse(backup)
+
+      // ✅ Validações para evitar modal desnecessário:
+      // 1. Backup deve ter linhas
+      if (!backupData.linhas?.length) return
+
+      // 2. Deve ter pelo menos uma linha com produto
+      const temProdutos = backupData.linhas.some(l => !l.deleted && l.produto?.trim())
+      if (!temProdutos) return
+
+      // 3. Backup não pode ser muito antigo (max 24h)
+      const timestampBackup = new Date(backupData.timestamp).getTime()
+      const agora = Date.now()
+      const diff24h = 24 * 60 * 60 * 1000
+      if (agora - timestampBackup > diff24h) {
+        console.log('🗑️ Backup muito antigo (>24h), descartando')
+        localStorage.removeItem(`sc_vendas_backup_${tenantId}`)
+        return
+      }
+
+      // 4. Só mostra se linhas atuais estão vazias (não sobrescrever trabalho atual)
+      if (linhas.length > 0 && linhas.some(l => !l.deleted && l.produto?.trim())) {
+        console.log('⚠️ Já tem dados na tela, não mostra backup')
+        return
+      }
+
+      // ✅ Tudo OK, mostra modal de recuperação
+      console.log('💾 Backup encontrado! Mostrando modal...', backupData.linhas.length, 'linhas')
+      setShowRecoverModal(true)
+    } catch (err) {
+      console.error('❌ Erro ao verificar backup:', err)
+    }
+  }, [tenantId, linhas])
 
   // Função para recuperar backup
   const recuperarBackup = useCallback(() => {
