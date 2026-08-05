@@ -5,7 +5,6 @@ import {
   finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
   enviarVenda,
-  buscarProdutosPorTermos,
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { supabase } from '../../lib/supabase'
@@ -471,66 +470,8 @@ export default function VendasPage() {
     return { total, qtd }
   }, [linhas, filtro])
 
-  // ── BUSCA DE PRODUTOS (quando digita no filtro) ──
-  useEffect(() => {
-    console.log('🔄 useEffect busca ativado. Filtro:', filtro)
-
-    // Se limpar filtro, remove produtos da busca que não foram editados
-    if (!filtro.trim()) {
-      // Evita executar se a limpeza veio da função buscar()
-      if (skipFilterEffectRef.current) {
-        console.log('⏭️ Pulando useEffect (flag skipFilterEffect ativa)')
-        skipFilterEffectRef.current = false
-        return
-      }
-      console.log('⚪ Filtro vazio, removendo produtos não editados da busca')
-      setLinhas(prev => prev.filter(l => {
-        // Mantém se NÃO for da busca, OU se foi editado (tem cliente ou outros dados)
-        if (!l._fromSearch) return true
-        const foiEditado = l.cliente_nome?.trim() || l.produto?.trim() || l.modelo?.trim()
-        return foiEditado
-      }))
-      return
-    }
-
-    console.log('⏱️ Iniciando debounce de 300ms...')
-    const timer = setTimeout(async () => {
-      console.log('🚀 Executando busca após debounce')
-      try {
-        // ✅ Passa data_live e live_nome para buscar SÓ da live atual
-        const resultados = await buscarProdutosPorTermos(
-          tenantId,
-          filtro,
-          dataLiveRef.current,
-          liveNomeRef.current
-        )
-        console.log('📥 Resultados recebidos:', resultados.length)
-
-        // Adiciona resultados no início de linhas com flag _fromSearch
-        if (resultados.length > 0) {
-          setLinhas(prev => {
-            // ✅ Remove APENAS produtos antigos da busca (não remove linhas com dados do usuário!)
-            const semBusca = prev.filter(l => !l._fromSearch)
-
-            // ✅ Filtra resultados para NÃO duplicar linhas que o usuário já está editando
-            const idsExistentes = new Set(prev.filter(l => l.id).map(l => l.id))
-            const novosResultados = resultados
-              .filter(r => !r.id || !idsExistentes.has(r.id))
-              .map(r => ({ ...r, _fromSearch: true }))
-
-            return [...novosResultados, ...semBusca]
-          })
-        }
-      } catch (err) {
-        console.error('❌ Erro ao buscar produtos:', err)
-      }
-    }, 300) // Debounce de 300ms
-
-    return () => {
-      console.log('🧹 Limpando timer do debounce')
-      clearTimeout(timer)
-    }
-  }, [filtro, tenantId])
+  // ── BUSCA DE PRODUTOS DESABILITADA (evita bugs de sacolinha) ──
+  // O filtro agora só filtra linhas JÁ EM MEMÓRIA, não busca no banco
 
   // ── INIT ──
   useEffect(() => {

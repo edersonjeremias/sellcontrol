@@ -51,11 +51,27 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {})
     .from('vendas')
     .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
     .eq('tenant_id', tid(tenantId))
-    .order('data_live', { ascending: false })
+    .order('data_live', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
 
-  if (dataInicio) q = q.gte('data_live', dataInicio)
-  if (dataFim)    q = q.lte('data_live', dataFim)
+  // Filtra por data_live (vendidos) OU sem data_live (cadastrados)
+  if (dataInicio || dataFim) {
+    let filtros = []
+
+    // Produtos COM data_live no período
+    if (dataInicio && dataFim) {
+      filtros.push(`data_live.gte.${dataInicio},data_live.lte.${dataFim}`)
+    } else if (dataInicio) {
+      filtros.push(`data_live.gte.${dataInicio}`)
+    } else if (dataFim) {
+      filtros.push(`data_live.lte.${dataFim}`)
+    }
+
+    // OU produtos sem data_live (cadastrados, não vendidos)
+    filtros.push('data_live.is.null')
+
+    q = q.or(filtros.join(','))
+  }
 
   const { data, error } = await q
   if (error) throw error
