@@ -189,7 +189,7 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
               className="cell-input"
               style={{ width: '100%' }}
             />
-            {showDrop && itensFiltrados.length > 0 && (
+            {showDrop && searchVal.trim() && (
               <ul className="autocomplete-list" style={{
                 position: 'absolute',
                 top: 'calc(100% + 4px)',
@@ -206,26 +206,42 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
                 padding: 0,
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
               }}>
-                {itensFiltrados.map((item, idx) => {
-                  const nome = isCliente ? item.instagram : item
-                  return (
-                    <li key={nome}
-                      className={idx === activeIdx ? 'dropdown-item-active' : ''}
-                      onMouseDown={() => selecionarItem(item)}
-                      onMouseEnter={() => setActiveIdx(idx)}
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        borderBottom: idx < itensFiltrados.length - 1 ? '1px solid var(--border-light)' : 'none',
-                        background: idx === activeIdx ? 'var(--blue)' : 'transparent',
-                        color: idx === activeIdx ? '#171717' : 'var(--text-body)',
-                        fontSize: 14,
-                      }}
-                    >
-                      {nome}
-                    </li>
-                  )
-                })}
+                {itensFiltrados.length > 0 ? (
+                  itensFiltrados.map((item, idx) => {
+                    const nome = isCliente ? item.instagram : item
+                    return (
+                      <li key={nome}
+                        className={idx === activeIdx ? 'dropdown-item-active' : ''}
+                        onMouseDown={() => selecionarItem(item)}
+                        onMouseEnter={() => setActiveIdx(idx)}
+                        style={{
+                          padding: '8px 12px',
+                          cursor: 'pointer',
+                          borderBottom: idx < itensFiltrados.length - 1 ? '1px solid var(--border-light)' : 'none',
+                          background: idx === activeIdx ? 'var(--blue)' : 'transparent',
+                          color: idx === activeIdx ? '#171717' : 'var(--text-body)',
+                          fontSize: 14,
+                        }}
+                      >
+                        {nome}
+                      </li>
+                    )
+                  })
+                ) : (
+                  <li style={{
+                    padding: '12px',
+                    color: 'var(--muted)',
+                    fontSize: 13,
+                    textAlign: 'center',
+                  }}>
+                    Nenhum {isCliente ? 'cliente' : tipo} encontrado
+                    <div style={{ fontSize: 11, marginTop: 4 }}>
+                      {itensDisponiveis.length === 0
+                        ? `Sem ${isCliente ? 'clientes' : tipo + 's'} cadastrados`
+                        : `Busca: "${searchVal}"`}
+                    </div>
+                  </li>
+                )}
               </ul>
             )}
           </div>
