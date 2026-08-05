@@ -74,6 +74,7 @@ import ComissoesPage                  from './pages/relatorio/ComissoesPage'
 import NotificacoesPage               from './pages/notificacoes/NotificacoesPageKanban'
 import CuponsPage                     from './pages/cupons/CuponsPage'
 import DebugPage                      from './pages/DebugPage'
+import LimparUsuariosPage             from './pages/admin/LimparUsuariosPage'
 
 export default function App() {
   return (
@@ -93,6 +94,7 @@ export default function App() {
             <Route path="/producao" element={<RequireAuth><ProducaoPage /></RequireAuth>} />
             <Route path="/admin" element={<RequireAuth><RequireRole allowed={['master','admin']}><AdminPage /></RequireRole></RequireAuth>} />
             <Route path="/master/empresas" element={<RequireAuth><RequireRole allowed={['master']}><MasterEmpresasPage /></RequireRole></RequireAuth>} />
+            <Route path="/admin/limpar-usuarios" element={<RequireAuth><RequireRole allowed={['master']}><LimparUsuariosPage /></RequireRole></RequireAuth>} />
             <Route path="/cobrancas" element={<RequireAuth><CobrancasPage /></RequireAuth>} />
             <Route path="/recibo/:id" element={<ReciboPage />} />
             <Route path="/rastreio" element={<RastreioPage />} />
