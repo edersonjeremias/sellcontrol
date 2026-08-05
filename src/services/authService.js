@@ -6,17 +6,20 @@ export const ALL_PAGES = [
   { slug: 'dashboard',                   label: 'Dashboard',                 category: 'Principal',  icon: 'dashboard',      order_index: 10 },
   { slug: 'notificacoes',                label: 'Notificações',              category: 'Principal',  icon: 'notifications',  order_index: 15 },
   { slug: 'vendas',                      label: 'Vendas',                    category: 'Operações',  icon: 'sell',           order_index: 20 },
+  { slug: 'editar-vendas',               label: 'Editar Vendas',             category: 'Operações',  icon: 'edit',           order_index: 25 },
   { slug: 'producao',                    label: 'Produção',                  category: 'Operações',  icon: 'factory',        order_index: 30 },
   { slug: 'expedicao',                   label: 'Expedição',                 category: 'Operações',  icon: 'local_shipping', order_index: 35 },
   { slug: 'impressao-sacolinha',         label: 'Impressão Sacolinha',       category: 'Operações',  icon: 'local_offer',    order_index: 40 },
   { slug: 'impressao-pedidos',           label: 'Impressão Pedidos',         category: 'Operações',  icon: 'receipt_long',   order_index: 45 },
   { slug: 'impressao-sacolinha-cliente', label: 'Impressão Sacol. Cliente',  category: 'Operações',  icon: 'shopping_bag',   order_index: 50 },
-  { slug: 'etiquetas',                   label: 'Etiquetas',                 category: 'Operações',  icon: 'label',          order_index: 55 },
+  { slug: 'etiquetas',                   label: 'Etiquetas Produtos',        category: 'Operações',  icon: 'label',          order_index: 55 },
+  { slug: 'etiquetas-envio',             label: 'Etiquetas Envio',           category: 'Operações',  icon: 'local_shipping', order_index: 56 },
   { slug: 'cobrancas',                   label: 'Cobranças',                 category: 'Financeiro', icon: 'payments',       order_index: 60 },
   { slug: 'relatorio',                   label: 'Relatório',                 category: 'Financeiro', icon: 'bar_chart',      order_index: 65 },
   { slug: 'dashboard-financeiro',        label: 'Dashboard Financeiro',      category: 'Financeiro', icon: 'insights',       order_index: 70 },
   { slug: 'contas-pagar',                label: 'Contas a Pagar',            category: 'Financeiro', icon: 'receipt',        order_index: 75 },
   { slug: 'creditos-clientes',           label: 'Créditos de Clientes',      category: 'Financeiro', icon: 'loyalty',        order_index: 80 },
+  { slug: 'comissoes',                   label: 'Comissões',                 category: 'Financeiro', icon: 'monetization_on', order_index: 85 },
   { slug: 'clientes',                    label: 'Cadastro de Cliente',       category: 'Vendas',     icon: 'people',         order_index: 36 },
   { slug: 'contatos',                    label: 'CRM — Contatos',            category: 'Vendas',     icon: 'forum',          order_index: 37 },
   { slug: 'cupons',                      label: 'Cupons de Desconto',        category: 'Vendas',     icon: 'confirmation_number', order_index: 38 },
@@ -169,10 +172,41 @@ export async function createPage(tenantId, page) {
 // Lista todas as empresas (para o master gerenciar)
 export async function getAllTenants() {
   const { data, error } = await supabase
-    .from('configuracoes')
-    .select('tenant_id, nome_loja, whatsapp')
-    .order('nome_loja')
-  return { data: data || [], error }
+    .from('tenants')
+    .select(`
+      id,
+      nome,
+      cnpj,
+      plano,
+      ativo,
+      created_at
+    `)
+    .order('nome')
+
+  if (error) return { data: [], error }
+
+  // Busca configurações de cada tenant para pegar nome_loja e whatsapp
+  const tenantsComConfig = await Promise.all(
+    (data || []).map(async (t) => {
+      const { data: config } = await supabase
+        .from('configuracoes')
+        .select('nome_loja, whatsapp')
+        .eq('tenant_id', t.id)
+        .maybeSingle()
+
+      return {
+        tenant_id: t.id,
+        nome_loja: config?.nome_loja || t.nome,
+        whatsapp: config?.whatsapp || '',
+        cnpj: t.cnpj,
+        plano: t.plano,
+        ativo: t.ativo,
+        created_at: t.created_at
+      }
+    })
+  )
+
+  return { data: tenantsComConfig, error: null }
 }
 
 export async function getTenantAdmin(tenantId) {
