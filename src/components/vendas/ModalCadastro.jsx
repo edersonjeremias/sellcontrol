@@ -1,5 +1,11 @@
 import { useState } from 'react'
 
+// ✅ Função para capitalizar primeira letra
+function capitalizar(texto) {
+  if (!texto) return texto
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
 export default function ModalCadastro({ onSalvar, onFechar }) {
   const [tipo,    setTipo]    = useState('cliente')
   const [valor,   setValor]   = useState('')
@@ -7,17 +13,30 @@ export default function ModalCadastro({ onSalvar, onFechar }) {
   const [salvando, setSalvando] = useState(false)
 
   const isCliente = tipo === 'cliente'
+  const deveCapitalizar = ['produto', 'modelo', 'cor', 'marca'].includes(tipo)
 
   async function salvar() {
-    if (!valor.trim()) return
-    if (isCliente && !celular.trim()) return
+    const valorLimpo = valor.trim()
+    const celularLimpo = celular.trim()
+
+    if (!valorLimpo) return
+    if (isCliente && !celularLimpo) return
+
     setSalvando(true)
     try {
-      await onSalvar?.(tipo, valor, celular)
+      await onSalvar?.(tipo, valorLimpo, celularLimpo)
       setValor(''); setCelular('')
     } finally {
       setSalvando(false)
     }
+  }
+
+  function handleValorChange(e) {
+    let texto = e.target.value.trimStart() // Remove espaços do início
+    if (deveCapitalizar && texto) {
+      texto = capitalizar(texto)
+    }
+    setValor(texto)
   }
 
   return (
@@ -37,20 +56,20 @@ export default function ModalCadastro({ onSalvar, onFechar }) {
             </select>
           </div>
 
+          <div className="modal-field" style={{ marginTop: 15 }}>
+            <label>{isCliente ? 'Instagram (@usuario)' : 'Nome do item'}</label>
+            <input className="cell-input" value={valor} placeholder="Digite..."
+              onChange={handleValorChange}
+              onKeyDown={e => e.key === 'Enter' && salvar()} />
+          </div>
+
           {isCliente && (
             <div className="modal-field" style={{ marginTop: 15 }}>
               <label>WhatsApp (apenas números)</label>
               <input className="cell-input" value={celular} placeholder="Apenas números..."
-                onChange={e => setCelular(e.target.value.replace(/\D/g, ''))} />
+                onChange={e => setCelular(e.target.value.replace(/\D/g, '').trimStart())} />
             </div>
           )}
-
-          <div className="modal-field" style={{ marginTop: 15 }}>
-            <label>{isCliente ? 'Instagram (@usuario)' : 'Nome do item'}</label>
-            <input className="cell-input" value={valor} placeholder="Digite..."
-              onChange={e => setValor(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && salvar()} />
-          </div>
         </div>
         <div className="modal-footer">
           <button className="btn-cancel"  onClick={onFechar} disabled={salvando}>Cancelar</button>
