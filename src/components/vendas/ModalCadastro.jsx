@@ -25,7 +25,10 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
 
   // Lista de itens do tipo selecionado
   const itensDisponiveis = (() => {
-    if (tipo === 'cliente') return listas.clientes || []
+    if (tipo === 'cliente') {
+      console.log('🔍 Clientes disponíveis:', listas.clientes)
+      return listas.clientes || []
+    }
     if (tipo === 'produto') return listas.produtos || []
     if (tipo === 'modelo') return listas.modelos || []
     if (tipo === 'cor') return listas.cores || []
