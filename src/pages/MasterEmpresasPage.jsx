@@ -473,6 +473,7 @@ function AbaPaginas({ showToast }) {
 
 // ── Aba: Importar Dados ────────────────────────────────────────
 function AbaImportarDados({ showToast }) {
+  const [tipoImport, setTipoImport] = useState('clientes') // 'clientes' | 'vendas'
   const [tenants, setTenants] = useState([])
   const [tenantId, setTenantId] = useState('')
   const [metodo, setMetodo] = useState('csv') // 'csv' | 'sheets'
@@ -579,8 +580,8 @@ function AbaImportarDados({ showToast }) {
     return new Date().toISOString().split('T')[0]
   }
 
-  // Importar dados
-  async function executarImportacao() {
+  // Importar CLIENTES
+  async function executarImportacaoClientes() {
     if (!tenantId) {
       showToast('Selecione uma empresa de destino', 'error')
       return
@@ -614,7 +615,7 @@ function AbaImportarDados({ showToast }) {
       if (!instagram) {
         pulados++
         listaErros.push({
-          linha: i + 2, // +2 porque linha 1 é header e array começa em 0
+          linha: i + 2,
           instagram: instagram || '(vazio)',
           erro: 'Instagram vazio ou inválido',
           tipo: 'pulado'
@@ -624,7 +625,6 @@ function AbaImportarDados({ showToast }) {
       }
 
       try {
-        // Verificar se existe
         const { data: existente } = await supabase
           .from('clientes')
           .select('id')
@@ -642,27 +642,21 @@ function AbaImportarDados({ showToast }) {
         }
 
         if (existente) {
-          // Atualizar
           const { error } = await supabase
             .from('clientes')
             .update(clienteData)
             .eq('id', existente.id)
-
           if (error) throw error
           atualizados++
         } else {
-          // Inserir
           const { error } = await supabase
             .from('clientes')
             .insert(clienteData)
-
           if (error) throw error
           inseridos++
         }
 
         setProgresso(p => ({ ...p, atual: i + 1, inseridos, atualizados }))
-
-        // Pausa de 50ms para não sobrecarregar
         await new Promise(resolve => setTimeout(resolve, 50))
 
       } catch (err) {
@@ -694,7 +688,131 @@ function AbaImportarDados({ showToast }) {
       )
     }
 
-    // NÃO limpar preview se houver erros (para o usuário revisar)
+    if (erros === 0 && pulados === 0) {
+      setTimeout(() => {
+        setPreview([])
+        setProgresso(null)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        setSheetsUrl('')
+      }, 3000)
+    }
+  }
+
+  // Importar VENDAS
+  async function executarImportacaoVendas() {
+    if (!tenantId) {
+      showToast('Selecione uma empresa de destino', 'error')
+      return
+    }
+
+    if (preview.length === 0) {
+      showToast('Nenhum dado para importar', 'error')
+      return
+    }
+
+    setImporting(true)
+    setProgresso({ total: preview.length, atual: 0, inseridos: 0, atualizados: 0, erros: 0, pulados: 0 })
+    setErrosDetalhados([])
+
+    let inseridos = 0
+    let erros = 0
+    let pulados = 0
+    const listaErros = []
+
+    for (let i = 0; i < preview.length; i++) {
+      const row = preview[i]
+
+      // Mapear campos do CSV de vendas
+      const produto = row.produto || ''
+      const modelo = row.modelo || ''
+      const cor = row.cor || ''
+      const marca = row.marca || ''
+      const tamanho = row.tamanho || ''
+      const preco = row.preco ? parseFloat(row.preco) : null
+      const codigo = row.codigo || ''
+      const cliente_nome = (row.cliente_nome || '').trim().toLowerCase().replace('@', '')
+      const data_live = row.data_live || null
+      const live_nome = row.live_nome || ''
+      const sacolinha = row.sacolinha ? parseInt(row.sacolinha) : null
+
+      if (!produto || !cliente_nome) {
+        pulados++
+        listaErros.push({
+          linha: i + 2,
+          instagram: cliente_nome || '(vazio)',
+          erro: 'Produto ou cliente vazio',
+          tipo: 'pulado'
+        })
+        setProgresso(p => ({ ...p, atual: i + 1, pulados }))
+        continue
+      }
+
+      try {
+        // Buscar cliente_id pelo instagram
+        const { data: cliente } = await supabase
+          .from('clientes')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('instagram', cliente_nome)
+          .maybeSingle()
+
+        const vendaData = {
+          tenant_id: tenantId,
+          produto,
+          modelo,
+          cor,
+          marca,
+          tamanho,
+          preco,
+          codigo,
+          cliente_nome,
+          cliente_id: cliente?.id || null,
+          data_live,
+          live_nome,
+          sacolinha,
+          status: 'ENVIADO',
+          tipo_envio: 'lote'
+        }
+
+        const { error } = await supabase
+          .from('vendas')
+          .insert(vendaData)
+
+        if (error) throw error
+        inseridos++
+
+        setProgresso(p => ({ ...p, atual: i + 1, inseridos }))
+        await new Promise(resolve => setTimeout(resolve, 50))
+
+      } catch (err) {
+        console.error(`Erro linha ${i + 2}:`, err)
+        erros++
+        listaErros.push({
+          linha: i + 2,
+          instagram: cliente_nome,
+          erro: err.message || 'Erro desconhecido',
+          detalhes: err.details || err.hint || '',
+          tipo: 'erro'
+        })
+        setProgresso(p => ({ ...p, atual: i + 1, erros }))
+      }
+    }
+
+    setErrosDetalhados(listaErros)
+    setImporting(false)
+
+    if (erros > 0) {
+      showToast(
+        `⚠️ Importação concluída com erros!\n${inseridos} inseridos, ${pulados} pulados, ${erros} erros`,
+        'error'
+      )
+    } else {
+      showToast(
+        `✅ Importação concluída!\n${inseridos} vendas inseridas, ${pulados} puladas`,
+        'success'
+      )
+    }
+
     if (erros === 0 && pulados === 0) {
       setTimeout(() => {
         setPreview([])
@@ -706,12 +824,51 @@ function AbaImportarDados({ showToast }) {
   }
 
   const nomeEmpresa = tenants.find(t => t.tenant_id === tenantId)?.nome_loja || ''
+  const executarImportacao = tipoImport === 'clientes' ? executarImportacaoClientes : executarImportacaoVendas
 
   return (
     <div style={{ padding: '20px 0', maxWidth: 800 }}>
       <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 20 }}>
-        Importe dados de clientes em massa via CSV ou Google Sheets para qualquer empresa.
+        Importe dados de {tipoImport === 'clientes' ? 'clientes' : 'vendas'} em massa via CSV ou Google Sheets para qualquer empresa.
       </p>
+
+      {/* Tabs tipo de importação */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '2px solid var(--border-light)' }}>
+        <button
+          onClick={() => {
+            setTipoImport('clientes')
+            setPreview([])
+            setProgresso(null)
+            setErrosDetalhados([])
+            if (fileInputRef.current) fileInputRef.current.value = ''
+          }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '12px 20px', fontSize: 15, fontWeight: 700,
+            color: tipoImport === 'clientes' ? 'var(--blue)' : 'var(--muted)',
+            borderBottom: tipoImport === 'clientes' ? '3px solid var(--blue)' : '3px solid transparent',
+            transition: 'all 0.15s',
+          }}>
+          👥 Clientes
+        </button>
+        <button
+          onClick={() => {
+            setTipoImport('vendas')
+            setPreview([])
+            setProgresso(null)
+            setErrosDetalhados([])
+            if (fileInputRef.current) fileInputRef.current.value = ''
+          }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '12px 20px', fontSize: 15, fontWeight: 700,
+            color: tipoImport === 'vendas' ? 'var(--blue)' : 'var(--muted)',
+            borderBottom: tipoImport === 'vendas' ? '3px solid var(--blue)' : '3px solid transparent',
+            transition: 'all 0.15s',
+          }}>
+          🛍️ Vendas
+        </button>
+      </div>
 
       {/* Selecionar empresa */}
       <div style={{ marginBottom: 24 }}>
@@ -771,7 +928,9 @@ function AbaImportarDados({ showToast }) {
             }}
           />
           <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-            Formato: instagram, whatsapp, data_cadastro, bloqueado, observacoes
+            {tipoImport === 'clientes'
+              ? 'Formato: instagram, whatsapp, data_cadastro, bloqueado, observacoes'
+              : 'Formato: produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome, data_live, live_nome, sacolinha'}
           </p>
         </div>
       )}
@@ -843,27 +1002,57 @@ function AbaImportarDados({ showToast }) {
             <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
               <thead style={{ position: 'sticky', top: 0, background: '#1a2230', borderBottom: '1px solid var(--border-light)' }}>
                 <tr>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Instagram</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>WhatsApp</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Bloqueado</th>
+                  {tipoImport === 'clientes' ? (
+                    <>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Instagram</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>WhatsApp</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Bloqueado</th>
+                    </>
+                  ) : (
+                    <>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Produto</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Cliente</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Preço</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Live</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {preview.slice(0, 50).map((row, i) => {
-                  const instagram = (row.instagram || row.Cliente || '').trim()
-                  return (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
-                        {instagram || <span style={{ color: 'var(--red)' }}>❌ vazio</span>}
-                      </td>
-                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
-                        {row.whatsapp || row.Whatsapp || '-'}
-                      </td>
-                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
-                        {row.bloqueado === 'TRUE' || row.Bloqueado === 'TRUE' ? '🔒' : '-'}
-                      </td>
-                    </tr>
-                  )
+                  if (tipoImport === 'clientes') {
+                    const instagram = (row.instagram || row.Cliente || '').trim()
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                        <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                          {instagram || <span style={{ color: 'var(--red)' }}>❌ vazio</span>}
+                        </td>
+                        <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                          {row.whatsapp || row.Whatsapp || '-'}
+                        </td>
+                        <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                          {row.bloqueado === 'TRUE' || row.Bloqueado === 'TRUE' ? '🔒' : '-'}
+                        </td>
+                      </tr>
+                    )
+                  } else {
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                        <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                          {row.produto || <span style={{ color: 'var(--red)' }}>❌ vazio</span>}
+                        </td>
+                        <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                          {row.cliente_nome || <span style={{ color: 'var(--red)' }}>❌ vazio</span>}
+                        </td>
+                        <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                          {row.preco ? `R$ ${parseFloat(row.preco).toFixed(2)}` : '-'}
+                        </td>
+                        <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                          {row.live_nome || '-'}
+                        </td>
+                      </tr>
+                    )
+                  }
                 })}
               </tbody>
             </table>
@@ -888,7 +1077,9 @@ function AbaImportarDados({ showToast }) {
                 width: '100%', minHeight: 48, fontSize: 15, fontWeight: 700,
                 background: 'var(--green)', color: '#fff'
               }}>
-              {importing ? 'Importando...' : `Importar ${preview.length} clientes para ${nomeEmpresa || 'empresa selecionada'}`}
+              {importing
+                ? 'Importando...'
+                : `Importar ${preview.length} ${tipoImport} para ${nomeEmpresa || 'empresa selecionada'}`}
             </button>
           )}
 

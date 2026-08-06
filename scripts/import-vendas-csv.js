@@ -86,11 +86,11 @@ function fixEncoding(text) {
 }
 
 /**
- * Normaliza nome do cliente (adiciona @ se não tiver)
+ * Normaliza nome do cliente (remove @ se tiver)
  */
 function normalizeCliente(nome) {
   nome = fixEncoding(nome.trim())
-  return nome.startsWith('@') ? nome : `@${nome}`
+  return nome.replace(/^@/, '') // Remove @ se existir
 }
 
 /**
