@@ -143,7 +143,9 @@ export default function EditarVendasPage() {
             <div className="field">
               <label>Cliente (Opcional)</label>
               <AutocompleteInput value={clienteFiltro} onChange={setClienteFiltro}
-                list={listas.clientes?.map(c => typeof c === 'string' ? c : c.instagram) || []}
+                list={(listas.clientes || [])
+                  .map(c => typeof c === 'string' ? c : c?.instagram)
+                  .filter(c => c && typeof c === 'string')}
                 placeholder="Todos os clientes..." showOnFocus />
             </div>
             <div className="actions">
