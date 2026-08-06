@@ -109,7 +109,10 @@ export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBl
             </div>
             <div className="modal-field full">
               <label>Cliente</label>
-              <AutocompleteInput value={campos.cliente_nome} list={listas.clientes}
+              <AutocompleteInput value={campos.cliente_nome}
+                list={(listas.clientes || [])
+                  .map(c => typeof c === 'string' ? c : c?.instagram)
+                  .filter(c => c && typeof c === 'string')}
                 onChange={v => set('cliente_nome', v)}
                 onSelect={handleClienteSelect} />
             </div>

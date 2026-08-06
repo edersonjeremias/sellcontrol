@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import AutocompleteInput from '../ui/AutocompleteInput'
 
-export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
+export default function ModalFila({ linha, clientes = [], onSalvar, onFechar }) {
+  // Normaliza clientes para array de strings
+  const clientesNormalizados = clientes
+    .map(c => typeof c === 'string' ? c : c?.instagram)
+    .filter(c => c && typeof c === 'string')
+
   const [filas, setFilas] = useState({ fila1: '', fila2: '', fila3: '' })
 
   useEffect(() => {
@@ -29,7 +34,7 @@ export default function ModalFila({ linha, clientes, onSalvar, onFechar }) {
               <div style={{ display: 'flex', gap: 8 }}>
                 <AutocompleteInput
                   value={filas[`fila${n}`]}
-                  list={clientes}
+                  list={clientesNormalizados}
                   onChange={v => setFilas(prev => ({ ...prev, [`fila${n}`]: v }))}
                   onSelect={v => setFilas(prev => ({ ...prev, [`fila${n}`]: v }))}
                   style={{
