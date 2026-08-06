@@ -54,23 +54,14 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {})
     .order('data_live', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
 
-  // Filtra por data_live (vendidos) OU sem data_live (cadastrados)
-  if (dataInicio || dataFim) {
-    let filtros = []
-
-    // Produtos COM data_live no período
-    if (dataInicio && dataFim) {
-      filtros.push(`data_live.gte.${dataInicio},data_live.lte.${dataFim}`)
-    } else if (dataInicio) {
-      filtros.push(`data_live.gte.${dataInicio}`)
-    } else if (dataFim) {
-      filtros.push(`data_live.lte.${dataFim}`)
-    }
-
-    // OU produtos sem data_live (cadastrados, não vendidos)
-    filtros.push('data_live.is.null')
-
-    q = q.or(filtros.join(','))
+  // Filtra por data_live (vendidos) OU created_at (cadastrados)
+  if (dataInicio && dataFim) {
+    // (data_live no período E not null) OU (data_live null E created_at no período)
+    q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+  } else if (dataInicio) {
+    q = q.or(`data_live.gte.${dataInicio},and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00)`)
+  } else if (dataFim) {
+    q = q.or(`data_live.lte.${dataFim},and(data_live.is.null,created_at.lte.${dataFim}T23:59:59)`)
   }
 
   const { data, error } = await q
