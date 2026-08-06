@@ -16,10 +16,12 @@ export default function ClienteAutocomplete({
   const inputRef = useRef(null)
   const listRef = useRef(null)
 
-  // ✅ Filtra localmente (MUITO mais rápido!)
-  const results = (list || []).filter(item =>
-    !value?.trim() || item.toLowerCase().includes(value.toLowerCase())
-  ).slice(0, 50)  // Máximo 50 sugestões
+  // ✅ Normaliza clientes (string ou objeto) e filtra localmente
+  const results = (list || [])
+    .map(c => typeof c === 'string' ? c : c?.instagram)  // Converte objeto → string
+    .filter(c => c && typeof c === 'string')  // Remove null/undefined
+    .filter(item => !value?.trim() || item.toLowerCase().includes(value.toLowerCase()))
+    .slice(0, 50)  // Máximo 50 sugestões
 
   // DEBUG: Log quando digita
   if (value?.trim()) {
