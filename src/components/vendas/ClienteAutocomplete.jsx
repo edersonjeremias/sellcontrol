@@ -67,30 +67,29 @@ export default function ClienteAutocomplete({
       setOpen(false); setActiveIdx(-1); return
     }
     if (e.key === 'Tab') {
-      if (visible && activeIdx >= 0) {
-        // ✅ Só seleciona se tiver navegado com setas
-        const chosen = results[activeIdx]
-        if (chosen) select(chosen)
+      // ✅ AUTO-SELECIONA o primeiro se tiver resultados (mesmo sem navegar com setas)
+      if (visible && results.length > 0) {
+        e.preventDefault()
+        const chosen = activeIdx >= 0 ? results[activeIdx] : results[0]
+        select(chosen)
       }
       setOpen(false); setActiveIdx(-1)
       return
     }
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (visible && activeIdx >= 0) {
-        // ✅ Só seleciona se tiver navegado com setas
-        const chosen = results[activeIdx]
-        if (chosen) {
-          select(chosen)
-          if (onEnterKey) {
-            onEnterKey()
-          } else {
-            navigateNext(e.target)
-          }
-          return
+      // ✅ AUTO-SELECIONA o primeiro se tiver resultados (mesmo sem navegar com setas)
+      if (visible && results.length > 0) {
+        const chosen = activeIdx >= 0 ? results[activeIdx] : results[0]
+        select(chosen)
+        if (onEnterKey) {
+          onEnterKey()
+        } else {
+          navigateNext(e.target)
         }
+        return
       }
-      // ✅ Se não tem nada selecionado, só navega sem preencher
+      // Se não tem resultados, só navega
       if (onEnterKey) {
         onEnterKey()
       } else {
@@ -111,7 +110,24 @@ export default function ClienteAutocomplete({
         onChange={e => { onChange(e.target.value); setOpen(true); setActiveIdx(-1) }}
         onFocus={() => { setActiveIdx(-1) }}
         onBlur={() => {
-          setTimeout(() => { setOpen(false); setActiveIdx(-1) }, 150)
+          setTimeout(() => {
+            setOpen(false)
+            setActiveIdx(-1)
+
+            // ✅ VALIDA: Se digitou algo que NÃO existe na lista, LIMPA
+            const valorDigitado = value?.trim().toLowerCase()
+            if (valorDigitado) {
+              const existe = list.some(c => {
+                const instagram = typeof c === 'string' ? c : c?.instagram
+                return instagram && instagram.toLowerCase() === valorDigitado
+              })
+
+              // Se não existe exatamente, limpa o campo
+              if (!existe) {
+                onChange('')
+              }
+            }
+          }, 150)
           onBlur?.()
         }}
         onKeyDown={handleKeyDown}
