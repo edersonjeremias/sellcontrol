@@ -1058,10 +1058,11 @@ export default function VendasPage() {
       return
     }
 
-    // Valida se o cliente está cadastrado (com trim para evitar espaços)
-    const clienteExiste = listasRef.current.clientes.some(c =>
-      c.trim().toLowerCase() === nome.toLowerCase()
-    )
+    // Valida se o cliente está cadastrado (normaliza objeto/string)
+    const clienteExiste = listasRef.current.clientes.some(c => {
+      const instagram = typeof c === 'string' ? c : c?.instagram
+      return instagram && instagram.trim().toLowerCase() === nome.toLowerCase()
+    })
 
     console.log('✅ Cliente existe?', clienteExiste)
     console.log('📚 Total de clientes na lista:', listasRef.current.clientes.length)
@@ -1070,10 +1071,12 @@ export default function VendasPage() {
 
     // Log detalhado para debug
     if (!clienteExiste) {
-      const similares = listasRef.current.clientes.filter(c =>
-        c.toLowerCase().includes(nome.toLowerCase()) ||
-        nome.toLowerCase().includes(c.toLowerCase())
-      )
+      const similares = listasRef.current.clientes.filter(c => {
+        const instagram = typeof c === 'string' ? c : c?.instagram
+        if (!instagram) return false
+        return instagram.toLowerCase().includes(nome.toLowerCase()) ||
+               nome.toLowerCase().includes(instagram.toLowerCase())
+      })
       if (similares.length > 0) {
         console.log('⚠️ Clientes similares encontrados:', similares)
       }
