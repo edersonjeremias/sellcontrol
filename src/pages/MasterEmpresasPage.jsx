@@ -1247,29 +1247,35 @@ function AbaUsuarios({ showToast }) {
   async function carregarUsuarios() {
     setLoading(true)
     try {
-      // Primeiro, busca todos os user_ids que estão na tabela portal_clientes
+      // Busca TODOS os user_ids que estão na tabela portal_clientes
       const { data: clientesPortal } = await supabase
         .from('portal_clientes')
         .select('user_id')
 
-      const idsClientesPortal = (clientesPortal || []).map(c => c.user_id).filter(Boolean)
+      const idsClientesPortal = new Set(
+        (clientesPortal || []).map(c => c.user_id).filter(Boolean)
+      )
 
-      // Busca usuários do tenant
-      let query = supabase
+      // Busca TODOS os usuários do tenant
+      const { data: todosUsuarios } = await supabase
         .from('users_perfil')
         .select('id, nome, email, username, role')
         .eq('tenant_id', tenantId)
+        .order('nome')
 
-      // Se houver clientes do portal, exclui esses IDs
-      if (idsClientesPortal.length > 0) {
-        query = query.not('id', 'in', `(${idsClientesPortal.join(',')})`)
-      }
+      // Filtra em JavaScript: remove usuários que são clientes do portal
+      const usuariosFiltrados = (todosUsuarios || []).filter(
+        u => !idsClientesPortal.has(u.id)
+      )
 
-      const { data } = await query.order('nome')
+      console.log('🔍 Total de usuários do tenant:', todosUsuarios?.length || 0)
+      console.log('🔍 Clientes do portal encontrados:', idsClientesPortal.size)
+      console.log('🔍 Usuários após filtro:', usuariosFiltrados.length)
 
-      setUsuarios(data || [])
+      setUsuarios(usuariosFiltrados)
     } catch (e) {
       showToast('Erro ao carregar usuários: ' + e.message, 'error')
+      console.error('Erro ao carregar usuários:', e)
     } finally {
       setLoading(false)
     }
