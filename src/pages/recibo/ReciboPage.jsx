@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getCobrancaById, formatMoeda, dividirPagamento, gerarPreferenciaMp } from '../../services/cobrancasService'
+import { getCobrancaById, formatMoeda, dividirPagamento, gerarPreferenciaMp, getSaldoCliente } from '../../services/cobrancasService'
 import { validarCupom, calcularDesconto, incrementarUsoCupom } from '../../services/cuponsService'
 import { supabase } from '../../lib/supabase'
 
@@ -33,6 +33,7 @@ export default function ReciboPage() {
   const [verificando, setVerificando] = useState(false)
   const [verificado,  setVerificado]  = useState(false)
   const [nomeEmpresa, setNomeEmpresa] = useState('Loja')
+  const [saldoCredito, setSaldoCredito] = useState({ saldoAtual: 0, saldoRestante: 0 })
 
   // Estados para divisão de pagamento
   const [showDividir, setShowDividir] = useState(false)
@@ -112,6 +113,28 @@ export default function ReciboPage() {
       }
 
       setCob(res)
+
+      // 💰 Buscar saldo de crédito do cliente
+      if (res.cliente && res.tenant_id) {
+        try {
+          const { saldo } = await getSaldoCliente(res.tenant_id, res.cliente)
+
+          // Calcular quanto de crédito foi usado nesta cobrança
+          const creditoUsado = (res.itens || [])
+            .filter(item => item.descricao?.includes('🎁') && item.valor < 0)
+            .reduce((total, item) => total + Math.abs(item.valor), 0)
+
+          // Saldo restante = saldo atual + crédito já usado
+          const saldoRestante = saldo
+
+          setSaldoCredito({
+            saldoAtual: saldo + creditoUsado, // Saldo antes de aplicar este desconto
+            saldoRestante: saldoRestante,      // Saldo disponível agora
+          })
+        } catch (err) {
+          console.error('Erro ao buscar saldo de crédito:', err)
+        }
+      }
 
       // Restaurar cupom se já foi aplicado
       if (res.cupom_codigo && res.cupom_desconto_percentual && res.cupom_desconto_valor) {
@@ -481,6 +504,27 @@ export default function ReciboPage() {
                 </span>
               </div>
             ))}
+
+            {/* Saldo de crédito restante */}
+            {saldoCredito.saldoRestante > 0 && (
+              <div style={{
+                marginTop: 12,
+                padding: '10px 12px',
+                background: 'rgba(251,188,4,0.1)',
+                border: '1px solid rgba(251,188,4,0.3)',
+                borderRadius: 8,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <span style={{ fontSize: 13, color: '#fbbc04', fontWeight: 600 }}>
+                  🪙 Saldo de crédito disponível
+                </span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: '#fbbc04' }}>
+                  R$ {saldoCredito.saldoRestante.toFixed(2).replace('.', ',')}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
