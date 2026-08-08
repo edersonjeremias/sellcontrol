@@ -428,7 +428,7 @@ export async function getSaldoCliente(tenantId, cliente) {
 
 export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null, motivo = null) {
   // Busca saldo anterior
-  const saldoAnterior = await getSaldoCliente(tenantId, cliente)
+  const { saldo: saldoAnterior } = await getSaldoCliente(tenantId, cliente)
 
   // Busca todos os créditos e filtra com normalização
   const clienteNorm = cliente.trim().toLowerCase().replace(/[._-]/g, '')
@@ -475,9 +475,9 @@ export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null,
 
 export async function devolverCredito(tenantId, cliente, valor, motivo = null) {
   // Busca saldo anterior
-  const saldoAnterior = await getSaldoCliente(tenantId, cliente)
+  const { saldo: saldoAnterior } = await getSaldoCliente(tenantId, cliente)
 
-  const { data } = await supabase.from('creditos').select('*').eq('tenant_id', tid(tenantId)).ilike('cliente', cliente.trim()).gt('valor_utilizado', 0).order('created_at', { ascending: false })
+  const { data } = await supabase.from('creditos').select('*').eq('tenant_id', tid(tenantId)).ilike('cliente', `%${cliente.trim()}%`).gt('valor_utilizado', 0).order('created_at', { ascending: false })
   if (!data?.length) return
 
   let f = valor
