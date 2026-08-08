@@ -514,7 +514,7 @@ export async function getHistoricoCreditos(tenantId, cliente = null) {
     .order('created_at', { ascending: false })
 
   if (cliente) {
-    query = query.ilike('cliente', cliente.trim())
+    query = query.ilike('cliente', `%${cliente.trim()}%`)
   }
 
   const { data, error } = await query

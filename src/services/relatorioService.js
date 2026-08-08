@@ -164,6 +164,17 @@ export async function salvarCredito(tenantId, credito) {
       .eq('id', credito.id)
     if (error) throw error
   } else {
+    // Busca saldo anterior do cliente
+    const { data: saldoData } = await supabase
+      .from('creditos')
+      .select('saldo_restante')
+      .eq('tenant_id', tid(tenantId))
+      .ilike('cliente', `%${(credito.cliente || '').trim()}%`)
+
+    const saldoAnterior = (saldoData || []).reduce((sum, c) => sum + (Number(c.saldo_restante) || 0), 0)
+    const saldoPosterior = saldoAnterior + valor
+
+    // Insere o crédito
     const { error } = await supabase.from('creditos').insert([{
       tenant_id:      tid(tenantId),
       cliente:        credito.cliente || '',
@@ -173,6 +184,17 @@ export async function salvarCredito(tenantId, credito) {
       motivo:         credito.observacao || 'Crédito da Loja',
     }])
     if (error) throw error
+
+    // Registra no histórico
+    await supabase.from('creditos_historico').insert([{
+      tenant_id: tid(tenantId),
+      cliente: (credito.cliente || '').trim(),
+      tipo: 'CREDITO',
+      valor: valor,
+      saldo_anterior: saldoAnterior,
+      saldo_posterior: saldoPosterior,
+      motivo: credito.observacao || 'Crédito da Loja'
+    }])
   }
 }
 
