@@ -175,19 +175,20 @@ export async function salvarCredito(tenantId, credito) {
     const saldoPosterior = saldoAnterior + valor
 
     // Insere o crédito
-    const { error } = await supabase.from('creditos').insert([{
+    const { data: creditoData, error } = await supabase.from('creditos').insert([{
       tenant_id:      tid(tenantId),
       cliente:        credito.cliente || '',
       valor_original: valor,
       saldo_restante: valor,
       valor_utilizado: 0,
       motivo:         credito.observacao || 'Crédito da Loja',
-    }])
+    }]).select('id').single()
     if (error) throw error
 
     // Registra no histórico
     await supabase.from('creditos_historico').insert([{
       tenant_id: tid(tenantId),
+      credito_id: creditoData?.id,
       cliente: (credito.cliente || '').trim(),
       tipo: 'CREDITO',
       valor: valor,
