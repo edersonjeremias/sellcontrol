@@ -29,7 +29,7 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
     <div className="modal-overlay" onClick={(e) => {
       if (e.target.classList.contains('modal-overlay')) onFechar()
     }}>
-      <div className="modal-card" style={{ maxWidth: 900, width: '90%' }} onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card" style={{ maxWidth: 1200, width: '95%' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>📦 Buscar Produto Cadastrado</h3>
           <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400 }}>
@@ -82,7 +82,7 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
                   : 'Nenhum produto disponível'}
               </div>
             ) : (
-              <table style={{ width: '100%', fontSize: 13 }}>
+              <table style={{ width: '100%', fontSize: 13, tableLayout: 'fixed' }}>
                 <thead style={{
                   position: 'sticky',
                   top: 0,
@@ -90,14 +90,14 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
                   zIndex: 1
                 }}>
                   <tr>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Produto</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Modelo</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Cor</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Marca</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Tam.</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Preço</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-light)' }}>Cód.</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid var(--border-light)' }}>Ação</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '18%' }}>Produto</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '18%' }}>Modelo</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '15%' }}>Cor</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '15%' }}>Marca</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Tam.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '10%' }}>Preço</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Cód.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Ação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -106,27 +106,28 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
                       borderBottom: '1px solid var(--border-light)',
                       ':hover': { background: 'var(--hover-bg)' }
                     }}>
-                      <td style={{ padding: '8px 12px' }}>{p.produto || '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{p.modelo || '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{p.cor || '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{p.marca || '—'}</td>
-                      <td style={{ padding: '8px 12px' }}>{p.tamanho || '—'}</td>
-                      <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--green)' }}>
+                      <td style={{ padding: '6px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.produto || '—'}</td>
+                      <td style={{ padding: '6px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.modelo || '—'}</td>
+                      <td style={{ padding: '6px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.cor || '—'}</td>
+                      <td style={{ padding: '6px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.marca || '—'}</td>
+                      <td style={{ padding: '6px 8px' }}>{p.tamanho || '—'}</td>
+                      <td style={{ padding: '6px 8px', fontWeight: 600, color: 'var(--green)' }}>
                         {p.preco || '—'}
                       </td>
-                      <td style={{ padding: '8px 12px', color: 'var(--muted)' }}>{p.codigo || '—'}</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                      <td style={{ padding: '6px 8px', color: 'var(--muted)', fontSize: 11 }}>{p.codigo || '—'}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
                         <button
                           onClick={() => onSelecionar(p)}
                           style={{
                             background: 'var(--blue)',
                             color: '#171717',
                             border: 'none',
-                            borderRadius: 6,
-                            padding: '6px 12px',
-                            fontSize: 12,
+                            borderRadius: 4,
+                            padding: '4px 10px',
+                            fontSize: 11,
                             fontWeight: 700,
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
                           }}
                         >
                           Usar
