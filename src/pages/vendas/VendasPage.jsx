@@ -1572,17 +1572,26 @@ export default function VendasPage() {
 
       if (error) throw error
 
-      // Remove duplicatas baseado em produto+modelo+cor+marca+tamanho
+      // ✅ Remove duplicatas E conta quantos registros de cada produto existem
       const produtosUnicos = []
-      const chaves = new Set()
+      const chaves = new Map() // Map para armazenar chave → { produto, count }
 
       data?.forEach(p => {
         const chave = `${p.produto}|${p.modelo}|${p.cor}|${p.marca}|${p.tamanho}`.toLowerCase()
-        if (!chaves.has(chave) && p.produto?.trim()) {
-          chaves.add(chave)
-          produtosUnicos.push(p)
+
+        if (chaves.has(chave)) {
+          // Já existe, incrementa contador
+          const item = chaves.get(chave)
+          item.count++
+        } else if (p.produto?.trim()) {
+          // Primeiro registro deste produto
+          const item = { ...p, count: 1 }
+          chaves.set(chave, item)
+          produtosUnicos.push(item)
         }
       })
+
+      console.log('📦 Produtos únicos com contador:', produtosUnicos.map(p => `${p.produto} (${p.count}x)`))
 
       setProdutosDisponiveis(produtosUnicos)
       setShowModalBuscarProduto(true)
@@ -1668,9 +1677,8 @@ export default function VendasPage() {
         console.warn('⚠️ Nenhum registro encontrado para deletar')
       }
 
-      // Remove da lista do modal
+      // ✅ Decrementa contador ou remove da lista
       setProdutosDisponiveis(prev => {
-        console.log('📋 Lista ANTES de remover:', prev.length, 'itens')
         const index = prev.findIndex(p =>
           p.produto === produto.produto &&
           p.modelo === produto.modelo &&
@@ -1678,13 +1686,27 @@ export default function VendasPage() {
           p.marca === produto.marca &&
           p.tamanho === produto.tamanho
         )
-        console.log('🔍 Índice encontrado:', index)
+
         if (index !== -1) {
           const novo = [...prev]
-          novo.splice(index, 1) // Remove apenas 1 item
-          console.log('✅ Lista DEPOIS de remover:', novo.length, 'itens')
+          const item = novo[index]
+
+          console.log(`📦 Produto "${item.produto}" - Qtd ANTES: ${item.count || 1}`)
+
+          if (item.count > 1) {
+            // Decrementa contador
+            novo[index] = { ...item, count: item.count - 1 }
+            console.log(`➖ Decrementou para: ${novo[index].count}`)
+          } else {
+            // Remove da lista (era o último)
+            novo.splice(index, 1)
+            console.log('🗑️ Era o último, removido da lista')
+          }
+
+          console.log(`📋 Lista: ${prev.length} → ${novo.length} itens`)
           return novo
         }
+
         console.log('⚠️ Produto não encontrado na lista do modal')
         return prev
       })

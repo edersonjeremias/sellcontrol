@@ -122,13 +122,14 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onExcl
                   zIndex: 1
                 }}>
                   <tr>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '17%' }}>Produto</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '17%' }}>Modelo</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '14%' }}>Cor</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '14%' }}>Marca</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '7%' }}>Tam.</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '9%' }}>Preço</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Cód.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '16%' }}>Produto</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '16%' }}>Modelo</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '13%' }}>Cor</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '13%' }}>Marca</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '6%' }}>Tam.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Preço</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '7%' }}>Cód.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-light)', width: '7%' }}>Qtd.</th>
                     <th style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-light)', width: '14%' }}>Ação</th>
                   </tr>
                 </thead>
@@ -147,6 +148,19 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onExcl
                         {p.preco || '—'}
                       </td>
                       <td style={{ padding: '6px 8px', color: 'var(--muted)', fontSize: 11 }}>{p.codigo || '—'}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: 12,
+                          background: p.count > 1 ? 'var(--blue)' : 'var(--muted)',
+                          color: 'white',
+                          fontSize: 11,
+                          fontWeight: 600
+                        }}>
+                          {p.count || 1}
+                        </span>
+                      </td>
                       <td style={{ padding: '6px 8px' }}>
                         <div className="acoes-wrapper" style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button
