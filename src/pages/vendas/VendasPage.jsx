@@ -1577,7 +1577,7 @@ export default function VendasPage() {
   }, [busy, tenantId])
 
   // ── IMPORTAR PRODUTO SELECIONADO ──
-  const importarProduto = useCallback((produto) => {
+  const importarProduto = useCallback(async (produto) => {
     // Gera código novo se automático estiver ativado, senão copia o código antigo
     const novoCodigo = config.codigo_automatico ? getProximoCodigo() : (produto.codigo || '')
 
@@ -1601,9 +1601,60 @@ export default function VendasPage() {
     // Adiciona a nova linha
     setLinhas(prev => [...prev, novaLinhaComProduto])
     setHasUnsaved(true)
+
+    // ✅ DELETA 1 REGISTRO do banco (a peça foi usada)
+    try {
+      // Busca o ID do primeiro registro que corresponde
+      const { data: registros, error: erroConsulta } = await supabase
+        .from('vendas')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('produto', produto.produto || '')
+        .eq('modelo', produto.modelo || '')
+        .eq('cor', produto.cor || '')
+        .eq('marca', produto.marca || '')
+        .eq('tamanho', produto.tamanho || '')
+        .or('cliente_nome.is.null,cliente_nome.eq.')
+        .limit(1)
+
+      if (erroConsulta) throw erroConsulta
+
+      if (registros && registros.length > 0) {
+        // Deleta apenas esse registro específico
+        const { error: erroDelete } = await supabase
+          .from('vendas')
+          .delete()
+          .eq('id', registros[0].id)
+
+        if (erroDelete) throw erroDelete
+
+        console.log('✅ Registro deletado do banco:', registros[0].id)
+      }
+
+      // Remove da lista do modal
+      setProdutosDisponiveis(prev => {
+        const index = prev.findIndex(p =>
+          p.produto === produto.produto &&
+          p.modelo === produto.modelo &&
+          p.cor === produto.cor &&
+          p.marca === produto.marca &&
+          p.tamanho === produto.tamanho
+        )
+        if (index !== -1) {
+          const novo = [...prev]
+          novo.splice(index, 1) // Remove apenas 1 item
+          return novo
+        }
+        return prev
+      })
+    } catch (err) {
+      console.error('Erro ao deletar registro do banco:', err)
+      // Não mostra erro ao usuário, pois o produto já foi importado com sucesso
+    }
+
     setShowModalBuscarProduto(false)
     showToast('✅ Produto importado! Preencha o cliente.', 'success')
-  }, [config.codigo_automatico])
+  }, [config.codigo_automatico, tenantId])
 
   // ── EXCLUIR PRODUTO DO BANCO ──
   const excluirProduto = useCallback(async (produto) => {
