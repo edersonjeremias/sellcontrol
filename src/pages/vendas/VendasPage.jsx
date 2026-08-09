@@ -1054,7 +1054,7 @@ export default function VendasPage() {
     })
   }
 
-  const handleClienteBlur = useCallback((key) => {
+  const handleClienteBlur = useCallback(async (key) => {
     console.log('🔍 handleClienteBlur chamado para key:', key)
 
     const l = linhasRef.current.find(linha => linha._key === key)
@@ -1076,6 +1076,17 @@ export default function VendasPage() {
       // ✅ Recalcula sacolinhas (limpa a sacolinha desta linha)
       setLinhas(prev => calcSacolas(prev))
       return
+    }
+
+    // ✅ ATUALIZA BLOQUEADOS ANTES DE VALIDAR (solução para quando Realtime não funciona)
+    console.log('🔄 Atualizando bloqueados antes de validar...')
+    try {
+      const db = await getDadosIniciais(tenantId)
+      console.log('📊 Bloqueados atualizados:', Object.keys(db.bloqueados).length, 'clientes')
+      globalDBRef.current = db
+      setGlobalDB(db)
+    } catch (err) {
+      console.error('❌ Erro ao atualizar bloqueados:', err)
     }
 
     // Verifica se lista de clientes está carregada
