@@ -29,20 +29,21 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onExcl
     <div className="modal-overlay" onClick={(e) => {
       if (e.target.classList.contains('modal-overlay')) onFechar()
     }}>
-      <div className="modal-card" style={{ maxWidth: 1200, width: '95%' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h3 style={{ margin: 0, marginBottom: 4 }}>📦 Buscar Produto Cadastrado</h3>
-            <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400, display: 'block', marginBottom: 4 }}>
-              Produtos não vendidos (últimos 60 dias)
-            </span>
-            <span style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 600 }}>
-              {produtosFiltrados.length} produtos encontrados de {produtos.length} totais
-            </span>
-          </div>
+      <div className="modal-card" style={{ maxWidth: 1200, width: '95%', minHeight: 600, maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+          <h3 style={{ margin: 0, marginBottom: 4 }}>📦 Buscar Produto Cadastrado</h3>
+          <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400, display: 'block', marginBottom: 8 }}>
+            Produtos não vendidos (últimos 60 dias)
+          </span>
+          <span style={{ fontSize: 14, color: 'var(--blue)', fontWeight: 600 }}>
+            {produtosFiltrados.length} produtos encontrados de {produtos.length} totais
+          </span>
           <button
             onClick={onFechar}
             style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
               background: 'transparent',
               border: 'none',
               color: 'var(--blue)',
@@ -92,7 +93,8 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onExcl
             overflowY: 'auto',
             border: '1px solid var(--border-light)',
             borderRadius: 8,
-            background: 'var(--card-bg)'
+            background: 'var(--card-bg)',
+            padding: '0 0 8px 0'
           }}>
             {produtosFiltrados.length === 0 ? (
               <div style={{
@@ -139,41 +141,29 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onExcl
                         {p.preco || '—'}
                       </td>
                       <td style={{ padding: '6px 8px', color: 'var(--muted)', fontSize: 11 }}>{p.codigo || '—'}</td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                      <td style={{ padding: '6px 8px' }}>
+                        <div className="acoes-wrapper" style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button
+                            type="button"
+                            className="btn-action-sm copy"
                             onClick={() => onSelecionar(p)}
-                            style={{
-                              background: 'var(--blue)',
-                              color: '#171717',
-                              border: 'none',
-                              borderRadius: 4,
-                              padding: '4px 8px',
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap'
-                            }}
-                            title="Importar produto"
+                            title="Importar produto para vendas"
                           >
-                            Usar
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
                           </button>
                           <button
+                            type="button"
+                            className="btn-action-sm del"
                             onClick={() => onExcluir?.(p)}
-                            style={{
-                              background: 'rgba(239,68,68,0.1)',
-                              color: 'var(--red)',
-                              border: '1px solid var(--red)',
-                              borderRadius: 4,
-                              padding: '4px 8px',
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap'
-                            }}
-                            title="Excluir do banco"
+                            title="Excluir produto do banco"
                           >
-                            🗑️
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
                           </button>
                         </div>
                       </td>
