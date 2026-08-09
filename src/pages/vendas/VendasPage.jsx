@@ -977,6 +977,34 @@ export default function VendasPage() {
     }
   }, [pronto, tenantId])
 
+  // ── POLLING AUTOMÁTICO (atualiza bloqueados a cada 10s) ──
+  // Solução temporária enquanto Realtime não está habilitado no Supabase
+  useEffect(() => {
+    if (!pronto || !tenantId) return
+
+    console.log('⏰ Iniciando polling de bloqueados (10s)')
+
+    const atualizarBloqueados = async () => {
+      try {
+        const db = await getDadosIniciais(tenantId)
+        const qtdBloqueados = Object.keys(db.bloqueados).length
+        console.log('🔄 Polling: bloqueados atualizados -', qtdBloqueados, 'clientes')
+        globalDBRef.current = db
+        setGlobalDB(db)
+      } catch (err) {
+        console.error('❌ Erro no polling de bloqueados:', err)
+      }
+    }
+
+    // Atualiza a cada 10 segundos
+    const intervalId = setInterval(atualizarBloqueados, 10000)
+
+    return () => {
+      console.log('⏰ Parando polling de bloqueados')
+      clearInterval(intervalId)
+    }
+  }, [pronto, tenantId])
+
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((key, field, value) => {
     console.log('🔧 handleFieldChange:', { key, field, value })
