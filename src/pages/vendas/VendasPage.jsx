@@ -1605,6 +1605,46 @@ export default function VendasPage() {
     showToast('✅ Produto importado! Preencha o cliente.', 'success')
   }, [config.codigo_automatico])
 
+  // ── EXCLUIR PRODUTO DO BANCO ──
+  const excluirProduto = useCallback(async (produto) => {
+    if (!confirm(`Deseja realmente excluir este produto do banco?\n\n${produto.produto || ''} ${produto.modelo || ''} ${produto.cor || ''}\n\nIsso vai deletar TODOS os registros deste produto que não têm cliente.`)) {
+      return
+    }
+
+    setBusy(true, 'Excluindo...')
+    try {
+      // Deleta todos os registros deste produto que não têm cliente
+      const { error } = await supabase
+        .from('vendas')
+        .delete()
+        .eq('tenant_id', tenantId)
+        .eq('produto', produto.produto || '')
+        .eq('modelo', produto.modelo || '')
+        .eq('cor', produto.cor || '')
+        .eq('marca', produto.marca || '')
+        .eq('tamanho', produto.tamanho || '')
+        .or('cliente_nome.is.null,cliente_nome.eq.')
+
+      if (error) throw error
+
+      // Remove da lista do modal
+      setProdutosDisponiveis(prev => prev.filter(p =>
+        !(p.produto === produto.produto &&
+          p.modelo === produto.modelo &&
+          p.cor === produto.cor &&
+          p.marca === produto.marca &&
+          p.tamanho === produto.tamanho)
+      ))
+
+      showToast('✅ Produto excluído do banco!', 'success')
+    } catch (err) {
+      console.error('Erro ao excluir produto:', err)
+      showToast('Erro ao excluir produto: ' + (err?.message || String(err)), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }, [tenantId])
+
   // ── MULTIPLICAR LINHAS ──
   function multiplicarLinhas() {
     const n = parseInt(qtInput)
@@ -1889,6 +1929,7 @@ export default function VendasPage() {
         <ModalBuscarProduto
           produtos={produtosDisponiveis}
           onSelecionar={importarProduto}
+          onExcluir={excluirProduto}
           onFechar={() => setShowModalBuscarProduto(false)}
         />
       )}

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 
-export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFechar }) {
+export default function ModalBuscarProduto({ produtos = [], onSelecionar, onExcluir, onFechar }) {
   const [filtro, setFiltro] = useState('')
 
   // Filtro multi-termo (igual ao da página de vendas)
@@ -33,8 +33,11 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h3 style={{ margin: 0, marginBottom: 4 }}>📦 Buscar Produto Cadastrado</h3>
-            <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400 }}>
+            <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400, display: 'block', marginBottom: 4 }}>
               Produtos não vendidos (últimos 60 dias)
+            </span>
+            <span style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 600 }}>
+              {produtosFiltrados.length} produtos encontrados de {produtos.length} totais
             </span>
           </div>
           <button
@@ -65,7 +68,6 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
         <div className="modal-body">
           {/* Filtro */}
           <div className="modal-field" style={{ marginBottom: 16 }}>
-            <label>Filtro Rápido</label>
             <input
               type="text"
               value={filtro}
@@ -82,9 +84,6 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
                 fontSize: 14
               }}
             />
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>
-              {produtosFiltrados.length} produtos encontrados de {produtos.length} totais
-            </div>
           </div>
 
           {/* Lista de Produtos */}
@@ -115,14 +114,14 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
                   zIndex: 1
                 }}>
                   <tr>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '18%' }}>Produto</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '18%' }}>Modelo</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '15%' }}>Cor</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '15%' }}>Marca</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Tam.</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '10%' }}>Preço</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '17%' }}>Produto</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '17%' }}>Modelo</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '14%' }}>Cor</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '14%' }}>Marca</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '7%' }}>Tam.</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '9%' }}>Preço</th>
                     <th style={{ padding: '6px 8px', textAlign: 'left', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Cód.</th>
-                    <th style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-light)', width: '8%' }}>Ação</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-light)', width: '14%' }}>Ação</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -141,22 +140,42 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
                       </td>
                       <td style={{ padding: '6px 8px', color: 'var(--muted)', fontSize: 11 }}>{p.codigo || '—'}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => onSelecionar(p)}
-                          style={{
-                            background: 'var(--blue)',
-                            color: '#171717',
-                            border: 'none',
-                            borderRadius: 4,
-                            padding: '4px 10px',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          Usar
-                        </button>
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                          <button
+                            onClick={() => onSelecionar(p)}
+                            style={{
+                              background: 'var(--blue)',
+                              color: '#171717',
+                              border: 'none',
+                              borderRadius: 4,
+                              padding: '4px 8px',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title="Importar produto"
+                          >
+                            Usar
+                          </button>
+                          <button
+                            onClick={() => onExcluir?.(p)}
+                            style={{
+                              background: 'rgba(239,68,68,0.1)',
+                              color: 'var(--red)',
+                              border: '1px solid var(--red)',
+                              borderRadius: 4,
+                              padding: '4px 8px',
+                              fontSize: 11,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap'
+                            }}
+                            title="Excluir do banco"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
