@@ -874,13 +874,18 @@ export default function VendasPage() {
   useEffect(() => {
     if (!pronto || !tenantId) return
 
+    console.log('🔌 Conectando listener de cobranças...', { tenantId })
+
     const atualizarBloqueados = async () => {
       try {
+        console.log('🔄 Atualizando bloqueados via realtime...')
         const db = await getDadosIniciais(tenantId)
+        console.log('📊 Bloqueados atualizados:', Object.keys(db.bloqueados).length, 'clientes')
+        console.log('📋 Lista de bloqueados:', db.bloqueados)
         globalDBRef.current = db
         setGlobalDB(db)
       } catch (err) {
-        console.error('Erro ao atualizar bloqueios:', err)
+        console.error('❌ Erro ao atualizar bloqueios:', err)
       }
     }
 
@@ -896,10 +901,15 @@ export default function VendasPage() {
           filter: `tenant_id=eq.${tenantId}`,
         },
         async (payload) => {
+          console.log('🆕 INSERT na tabela cobrancas detectado:', payload.new)
           const status = payload.new?.status?.toUpperCase()
+          const cliente = payload.new?.cliente
           const statusBloqueio = ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE']
 
+          console.log('📍 Status da cobrança:', status, '| Cliente:', cliente)
+
           if (statusBloqueio.includes(status)) {
+            console.log('🚫 Bloqueando cliente:', cliente)
             await atualizarBloqueados()
             showToast('⚠️ Nova cobrança pendente. Cliente bloqueado.', 'warning')
           }
@@ -915,8 +925,12 @@ export default function VendasPage() {
           filter: `tenant_id=eq.${tenantId}`,
         },
         async (payload) => {
+          console.log('🔄 UPDATE na tabela cobrancas detectado:', payload.new)
           const statusNovo = payload.new?.status?.toUpperCase()
           const statusAntigo = payload.old?.status?.toUpperCase()
+          const cliente = payload.new?.cliente
+
+          console.log('📍 Status mudou:', statusAntigo, '→', statusNovo, '| Cliente:', cliente)
 
           if (statusNovo === statusAntigo) return
 
@@ -924,9 +938,11 @@ export default function VendasPage() {
           const statusBloqueio = ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE']
 
           if (statusLiberado.includes(statusNovo)) {
+            console.log('✅ Liberando cliente:', cliente)
             await atualizarBloqueados()
             showToast('✅ Pagamento confirmado! Cliente liberado.', 'success')
           } else if (statusBloqueio.includes(statusNovo)) {
+            console.log('🚫 Bloqueando cliente:', cliente)
             await atualizarBloqueados()
             showToast('⚠️ Cliente bloqueado por pendência.', 'warning')
           }
@@ -942,12 +958,23 @@ export default function VendasPage() {
           filter: `tenant_id=eq.${tenantId}`,
         },
         async () => {
+          console.log('🗑️ DELETE na tabela cobrancas detectado')
           await atualizarBloqueados()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('📡 Status do canal de cobranças:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Listener de cobranças CONECTADO com sucesso!')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Erro ao conectar listener de cobranças')
+        }
+      })
 
-    return () => { supabase.removeChannel(channelCob) }
+    return () => {
+      console.log('🔌 Desconectando listener de cobranças...')
+      supabase.removeChannel(channelCob)
+    }
   }, [pronto, tenantId])
 
   // ── UPDATE DE CAMPO ──
