@@ -1604,6 +1604,14 @@ export default function VendasPage() {
 
     // ✅ DELETA 1 REGISTRO do banco (a peça foi usada)
     try {
+      console.log('🔍 Buscando registro para deletar:', {
+        produto: produto.produto,
+        modelo: produto.modelo,
+        cor: produto.cor,
+        marca: produto.marca,
+        tamanho: produto.tamanho
+      })
+
       // Busca o ID do primeiro registro que corresponde
       const { data: registros, error: erroConsulta } = await supabase
         .from('vendas')
@@ -1617,7 +1625,12 @@ export default function VendasPage() {
         .or('cliente_nome.is.null,cliente_nome.eq.')
         .limit(1)
 
-      if (erroConsulta) throw erroConsulta
+      if (erroConsulta) {
+        console.error('❌ Erro ao buscar registro:', erroConsulta)
+        throw erroConsulta
+      }
+
+      console.log('📊 Registros encontrados:', registros)
 
       if (registros && registros.length > 0) {
         // Deleta apenas esse registro específico
@@ -1626,13 +1639,19 @@ export default function VendasPage() {
           .delete()
           .eq('id', registros[0].id)
 
-        if (erroDelete) throw erroDelete
+        if (erroDelete) {
+          console.error('❌ Erro ao deletar:', erroDelete)
+          throw erroDelete
+        }
 
-        console.log('✅ Registro deletado do banco:', registros[0].id)
+        console.log('✅ Registro deletado do banco! ID:', registros[0].id)
+      } else {
+        console.warn('⚠️ Nenhum registro encontrado para deletar')
       }
 
       // Remove da lista do modal
       setProdutosDisponiveis(prev => {
+        console.log('📋 Lista ANTES de remover:', prev.length, 'itens')
         const index = prev.findIndex(p =>
           p.produto === produto.produto &&
           p.modelo === produto.modelo &&
@@ -1640,16 +1659,19 @@ export default function VendasPage() {
           p.marca === produto.marca &&
           p.tamanho === produto.tamanho
         )
+        console.log('🔍 Índice encontrado:', index)
         if (index !== -1) {
           const novo = [...prev]
           novo.splice(index, 1) // Remove apenas 1 item
+          console.log('✅ Lista DEPOIS de remover:', novo.length, 'itens')
           return novo
         }
+        console.log('⚠️ Produto não encontrado na lista do modal')
         return prev
       })
     } catch (err) {
-      console.error('Erro ao deletar registro do banco:', err)
-      // Não mostra erro ao usuário, pois o produto já foi importado com sucesso
+      console.error('❌ Erro GERAL ao deletar registro:', err)
+      showToast('⚠️ Produto importado, mas não foi removido do banco', 'warning')
     }
 
     setShowModalBuscarProduto(false)

@@ -30,14 +30,20 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onExcl
       if (e.target.classList.contains('modal-overlay')) onFechar()
     }}>
       <div className="modal-card" style={{ maxWidth: 1200, width: '95%', minHeight: 600, maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-          <h3 style={{ margin: 0, marginBottom: 4 }}>📦 Buscar Produto Cadastrado</h3>
-          <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400, display: 'block', marginBottom: 8 }}>
-            Produtos não vendidos (últimos 60 dias)
-          </span>
-          <span style={{ fontSize: 14, color: 'var(--blue)', fontWeight: 600 }}>
-            {produtosFiltrados.length} produtos encontrados de {produtos.length} totais
-          </span>
+        <div className="modal-header" style={{ position: 'relative', paddingBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <div>
+              <h3 style={{ margin: 0, marginBottom: 4 }}>📦 Buscar Produto Cadastrado</h3>
+              <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400 }}>
+                Produtos não vendidos (últimos 60 dias)
+              </span>
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <span style={{ fontSize: 14, color: 'var(--blue)', fontWeight: 600 }}>
+              {produtosFiltrados.length} produtos encontrados de {produtos.length} totais
+            </span>
+          </div>
           <button
             onClick={onFechar}
             style={{
