@@ -30,11 +30,36 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
       if (e.target.classList.contains('modal-overlay')) onFechar()
     }}>
       <div className="modal-card" style={{ maxWidth: 1200, width: '95%' }} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>📦 Buscar Produto Cadastrado</h3>
-          <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400 }}>
-            Produtos não vendidos (últimos 60 dias)
-          </span>
+        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h3 style={{ margin: 0, marginBottom: 4 }}>📦 Buscar Produto Cadastrado</h3>
+            <span style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 400 }}>
+              Produtos não vendidos (últimos 60 dias)
+            </span>
+          </div>
+          <button
+            onClick={onFechar}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--blue)',
+              fontSize: 24,
+              cursor: 'pointer',
+              padding: 0,
+              width: 32,
+              height: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 4,
+              transition: 'background 0.2s'
+            }}
+            onMouseOver={(e) => e.target.style.background = 'rgba(139, 180, 248, 0.1)'}
+            onMouseOut={(e) => e.target.style.background = 'transparent'}
+            title="Fechar"
+          >
+            ×
+          </button>
         </div>
 
         <div className="modal-body">
@@ -139,10 +164,6 @@ export default function ModalBuscarProduto({ produtos = [], onSelecionar, onFech
               </table>
             )}
           </div>
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn-cancel" onClick={onFechar}>Fechar</button>
         </div>
       </div>
     </div>
