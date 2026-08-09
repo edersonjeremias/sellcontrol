@@ -1543,6 +1543,21 @@ export default function VendasPage() {
       dataInicio.setDate(dataInicio.getDate() - 60)
       const dataInicioISO = dataInicio.toISOString()
 
+      // 🔍 DEBUG: Query SEM filtro data_live
+      const { data: dataDebug } = await supabase
+        .from('vendas')
+        .select('produto, modelo, cor, marca, tamanho, preco, codigo, data_live, cliente_nome')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', dataInicioISO)
+        .or('cliente_nome.is.null,cliente_nome.eq.')
+        .order('created_at', { ascending: false })
+        .limit(500)
+
+      console.log('🔍 DEBUG - Produtos SEM filtro data_live:', dataDebug?.length || 0)
+      console.log('🔍 Produtos COM data_live preenchida:', dataDebug?.filter(p => p.data_live).length || 0)
+      console.log('🔍 Produtos COM data_live NULL:', dataDebug?.filter(p => !p.data_live).length || 0)
+
+      // ✅ Query REAL (com filtro data_live)
       const { data, error } = await supabase
         .from('vendas')
         .select('produto, modelo, cor, marca, tamanho, preco, codigo')
@@ -1552,6 +1567,8 @@ export default function VendasPage() {
         .is('data_live', null) // ✅ NÃO traz produtos que já estão em vendas (data_live preenchida)
         .order('created_at', { ascending: false })
         .limit(500)
+
+      console.log('✅ DEBUG - Produtos COM filtro data_live:', data?.length || 0)
 
       if (error) throw error
 
