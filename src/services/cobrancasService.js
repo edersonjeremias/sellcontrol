@@ -427,11 +427,8 @@ export async function getSaldoCliente(tenantId, cliente) {
 }
 
 export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null, motivo = null) {
-  console.log('🔵 abaterCredito START:', { tenantId, cliente, valor, cobrancaId, motivo })
-
   // Busca saldo anterior
   const { saldo: saldoAnterior } = await getSaldoCliente(tenantId, cliente)
-  console.log('📊 Saldo anterior:', saldoAnterior)
 
   // Busca todos os créditos e filtra com normalização
   const clienteNorm = cliente.trim().toLowerCase().replace(/[._-]/g, '')
@@ -442,24 +439,14 @@ export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null,
     .gt('saldo_restante', 0)
     .order('created_at')
 
-  console.log('💰 Créditos encontrados:', todosCreditos?.length || 0)
-
-  if (!todosCreditos?.length) {
-    console.warn('⚠️ Nenhum crédito com saldo > 0 encontrado')
-    return
-  }
+  if (!todosCreditos?.length) return
 
   const data = todosCreditos.filter(c => {
     const cNorm = (c.cliente || '').toLowerCase().replace(/[._-]/g, '')
     return cNorm === clienteNorm
   })
 
-  console.log('✅ Créditos após filtro:', data.length)
-
-  if (!data.length) {
-    console.warn('⚠️ Nenhum crédito após normalização do nome')
-    return
-  }
+  if (!data.length) return
 
   let f = valor
   for (const c of data) {
@@ -472,9 +459,7 @@ export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null,
 
   // Registra no histórico
   const saldoPosterior = saldoAnterior - valor
-  console.log('📝 Inserindo no histórico:', { cliente: cliente.trim(), tipo: 'DEBITO', valor, saldoAnterior, saldoPosterior })
-
-  const { data: historicoData, error: historicoError } = await supabase.from('creditos_historico').insert([{
+  const { error } = await supabase.from('creditos_historico').insert([{
     tenant_id: tid(tenantId),
     cliente: cliente.trim(),
     tipo: 'DEBITO',
@@ -483,14 +468,10 @@ export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null,
     saldo_posterior: saldoPosterior,
     motivo: motivo,
     cobranca_id: cobrancaId
-  }]).select()
+  }])
 
-  if (historicoError) {
-    console.error('❌ ERRO ao inserir histórico:', historicoError)
-    throw historicoError
-  }
+  if (error) throw error
 
-  console.log('✅ Histórico inserido com sucesso:', historicoData)
   console.log(`💳 Crédito usado: ${cliente} | R$ ${valor} | Saldo: ${saldoAnterior} → ${saldoPosterior}`)
 }
 
