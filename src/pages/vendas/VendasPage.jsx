@@ -1540,14 +1540,14 @@ export default function VendasPage() {
       // Busca produtos não vendidos dos últimos 60 dias
       const dataInicio = new Date()
       dataInicio.setDate(dataInicio.getDate() - 60)
-      const dataInicioISO = dataInicio.toISOString().split('T')[0]
+      const dataInicioISO = dataInicio.toISOString()
 
       const { data, error } = await supabase
         .from('vendas')
-        .select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, custo, qtde, condicao, genero')
+        .select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, custo, qtde, condicao, genero, created_at')
         .eq('tenant_id', tenantId)
         .gte('created_at', dataInicioISO)
-        .or('cliente_nome.is.null,cliente_nome.eq.,status.neq.VENDIDO') // Sem cliente OU status diferente de VENDIDO
+        .or('cliente_nome.is.null,cliente_nome.eq.') // Produtos sem cliente (não vendidos)
         .order('created_at', { ascending: false })
         .limit(500)
 
