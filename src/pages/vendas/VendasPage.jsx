@@ -159,6 +159,7 @@ export default function VendasPage() {
   const [showModalCadastro, setShowModalCadastro] = useState(false)
   const [showModalBuscarProduto, setShowModalBuscarProduto] = useState(false)
   const [produtosDisponiveis, setProdutosDisponiveis] = useState([])
+  const [produtoParaExcluir, setProdutoParaExcluir] = useState(null)
   const [showModalLive,     setShowModalLive]     = useState(false)
   const [novaLiveNome,      setNovaLiveNome]      = useState('')
   const [salvandoLive,      setSalvandoLive]      = useState(false)
@@ -1547,7 +1548,8 @@ export default function VendasPage() {
         .select('produto, modelo, cor, marca, tamanho, preco, codigo')
         .eq('tenant_id', tenantId)
         .gte('created_at', dataInicioISO)
-        .or('cliente_nome.is.null,cliente_nome.eq.') // Produtos sem cliente (não vendidos)
+        .or('cliente_nome.is.null,cliente_nome.eq.') // Produtos sem cliente
+        .is('data_live', null) // ✅ NÃO traz produtos que já estão em vendas (data_live preenchida)
         .order('created_at', { ascending: false })
         .limit(500)
 
@@ -1679,13 +1681,17 @@ export default function VendasPage() {
   }, [config.codigo_automatico, tenantId])
 
   // ── EXCLUIR PRODUTO DO BANCO ──
-  const excluirProduto = useCallback(async (produto) => {
-    if (!confirm(`Deseja realmente excluir este produto do banco?\n\n${produto.produto || ''} ${produto.modelo || ''} ${produto.cor || ''}\n\nIsso vai deletar TODOS os registros deste produto que não têm cliente.`)) {
-      return
-    }
+  const excluirProduto = useCallback((produto) => {
+    // Abre modal de confirmação
+    setProdutoParaExcluir(produto)
+  }, [])
+
+  const confirmarExclusaoProduto = useCallback(async () => {
+    if (!produtoParaExcluir) return
 
     setBusy(true, 'Excluindo...')
     try {
+      const produto = produtoParaExcluir
       // Deleta todos os registros deste produto que não têm cliente
       const { error } = await supabase
         .from('vendas')
@@ -1715,8 +1721,9 @@ export default function VendasPage() {
       showToast('Erro ao excluir produto: ' + (err?.message || String(err)), 'error')
     } finally {
       setBusy(false)
+      setProdutoParaExcluir(null)
     }
-  }, [tenantId])
+  }, [tenantId, produtoParaExcluir])
 
   // ── MULTIPLICAR LINHAS ──
   function multiplicarLinhas() {
@@ -2080,6 +2087,16 @@ export default function VendasPage() {
 
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
       {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} hideConfirm={confirmacao.hideConfirm} />}
+
+      {/* MODAL CONFIRMAÇÃO EXCLUIR PRODUTO */}
+      {produtoParaExcluir && (
+        <ModalConfirmacao
+          titulo="🗑️ Excluir Produto"
+          mensagem={`Deseja realmente excluir este produto do banco?<br><br><b>${produtoParaExcluir.produto || ''} ${produtoParaExcluir.modelo || ''} ${produtoParaExcluir.cor || ''}</b><br><br>Isso vai deletar <b>TODOS</b> os registros deste produto que não têm cliente.`}
+          onSim={confirmarExclusaoProduto}
+          onNao={() => setProdutoParaExcluir(null)}
+        />
+      )}
 
       {/* MODAL ERRO CLIENTE NÃO CADASTRADO */}
       {modalClienteErro && (
