@@ -1544,7 +1544,7 @@ export default function VendasPage() {
 
       const { data, error } = await supabase
         .from('vendas')
-        .select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, custo, qtde, condicao, genero, created_at')
+        .select('produto, modelo, cor, marca, tamanho, preco, codigo')
         .eq('tenant_id', tenantId)
         .gte('created_at', dataInicioISO)
         .or('cliente_nome.is.null,cliente_nome.eq.') // Produtos sem cliente (não vendidos)
@@ -1581,7 +1581,7 @@ export default function VendasPage() {
     // Gera código novo se automático estiver ativado, senão copia o código antigo
     const novoCodigo = config.codigo_automatico ? getProximoCodigo() : (produto.codigo || '')
 
-    // Cria nova linha com os dados do produto
+    // Cria nova linha com os dados do produto (apenas campos que existem na tabela vendas)
     const novaLinhaComProduto = {
       ...novaLinha(novoCodigo),
       produto: produto.produto || '',
@@ -1590,12 +1590,7 @@ export default function VendasPage() {
       marca: produto.marca || '',
       tamanho: produto.tamanho || '',
       preco: formatMoney(produto.preco) || '',
-      preco_promocional: produto.preco_promocional ? formatMoney(produto.preco_promocional) : '',
       codigo: novoCodigo,
-      custo: produto.custo ? formatMoney(produto.custo) : '',
-      qtde: produto.qtde || '',
-      condicao: produto.condicao || '',
-      genero: produto.genero || '',
       // Cliente e sacolinha ficam vazios - serão preenchidos depois
       cliente_nome: '',
       sacolinha: null,
@@ -1607,7 +1602,7 @@ export default function VendasPage() {
     setLinhas(prev => [...prev, novaLinhaComProduto])
     setHasUnsaved(true)
     setShowModalBuscarProduto(false)
-    showToast('Produto importado! Preencha o cliente.', 'success')
+    showToast('✅ Produto importado! Preencha o cliente.', 'success')
   }, [config.codigo_automatico])
 
   // ── MULTIPLICAR LINHAS ──
