@@ -15,6 +15,7 @@ import TabelaRow      from '../../components/vendas/TabelaRow'
 import ModalEdicao    from '../../components/vendas/ModalEdicao'
 import ModalFila      from '../../components/vendas/ModalFila'
 import ModalCadastro  from '../../components/vendas/ModalCadastro'
+import ModalBuscarProduto from '../../components/vendas/ModalBuscarProduto'
 import AutocompleteInput  from '../../components/ui/AutocompleteInput'
 import ModalAlerta        from '../../components/ui/ModalAlerta'
 import ModalConfirmacao   from '../../components/ui/ModalConfirmacao'
@@ -156,6 +157,8 @@ export default function VendasPage() {
   const [modalEdicaoKey,    setModalEdicaoKey]    = useState(null)
   const [modalFilaKey,      setModalFilaKey]      = useState(null)
   const [showModalCadastro, setShowModalCadastro] = useState(false)
+  const [showModalBuscarProduto, setShowModalBuscarProduto] = useState(false)
+  const [produtosDisponiveis, setProdutosDisponiveis] = useState([])
   const [showModalLive,     setShowModalLive]     = useState(false)
   const [novaLiveNome,      setNovaLiveNome]      = useState('')
   const [salvandoLive,      setSalvandoLive]      = useState(false)
@@ -1529,6 +1532,84 @@ export default function VendasPage() {
     }
   }, [busy, tenantId])
 
+  // ── BUSCAR PRODUTOS DISPONÍVEIS ──
+  const buscarProdutosDisponiveis = useCallback(async () => {
+    if (busy) return
+    setBusy(true, 'Buscando produtos...')
+    try {
+      // Busca produtos não vendidos dos últimos 60 dias
+      const dataInicio = new Date()
+      dataInicio.setDate(dataInicio.getDate() - 60)
+      const dataInicioISO = dataInicio.toISOString().split('T')[0]
+
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, custo, qtde, condicao, genero')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', dataInicioISO)
+        .or('cliente_nome.is.null,cliente_nome.eq.,status.neq.VENDIDO') // Sem cliente OU status diferente de VENDIDO
+        .order('created_at', { ascending: false })
+        .limit(500)
+
+      if (error) throw error
+
+      // Remove duplicatas baseado em produto+modelo+cor+marca+tamanho
+      const produtosUnicos = []
+      const chaves = new Set()
+
+      data?.forEach(p => {
+        const chave = `${p.produto}|${p.modelo}|${p.cor}|${p.marca}|${p.tamanho}`.toLowerCase()
+        if (!chaves.has(chave) && p.produto?.trim()) {
+          chaves.add(chave)
+          produtosUnicos.push(p)
+        }
+      })
+
+      setProdutosDisponiveis(produtosUnicos)
+      setShowModalBuscarProduto(true)
+      showToast(`${produtosUnicos.length} produtos encontrados`, 'success')
+    } catch (err) {
+      console.error('Erro ao buscar produtos:', err)
+      showToast('Erro ao buscar produtos. Tente novamente.', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }, [busy, tenantId])
+
+  // ── IMPORTAR PRODUTO SELECIONADO ──
+  const importarProduto = useCallback((produto) => {
+    // Gera código novo se automático estiver ativado, senão copia o código antigo
+    const novoCodigo = config.codigo_automatico ? getProximoCodigo() : (produto.codigo || '')
+
+    // Cria nova linha com os dados do produto
+    const novaLinhaComProduto = {
+      ...novaLinha(novoCodigo),
+      produto: produto.produto || '',
+      modelo: produto.modelo || '',
+      cor: produto.cor || '',
+      marca: produto.marca || '',
+      tamanho: produto.tamanho || '',
+      preco: formatMoney(produto.preco) || '',
+      preco_promocional: produto.preco_promocional ? formatMoney(produto.preco_promocional) : '',
+      codigo: novoCodigo,
+      custo: produto.custo ? formatMoney(produto.custo) : '',
+      qtde: produto.qtde || '',
+      condicao: produto.condicao || '',
+      genero: produto.genero || '',
+      // Cliente e sacolinha ficam vazios - serão preenchidos depois
+      cliente_nome: '',
+      sacolinha: null,
+      data_live: dataLiveRef.current || '',
+      live_nome: liveNomeRef.current || '',
+    }
+
+    // Adiciona a nova linha
+    setLinhas(prev => [...prev, novaLinhaComProduto])
+    setHasUnsaved(true)
+    setShowModalBuscarProduto(false)
+    showToast('Produto importado! Preencha o cliente.', 'success')
+  }, [config.codigo_automatico])
+
   // ── MULTIPLICAR LINHAS ──
   function multiplicarLinhas() {
     const n = parseInt(qtInput)
@@ -1624,6 +1705,7 @@ export default function VendasPage() {
                 </svg>
               </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
+              <button className="btn-acao btn-ghost" onClick={buscarProdutosDisponiveis} disabled={busy}>📦 Produtos</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
 
               {/* INDICADOR DE STATUS */}
@@ -1804,6 +1886,15 @@ export default function VendasPage() {
             }
           }}
           onFechar={() => setShowModalCadastro(false)}
+        />
+      )}
+
+      {/* MODAL BUSCAR PRODUTO */}
+      {showModalBuscarProduto && (
+        <ModalBuscarProduto
+          produtos={produtosDisponiveis}
+          onSelecionar={importarProduto}
+          onFechar={() => setShowModalBuscarProduto(false)}
         />
       )}
 
