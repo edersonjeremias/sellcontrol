@@ -17,11 +17,28 @@ export default function ImpressaoSacolinhaClientePage() {
   const tenantId = profile?.tenant_id
 
   useEffect(() => {
+    // Previne cache da página
+    const meta = document.createElement('meta')
+    meta.httpEquiv = 'Cache-Control'
+    meta.content = 'no-cache, no-store, must-revalidate'
+    meta.id = 'no-cache-meta'
+    document.head.appendChild(meta)
+
     const style = document.createElement('style')
     style.id = 'print-sacol-cli-page'
-    style.textContent = '@media print { @page { size: 100mm 150mm; margin: 0; } }'
+    // Força reload do CSS de impressão e previne cache
+    style.textContent = `@media print {
+      @page { size: 100mm 150mm; margin: 0; }
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }`
     document.head.appendChild(style)
-    return () => { if (document.getElementById('print-sacol-cli-page')) document.head.removeChild(style) }
+
+    return () => {
+      const metaEl = document.getElementById('no-cache-meta')
+      if (metaEl) document.head.removeChild(metaEl)
+      const styleEl = document.getElementById('print-sacol-cli-page')
+      if (styleEl) document.head.removeChild(styleEl)
+    }
   }, [])
 
   const [nomeLoja,      setNomeLoja]      = useState('')
@@ -33,6 +50,16 @@ export default function ImpressaoSacolinhaClientePage() {
   const [gerado,        setGerado]        = useState(false)
   const [loading,       setLoading]       = useState(false)
   const [err,           setErr]           = useState(null)
+
+  // Debug: monitora renderização dos cards
+  useEffect(() => {
+    if (gerado && clientes.length > 0) {
+      setTimeout(() => {
+        const cards = document.querySelectorAll('.sacol-cli-card')
+        console.log('✅ Renderização completa:', cards.length, 'de', clientes.length, 'cards no DOM')
+      }, 200)
+    }
+  }, [gerado, clientes])
 
   // Carrega nome da loja e datas com live
   useEffect(() => {
@@ -106,14 +133,38 @@ export default function ImpressaoSacolinhaClientePage() {
         return a.nome.localeCompare(b.nome)
       })
 
+      console.log('📦 Sacolinhas geradas:', lista.length, 'clientes')
+      console.log('📋 Detalhes:', lista.map(c => ({
+        nome: c.nome,
+        sacolinha: c.sacolinha,
+        itens: c.itens.length
+      })))
+
       setClientes(lista)
       setGerado(true)
     } catch (e) {
+      console.error('❌ Erro ao gerar sacolinhas:', e)
       setErr(e.message || 'Erro ao carregar dados.')
     } finally {
       setLoading(false)
     }
   }, [tenantId, dataFiltro, liveNome])
+
+  const imprimir = useCallback(() => {
+    console.log('🖨️ Iniciando impressão de', clientes.length, 'sacolinhas...')
+
+    // Aguarda renderização completa antes de imprimir
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.sacol-cli-card')
+      console.log('📄 Cards renderizados no DOM:', cards.length)
+
+      if (cards.length !== clientes.length) {
+        console.warn('⚠️ AVISO: Esperava', clientes.length, 'cards mas encontrou', cards.length)
+      }
+
+      window.print()
+    }, 100)
+  }, [clientes])
 
   const limpar = () => {
     setDataFiltro(''); setLiveNome('')
@@ -154,7 +205,7 @@ export default function ImpressaoSacolinhaClientePage() {
           >
             {loading ? 'Carregando…' : 'Gerar'}
           </button>
-          <button className="sacol-btn sacol-btn-blue" onClick={() => window.print()} disabled={!gerado}>
+          <button className="sacol-btn sacol-btn-blue" onClick={imprimir} disabled={!gerado}>
             Imprimir
           </button>
           <button className="sacol-btn sacol-btn-ghost" onClick={limpar}>
@@ -163,6 +214,11 @@ export default function ImpressaoSacolinhaClientePage() {
         </div>
 
         {err && <span style={{ color: '#f28b82', fontSize: 13, alignSelf: 'center' }}>{err}</span>}
+        {gerado && clientes.length > 0 && (
+          <span style={{ color: '#9aa0a6', fontSize: 13, alignSelf: 'center' }}>
+            {clientes.length} sacolinha{clientes.length !== 1 ? 's' : ''} gerada{clientes.length !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
 
       {/* ── Resultado ── */}

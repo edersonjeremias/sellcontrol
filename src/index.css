@@ -1438,7 +1438,8 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   #sacol-resultado      { padding: 0; background: white; display: block; }
   #pedidos-resultado    { padding: 0; background: white; display: block; gap: 0; min-height: unset; }
   #sacol-cli-resultado  { padding: 0; background: white; display: block; gap: 0; min-height: unset; }
-  .etiqueta-sacola { margin: 0; border: none; box-shadow: none; page-break-after: always; }
-  .pedido-card     { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; }
-  .sacol-cli-card  { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; }
+  .etiqueta-sacola { margin: 0; border: none; box-shadow: none; page-break-after: always; page-break-inside: avoid; }
+  .pedido-card     { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; page-break-inside: avoid; }
+  .sacol-cli-card  { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; page-break-inside: avoid; max-height: 150mm; overflow: hidden; }
+  .sacol-cli-item  { page-break-inside: avoid; }
 }
