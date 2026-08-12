@@ -1626,8 +1626,8 @@ export default function VendasPage() {
       live_nome: liveNomeRef.current || '',
     }
 
-    // Adiciona a nova linha
-    setLinhas(prev => [...prev, novaLinhaComProduto])
+    // ✅ Adiciona a nova linha NO TOPO (não no final)
+    setLinhas(prev => [novaLinhaComProduto, ...prev])
     setHasUnsaved(true)
 
     // ✅ DELETA 1 REGISTRO do banco (a peça foi usada)
