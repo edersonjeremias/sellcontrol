@@ -207,18 +207,27 @@ export async function excluirCredito(id) {
 // ── Dashboard: gráficos ────────────────────────────────────────
 
 export async function getVendasPorAno(tenantId) {
+  // Busca TODAS as vendas que têm cliente
   const { data, error } = await supabase
     .from('vendas')
-    .select('preco, cliente_nome, data_live')
+    .select('preco, cliente_nome, data_live, created_at')
     .eq('tenant_id', tid(tenantId))
-    .not('data_live', 'is', null)
+    .neq('cliente_nome', '')
+    .not('cliente_nome', 'is', null)
 
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    // Conta TODAS as vendas que têm cliente (vendido, enviado, etc)
-    if (!v.data_live || !(v.cliente_nome || '').trim()) return
-    const ano = v.data_live.slice(0, 4)
+    if (!(v.cliente_nome || '').trim()) return
+
+    // Usa data_live se disponível, senão usa created_at
+    let dataVenda = v.data_live
+    if (!dataVenda && v.created_at) {
+      dataVenda = v.created_at.slice(0, 10)
+    }
+    if (!dataVenda) return
+
+    const ano = dataVenda.slice(0, 4)
     map[ano] = (map[ano] || 0) + (Number(v.preco) || 0)
   })
   return Object.entries(map)
@@ -227,19 +236,29 @@ export async function getVendasPorAno(tenantId) {
 }
 
 export async function getVendasPorMes(tenantId, ano) {
+  // Busca TODAS as vendas que têm cliente
   const { data, error } = await supabase
     .from('vendas')
-    .select('preco, cliente_nome, data_live')
+    .select('preco, cliente_nome, data_live, created_at')
     .eq('tenant_id', tid(tenantId))
-    .gte('data_live', `${ano}-01-01`)
-    .lte('data_live', `${ano}-12-31`)
+    .neq('cliente_nome', '')
+    .not('cliente_nome', 'is', null)
 
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    // Conta TODAS as vendas que têm cliente (vendido, enviado, etc)
-    if (!v.data_live || !(v.cliente_nome || '').trim()) return
-    const m = parseInt(v.data_live.slice(5, 7)) - 1
+    if (!(v.cliente_nome || '').trim()) return
+
+    // Usa data_live se disponível, senão usa created_at
+    let dataVenda = v.data_live
+    if (!dataVenda && v.created_at) {
+      dataVenda = v.created_at.slice(0, 10)
+    }
+
+    // Filtra pelo ano
+    if (!dataVenda || !dataVenda.startsWith(`${ano}-`)) return
+
+    const m = parseInt(dataVenda.slice(5, 7)) - 1
     map[m] = (map[m] || 0) + (Number(v.preco) || 0)
   })
   return Array.from({ length: 12 }, (_, i) => ({ label: MESES[i], value: map[i] || 0 }))
@@ -250,19 +269,29 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
+  // Busca vendas que têm cliente E (data_live no período OU created_at no período)
   const { data, error } = await supabase
     .from('vendas')
-    .select('preco, cliente_nome, data_live')
+    .select('preco, cliente_nome, data_live, created_at')
     .eq('tenant_id', tid(tenantId))
-    .gte('data_live', dataInicio)
-    .lte('data_live', dataFim)
+    .neq('cliente_nome', '')
+    .not('cliente_nome', 'is', null)
 
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    // Conta TODAS as vendas que têm cliente (vendido, enviado, etc)
-    if (!v.data_live || !(v.cliente_nome || '').trim()) return
-    const dia = v.data_live.slice(8, 10)
+    if (!(v.cliente_nome || '').trim()) return
+
+    // Usa data_live se disponível, senão usa created_at
+    let dataVenda = v.data_live
+    if (!dataVenda && v.created_at) {
+      dataVenda = v.created_at.slice(0, 10)
+    }
+
+    // Filtra pelo período
+    if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
+
+    const dia = dataVenda.slice(8, 10)
     map[dia] = (map[dia] || 0) + (Number(v.preco) || 0)
   })
   return Array.from({ length: ultimoDia }, (_, i) => {
@@ -276,19 +305,29 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
+  // Busca TODAS as vendas que têm cliente
   const { data, error } = await supabase
     .from('vendas')
-    .select('preco, cliente_nome')
+    .select('preco, cliente_nome, data_live, created_at')
     .eq('tenant_id', tid(tenantId))
-    .gte('data_live', dataInicio)
-    .lte('data_live', dataFim)
+    .neq('cliente_nome', '')
+    .not('cliente_nome', 'is', null)
 
   if (error) throw error
   const map = {}
   ;(data || []).forEach(v => {
-    // Conta TODAS as vendas que têm cliente (vendido, enviado, etc)
     const cli = (v.cliente_nome || '').trim()
-    if (!cli) return  // Ignora produtos sem cliente
+    if (!cli) return
+
+    // Usa data_live se disponível, senão usa created_at
+    let dataVenda = v.data_live
+    if (!dataVenda && v.created_at) {
+      dataVenda = v.created_at.slice(0, 10)
+    }
+
+    // Filtra pelo período
+    if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
+
     map[cli] = (map[cli] || 0) + (Number(v.preco) || 0)
   })
   return Object.entries(map)
@@ -303,9 +342,9 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
   const [vendasRes, contasRes] = await Promise.all([
-    supabase.from('vendas').select('preco, cliente_nome, data_live')
+    supabase.from('vendas').select('preco, cliente_nome, data_live, created_at')
       .eq('tenant_id', tid(tenantId))
-      .gte('data_live', dataInicio).lte('data_live', dataFim),
+      .neq('cliente_nome', '').not('cliente_nome', 'is', null),
     supabase.from('contas_pagar').select('valor, data_pagamento, categoria')
       .eq('tenant_id', tid(tenantId))
       .gte('data_pagamento', dataInicio).lte('data_pagamento', dataFim)
@@ -314,9 +353,18 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
 
   const vMap = {}, cMap = {}
   ;(vendasRes.data || []).forEach(v => {
-    // Conta TODAS as vendas que têm cliente (vendido, enviado, etc)
-    if (!v.data_live || !(v.cliente_nome || '').trim()) return
-    const d = v.data_live.slice(8, 10)
+    if (!(v.cliente_nome || '').trim()) return
+
+    // Usa data_live se disponível, senão usa created_at
+    let dataVenda = v.data_live
+    if (!dataVenda && v.created_at) {
+      dataVenda = v.created_at.slice(0, 10)
+    }
+
+    // Filtra pelo período
+    if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
+
+    const d = dataVenda.slice(8, 10)
     vMap[d] = (vMap[d] || 0) + (Number(v.preco) || 0)
   })
   ;(contasRes.data || []).forEach(c => {
@@ -375,9 +423,9 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
   const [vendasRes, cobRes, contasRes, credRes] = await Promise.all([
-    supabase.from('vendas').select('preco, status, cliente_nome')
+    supabase.from('vendas').select('preco, status, cliente_nome, data_live, created_at')
       .eq('tenant_id', tid(tenantId))
-      .gte('data_live', dataInicio).lte('data_live', dataFim),
+      .neq('cliente_nome', '').not('cliente_nome', 'is', null),
     supabase.from('cobrancas').select('total, status')
       .eq('tenant_id', tid(tenantId))
       .gte('data', dataInicio).lte('data', dataFim),
@@ -391,8 +439,17 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
 
   let vendidoBruto = 0, cancelados = 0, devolucoes = 0, comprasRevenda = 0
   ;(vendasRes.data || []).forEach(v => {
-    // Conta TODAS as vendas que têm cliente (vendido, enviado, etc)
-    if (!(v.cliente_nome || '').trim()) return  // Ignora produtos sem cliente
+    if (!(v.cliente_nome || '').trim()) return
+
+    // Usa data_live se disponível, senão usa created_at
+    let dataVenda = v.data_live
+    if (!dataVenda && v.created_at) {
+      dataVenda = v.created_at.slice(0, 10)
+    }
+
+    // Filtra pelo período
+    if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
+
     const val = Number(v.preco) || 0
     const st  = (v.status || '').toUpperCase()
     if (st === 'CANCELADO') cancelados += val
