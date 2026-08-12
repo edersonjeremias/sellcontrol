@@ -1609,9 +1609,8 @@ export default function VendasPage() {
     // Gera código novo se automático estiver ativado, senão copia o código antigo
     const novoCodigo = config.codigo_automatico ? getProximoCodigo() : (produto.codigo || '')
 
-    // Cria nova linha com os dados do produto (apenas campos que existem na tabela vendas)
-    const novaLinhaComProduto = {
-      ...novaLinha(novoCodigo),
+    // Dados do produto para preencher
+    const dadosProduto = {
       produto: produto.produto || '',
       modelo: produto.modelo || '',
       cor: produto.cor || '',
@@ -1619,15 +1618,39 @@ export default function VendasPage() {
       tamanho: produto.tamanho || '',
       preco: formatMoney(produto.preco) || '',
       codigo: novoCodigo,
-      // Cliente e sacolinha ficam vazios - serão preenchidos depois
-      cliente_nome: '',
-      sacolinha: null,
       data_live: dataLiveRef.current || '',
       live_nome: liveNomeRef.current || '',
     }
 
-    // ✅ Adiciona a nova linha NO TOPO (não no final)
-    setLinhas(prev => [novaLinhaComProduto, ...prev])
+    // ✅ ESTRATÉGIA: Primeiro tenta preencher linha vazia, senão cria nova no topo
+    setLinhas(prev => {
+      // 1. Busca primeira linha vazia (sem produto)
+      const indexVazia = prev.findIndex(linha =>
+        !linha.produto?.trim() &&
+        !linha.isNew === false // Não é linha já salva
+      )
+
+      if (indexVazia !== -1) {
+        // ✅ Encontrou linha vazia - preenche ela
+        console.log(`📝 Preenchendo linha vazia no índice ${indexVazia}`)
+        const novaLista = [...prev]
+        novaLista[indexVazia] = {
+          ...novaLista[indexVazia],
+          ...dadosProduto,
+        }
+        return novaLista
+      } else {
+        // ❌ Não tem linha vazia - cria nova no TOPO
+        console.log('➕ Criando nova linha no topo')
+        const novaLinhaComProduto = {
+          ...novaLinha(novoCodigo),
+          ...dadosProduto,
+          cliente_nome: '',
+          sacolinha: null,
+        }
+        return [novaLinhaComProduto, ...prev]
+      }
+    })
     setHasUnsaved(true)
 
     // ✅ DELETA 1 REGISTRO do banco (a peça foi usada)
