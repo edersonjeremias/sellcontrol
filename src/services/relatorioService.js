@@ -210,7 +210,7 @@ export async function getVendasPorAno(tenantId) {
   // Busca TODAS as vendas que têm cliente
   const { data, error } = await supabase
     .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at')
+    .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
@@ -219,6 +219,10 @@ export async function getVendasPorAno(tenantId) {
   const map = {}
   ;(data || []).forEach(v => {
     if (!(v.cliente_nome || '').trim()) return
+
+    // Ignora vendas CANCELADAS e DEVOLVIDAS
+    const status = (v.status || '').toUpperCase()
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     // Usa data_live se disponível, senão usa created_at
     let dataVenda = v.data_live
@@ -237,9 +241,9 @@ export async function getVendasPorAno(tenantId) {
 
 export async function getVendasPorMes(tenantId, ano) {
   // Busca TODAS as vendas que têm cliente
-  const { data, error } = await supabase
+  const { data, error} = await supabase
     .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at')
+    .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
@@ -248,6 +252,10 @@ export async function getVendasPorMes(tenantId, ano) {
   const map = {}
   ;(data || []).forEach(v => {
     if (!(v.cliente_nome || '').trim()) return
+
+    // Ignora vendas CANCELADAS e DEVOLVIDAS
+    const status = (v.status || '').toUpperCase()
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     // Usa data_live se disponível, senão usa created_at
     let dataVenda = v.data_live
@@ -272,7 +280,7 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   // Busca vendas que têm cliente E (data_live no período OU created_at no período)
   const { data, error } = await supabase
     .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at')
+    .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
@@ -291,6 +299,10 @@ export async function getVendasPorDia(tenantId, ano, mes) {
     // Filtra pelo período
     if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
 
+    // Ignora vendas CANCELADAS e DEVOLVIDAS (igual ao relatório)
+    const status = (v.status || '').toUpperCase()
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
+
     const dia = dataVenda.slice(8, 10)
     map[dia] = (map[dia] || 0) + (Number(v.preco) || 0)
   })
@@ -308,7 +320,7 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   // Busca TODAS as vendas que têm cliente
   const { data, error } = await supabase
     .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at')
+    .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
@@ -318,6 +330,10 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   ;(data || []).forEach(v => {
     const cli = (v.cliente_nome || '').trim()
     if (!cli) return
+
+    // Ignora vendas CANCELADAS e DEVOLVIDAS
+    const status = (v.status || '').toUpperCase()
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     // Usa data_live se disponível, senão usa created_at
     let dataVenda = v.data_live
@@ -342,7 +358,7 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
   const [vendasRes, contasRes] = await Promise.all([
-    supabase.from('vendas').select('preco, cliente_nome, data_live, created_at')
+    supabase.from('vendas').select('preco, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
       .neq('cliente_nome', '').not('cliente_nome', 'is', null),
     supabase.from('contas_pagar').select('valor, data_pagamento, categoria')
@@ -354,6 +370,10 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
   const vMap = {}, cMap = {}
   ;(vendasRes.data || []).forEach(v => {
     if (!(v.cliente_nome || '').trim()) return
+
+    // Ignora vendas CANCELADAS e DEVOLVIDAS
+    const status = (v.status || '').toUpperCase()
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     // Usa data_live se disponível, senão usa created_at
     let dataVenda = v.data_live
