@@ -2,11 +2,18 @@ import { supabase } from '../lib/supabase'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
+// Converte preço para número (aceita string com vírgula ou número)
+function toNum(val) {
+  if (!val && val !== 0) return 0
+  if (typeof val === 'string') {
+    return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0
+  }
+  return Number(val) || 0
+}
+
 export function fmtR(val) {
   if (!val && val !== 0) return 'R$ 0,00'
-  const n = typeof val === 'string'
-    ? parseFloat(String(val).replace(/\./g, '').replace(',', '.'))
-    : Number(val)
+  const n = toNum(val)
   if (isNaN(n)) return 'R$ 0,00'
   return 'R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
@@ -232,7 +239,7 @@ export async function getVendasPorAno(tenantId) {
     if (!dataVenda) return
 
     const ano = dataVenda.slice(0, 4)
-    map[ano] = (map[ano] || 0) + (Number(v.preco) || 0)
+    map[ano] = (map[ano] || 0) + toNum(v.preco)
   })
   return Object.entries(map)
     .map(([label, value]) => ({ label, value }))
@@ -267,7 +274,7 @@ export async function getVendasPorMes(tenantId, ano) {
     if (!dataVenda || !dataVenda.startsWith(`${ano}-`)) return
 
     const m = parseInt(dataVenda.slice(5, 7)) - 1
-    map[m] = (map[m] || 0) + (Number(v.preco) || 0)
+    map[m] = (map[m] || 0) + toNum(v.preco)
   })
   return Array.from({ length: 12 }, (_, i) => ({ label: MESES[i], value: map[i] || 0 }))
 }
@@ -304,7 +311,7 @@ export async function getVendasPorDia(tenantId, ano, mes) {
     if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     const dia = dataVenda.slice(8, 10)
-    map[dia] = (map[dia] || 0) + (Number(v.preco) || 0)
+    map[dia] = (map[dia] || 0) + toNum(v.preco)
   })
   return Array.from({ length: ultimoDia }, (_, i) => {
     const d = String(i + 1).padStart(2, '0')
@@ -344,7 +351,7 @@ export async function getTopClientesMes(tenantId, ano, mes) {
     // Filtra pelo período
     if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
 
-    map[cli] = (map[cli] || 0) + (Number(v.preco) || 0)
+    map[cli] = (map[cli] || 0) + toNum(v.preco)
   })
   return Object.entries(map)
     .map(([label, value]) => ({ label, value }))
@@ -385,14 +392,14 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
     if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
 
     const d = dataVenda.slice(8, 10)
-    vMap[d] = (vMap[d] || 0) + (Number(v.preco) || 0)
+    vMap[d] = (vMap[d] || 0) + toNum(v.preco)
   })
   ;(contasRes.data || []).forEach(c => {
     const cat = (c.categoria || '').toUpperCase()
     if (!cat.includes('COMPRA') && !cat.includes('REVENDA')) return
     if (!c.data_pagamento) return
     const d = c.data_pagamento.slice(8, 10)
-    cMap[d] = (cMap[d] || 0) + (Number(c.valor) || 0)
+    cMap[d] = (cMap[d] || 0) + toNum(c.valor)
   })
 
   return Array.from({ length: ultimoDia }, (_, i) => {
@@ -421,12 +428,12 @@ export async function getFluxoCaixaMes(tenantId, ano, mes) {
   ;(entRes.data || []).forEach(c => {
     if (!c.data_pagamento) return
     const d = c.data_pagamento.slice(8, 10)
-    eMap[d] = (eMap[d] || 0) + (Number(c.total) || 0)
+    eMap[d] = (eMap[d] || 0) + toNum(c.total)
   })
   ;(saiRes.data || []).forEach(c => {
     if (!c.data_pagamento) return
     const d = c.data_pagamento.slice(8, 10)
-    sMap[d] = (sMap[d] || 0) + (Number(c.valor) || 0)
+    sMap[d] = (sMap[d] || 0) + toNum(c.valor)
   })
 
   return Array.from({ length: ultimoDia }, (_, i) => {
@@ -470,18 +477,18 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
     // Filtra pelo período
     if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
 
-    const val = Number(v.preco) || 0
+    const val = toNum(v.preco)
     const st  = (v.status || '').toUpperCase()
     if (st === 'CANCELADO') cancelados += val
     else if (st === 'DEVOLVIDO') devolucoes += val
     else vendidoBruto += val
   })
 
-  const totalCreditos = (credRes.data || []).reduce((s, c) => s + (Number(c.valor) || 0), 0)
+  const totalCreditos = (credRes.data || []).reduce((s, c) => s + toNum(c.valor), 0)
 
   let fixasPagas = 0, varPagas = 0, fixasAP = 0, varAP = 0, proLabPago = 0, proLabAP = 0
   ;(contasRes.data || []).forEach(c => {
-    const val  = Number(c.valor) || 0
+    const val  = toNum(c.valor)
     const pago = (c.status || '').toUpperCase() === 'PAGO'
     const cat  = (c.categoria || '').toUpperCase()
     const tipo = (c.tipo_despesa || '').toLowerCase()
@@ -500,7 +507,7 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
 
   let aReceber = 0, recebido = 0
   ;(cobRes.data || []).forEach(c => {
-    const val = Number(c.total) || 0
+    const val = toNum(c.total)
     const st  = (c.status || '').toUpperCase()
     if (st === 'PAGO' || st === 'BAIXADO') recebido += val
     else if (st !== 'CANCELADO') aReceber += val
