@@ -293,7 +293,20 @@ export async function getVendasPorDia(tenantId, ano, mes) {
     .not('cliente_nome', 'is', null)
 
   if (error) throw error
+
+  console.log('DEBUG getVendasPorDia - Total vendas retornadas:', data?.length)
+  if (data?.length > 0) {
+    console.log('DEBUG - Amostra primeira venda:', {
+      preco: data[0].preco,
+      tipo: typeof data[0].preco,
+      convertido: toNum(data[0].preco)
+    })
+  }
+
   const map = {}
+  let totalDebug = 0
+  let countDebug = 0
+
   ;(data || []).forEach(v => {
     if (!(v.cliente_nome || '').trim()) return
 
@@ -311,8 +324,16 @@ export async function getVendasPorDia(tenantId, ano, mes) {
     if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     const dia = dataVenda.slice(8, 10)
-    map[dia] = (map[dia] || 0) + toNum(v.preco)
+    const valor = toNum(v.preco)
+    map[dia] = (map[dia] || 0) + valor
+
+    if (dia === '19') {
+      totalDebug += valor
+      countDebug++
+    }
   })
+
+  console.log('DEBUG - Dia 19:', { total: totalDebug, count: countDebug, mapaCompleto: map })
   return Array.from({ length: ultimoDia }, (_, i) => {
     const d = String(i + 1).padStart(2, '0')
     return { label: d, value: map[d] || 0 }
