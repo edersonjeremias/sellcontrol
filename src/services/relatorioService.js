@@ -214,22 +214,20 @@ export async function excluirCredito(id) {
 // ── Dashboard: gráficos ────────────────────────────────────────
 
 export async function getVendasPorAno(tenantId) {
-  // Busca vendas que têm cliente (sem filtro de ano - busca todos os anos)
+  // Busca TODAS as vendas (mesma lógica do relatório)
   const { data, error } = await supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
-    .neq('cliente_nome', '')
-    .not('cliente_nome', 'is', null)
-    .not('data_live', 'is', null)
-    .order('data_live', { ascending: false })
 
   if (error) throw error
+
   const map = {}
   ;(data || []).forEach(v => {
+    // Filtra apenas vendas com cliente
     if (!(v.cliente_nome || '').trim()) return
 
-    // Ignora vendas CANCELADAS e DEVOLVIDAS
+    // Ignora CANCELADOS e DEVOLVIDOS
     const status = (v.status || '').toUpperCase()
     if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
@@ -252,21 +250,23 @@ export async function getVendasPorMes(tenantId, ano) {
   const dataInicio = `${ano}-01-01`
   const dataFim = `${ano}-12-31`
 
-  // Busca vendas do ano específico
-  const { data, error} = await supabase
+  // Busca vendas do ano (mesma lógica do relatório)
+  let q = supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
-    .neq('cliente_nome', '')
-    .not('cliente_nome', 'is', null)
-    .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
 
+  q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+
+  const { data, error} = await q
   if (error) throw error
+
   const map = {}
   ;(data || []).forEach(v => {
+    // Filtra apenas vendas com cliente
     if (!(v.cliente_nome || '').trim()) return
 
-    // Ignora vendas CANCELADAS e DEVOLVIDAS
+    // Ignora CANCELADOS e DEVOLVIDOS
     const status = (v.status || '').toUpperCase()
     if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
@@ -275,9 +275,7 @@ export async function getVendasPorMes(tenantId, ano) {
     if (!dataVenda && v.created_at) {
       dataVenda = v.created_at.slice(0, 10)
     }
-
-    // Filtra pelo ano
-    if (!dataVenda || !dataVenda.startsWith(`${ano}-`)) return
+    if (!dataVenda) return
 
     const m = parseInt(dataVenda.slice(5, 7)) - 1
     map[m] = (map[m] || 0) + toNum(v.preco)
@@ -290,31 +288,33 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
-  // Busca vendas que têm cliente E (data_live no período OU created_at no período)
-  // IMPORTANTE: Filtro SQL igual ao relatório para pegar TODAS as vendas do período
-  const { data, error } = await supabase
+  // Busca vendas do período (MESMA LÓGICA DO RELATÓRIO - sem filtro de cliente_nome)
+  let q = supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
-    .neq('cliente_nome', '')
-    .not('cliente_nome', 'is', null)
-    .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
 
+  // Filtro de data igual ao relatório
+  q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+
+  const { data, error } = await q
   if (error) throw error
 
   const map = {}
   ;(data || []).forEach(v => {
+    // Filtra apenas vendas com cliente (vendidos)
     if (!(v.cliente_nome || '').trim()) return
+
+    // Ignora CANCELADOS e DEVOLVIDOS
+    const status = (v.status || '').toUpperCase()
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     // Usa data_live se disponível, senão usa created_at
     let dataVenda = v.data_live
     if (!dataVenda && v.created_at) {
       dataVenda = v.created_at.slice(0, 10)
     }
-
-    // Ignora vendas CANCELADAS e DEVOLVIDAS (igual ao relatório)
-    const status = (v.status || '').toUpperCase()
-    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
+    if (!dataVenda) return
 
     const dia = dataVenda.slice(8, 10)
     map[dia] = (map[dia] || 0) + toNum(v.preco)
@@ -330,33 +330,26 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
-  // Busca vendas do mês específico
-  const { data, error } = await supabase
+  // Busca vendas do mês (mesma lógica do relatório)
+  let q = supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
-    .neq('cliente_nome', '')
-    .not('cliente_nome', 'is', null)
-    .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
 
+  q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+
+  const { data, error } = await q
   if (error) throw error
+
   const map = {}
   ;(data || []).forEach(v => {
+    // Filtra apenas vendas com cliente
     const cli = (v.cliente_nome || '').trim()
     if (!cli) return
 
-    // Ignora vendas CANCELADAS e DEVOLVIDAS
+    // Ignora CANCELADOS e DEVOLVIDOS
     const status = (v.status || '').toUpperCase()
     if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
-
-    // Usa data_live se disponível, senão usa created_at
-    let dataVenda = v.data_live
-    if (!dataVenda && v.created_at) {
-      dataVenda = v.created_at.slice(0, 10)
-    }
-
-    // Filtra pelo período
-    if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
 
     map[cli] = (map[cli] || 0) + toNum(v.preco)
   })
@@ -374,7 +367,6 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
   const [vendasRes, contasRes] = await Promise.all([
     supabase.from('vendas').select('preco, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
-      .neq('cliente_nome', '').not('cliente_nome', 'is', null)
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`),
     supabase.from('contas_pagar').select('valor, data_pagamento, categoria')
       .eq('tenant_id', tid(tenantId))
@@ -460,7 +452,6 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   const [vendasRes, cobRes, contasRes, credRes] = await Promise.all([
     supabase.from('vendas').select('preco, status, cliente_nome, data_live, created_at')
       .eq('tenant_id', tid(tenantId))
-      .neq('cliente_nome', '').not('cliente_nome', 'is', null)
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`),
     supabase.from('cobrancas').select('total, status')
       .eq('tenant_id', tid(tenantId))
