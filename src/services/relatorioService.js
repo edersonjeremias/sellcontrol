@@ -300,24 +300,51 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   const { data, error } = await q
   if (error) throw error
 
+  console.log('🔍 DEBUG getVendasPorDia:', {
+    periodo: `${dataInicio} a ${dataFim}`,
+    totalRetornado: data?.length,
+    amostra: data?.[0]
+  })
+
   const map = {}
+  let semCliente = 0, cancelados = 0, semData = 0, contados = 0
+
   ;(data || []).forEach(v => {
     // Filtra apenas vendas com cliente (vendidos)
-    if (!(v.cliente_nome || '').trim()) return
+    if (!(v.cliente_nome || '').trim()) {
+      semCliente++
+      return
+    }
 
     // Ignora CANCELADOS e DEVOLVIDOS
     const status = (v.status || '').toUpperCase()
-    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') {
+      cancelados++
+      return
+    }
 
     // Usa data_live se disponível, senão usa created_at
     let dataVenda = v.data_live
     if (!dataVenda && v.created_at) {
       dataVenda = v.created_at.slice(0, 10)
     }
-    if (!dataVenda) return
+    if (!dataVenda) {
+      semData++
+      return
+    }
 
     const dia = dataVenda.slice(8, 10)
     map[dia] = (map[dia] || 0) + toNum(v.preco)
+    contados++
+  })
+
+  console.log('📊 Resultado:', {
+    semCliente,
+    cancelados,
+    semData,
+    contados,
+    totalSomado: Object.values(map).reduce((a, b) => a + b, 0),
+    mapaDias: map
   })
   return Array.from({ length: ultimoDia }, (_, i) => {
     const d = String(i + 1).padStart(2, '0')
