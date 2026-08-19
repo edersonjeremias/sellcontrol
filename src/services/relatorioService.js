@@ -214,13 +214,15 @@ export async function excluirCredito(id) {
 // ── Dashboard: gráficos ────────────────────────────────────────
 
 export async function getVendasPorAno(tenantId) {
-  // Busca TODAS as vendas que têm cliente
+  // Busca vendas que têm cliente (sem filtro de ano - busca todos os anos)
   const { data, error } = await supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
+    .not('data_live', 'is', null)
+    .order('data_live', { ascending: false })
 
   if (error) throw error
   const map = {}
@@ -247,13 +249,17 @@ export async function getVendasPorAno(tenantId) {
 }
 
 export async function getVendasPorMes(tenantId, ano) {
-  // Busca TODAS as vendas que têm cliente
+  const dataInicio = `${ano}-01-01`
+  const dataFim = `${ano}-12-31`
+
+  // Busca vendas do ano específico
   const { data, error} = await supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
+    .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
 
   if (error) throw error
   const map = {}
@@ -285,28 +291,18 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
   // Busca vendas que têm cliente E (data_live no período OU created_at no período)
+  // IMPORTANTE: Filtro SQL igual ao relatório para pegar TODAS as vendas do período
   const { data, error } = await supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
+    .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
 
   if (error) throw error
 
-  console.log('DEBUG getVendasPorDia - Total vendas retornadas:', data?.length)
-  if (data?.length > 0) {
-    console.log('DEBUG - Amostra primeira venda:', {
-      preco: data[0].preco,
-      tipo: typeof data[0].preco,
-      convertido: toNum(data[0].preco)
-    })
-  }
-
   const map = {}
-  let totalDebug = 0
-  let countDebug = 0
-
   ;(data || []).forEach(v => {
     if (!(v.cliente_nome || '').trim()) return
 
@@ -316,24 +312,13 @@ export async function getVendasPorDia(tenantId, ano, mes) {
       dataVenda = v.created_at.slice(0, 10)
     }
 
-    // Filtra pelo período
-    if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
-
     // Ignora vendas CANCELADAS e DEVOLVIDAS (igual ao relatório)
     const status = (v.status || '').toUpperCase()
     if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     const dia = dataVenda.slice(8, 10)
-    const valor = toNum(v.preco)
-    map[dia] = (map[dia] || 0) + valor
-
-    if (dia === '19') {
-      totalDebug += valor
-      countDebug++
-    }
+    map[dia] = (map[dia] || 0) + toNum(v.preco)
   })
-
-  console.log('DEBUG - Dia 19:', { total: totalDebug, count: countDebug, mapaCompleto: map })
   return Array.from({ length: ultimoDia }, (_, i) => {
     const d = String(i + 1).padStart(2, '0')
     return { label: d, value: map[d] || 0 }
@@ -345,13 +330,14 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
-  // Busca TODAS as vendas que têm cliente
+  // Busca vendas do mês específico
   const { data, error } = await supabase
     .from('vendas')
     .select('preco, cliente_nome, data_live, created_at, status')
     .eq('tenant_id', tid(tenantId))
     .neq('cliente_nome', '')
     .not('cliente_nome', 'is', null)
+    .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
 
   if (error) throw error
   const map = {}
@@ -388,7 +374,8 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
   const [vendasRes, contasRes] = await Promise.all([
     supabase.from('vendas').select('preco, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
-      .neq('cliente_nome', '').not('cliente_nome', 'is', null),
+      .neq('cliente_nome', '').not('cliente_nome', 'is', null)
+      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`),
     supabase.from('contas_pagar').select('valor, data_pagamento, categoria')
       .eq('tenant_id', tid(tenantId))
       .gte('data_pagamento', dataInicio).lte('data_pagamento', dataFim)
@@ -473,7 +460,8 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   const [vendasRes, cobRes, contasRes, credRes] = await Promise.all([
     supabase.from('vendas').select('preco, status, cliente_nome, data_live, created_at')
       .eq('tenant_id', tid(tenantId))
-      .neq('cliente_nome', '').not('cliente_nome', 'is', null),
+      .neq('cliente_nome', '').not('cliente_nome', 'is', null)
+      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`),
     supabase.from('cobrancas').select('total, status')
       .eq('tenant_id', tid(tenantId))
       .gte('data', dataInicio).lte('data', dataFim),
