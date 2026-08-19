@@ -288,63 +288,45 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
-  // Busca vendas do período (MESMA LÓGICA DO RELATÓRIO - sem filtro de cliente_nome)
-  let q = supabase
-    .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at, status')
-    .eq('tenant_id', tid(tenantId))
+  // Busca TODAS as vendas com paginação (Supabase limita a 1000 por página)
+  let todasVendas = []
+  let pagina = 0
+  const TAMANHO_PAGINA = 1000
 
-  // Filtro de data igual ao relatório
-  q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+  while (true) {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('preco, cliente_nome, data_live, created_at, status')
+      .eq('tenant_id', tid(tenantId))
+      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
-  const { data, error } = await q
-  if (error) throw error
+    if (error) throw error
+    if (!data || data.length === 0) break
 
-  console.log('🔍 DEBUG getVendasPorDia:', {
-    periodo: `${dataInicio} a ${dataFim}`,
-    totalRetornado: data?.length,
-    amostra: data?.[0]
-  })
+    todasVendas = todasVendas.concat(data)
+    if (data.length < TAMANHO_PAGINA) break // Última página
+    pagina++
+  }
 
   const map = {}
-  let semCliente = 0, cancelados = 0, semData = 0, contados = 0
-
-  ;(data || []).forEach(v => {
+  ;(todasVendas || []).forEach(v => {
     // Filtra apenas vendas com cliente (vendidos)
-    if (!(v.cliente_nome || '').trim()) {
-      semCliente++
-      return
-    }
+    if (!(v.cliente_nome || '').trim()) return
 
     // Ignora CANCELADOS e DEVOLVIDOS
     const status = (v.status || '').toUpperCase()
-    if (status === 'CANCELADO' || status === 'DEVOLVIDO') {
-      cancelados++
-      return
-    }
+    if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
     // Usa data_live se disponível, senão usa created_at
     let dataVenda = v.data_live
     if (!dataVenda && v.created_at) {
       dataVenda = v.created_at.slice(0, 10)
     }
-    if (!dataVenda) {
-      semData++
-      return
-    }
+    if (!dataVenda) return
 
     const dia = dataVenda.slice(8, 10)
     map[dia] = (map[dia] || 0) + toNum(v.preco)
-    contados++
-  })
-
-  console.log('📊 Resultado:', {
-    semCliente,
-    cancelados,
-    semData,
-    contados,
-    totalSomado: Object.values(map).reduce((a, b) => a + b, 0),
-    mapaDias: map
   })
   return Array.from({ length: ultimoDia }, (_, i) => {
     const d = String(i + 1).padStart(2, '0')
