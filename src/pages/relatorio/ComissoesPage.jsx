@@ -59,19 +59,31 @@ export default function ComissoesPage() {
   async function atualizarVendedoras(dataIni, dataFi) {
     if (!tenantId) return
 
-    const { data } = await supabase
-      .from('vendas')
-      .select('live_nome')
-      .eq('tenant_id', tid(tenantId))
-      .gte('data_live', dataIni)
-      .lte('data_live', dataFi)
-      .not('live_nome', 'is', null)
-      .order('live_nome')
+    // Busca TODAS as vendas com paginação
+    let todasVendas = []
+    let pagina = 0
+    const TAMANHO_PAGINA = 1000
 
-    if (data) {
-      const unique = [...new Set(data.map(v => v.live_nome).filter(Boolean))]
-      setVendedoras(unique)
+    while (true) {
+      const { data, error } = await supabase
+        .from('vendas')
+        .select('live_nome')
+        .eq('tenant_id', tid(tenantId))
+        .gte('data_live', dataIni)
+        .lte('data_live', dataFi)
+        .not('live_nome', 'is', null)
+        .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
+
+      if (error) break
+      if (!data || data.length === 0) break
+
+      todasVendas = todasVendas.concat(data)
+      if (data.length < TAMANHO_PAGINA) break
+      pagina++
     }
+
+    const unique = [...new Set(todasVendas.map(v => v.live_nome).filter(Boolean))]
+    setVendedoras(unique)
   }
 
   // Atualiza vendedoras quando muda o período
@@ -91,21 +103,34 @@ export default function ComissoesPage() {
 
     setCarregando(true)
     try {
-      // Busca vendas ENVIADAS/VENDIDAS e também CANCELADAS
-      let query = supabase
-        .from('vendas')
-        .select('data_live, live_nome, preco, preco_promocional, status')
-        .eq('tenant_id', tid(tenantId))
-        .gte('data_live', dataInicio)
-        .lte('data_live', dataFim)
+      // Busca TODAS as vendas com paginação (Supabase limita a 1000 por página)
+      let todasVendas = []
+      let pagina = 0
+      const TAMANHO_PAGINA = 1000
 
-      if (vendedoraSel) {
-        query = query.eq('live_nome', vendedoraSel)
+      while (true) {
+        let query = supabase
+          .from('vendas')
+          .select('data_live, live_nome, preco, preco_promocional, status')
+          .eq('tenant_id', tid(tenantId))
+          .gte('data_live', dataInicio)
+          .lte('data_live', dataFim)
+          .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
+
+        if (vendedoraSel) {
+          query = query.eq('live_nome', vendedoraSel)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+        if (!data || data.length === 0) break
+
+        todasVendas = todasVendas.concat(data)
+        if (data.length < TAMANHO_PAGINA) break
+        pagina++
       }
 
-      const { data: vendas, error } = await query
-
-      if (error) throw error
+      const vendas = todasVendas
 
       // Agrupar por data + vendedora
       const grouped = {}
