@@ -214,16 +214,28 @@ export async function excluirCredito(id) {
 // ── Dashboard: gráficos ────────────────────────────────────────
 
 export async function getVendasPorAno(tenantId) {
-  // Busca TODAS as vendas (mesma lógica do relatório)
-  const { data, error } = await supabase
-    .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at, status')
-    .eq('tenant_id', tid(tenantId))
+  // Busca TODAS as vendas com paginação
+  let todasVendas = []
+  let pagina = 0
+  const TAMANHO_PAGINA = 1000
 
-  if (error) throw error
+  while (true) {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('preco, cliente_nome, data_live, created_at, status')
+      .eq('tenant_id', tid(tenantId))
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
+
+    if (error) throw error
+    if (!data || data.length === 0) break
+
+    todasVendas = todasVendas.concat(data)
+    if (data.length < TAMANHO_PAGINA) break
+    pagina++
+  }
 
   const map = {}
-  ;(data || []).forEach(v => {
+  ;(todasVendas || []).forEach(v => {
     // Filtra apenas vendas com cliente
     if (!(v.cliente_nome || '').trim()) return
 
@@ -250,19 +262,29 @@ export async function getVendasPorMes(tenantId, ano) {
   const dataInicio = `${ano}-01-01`
   const dataFim = `${ano}-12-31`
 
-  // Busca vendas do ano (mesma lógica do relatório)
-  let q = supabase
-    .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at, status')
-    .eq('tenant_id', tid(tenantId))
+  // Busca TODAS as vendas do ano com paginação
+  let todasVendas = []
+  let pagina = 0
+  const TAMANHO_PAGINA = 1000
 
-  q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+  while (true) {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('preco, cliente_nome, data_live, created_at, status')
+      .eq('tenant_id', tid(tenantId))
+      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
-  const { data, error} = await q
-  if (error) throw error
+    if (error) throw error
+    if (!data || data.length === 0) break
+
+    todasVendas = todasVendas.concat(data)
+    if (data.length < TAMANHO_PAGINA) break
+    pagina++
+  }
 
   const map = {}
-  ;(data || []).forEach(v => {
+  ;(todasVendas || []).forEach(v => {
     // Filtra apenas vendas com cliente
     if (!(v.cliente_nome || '').trim()) return
 
@@ -339,19 +361,29 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
-  // Busca vendas do mês (mesma lógica do relatório)
-  let q = supabase
-    .from('vendas')
-    .select('preco, cliente_nome, data_live, created_at, status')
-    .eq('tenant_id', tid(tenantId))
+  // Busca TODAS as vendas do mês com paginação
+  let todasVendas = []
+  let pagina = 0
+  const TAMANHO_PAGINA = 1000
 
-  q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+  while (true) {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('preco, cliente_nome, data_live, created_at, status')
+      .eq('tenant_id', tid(tenantId))
+      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
-  const { data, error } = await q
-  if (error) throw error
+    if (error) throw error
+    if (!data || data.length === 0) break
+
+    todasVendas = todasVendas.concat(data)
+    if (data.length < TAMANHO_PAGINA) break
+    pagina++
+  }
 
   const map = {}
-  ;(data || []).forEach(v => {
+  ;(todasVendas || []).forEach(v => {
     // Filtra apenas vendas com cliente
     const cli = (v.cliente_nome || '').trim()
     if (!cli) return
@@ -373,18 +405,40 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
-  const [vendasRes, contasRes] = await Promise.all([
-    supabase.from('vendas').select('preco, cliente_nome, data_live, created_at, status')
+  // Busca TODAS as vendas com paginação
+  let todasVendas = []
+  let pagina = 0
+  const TAMANHO_PAGINA = 1000
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('preco, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
-      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`),
-    supabase.from('contas_pagar').select('valor, data_pagamento, categoria')
-      .eq('tenant_id', tid(tenantId))
-      .gte('data_pagamento', dataInicio).lte('data_pagamento', dataFim)
-      .eq('status', 'PAGO'),
-  ])
+      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
+
+    if (error) throw error
+    if (!data || data.length === 0) break
+
+    todasVendas = todasVendas.concat(data)
+    if (data.length < TAMANHO_PAGINA) break
+    pagina++
+  }
+
+  // Busca contas a pagar
+  const { data: contasPagar, error: contasError } = await supabase
+    .from('contas_pagar')
+    .select('valor, data_pagamento, categoria')
+    .eq('tenant_id', tid(tenantId))
+    .gte('data_pagamento', dataInicio)
+    .lte('data_pagamento', dataFim)
+    .eq('status', 'PAGO')
+
+  if (contasError) throw contasError
 
   const vMap = {}, cMap = {}
-  ;(vendasRes.data || []).forEach(v => {
+  ;(todasVendas || []).forEach(v => {
     if (!(v.cliente_nome || '').trim()) return
 
     // Ignora vendas CANCELADAS e DEVOLVIDAS
@@ -403,7 +457,7 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
     const d = dataVenda.slice(8, 10)
     vMap[d] = (vMap[d] || 0) + toNum(v.preco)
   })
-  ;(contasRes.data || []).forEach(c => {
+  ;(contasPagar || []).forEach(c => {
     const cat = (c.categoria || '').toUpperCase()
     if (!cat.includes('COMPRA') && !cat.includes('REVENDA')) return
     if (!c.data_pagamento) return
@@ -458,10 +512,29 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   const ultimoDia  = new Date(ano, mes, 0).getDate()
   const dataFim    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`
 
-  const [vendasRes, cobRes, contasRes, credRes] = await Promise.all([
-    supabase.from('vendas').select('preco, status, cliente_nome, data_live, created_at')
+  // Busca TODAS as vendas com paginação
+  let todasVendas = []
+  let pagina = 0
+  const TAMANHO_PAGINA = 1000
+
+  while (true) {
+    const { data, error } = await supabase
+      .from('vendas')
+      .select('preco, status, cliente_nome, data_live, created_at')
       .eq('tenant_id', tid(tenantId))
-      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`),
+      .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
+
+    if (error) throw error
+    if (!data || data.length === 0) break
+
+    todasVendas = todasVendas.concat(data)
+    if (data.length < TAMANHO_PAGINA) break
+    pagina++
+  }
+
+  // Busca outras tabelas
+  const [cobRes, contasRes, credRes] = await Promise.all([
     supabase.from('cobrancas').select('total, status')
       .eq('tenant_id', tid(tenantId))
       .gte('data', dataInicio).lte('data', dataFim),
@@ -474,7 +547,7 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   ])
 
   let vendidoBruto = 0, cancelados = 0, devolucoes = 0, comprasRevenda = 0
-  ;(vendasRes.data || []).forEach(v => {
+  ;(todasVendas || []).forEach(v => {
     if (!(v.cliente_nome || '').trim()) return
 
     // Usa data_live se disponível, senão usa created_at
@@ -496,7 +569,7 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   const totalCreditos = (credRes.data || []).reduce((s, c) => s + toNum(c.valor), 0)
 
   let fixasPagas = 0, varPagas = 0, fixasAP = 0, varAP = 0, proLabPago = 0, proLabAP = 0
-  ;(contasRes.data || []).forEach(c => {
+  ;(contasPagar || []).forEach(c => {
     const val  = toNum(c.valor)
     const pago = (c.status || '').toUpperCase() === 'PAGO'
     const cat  = (c.categoria || '').toUpperCase()
