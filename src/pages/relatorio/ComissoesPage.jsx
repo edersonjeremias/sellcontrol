@@ -55,24 +55,31 @@ export default function ComissoesPage() {
     fetchEmpresa()
   }, [tenantId])
 
-  // Busca lista de vendedoras (lives) únicas
-  useEffect(() => {
+  // Busca lista de vendedoras (lives) únicas do período selecionado
+  async function atualizarVendedoras(dataIni, dataFi) {
     if (!tenantId) return
-    const fetchVendedoras = async () => {
-      const { data } = await supabase
-        .from('vendas')
-        .select('live_nome')
-        .eq('tenant_id', tid(tenantId))
-        .not('live_nome', 'is', null)
-        .order('live_nome')
 
-      if (data) {
-        const unique = [...new Set(data.map(v => v.live_nome).filter(Boolean))]
-        setVendedoras(unique)
-      }
+    const { data } = await supabase
+      .from('vendas')
+      .select('live_nome')
+      .eq('tenant_id', tid(tenantId))
+      .gte('data_live', dataIni)
+      .lte('data_live', dataFi)
+      .not('live_nome', 'is', null)
+      .order('live_nome')
+
+    if (data) {
+      const unique = [...new Set(data.map(v => v.live_nome).filter(Boolean))]
+      setVendedoras(unique)
     }
-    fetchVendedoras()
-  }, [tenantId])
+  }
+
+  // Atualiza vendedoras quando muda o período
+  useEffect(() => {
+    if (tenantId && dataInicio && dataFim) {
+      atualizarVendedoras(dataInicio, dataFim)
+    }
+  }, [tenantId, dataInicio, dataFim])
 
   // Busca vendas e agrupa
   async function buscar() {
