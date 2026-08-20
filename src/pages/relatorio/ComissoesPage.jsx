@@ -111,10 +111,9 @@ export default function ComissoesPage() {
       while (true) {
         let query = supabase
           .from('vendas')
-          .select('data_live, live_nome, preco, preco_promocional, status')
+          .select('data_live, live_nome, preco, preco_promocional, status, created_at, cliente_nome')
           .eq('tenant_id', tid(tenantId))
-          .gte('data_live', dataInicio)
-          .lte('data_live', dataFim)
+          .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
           .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
         if (vendedoraSel) {
@@ -135,18 +134,25 @@ export default function ComissoesPage() {
       // Agrupar por data + vendedora
       const grouped = {}
       ;(vendas || []).forEach(v => {
+        // Filtra apenas vendas com cliente
+        if (!(v.cliente_nome || '').trim()) return
+
         const status = (v.status || '').toUpperCase()
 
-        // Só conta vendas enviadas/vendidas ou canceladas
-        const isVendido = ['ENVIADO', 'VENDIDO'].includes(status)
-        const isCancelado = status === 'CANCELADO' || status.includes('CANCEL')
+        // Ignora CANCELADOS e DEVOLVIDOS (mesma lógica do dashboard)
+        if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
-        if (!isVendido && !isCancelado) return // Ignora vendas apenas cadastradas
+        // Usa data_live se disponível, senão usa created_at
+        let dataVenda = v.data_live
+        if (!dataVenda && v.created_at) {
+          dataVenda = v.created_at.slice(0, 10)
+        }
+        if (!dataVenda) return
 
-        const key = `${v.data_live}|${v.live_nome || '(sem live)'}`
+        const key = `${dataVenda}|${v.live_nome || '(sem live)'}`
         if (!grouped[key]) {
           grouped[key] = {
-            data: v.data_live,
+            data: dataVenda,
             vendedora: v.live_nome || '(sem live)',
             bruto: 0,
             cancelado: 0
@@ -155,12 +161,7 @@ export default function ComissoesPage() {
 
         // Usa preço promocional se existir, senão usa preço normal
         const valor = Number(v.preco_promocional || v.preco) || 0
-
-        if (isCancelado) {
-          grouped[key].cancelado += valor
-        } else if (isVendido) {
-          grouped[key].bruto += valor
-        }
+        grouped[key].bruto += valor
       })
 
       // Converter para array e calcular líquido
