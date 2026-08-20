@@ -274,13 +274,13 @@ export default function ComissoesPage() {
             <table style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
-                  <th style={{ padding: '8px 6px', textAlign: 'left', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Data</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'left', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Vendedora</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Vendido Bruto</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Cancelados</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Líquido Base</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>% Com.</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Valor a Pagar</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Data</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Vend.</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Bruto</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Cancel.</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>Líquido</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>%</th>
+                  <th style={{ padding: '8px 6px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11 }}>A Pagar</th>
                 </tr>
               </thead>
               <tbody>
@@ -381,20 +381,20 @@ export default function ComissoesPage() {
 
           /* Cabeçalho profissional */
           [data-print-area] h1 {
-            font-size: 16px !important;
+            font-size: 14px !important;
             font-weight: 700 !important;
             text-align: center !important;
-            margin: 0 0 6px 0 !important;
+            margin: 0 0 4px 0 !important;
             color: #1a1a1a !important;
             letter-spacing: 0.3px !important;
           }
 
           [data-print-area] p {
-            font-size: 9px !important;
+            font-size: 8px !important;
             text-align: center !important;
-            margin: 0 0 12px 0 !important;
+            margin: 0 0 8px 0 !important;
             color: #666 !important;
-            padding-bottom: 8px !important;
+            padding-bottom: 6px !important;
             border-bottom: 1px solid #ddd !important;
           }
 
@@ -403,8 +403,8 @@ export default function ComissoesPage() {
             width: 100% !important;
             table-layout: fixed !important;
             border-collapse: collapse !important;
-            margin-top: 8px !important;
-            font-size: 9px !important;
+            margin-top: 6px !important;
+            font-size: 7.5px !important;
             color: #1a1a1a !important;
             border: none !important;
           }
@@ -414,23 +414,23 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 6px 8px !important;
+            padding: 4px 3px !important;
             text-align: center !important;
-            font-size: 8px !important;
+            font-size: 7px !important;
             font-weight: 700 !important;
             color: #333 !important;
             text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
+            letter-spacing: 0.3px !important;
           }
 
           /* Células do corpo */
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 8px !important;
-            font-size: 9px !important;
+            padding: 5px 3px !important;
+            font-size: 7.5px !important;
             color: #1a1a1a !important;
-            line-height: 1.3 !important;
+            line-height: 1.2 !important;
           }
 
           /* Alinhamentos */
@@ -440,8 +440,8 @@ export default function ComissoesPage() {
           }
 
           table tbody td:nth-child(2) {
-            text-align: left !important;
-            padding-left: 12px !important;
+            text-align: center !important;
+            padding-left: 3px !important;
           }
 
           table tbody td:nth-child(3),
@@ -450,7 +450,7 @@ export default function ComissoesPage() {
           table tbody td:nth-child(7) {
             text-align: right !important;
             font-family: 'Courier New', monospace !important;
-            padding-right: 12px !important;
+            padding-right: 4px !important;
           }
 
           table tbody td:nth-child(6) {
@@ -467,16 +467,16 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 10px 8px !important;
-            font-size: 10px !important;
+            padding: 6px 3px !important;
+            font-size: 8px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
           }
 
           table tfoot th:nth-child(1),
           table tfoot th:nth-child(2) {
-            text-align: left !important;
-            padding-left: 12px !important;
+            text-align: center !important;
+            padding-left: 3px !important;
           }
 
           table tfoot th:nth-child(3),
@@ -485,47 +485,47 @@ export default function ComissoesPage() {
           table tfoot th:nth-child(7) {
             text-align: right !important;
             font-family: 'Courier New', monospace !important;
-            padding-right: 12px !important;
+            padding-right: 4px !important;
           }
 
           table tfoot th:nth-child(6) {
             text-align: center !important;
           }
 
-          /* Larguras otimizadas para A4 */
+          /* Larguras otimizadas para A4 - mais compactas */
           table th:nth-child(1),
           table td:nth-child(1) {
-            width: 11% !important;
+            width: 10% !important;
           }
 
           table th:nth-child(2),
           table td:nth-child(2) {
-            width: 14% !important;
+            width: 11% !important;
           }
 
           table th:nth-child(3),
           table td:nth-child(3) {
-            width: 17% !important;
+            width: 15% !important;
           }
 
           table th:nth-child(4),
           table td:nth-child(4) {
-            width: 15% !important;
+            width: 13% !important;
           }
 
           table th:nth-child(5),
           table td:nth-child(5) {
-            width: 17% !important;
+            width: 15% !important;
           }
 
           table th:nth-child(6),
           table td:nth-child(6) {
-            width: 9% !important;
+            width: 7% !important;
           }
 
           table th:nth-child(7),
           table td:nth-child(7) {
-            width: 17% !important;
+            width: 15% !important;
           }
 
           /* Previne quebras */
