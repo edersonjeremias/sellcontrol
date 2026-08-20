@@ -656,14 +656,17 @@ export default function VendasPage() {
     }, 300)
   }, [showToast])
 
-  // ── Auto-save periódico (15 segundos) ──
+  // ── Auto-save periódico (30 segundos, pausa quando inativo) ──
+  // Otimizado: reduzido de 15s para 30s + pausa quando página inativa
   useEffect(() => {
     if (!tenantId || !pronto) return
-    const interval = setInterval(async () => {
-      if (!hasUnsavedRef.current || isSavingRef.current || busyRef.current) return
 
-      // REMOVIDO: validação de preço zerado no auto-save
-      // Permite salvar rascunhos, validação só ao finalizar
+    let interval = null
+    let isPageVisible = !document.hidden
+
+    async function autoSave() {
+      if (!isPageVisible) return // Não salva se página está inativa
+      if (!hasUnsavedRef.current || isSavingRef.current || busyRef.current) return
 
       isSavingRef.current = true
       try {
@@ -689,8 +692,31 @@ export default function VendasPage() {
       } finally {
         isSavingRef.current = false
       }
-    }, 15000)
-    return () => clearInterval(interval)
+    }
+
+    function startAutoSave() {
+      if (interval) clearInterval(interval)
+      // Auto-save a cada 30 segundos (reduzido de 15s para economizar mensagens)
+      interval = setInterval(autoSave, 30000)
+    }
+
+    function handleVisibilityChange() {
+      isPageVisible = !document.hidden
+      if (isPageVisible) {
+        startAutoSave()
+      } else {
+        // Pausa auto-save quando página está inativa
+        if (interval) clearInterval(interval)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    startAutoSave()
+
+    return () => {
+      if (interval) clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [tenantId, pronto, showToast])
 
   // ── AÇÕES PRINCIPAIS ──
@@ -981,14 +1007,19 @@ export default function VendasPage() {
     }
   }, [pronto, tenantId])
 
-  // ── POLLING AUTOMÁTICO (atualiza bloqueados a cada 10s) ──
-  // Solução temporária enquanto Realtime não está habilitado no Supabase
+  // ── POLLING AUTOMÁTICO (atualiza bloqueados a cada 60s) ──
+  // Otimizado: reduzido de 10s para 60s + pausa quando página inativa
   useEffect(() => {
     if (!pronto || !tenantId) return
 
-    console.log('⏰ Iniciando polling de bloqueados (10s)')
+    console.log('⏰ Iniciando polling de bloqueados (60s, pausa quando inativo)')
+
+    let intervalId = null
+    let isPageVisible = !document.hidden
 
     const atualizarBloqueados = async () => {
+      if (!isPageVisible) return // Não atualiza se página está inativa
+
       try {
         const db = await getDadosIniciais(tenantId)
         const qtdBloqueados = Object.keys(db.bloqueados).length
@@ -1000,12 +1031,31 @@ export default function VendasPage() {
       }
     }
 
-    // Atualiza a cada 10 segundos
-    const intervalId = setInterval(atualizarBloqueados, 10000)
+    function startPolling() {
+      if (intervalId) clearInterval(intervalId)
+      // Atualiza a cada 60 segundos (reduzido de 10s para economizar mensagens)
+      intervalId = setInterval(atualizarBloqueados, 60000)
+    }
+
+    function handleVisibilityChange() {
+      isPageVisible = !document.hidden
+      if (isPageVisible) {
+        // Quando página volta a ficar visível, atualiza imediatamente
+        atualizarBloqueados()
+        startPolling()
+      } else {
+        // Pausa polling quando página está inativa
+        if (intervalId) clearInterval(intervalId)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    startPolling()
 
     return () => {
       console.log('⏰ Parando polling de bloqueados')
-      clearInterval(intervalId)
+      if (intervalId) clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [pronto, tenantId])
 

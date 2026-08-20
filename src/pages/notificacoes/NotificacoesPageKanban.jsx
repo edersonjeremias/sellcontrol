@@ -526,12 +526,42 @@ export default function NotificacoesPageKanban() {
 
   useEffect(() => { carregar() }, [carregar])
 
+  // ── Polling otimizado: 2 minutos + pausa quando página inativa ──
   useEffect(() => {
     if (!tenantId) return
-    const interval = setInterval(() => {
-      carregar()
-    }, 30000)
-    return () => clearInterval(interval)
+
+    let interval = null
+    let isPageVisible = !document.hidden
+
+    function startPolling() {
+      if (interval) clearInterval(interval)
+      // Polling a cada 2 minutos (reduzido de 30s para economizar mensagens realtime)
+      interval = setInterval(() => {
+        if (isPageVisible) {
+          carregar()
+        }
+      }, 120000) // 2 minutos
+    }
+
+    function handleVisibilityChange() {
+      isPageVisible = !document.hidden
+      if (isPageVisible) {
+        // Quando página volta a ficar visível, recarrega imediatamente
+        carregar()
+        startPolling()
+      } else {
+        // Pausa polling quando página está inativa
+        if (interval) clearInterval(interval)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    startPolling()
+
+    return () => {
+      if (interval) clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [tenantId, carregar])
 
   async function handleMover(id, novaColuna) {
