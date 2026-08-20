@@ -569,7 +569,7 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   const totalCreditos = (credRes.data || []).reduce((s, c) => s + toNum(c.valor), 0)
 
   let fixasPagas = 0, varPagas = 0, fixasAP = 0, varAP = 0, proLabPago = 0, proLabAP = 0
-  ;(contasPagar || []).forEach(c => {
+  ;(contasRes.data || []).forEach(c => {
     const val  = toNum(c.valor)
     const pago = (c.status || '').toUpperCase() === 'PAGO'
     const cat  = (c.categoria || '').toUpperCase()
