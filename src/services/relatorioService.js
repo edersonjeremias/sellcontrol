@@ -195,7 +195,6 @@ export async function salvarCredito(tenantId, credito) {
     // Registra no histórico
     await supabase.from('creditos_historico').insert([{
       tenant_id: tid(tenantId),
-      credito_id: creditoData?.id,
       cliente: (credito.cliente || '').trim(),
       tipo: 'CREDITO',
       valor: valor,

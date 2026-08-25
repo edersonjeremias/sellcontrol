@@ -462,7 +462,6 @@ export async function abaterCredito(tenantId, cliente, valor, cobrancaId = null,
   const saldoPosterior = saldoAnterior - valor
   const { error } = await supabase.from('creditos_historico').insert([{
     tenant_id: tid(tenantId),
-    credito_id: creditoUsadoId, // Rastreia qual crédito foi usado
     cliente: cliente.trim(),
     tipo: 'DEBITO',
     valor: valor,
@@ -499,7 +498,6 @@ export async function devolverCredito(tenantId, cliente, valor, motivo = null) {
   const saldoPosterior = saldoAnterior + valor
   await supabase.from('creditos_historico').insert([{
     tenant_id: tid(tenantId),
-    credito_id: creditoDevolvido, // Rastreia qual crédito foi devolvido
     cliente: cliente.trim(),
     tipo: 'CREDITO',
     valor: valor,
