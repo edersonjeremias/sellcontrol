@@ -123,14 +123,9 @@ export default function RelatorioPage() {
           <p style={{ color:'var(--muted)' }}>Carregando…</p>
         ) : (
           <>
-            <p style={{ fontSize:12, color:'var(--muted)', marginBottom:8 }}>
-              {vendas.length} de {vendasBase.length} registro(s)
-              {busca.trim() && <span style={{ color:'var(--blue)', marginLeft:6 }}>· filtrado por "{busca.trim()}"</span>}
-              {' · '}Total líquido: <strong style={{ color:'var(--green)' }}>{fmtR(totalLiquido)}</strong>
-            </p>
-            <div style={{ overflowX:'auto' }}>
+            <div style={{ overflowX:'auto', maxHeight:'calc(100vh - 200px)', overflowY:'auto' }}>
               <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-                <thead>
+                <thead style={{ position:'sticky', top:0, zIndex:10 }}>
                   <tr>
                     {['Data','Live','Cliente','Produto','Modelo','Marca','Cor','Tam','Cód.','Sacolinha','Preço','Status'].map(h => (
                       <th key={h} style={S.th}>{h}</th>
