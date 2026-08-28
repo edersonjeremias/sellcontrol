@@ -51,12 +51,20 @@ export const ROLES = [
 ]
 
 export async function getUsuarios(tenantId) {
-  // Primeiro, busca todos os user_ids que estão na tabela portal_clientes
-  const { data: clientesPortal } = await supabase
-    .from('portal_clientes')
-    .select('user_id')
+  // Busca todos os user_ids que são clientes (tanto da tabela clientes quanto portal_clientes)
+  const [{ data: clientes }, { data: clientesPortal }] = await Promise.all([
+    supabase.from('clientes').select('user_id'),
+    supabase.from('portal_clientes').select('user_id')
+  ])
 
-  const idsClientesPortal = (clientesPortal || []).map(c => c.user_id).filter(Boolean)
+  // Combina os IDs de clientes comuns e clientes do portal
+  const idsClientes = [
+    ...(clientes || []).map(c => c.user_id),
+    ...(clientesPortal || []).map(c => c.user_id)
+  ].filter(Boolean)
+
+  // Remove duplicatas
+  const idsClientesUnicos = [...new Set(idsClientes)]
 
   // Busca usuários do tenant
   let query = supabase
@@ -64,9 +72,9 @@ export async function getUsuarios(tenantId) {
     .select('id, nome, email, username, role, ativo, created_at')
     .eq('tenant_id', tenantId)
 
-  // Se houver clientes do portal, exclui esses IDs
-  if (idsClientesPortal.length > 0) {
-    query = query.not('id', 'in', `(${idsClientesPortal.join(',')})`)
+  // Se houver clientes, exclui esses IDs
+  if (idsClientesUnicos.length > 0) {
+    query = query.not('id', 'in', `(${idsClientesUnicos.join(',')})`)
   }
 
   const { data, error } = await query.order('nome')
