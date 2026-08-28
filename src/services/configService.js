@@ -51,36 +51,38 @@ export const ROLES = [
 ]
 
 export async function getUsuarios(tenantId) {
-  // Busca todos os user_ids que são clientes (tanto da tabela clientes quanto portal_clientes)
-  const [{ data: clientes }, { data: clientesPortal }] = await Promise.all([
-    supabase.from('clientes').select('user_id'),
-    supabase.from('portal_clientes').select('user_id')
-  ])
+  // Busca apenas clientes do portal (que têm user_id)
+  const { data: clientesPortal } = await supabase
+    .from('portal_clientes')
+    .select('user_id')
 
-  // Combina os IDs de clientes comuns e clientes do portal
-  const idsClientes = [
-    ...(clientes || []).map(c => c.user_id),
-    ...(clientesPortal || []).map(c => c.user_id)
-  ].filter(Boolean)
+  const idsClientesPortal = (clientesPortal || []).map(c => c.user_id).filter(Boolean)
 
-  // Remove duplicatas
-  const idsClientesUnicos = [...new Set(idsClientes)]
-
-  // Busca usuários do tenant
+  // Busca usuários do tenant que:
+  // 1. Tenham username definido (usuários do sistema têm username)
+  // 2. OU sejam admins/gerentes/vendedores/financeiro (mesmo sem username)
+  // 3. E não sejam clientes do portal
   let query = supabase
     .from('users_perfil')
     .select('id, nome, email, username, role, ativo, created_at')
     .eq('tenant_id', tenantId)
+    .or('username.neq.,role.in.(admin,gerente,vendedor,financeiro,master)')
 
-  // Se houver clientes, exclui esses IDs
-  if (idsClientesUnicos.length > 0) {
-    query = query.not('id', 'in', `(${idsClientesUnicos.join(',')})`)
+  // Exclui clientes do portal
+  if (idsClientesPortal.length > 0) {
+    query = query.not('id', 'in', `(${idsClientesPortal.join(',')})`)
   }
 
   const { data, error } = await query.order('nome')
 
   if (error) throw error
-  return data || []
+
+  // Filtra localmente: apenas quem tem username OU role válido
+  const usuariosValidos = (data || []).filter(u =>
+    u.username || ['admin', 'gerente', 'vendedor', 'financeiro', 'master'].includes(u.role)
+  )
+
+  return usuariosValidos
 }
 
 export async function updateUsuarioRole(userId, role) {
