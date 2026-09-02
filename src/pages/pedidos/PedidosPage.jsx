@@ -185,17 +185,25 @@ export default function PedidosPage() {
   const [itens, setItens]       = useState([])
   const [clientes, setClientes] = useState([])
   const [dirty, setDirty]       = useState(new Map())
-  const [originalStatus, setOriginalStatus] = useState(new Map()) // Rastreia status original
+  const [originalStatus, setOriginalStatus] = useState(new Map())
   const [loading, setLoading]   = useState(false)
   const [err, setErr]           = useState(null)
   const [msg, setMsg]           = useState(null)
   const [printData, setPrintData] = useState(null)
   const [romAddVal, setRomAddVal] = useState('')
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
   // Modal dimensões para gerar romaneio
   const [showDimensoesModal, setShowDimensoesModal] = useState(false)
   const [dimensoes, setDimensoes] = useState({ peso: '', altura: '', largura: '', comprimento: '' })
-  const [modoEdicao, setModoEdicao] = useState(false) // true = editando romaneio existente
+  const [modoEdicao, setModoEdicao] = useState(false)
+
+  // Detecta mudança de tamanho de tela
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const carregarClientes = useCallback(async () => {
     if (!tenantId) return
@@ -223,7 +231,7 @@ export default function PedidosPage() {
       })
       setItens(data)
       setDirty(new Map())
-      setOriginalStatus(new Map()) // Reset status originais
+      setOriginalStatus(new Map())
     } catch (e) {
       setErr(e.message || 'Erro ao buscar')
     } finally {
@@ -232,7 +240,6 @@ export default function PedidosPage() {
   }, [tenantId, filtros])
 
   const handleChange = useCallback((id, field, value) => {
-    // Salva o status original ANTES de modificar (síncrono)
     if (field === 'status') {
       setItens(currItens => {
         const item = currItens.find(i => i.id === id)
@@ -241,13 +248,11 @@ export default function PedidosPage() {
             if (!prevOriginal.has(id)) {
               const next = new Map(prevOriginal)
               next.set(id, item.status)
-              console.log('💾 Salvando status original:', id, '→', item.status)
               return next
             }
             return prevOriginal
           })
         }
-        // Retorna o array modificado
         return currItens.map(i => i.id === id ? { ...i, [field]: value } : i)
       })
     } else {
@@ -263,55 +268,33 @@ export default function PedidosPage() {
 
   const handleSalvar = useCallback(async () => {
     if (!tenantId || !dirty.size) return
-    // merge dirty fields with full item data
     const dirtyWithFull = new Map()
     const itemsCancelados = []
-
-    console.log('🔍 DEBUG - Total de itens modificados:', dirty.size)
 
     itens.forEach(i => {
       if (dirty.has(i.id)) {
         let updated = { ...i, ...dirty.get(i.id) }
-
-        // Usa o status original salvo no handleChange
         const statusAntigo = originalStatus.get(i.id) || i.status
         const statusNovo = dirty.get(i.id).status
 
-        console.log(`🔍 Item ${i.id}:`, {
-          statusAntigo,
-          statusNovo,
-          statusOriginalSalvo: originalStatus.get(i.id),
-          mudouParaCancelado: statusNovo === 'Cancelado' && statusAntigo !== 'Cancelado'
-        })
-
-        // ✅ REMOVE DO ROMANEIO se perdeu status
-        // Lógica: tinha romaneio E status virou vazio
         if (i.numero_pedido && statusNovo === '') {
-          console.log('🗑️ Removendo item do romaneio (status ficou vazio):', i.id)
           updated = { ...updated, numero_pedido: null }
         }
 
         dirtyWithFull.set(i.id, updated)
 
-        // Detecta mudança para Cancelado
         if (dirty.get(i.id).status === 'Cancelado' && statusAntigo !== 'Cancelado') {
-          console.log('✅ Item CANCELADO detectado:', i.id)
           itemsCancelados.push(updated)
         }
       }
     })
 
-    console.log('🔍 Total de itens cancelados detectados:', itemsCancelados.length)
-
     setLoading(true)
     try {
       await salvarItens(tenantId, dirtyWithFull)
 
-      // Cria notificações para itens cancelados
-      console.log('🔔 Iniciando criação de notificações para', itemsCancelados.length, 'itens')
       for (const item of itemsCancelados) {
         try {
-          console.log('🔔 Criando notificação para item:', item.codigo)
           await criarNotificacaoCancelamentoConversa(tenantId, {
             codigo: item.codigo || 'Sem código',
             produto: item.produto || '',
@@ -324,14 +307,13 @@ export default function PedidosPage() {
             preco: item.preco || 0,
             observacao: item.observacao || '',
           })
-          console.log('✅ Notificação criada com sucesso!')
         } catch (err) {
-          console.error('❌ Erro ao criar notificação:', err)
+          console.error('Erro ao criar notificação:', err)
         }
       }
 
       setDirty(new Map())
-      setOriginalStatus(new Map()) // Limpa status originais após salvar
+      setOriginalStatus(new Map())
       showMsg('Salvo!')
     } catch (e) {
       setErr(e.message || 'Erro ao salvar')
@@ -340,7 +322,6 @@ export default function PedidosPage() {
     }
   }, [tenantId, dirty, itens, originalStatus, showMsg])
 
-  // Abre modal para pedir peso/dimensões ANTES de gerar romaneio
   const handleGerarPedido = useCallback(() => {
     if (!tenantId) return
     const semPedido = itens.filter(i => !i.numero_pedido)
@@ -348,12 +329,10 @@ export default function PedidosPage() {
       setErr('Todos os itens já possuem romaneio.')
       return
     }
-    // Abre modal para pedir dimensões
     setDimensoes({ peso: '', altura: '', largura: '', comprimento: '' })
     setShowDimensoesModal(true)
   }, [tenantId, itens])
 
-  // Confirma e gera romaneio COM dimensões (criar OU editar)
   const handleConfirmarGerar = useCallback(async () => {
     if (!tenantId) return
 
@@ -362,7 +341,6 @@ export default function PedidosPage() {
 
     try {
       if (modoEdicao) {
-        // MODO EDIÇÃO: atualiza romaneio existente
         if (!romAddVal) {
           setErr('Digite o número do romaneio para editar')
           return
@@ -372,7 +350,6 @@ export default function PedidosPage() {
         showMsg(`Romaneio #${romAddVal} atualizado!`)
         setModoEdicao(false)
       } else {
-        // MODO CRIAÇÃO: cria novo romaneio
         const semPedido = itens.filter(i => !i.numero_pedido)
         if (!semPedido.length) {
           setErr('Todos os itens já possuem romaneio.')
@@ -382,7 +359,6 @@ export default function PedidosPage() {
         const numPedido = await criarRomaneioComDimensoes(tenantId, semPedido, dimensoes)
         showMsg(`Romaneio #${numPedido} gerado com sucesso!`)
 
-        // Atualiza estado local
         const semIds = new Set(semPedido.map(i => i.id))
         const sepIds = new Set(semPedido.filter(i => i.status === 'Separado').map(i => i.id))
         setItens(prev => prev.map(i => {
@@ -398,7 +374,6 @@ export default function PedidosPage() {
     }
   }, [tenantId, itens, dimensoes, showMsg, modoEdicao, romAddVal])
 
-  // Busca romaneio e carrega itens
   const handleBuscarRomaneio = useCallback(async () => {
     if (!tenantId || !romAddVal) {
       setErr('Digite o número do romaneio')
@@ -418,7 +393,6 @@ export default function PedidosPage() {
     }
   }, [tenantId, romAddVal, showMsg])
 
-  // Abre modal para EDITAR dimensões de romaneio existente
   const handleEditarRomaneio = useCallback(async () => {
     if (!tenantId || !romAddVal) {
       setErr('Digite o número do romaneio para editar')
@@ -427,7 +401,6 @@ export default function PedidosPage() {
 
     setLoading(true)
     try {
-      // Busca dimensões atuais do romaneio
       const { data, error } = await supabase
         .from('romaneios')
         .select('peso, altura, largura, comprimento')
@@ -443,7 +416,6 @@ export default function PedidosPage() {
         return
       }
 
-      // Carrega dimensões no form
       setDimensoes({
         peso: data.peso ? String(data.peso) : '',
         altura: data.altura ? String(data.altura) : '',
@@ -571,24 +543,47 @@ export default function PedidosPage() {
   return (
     <AppShell>
       <div style={{
-        padding: '12px', height: '100%', display: 'flex', flexDirection: 'column', gap: 8,
+        padding: isMobile ? '8px' : '12px',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
       }}>
         {/* ── FILTROS ── */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{
+          display: 'flex',
+          gap: 6,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          fontSize: isMobile ? 14 : 12,
+        }}>
           <input list="ped-clientes" value={filtros.clienteNome}
             onChange={e => setF('clienteNome', e.target.value)}
-            placeholder="Cliente" style={{ ...SI, minWidth: 130 }} />
+            placeholder="Cliente"
+            style={{
+              ...SI,
+              minWidth: isMobile ? 140 : 130,
+              fontSize: isMobile ? 14 : 12,
+            }} />
           <datalist id="ped-clientes">
             {clientes.map(c => <option key={c} value={c} />)}
           </datalist>
 
           <input type="date" value={filtros.dataLive}
             onChange={e => setF('dataLive', e.target.value)}
-            style={{ ...SI, width: 130 }} />
+            style={{
+              ...SI,
+              width: isMobile ? 150 : 130,
+              fontSize: isMobile ? 14 : 12,
+            }} />
 
           <select value={filtros.statusFiltro}
             onChange={e => setF('statusFiltro', e.target.value)}
-            style={{ ...SI, width: 145 }}>
+            style={{
+              ...SI,
+              width: isMobile ? 160 : 145,
+              fontSize: isMobile ? 14 : 12,
+            }}>
             <option value="todos">Todos status</option>
             <option value="nao_enviados">Não enviados</option>
             {STATUS_PEDIDO_OPTS.filter(Boolean).map(s => (
@@ -598,62 +593,83 @@ export default function PedidosPage() {
 
           <input value={filtros.busca}
             onChange={e => setF('busca', e.target.value)}
-            placeholder="Busca rápida..." style={{ ...SI, minWidth: 130 }} />
+            placeholder="Busca rápida..."
+            style={{
+              ...SI,
+              minWidth: isMobile ? 140 : 130,
+              fontSize: isMobile ? 14 : 12,
+              flex: isMobile ? '1 1 100%' : 'none',
+            }} />
 
-          <input value={filtros.numeroPedido} type="number" min="1"
-            onChange={e => setF('numeroPedido', e.target.value)}
-            placeholder="Romaneio" style={{ ...SI, width: 90 }} />
+          {!isMobile && (
+            <>
+              <input value={filtros.numeroPedido} type="number" min="1"
+                onChange={e => setF('numeroPedido', e.target.value)}
+                placeholder="Romaneio" style={{ ...SI, width: 90 }} />
 
-          <span style={{ color: '#81c995', fontWeight: 700, fontSize: 14, marginLeft: 6, whiteSpace: 'nowrap' }}>
-            R$ {fmtMoney(total)}
-          </span>
+              <span style={{ color: '#81c995', fontWeight: 700, fontSize: 14, marginLeft: 6, whiteSpace: 'nowrap' }}>
+                R$ {fmtMoney(total)}
+              </span>
+            </>
+          )}
         </div>
 
         {/* ── AÇÕES ── */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="btn-acao btn-blue" disabled={loading} onClick={handleBuscar}
-            style={{ flex: 'none', minWidth: 80 }}>
+            style={{ flex: 'none', minWidth: isMobile ? 70 : 80, fontSize: isMobile ? 13 : 12 }}>
             Buscar
           </button>
           <button className="btn-acao btn-purple" disabled={loading || !dirty.size} onClick={handleSalvar}
-            style={{ flex: 'none', minWidth: 80 }}>
+            style={{ flex: 'none', minWidth: isMobile ? 70 : 80, fontSize: isMobile ? 13 : 12 }}>
             Salvar{dirty.size > 0 ? ` (${dirty.size})` : ''}
           </button>
-          <button className="btn-acao btn-green" disabled={loading} onClick={handleGerarPedido}
-            style={{ flex: 'none', minWidth: 110 }}>
-            Gerar Romaneio
-          </button>
-          <button className="btn-acao btn-purple" disabled={loading} onClick={handleReimprimir}
-            style={{ flex: 'none', minWidth: 95 }}>
-            Reimprimir
-          </button>
-          <button className="btn-acao btn-dark" disabled={loading} onClick={handleImprimir}
-            style={{ flex: 'none', minWidth: 80 }}>
-            Imprimir
-          </button>
 
-          <span style={{ color: 'var(--muted)', fontSize: 12, margin: '0 2px' }}>|</span>
-          <input
-            type="number" min="1" value={romAddVal}
-            onChange={e => setRomAddVal(e.target.value)}
-            placeholder="Nº Romaneio"
-            style={{ ...SI, width: 105, minWidth: 0 }}
-            onKeyDown={e => e.key === 'Enter' && handleBuscarRomaneio()}
-          />
-          <button className="btn-acao btn-blue" disabled={loading || !romAddVal}
-            onClick={handleBuscarRomaneio} style={{ flex: 'none', minWidth: 90 }}
-            title="Buscar itens deste romaneio">
-            🔍 Buscar
-          </button>
-          <button className="btn-acao btn-yellow" disabled={loading || !romAddVal}
-            onClick={handleEditarRomaneio} style={{ flex: 'none', minWidth: 90 }}
-            title="Editar peso e dimensões deste romaneio">
-            ✏️ Editar
-          </button>
-          <button className="btn-acao btn-ghost" disabled={loading || !romAddVal}
-            onClick={handleAdicionarAoRomaneio} style={{ flex: 'none', minWidth: 130 }}>
-            + Adicionar ao Rom.
-          </button>
+          {!isMobile && (
+            <>
+              <button className="btn-acao btn-green" disabled={loading} onClick={handleGerarPedido}
+                style={{ flex: 'none', minWidth: 110 }}>
+                Gerar Romaneio
+              </button>
+              <button className="btn-acao btn-purple" disabled={loading} onClick={handleReimprimir}
+                style={{ flex: 'none', minWidth: 95 }}>
+                Reimprimir
+              </button>
+              <button className="btn-acao btn-dark" disabled={loading} onClick={handleImprimir}
+                style={{ flex: 'none', minWidth: 80 }}>
+                Imprimir
+              </button>
+
+              <span style={{ color: 'var(--muted)', fontSize: 12, margin: '0 2px' }}>|</span>
+              <input
+                type="number" min="1" value={romAddVal}
+                onChange={e => setRomAddVal(e.target.value)}
+                placeholder="Nº Romaneio"
+                style={{ ...SI, width: 105, minWidth: 0 }}
+                onKeyDown={e => e.key === 'Enter' && handleBuscarRomaneio()}
+              />
+              <button className="btn-acao btn-blue" disabled={loading || !romAddVal}
+                onClick={handleBuscarRomaneio} style={{ flex: 'none', minWidth: 90 }}
+                title="Buscar itens deste romaneio">
+                🔍 Buscar
+              </button>
+              <button className="btn-acao btn-yellow" disabled={loading || !romAddVal}
+                onClick={handleEditarRomaneio} style={{ flex: 'none', minWidth: 90 }}
+                title="Editar peso e dimensões deste romaneio">
+                ✏️ Editar
+              </button>
+              <button className="btn-acao btn-ghost" disabled={loading || !romAddVal}
+                onClick={handleAdicionarAoRomaneio} style={{ flex: 'none', minWidth: 130 }}>
+                + Adicionar ao Rom.
+              </button>
+            </>
+          )}
+
+          {isMobile && (
+            <span style={{ color: '#81c995', fontWeight: 700, fontSize: 16, marginLeft: 'auto' }}>
+              R$ {fmtMoney(total)}
+            </span>
+          )}
 
           {msg && <span style={{ color: '#81c995', fontSize: 13 }}>{msg}</span>}
           {err && (
@@ -667,35 +683,61 @@ export default function PedidosPage() {
           )}
         </div>
 
-        {/* ── TABELA ── */}
-        <div style={{
-          flex: 1, overflow: 'auto', borderRadius: 6,
-          border: '1px solid var(--border-light)', background: 'var(--card-bg)',
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 900 }}>
-            <thead>
-              <tr>
-                {COLS.map(c => (
-                  <th key={c.key} style={{ ...TH, width: c.w, position: 'sticky', top: 0, zIndex: 2 }}>
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {itensFiltrados.length === 0 && (
+        {/* ── CONTEÚDO (TABELA DESKTOP / CARDS MOBILE) ── */}
+        {isMobile ? (
+          // VIEW MOBILE - CARDS
+          <div style={{
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+          }}>
+            {itensFiltrados.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
+                {loading ? 'Carregando...' : 'Nenhum item. Use BUSCAR para carregar dados.'}
+              </div>
+            )}
+            {itensFiltrados.map(item => (
+              <ItemCardMobile
+                key={item.id}
+                item={item}
+                onChange={handleChange}
+                onRomaneioBlur={handleRomaneioItemBlur}
+              />
+            ))}
+          </div>
+        ) : (
+          // VIEW DESKTOP - TABELA
+          <div style={{
+            flex: 1, overflow: 'auto', borderRadius: 6,
+            border: '1px solid var(--border-light)', background: 'var(--card-bg)',
+          }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 900 }}>
+              <thead>
                 <tr>
-                  <td colSpan={COLS.length} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
-                    {loading ? 'Carregando...' : 'Nenhum item. Use BUSCAR para carregar dados.'}
-                  </td>
+                  {COLS.map(c => (
+                    <th key={c.key} style={{ ...TH, width: c.w, position: 'sticky', top: 0, zIndex: 2 }}>
+                      {c.label}
+                    </th>
+                  ))}
                 </tr>
-              )}
-              {itensFiltrados.map(item => (
-                <ItemRow key={item.id} item={item} onChange={handleChange} onRomaneioBlur={handleRomaneioItemBlur} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {itensFiltrados.length === 0 && (
+                  <tr>
+                    <td colSpan={COLS.length} style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
+                      {loading ? 'Carregando...' : 'Nenhum item. Use BUSCAR para carregar dados.'}
+                    </td>
+                  </tr>
+                )}
+                {itensFiltrados.map(item => (
+                  <ItemRow key={item.id} item={item} onChange={handleChange} onRomaneioBlur={handleRomaneioItemBlur} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {printData && (
           <PrintModal data={printData} onClose={() => setPrintData(null)} />
@@ -709,7 +751,7 @@ export default function PedidosPage() {
           }} onClick={() => setShowDimensoesModal(false)}>
             <div style={{
               background: '#1a2230', border: '2px solid var(--blue)', borderRadius: 12,
-              padding: 24, minWidth: 400, maxWidth: 500,
+              padding: 24, minWidth: isMobile ? '90vw' : 400, maxWidth: isMobile ? '90vw' : 500,
             }} onClick={e => e.stopPropagation()}>
               <h3 style={{ margin: '0 0 16px 0', color: 'var(--blue)', fontSize: 18 }}>
                 {modoEdicao ? `✏️ Editar Romaneio #${romAddVal}` : '📦 Informações da Caixa'}
@@ -806,7 +848,7 @@ export default function PedidosPage() {
   )
 }
 
-// ── Row component ────────────────────────────────────────────
+// ── Row component (Desktop) ────────────────────────────────────────────
 function ItemRow({ item, onChange, onRomaneioBlur }) {
   return (
     <tr style={{ borderBottom: '1px solid var(--table-border)' }}
@@ -866,5 +908,158 @@ function ItemRow({ item, onChange, onRomaneioBlur }) {
         />
       </td>
     </tr>
+  )
+}
+
+// ── Card component (Mobile) ────────────────────────────────────────────
+function ItemCardMobile({ item, onChange, onRomaneioBlur }) {
+  return (
+    <div style={{
+      background: 'var(--card-bg)',
+      border: '1px solid var(--border-light)',
+      borderRadius: 8,
+      padding: 12,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+    }}>
+      {/* Cabeçalho - Produto e Preço */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        paddingBottom: 8,
+        borderBottom: '1px solid var(--border-light)',
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{
+            fontWeight: 700,
+            fontSize: 15,
+            color: 'var(--text-header)',
+            marginBottom: 4,
+          }}>
+            {item.produto}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-body)' }}>
+            {item.modelo && `${item.modelo} • `}
+            {item.cor && `${item.cor} • `}
+            {item.tamanho && item.tamanho}
+          </div>
+        </div>
+        <div style={{
+          fontWeight: 700,
+          fontSize: 16,
+          color: '#81c995',
+          marginLeft: 8,
+        }}>
+          {item.preco ? `R$ ${fmtMoney(item.preco)}` : ''}
+        </div>
+      </div>
+
+      {/* Informações do item */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
+        {item.marca && (
+          <div>
+            <span style={{ color: 'var(--muted)', fontSize: 11 }}>MARCA:</span>
+            <div style={{ color: 'var(--text-body)' }}>{item.marca}</div>
+          </div>
+        )}
+        {item.codigo && (
+          <div>
+            <span style={{ color: 'var(--muted)', fontSize: 11 }}>CÓD:</span>
+            <div style={{ color: 'var(--text-body)' }}>{item.codigo}</div>
+          </div>
+        )}
+        {item.cliente_nome && (
+          <div style={{ gridColumn: '1 / -1' }}>
+            <span style={{ color: 'var(--muted)', fontSize: 11 }}>CLIENTE:</span>
+            <div style={{ color: 'var(--text-body)' }}>{item.cliente_nome}</div>
+          </div>
+        )}
+        {item.data_live && (
+          <div>
+            <span style={{ color: 'var(--muted)', fontSize: 11 }}>DATA LIVE:</span>
+            <div style={{ color: 'var(--text-body)' }}>{fmtDate(item.data_live)}</div>
+          </div>
+        )}
+        {item.numero_pedido && (
+          <div>
+            <span style={{ color: 'var(--muted)', fontSize: 11 }}>ROMANEIO:</span>
+            <div style={{ color: '#8ab4f8', fontWeight: 700 }}>{item.numero_pedido}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Status - Campo GRANDE e DESTACADO para mobile */}
+      <div style={{ marginTop: 4 }}>
+        <label style={{
+          display: 'block',
+          fontSize: 11,
+          color: 'var(--muted)',
+          marginBottom: 6,
+          fontWeight: 600,
+        }}>
+          STATUS
+        </label>
+        <select
+          value={item.status || ''}
+          onChange={e => onChange(item.id, 'status', e.target.value)}
+          style={{
+            width: '100%',
+            padding: '12px',
+            fontSize: 15,
+            fontWeight: 600,
+            background: 'var(--input-bg)',
+            border: '2px solid var(--input-border)',
+            borderRadius: 8,
+            color: STATUS_COR[item.status] || 'var(--text-body)',
+            cursor: 'pointer',
+            outline: 'none',
+          }}>
+          {STATUS_PEDIDO_OPTS.map(s => (
+            <option
+              key={s}
+              value={s}
+              style={{
+                color: STATUS_COR[s] || 'var(--text-body)',
+                background: '#1a1a1a',
+                padding: '8px',
+              }}
+            >
+              {s || '— Selecione —'}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Observação */}
+      {(item.observacao || true) && (
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: 11,
+            color: 'var(--muted)',
+            marginBottom: 4,
+          }}>
+            OBSERVAÇÃO
+          </label>
+          <input
+            value={item.observacao || ''}
+            onChange={e => onChange(item.id, 'observacao', e.target.value)}
+            placeholder="Adicionar observação..."
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: 13,
+              background: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
+              borderRadius: 6,
+              color: 'var(--text-body)',
+              outline: 'none',
+            }}
+          />
+        </div>
+      )}
+    </div>
   )
 }
