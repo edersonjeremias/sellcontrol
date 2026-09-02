@@ -917,101 +917,116 @@ function ItemCardMobile({ item, onChange, onRomaneioBlur }) {
     <div style={{
       background: 'var(--card-bg)',
       border: '1px solid var(--border-light)',
-      borderRadius: 8,
-      padding: 12,
+      borderRadius: 6,
+      padding: 10,
       display: 'flex',
       flexDirection: 'column',
-      gap: 10,
+      gap: 8,
     }}>
-      {/* Cabeçalho - Produto e Preço */}
+      {/* LINHA 1: Cód + Produto + Modelo + Cor + Marca + Preço */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        paddingBottom: 8,
-        borderBottom: '1px solid var(--border-light)',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 6,
+        fontSize: 13,
       }}>
-        <div style={{ flex: 1 }}>
-          <div style={{
-            fontWeight: 700,
-            fontSize: 15,
-            color: 'var(--text-header)',
-            marginBottom: 4,
-          }}>
+        <div style={{
+          flex: '1 1 auto',
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 4,
+          alignItems: 'center',
+          color: 'var(--text-body)',
+        }}>
+          {item.codigo && (
+            <span style={{
+              background: 'var(--input-bg)',
+              padding: '2px 6px',
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: 600,
+              color: 'var(--muted)',
+            }}>
+              #{item.codigo}
+            </span>
+          )}
+          <span style={{ fontWeight: 700, color: 'var(--text-header)' }}>
             {item.produto}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-body)' }}>
-            {item.modelo && `${item.modelo} • `}
-            {item.cor && `${item.cor} • `}
-            {item.tamanho && item.tamanho}
-          </div>
+          </span>
+          {item.modelo && <span>• {item.modelo}</span>}
+          {item.cor && <span>• {item.cor}</span>}
+          {item.marca && <span>• {item.marca}</span>}
+          {item.tamanho && (
+            <span style={{
+              background: 'var(--input-bg)',
+              padding: '2px 6px',
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: 600,
+            }}>
+              {item.tamanho}
+            </span>
+          )}
         </div>
         <div style={{
           fontWeight: 700,
-          fontSize: 16,
+          fontSize: 15,
           color: '#81c995',
-          marginLeft: 8,
+          whiteSpace: 'nowrap',
         }}>
           {item.preco ? `R$ ${fmtMoney(item.preco)}` : ''}
         </div>
       </div>
 
-      {/* Informações do item */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
-        {item.marca && (
-          <div>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>MARCA:</span>
-            <div style={{ color: 'var(--text-body)' }}>{item.marca}</div>
-          </div>
-        )}
-        {item.codigo && (
-          <div>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>CÓD:</span>
-            <div style={{ color: 'var(--text-body)' }}>{item.codigo}</div>
-          </div>
-        )}
-        {item.cliente_nome && (
-          <div style={{ gridColumn: '1 / -1' }}>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>CLIENTE:</span>
-            <div style={{ color: 'var(--text-body)' }}>{item.cliente_nome}</div>
-          </div>
-        )}
+      {/* LINHA 2: Cliente + Data Live */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        fontSize: 12,
+        color: 'var(--text-body)',
+        gap: 8,
+      }}>
+        <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ color: 'var(--muted)', fontSize: 10 }}>CLIENTE: </span>
+          {item.cliente_nome}
+        </div>
         {item.data_live && (
-          <div>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>DATA LIVE:</span>
-            <div style={{ color: 'var(--text-body)' }}>{fmtDate(item.data_live)}</div>
+          <div style={{ whiteSpace: 'nowrap' }}>
+            <span style={{ color: 'var(--muted)', fontSize: 10 }}>LIVE: </span>
+            {fmtDate(item.data_live)}
           </div>
         )}
         {item.numero_pedido && (
-          <div>
-            <span style={{ color: 'var(--muted)', fontSize: 11 }}>ROMANEIO:</span>
-            <div style={{ color: '#8ab4f8', fontWeight: 700 }}>{item.numero_pedido}</div>
+          <div style={{
+            background: 'var(--input-bg)',
+            padding: '2px 8px',
+            borderRadius: 4,
+            fontSize: 11,
+            fontWeight: 700,
+            color: '#8ab4f8',
+            whiteSpace: 'nowrap',
+          }}>
+            ROM {item.numero_pedido}
           </div>
         )}
       </div>
 
-      {/* Status - Campo GRANDE e DESTACADO para mobile */}
-      <div style={{ marginTop: 4 }}>
-        <label style={{
-          display: 'block',
-          fontSize: 11,
-          color: 'var(--muted)',
-          marginBottom: 6,
-          fontWeight: 600,
-        }}>
-          STATUS
-        </label>
+      {/* LINHA 3: Status */}
+      <div>
         <select
           value={item.status || ''}
           onChange={e => onChange(item.id, 'status', e.target.value)}
           style={{
             width: '100%',
-            padding: '12px',
-            fontSize: 15,
+            padding: '10px',
+            fontSize: 14,
             fontWeight: 600,
             background: 'var(--input-bg)',
             border: '2px solid var(--input-border)',
-            borderRadius: 8,
+            borderRadius: 6,
             color: STATUS_COR[item.status] || 'var(--text-body)',
             cursor: 'pointer',
             outline: 'none',
@@ -1032,28 +1047,20 @@ function ItemCardMobile({ item, onChange, onRomaneioBlur }) {
         </select>
       </div>
 
-      {/* Observação */}
+      {/* LINHA 4: Observação */}
       {(item.observacao || true) && (
         <div>
-          <label style={{
-            display: 'block',
-            fontSize: 11,
-            color: 'var(--muted)',
-            marginBottom: 4,
-          }}>
-            OBSERVAÇÃO
-          </label>
           <input
             value={item.observacao || ''}
             onChange={e => onChange(item.id, 'observacao', e.target.value)}
-            placeholder="Adicionar observação..."
+            placeholder="Observação..."
             style={{
               width: '100%',
               padding: '8px',
-              fontSize: 13,
+              fontSize: 12,
               background: 'var(--input-bg)',
               border: '1px solid var(--input-border)',
-              borderRadius: 6,
+              borderRadius: 4,
               color: 'var(--text-body)',
               outline: 'none',
             }}
