@@ -140,6 +140,7 @@ export default function ContasPagarPage() {
   const [dataPag,     setDataPag]     = useState(HOJE)
   const [confirmDel,  setConfirmDel]  = useState(null)
   const [salvando,    setSalvando]    = useState(false)
+  const [modalDetalheCat, setModalDetalheCat] = useState(null) // { categoria, contas }
 
   // ── Formulário modal novo / editar ─────────────────────────
   const [form,    setForm]    = useState(FORM_VAZIO)
@@ -326,6 +327,12 @@ export default function ContasPagarPage() {
       carregar()
     } catch { showToast('Erro ao excluir.', 'error') }
     setConfirmDel(null)
+  }
+
+  // ── Abrir modal com detalhes da categoria ──────────────────
+  function abrirDetalhesCategoria(categoria) {
+    const contasDaCategoria = contasFiltradas.filter(c => (c.categoria || 'Sem categoria') === categoria)
+    setModalDetalheCat({ categoria, contas: contasDaCategoria })
   }
 
   // ── Relatórios: gastos por categoria ──────────────────────
@@ -522,11 +529,13 @@ export default function ContasPagarPage() {
               : catOrdenadas.map(([cat, valor]) => {
                   const pct = totalPeriodo > 0 ? (valor / totalPeriodo * 100).toFixed(1) : 0
                   return (
-                    <div key={cat} style={{
-                      background:'var(--card-bg)', border:'1px solid var(--border-light)',
-                      borderRadius:8, padding:'14px 18px', cursor:'default',
-                      transition:'transform 0.15s',
-                    }}
+                    <div key={cat}
+                      onClick={() => abrirDetalhesCategoria(cat)}
+                      style={{
+                        background:'var(--card-bg)', border:'1px solid var(--border-light)',
+                        borderRadius:8, padding:'14px 18px', cursor:'pointer',
+                        transition:'transform 0.15s',
+                      }}
                       onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.borderColor='var(--blue)'}}
                       onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.borderColor='var(--border-light)'}}
                     >
@@ -715,6 +724,93 @@ export default function ContasPagarPage() {
             <div className="modal-footer">
               <button onClick={() => setConfirmDel(null)} style={{ ...S.sec, flex:1 }}>Cancelar</button>
               <button onClick={confirmarExclusao} style={{ ...S.del, flex:1 }}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: DETALHES DA CATEGORIA ═══ */}
+      {modalDetalheCat && (
+        <div className="modal-overlay" onClick={() => setModalDetalheCat(null)}>
+          <div className="modal-card" style={{ maxWidth:900, maxHeight:'90vh' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid var(--border-light)' }}>
+              <div>
+                <h3 style={{ margin:0, fontSize:18, color:'var(--blue)' }}>{modalDetalheCat.categoria}</h3>
+                <p style={{ margin:'4px 0 0 0', fontSize:12, color:'var(--muted)' }}>
+                  {modalDetalheCat.contas.length} {modalDetalheCat.contas.length === 1 ? 'lançamento' : 'lançamentos'}
+                </p>
+              </div>
+              <button onClick={() => setModalDetalheCat(null)} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer' }}>✕</button>
+            </div>
+            <div className="modal-body" style={{ padding:0, maxHeight:'calc(90vh - 120px)', overflowY:'auto' }}>
+              {modalDetalheCat.contas.length === 0 ? (
+                <p style={{ padding:20, color:'var(--muted)', textAlign:'center' }}>Nenhum lançamento encontrado.</p>
+              ) : (
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead style={{ position:'sticky', top:0, zIndex:1 }}>
+                    <tr>
+                      <th style={S.th}>Data</th>
+                      <th style={S.th}>Descrição</th>
+                      <th style={S.th}>Tipo</th>
+                      <th style={{...S.th, textAlign:'right'}}>Valor</th>
+                      <th style={S.th}>Status</th>
+                      <th style={S.th}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modalDetalheCat.contas
+                      .sort((a, b) => (a.data_vencimento || '').localeCompare(b.data_vencimento || ''))
+                      .map(c => (
+                        <tr key={c.id}
+                          style={{ borderBottom:'1px solid var(--border-light)', background:'var(--body-bg)' }}
+                          onMouseEnter={e=>e.currentTarget.style.background='var(--table-row-hover)'}
+                          onMouseLeave={e=>e.currentTarget.style.background='var(--body-bg)'}
+                        >
+                          <td style={{...S.td, whiteSpace:'nowrap', color:'var(--blue)', fontWeight:600}}>{fmtData(c.data_vencimento)}</td>
+                          <td style={S.td}>
+                            <div style={{ fontSize:14, color:'var(--text-header)', fontWeight:500 }}>{c.observacao || c.categoria}</div>
+                            {c.status==='PAGO' && c.data_pagamento && (
+                              <div style={{ fontSize:11, color:'var(--green)', marginTop:2 }}>✓ pago em {fmtData(c.data_pagamento)}</div>
+                            )}
+                          </td>
+                          <td style={{...S.td, fontSize:12, color:'var(--muted)'}}>{c.tipo_despesa}</td>
+                          <td style={{...S.td, textAlign:'right', fontWeight:700, color: c.status==='PAGO'?'var(--green)':'var(--red)'}}>{fmtR(c.valor)}</td>
+                          <td style={S.td}>
+                            <span style={{
+                              fontSize:11, fontWeight:700, padding:'3px 10px', borderRadius:4,
+                              color: c.status==='PAGO'?'var(--green)':'var(--yellow)',
+                            }}>
+                              {c.status==='PAGO' ? 'Pago' : 'Pendente'}
+                            </span>
+                          </td>
+                          <td style={S.td}>
+                            <div style={{ display:'flex', gap:4 }}>
+                              {c.status !== 'PAGO' && (
+                                <button onClick={() => { setModalPagar({id:c.id}); setDataPag(HOJE); setModalDetalheCat(null) }}
+                                  style={{ ...S.ok, padding:'3px 8px', fontSize:11 }} title="Marcar como pago">
+                                  ✓ Pagar
+                                </button>
+                              )}
+                              <button onClick={() => { abrirEditar(c); setModalDetalheCat(null) }}
+                                style={{ ...S.btn, padding:'3px 8px', fontSize:11 }} title="Editar">✏️</button>
+                              <button onClick={() => { setConfirmDel(c); setModalDetalheCat(null) }}
+                                style={{ ...S.del, padding:'3px 8px', fontSize:11 }} title="Excluir">🗑️</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    }
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="modal-footer" style={{ borderTop:'1px solid var(--border-light)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div style={{ fontSize:14, fontWeight:700, color:'var(--text-body)' }}>
+                Total: <span style={{ color:'var(--blue)', fontSize:16 }}>
+                  {fmtR(modalDetalheCat.contas.reduce((s, c) => s + (Number(c.valor)||0), 0))}
+                </span>
+              </div>
+              <button onClick={() => setModalDetalheCat(null)} style={{ ...S.btn, padding:'7px 16px' }}>Fechar</button>
             </div>
           </div>
         </div>
