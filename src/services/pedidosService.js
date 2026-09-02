@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase'
 
 export const STATUS_PEDIDO_OPTS = [
-  '', 'Separado', 'Enviado',
+  '', 'Separado', 'Enviado', 'Comprar', 'Comprado',
   'Devolução', 'Gerar Crédito', 'Cancelado', 'Pendente',
 ]
 

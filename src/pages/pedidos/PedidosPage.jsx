@@ -15,6 +15,7 @@ const STATUS_COR = {
   'Separado':      '#81c995',
   'Enviado':       '#8ab4f8',
   'Comprar':       '#fbbc04',
+  'Comprado':      '#81c995',
   'Devolução':     '#f28b82',
   'Gerar Crédito': '#c58af9',
   'Cancelado':     '#9aa0a6',
