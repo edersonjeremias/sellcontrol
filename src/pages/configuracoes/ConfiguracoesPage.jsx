@@ -11,6 +11,7 @@ import {
 } from '../../services/authService'
 import ConfigAssuntos from './ConfigAssuntos'
 import UserActionsMenu from '../../components/config/UserActionsMenu'
+import AbaStatusExpedicao from './AbaStatusExpedicao'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -794,6 +795,7 @@ export default function ConfiguracoesPage() {
           {['admin', 'master'].includes(profile?.role) && (
             <>
               <TabBtn label="Usuários e Permissões" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
+              <TabBtn label="Status Expedição" active={aba === 'status'} onClick={() => setAba('status')} />
               <TabBtn label="Assuntos" active={aba === 'assuntos'} onClick={() => setAba('assuntos')} />
             </>
           )}
@@ -804,6 +806,9 @@ export default function ConfiguracoesPage() {
         )}
         {aba === 'usuarios' && (
           <AbaUsuarios tenantId={tenantId} profileAtual={profile} showToast={showToast} />
+        )}
+        {aba === 'status' && (
+          <AbaStatusExpedicao tenantId={tenantId} showToast={showToast} />
         )}
         {aba === 'assuntos' && (
           <ConfigAssuntos />

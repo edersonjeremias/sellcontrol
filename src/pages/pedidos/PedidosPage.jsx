@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import {
-  STATUS_PEDIDO_OPTS, calcTotal,
+  STATUS_PEDIDO_OPTS, calcTotal, getStatusPedido,
   buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir,
   atribuirRomaneio, adicionarSeparadosAoRomaneio, criarRomaneioComDimensoes,
   atualizarDimensoesRomaneio,
@@ -192,6 +192,8 @@ export default function PedidosPage() {
   const [printData, setPrintData] = useState(null)
   const [romAddVal, setRomAddVal] = useState('')
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [statusOpts, setStatusOpts] = useState(STATUS_PEDIDO_OPTS)
+  const [statusCores, setStatusCores] = useState(STATUS_COR)
 
   // Modal dimensões para gerar romaneio
   const [showDimensoesModal, setShowDimensoesModal] = useState(false)
@@ -211,7 +213,17 @@ export default function PedidosPage() {
     setClientes((data || []).map(c => (c.instagram || '').replace(/^@/, '').trim()).filter(Boolean))
   }, [tenantId])
 
-  useEffect(() => { carregarClientes() }, [carregarClientes])
+  const carregarStatus = useCallback(async () => {
+    if (!tenantId) return
+    const { opts, cores } = await getStatusPedido(tenantId)
+    setStatusOpts(opts)
+    setStatusCores(cores)
+  }, [tenantId])
+
+  useEffect(() => {
+    carregarClientes()
+    carregarStatus()
+  }, [carregarClientes, carregarStatus])
 
   const showMsg = useCallback((text) => {
     setMsg(text)
@@ -586,7 +598,7 @@ export default function PedidosPage() {
             }}>
             <option value="todos">Todos status</option>
             <option value="nao_enviados">Não enviados</option>
-            {STATUS_PEDIDO_OPTS.filter(Boolean).map(s => (
+            {statusOpts.filter(Boolean).map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -704,6 +716,8 @@ export default function PedidosPage() {
                 item={item}
                 onChange={handleChange}
                 onRomaneioBlur={handleRomaneioItemBlur}
+                statusOpts={statusOpts}
+                statusCores={statusCores}
               />
             ))}
           </div>
@@ -732,7 +746,14 @@ export default function PedidosPage() {
                   </tr>
                 )}
                 {itensFiltrados.map(item => (
-                  <ItemRow key={item.id} item={item} onChange={handleChange} onRomaneioBlur={handleRomaneioItemBlur} />
+                  <ItemRow
+                    key={item.id}
+                    item={item}
+                    onChange={handleChange}
+                    onRomaneioBlur={handleRomaneioItemBlur}
+                    statusOpts={statusOpts}
+                    statusCores={statusCores}
+                  />
                 ))}
               </tbody>
             </table>
@@ -849,7 +870,7 @@ export default function PedidosPage() {
 }
 
 // ── Row component (Desktop) ────────────────────────────────────────────
-function ItemRow({ item, onChange, onRomaneioBlur }) {
+function ItemRow({ item, onChange, onRomaneioBlur, statusOpts, statusCores }) {
   return (
     <tr style={{ borderBottom: '1px solid var(--table-border)' }}
       onMouseEnter={e => { e.currentTarget.style.background = 'var(--table-row-hover)' }}
@@ -881,10 +902,10 @@ function ItemRow({ item, onChange, onRomaneioBlur }) {
           onChange={e => onChange(item.id, 'status', e.target.value)}
           style={{
             background: 'transparent', border: 'none', width: '100%', fontSize: 12,
-            color: STATUS_COR[item.status] || 'var(--text-body)', cursor: 'pointer', outline: 'none',
+            color: statusCores[item.status] || 'var(--text-body)', cursor: 'pointer', outline: 'none',
           }}>
-          {STATUS_PEDIDO_OPTS.map(s => (
-            <option key={s} value={s} style={{ color: STATUS_COR[s] || 'var(--text-body)', background: '#292a2d' }}>
+          {statusOpts.map(s => (
+            <option key={s} value={s} style={{ color: statusCores[s] || 'var(--text-body)', background: '#292a2d' }}>
               {s || '—'}
             </option>
           ))}
@@ -912,7 +933,7 @@ function ItemRow({ item, onChange, onRomaneioBlur }) {
 }
 
 // ── Card component (Mobile) ────────────────────────────────────────────
-function ItemCardMobile({ item, onChange, onRomaneioBlur }) {
+function ItemCardMobile({ item, onChange, onRomaneioBlur, statusOpts, statusCores }) {
   return (
     <div style={{
       background: 'var(--card-bg)',
@@ -1027,16 +1048,16 @@ function ItemCardMobile({ item, onChange, onRomaneioBlur }) {
             background: 'var(--input-bg)',
             border: '2px solid var(--input-border)',
             borderRadius: 6,
-            color: STATUS_COR[item.status] || 'var(--text-body)',
+            color: statusCores[item.status] || 'var(--text-body)',
             cursor: 'pointer',
             outline: 'none',
           }}>
-          {STATUS_PEDIDO_OPTS.map(s => (
+          {statusOpts.map(s => (
             <option
               key={s}
               value={s}
               style={{
-                color: STATUS_COR[s] || 'var(--text-body)',
+                color: statusCores[s] || 'var(--text-body)',
                 background: '#1a1a1a',
                 padding: '8px',
               }}

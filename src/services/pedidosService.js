@@ -1,9 +1,52 @@
 import { supabase } from '../lib/supabase'
+import { getStatusExpedicao } from './statusExpedicaoService'
 
-export const STATUS_PEDIDO_OPTS = [
+// Array padrão (fallback se não houver status customizados)
+export const STATUS_PEDIDO_OPTS_DEFAULT = [
   '', 'Separado', 'Enviado', 'Comprar', 'Comprado',
   'Devolução', 'Gerar Crédito', 'Cancelado', 'Pendente',
 ]
+
+// Mantém compatibilidade com código existente
+export const STATUS_PEDIDO_OPTS = STATUS_PEDIDO_OPTS_DEFAULT
+
+/**
+ * Busca status customizados do tenant ou retorna padrão
+ * @param {string} tenantId
+ * @returns {Promise<{opts: Array<string>, cores: Object}>}
+ */
+export async function getStatusPedido(tenantId) {
+  try {
+    const statusCustomizados = await getStatusExpedicao(tenantId)
+
+    if (statusCustomizados && statusCustomizados.length > 0) {
+      // Retorna status customizados
+      const opts = ['', ...statusCustomizados.map(s => s.nome)]
+      const cores = {}
+      statusCustomizados.forEach(s => {
+        cores[s.nome] = s.cor
+      })
+      return { opts, cores }
+    }
+  } catch (e) {
+    console.error('Erro ao buscar status customizados:', e)
+  }
+
+  // Fallback para status padrão
+  return {
+    opts: STATUS_PEDIDO_OPTS_DEFAULT,
+    cores: {
+      'Separado':      '#81c995',
+      'Enviado':       '#8ab4f8',
+      'Comprar':       '#fbbc04',
+      'Comprado':      '#81c995',
+      'Devolução':     '#f28b82',
+      'Gerar Crédito': '#c58af9',
+      'Cancelado':     '#9aa0a6',
+      'Pendente':      '#fbbc04',
+    }
+  }
+}
 
 const EXCLUIR_DO_TOTAL   = new Set(['Cancelado', 'Pendente', 'Devolução'])
 const EXCLUIR_DO_PADRAO  = new Set(['Enviado', 'Cancelado', 'Devolução', 'Gerar Crédito'])
