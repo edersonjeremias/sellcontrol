@@ -191,7 +191,11 @@ export default function ContasPagarPage() {
     if (!grupos[d]) grupos[d] = []
     grupos[d].push(c)
   })
-  const datasOrd = Object.keys(grupos).sort((a, b) => b.localeCompare(a)) // Decrescente: mais recente primeiro
+  // Ordena lançamentos dentro de cada grupo: mais recente primeiro (por ID decrescente)
+  Object.keys(grupos).forEach(data => {
+    grupos[data].sort((a, b) => (b.id || 0) - (a.id || 0))
+  })
+  const datasOrd = Object.keys(grupos).sort((a, b) => a.localeCompare(b)) // Datas crescentes
 
   function toggleGrupo(d) {
     setAbertos(prev => {
@@ -771,7 +775,7 @@ export default function ContasPagarPage() {
                   </thead>
                   <tbody>
                     {modalDetalheCat.contas
-                      .sort((a, b) => (b.data_vencimento || '').localeCompare(a.data_vencimento || ''))
+                      .sort((a, b) => (b.id || 0) - (a.id || 0))
                       .map(c => (
                         <tr key={c.id}
                           style={{ borderBottom:'1px solid var(--border-light)', background:'var(--body-bg)' }}
