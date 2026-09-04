@@ -191,9 +191,15 @@ export default function ContasPagarPage() {
     if (!grupos[d]) grupos[d] = []
     grupos[d].push(c)
   })
-  // Ordena lançamentos dentro de cada grupo: mais recente primeiro (por ID decrescente)
+  // Ordena lançamentos dentro de cada grupo: mais recente primeiro
   Object.keys(grupos).forEach(data => {
-    grupos[data].sort((a, b) => (b.id || 0) - (a.id || 0))
+    grupos[data].sort((a, b) => {
+      // Tenta usar created_at primeiro, senão usa id
+      if (a.created_at && b.created_at) {
+        return new Date(b.created_at) - new Date(a.created_at)
+      }
+      return (b.id || 0) - (a.id || 0)
+    })
   })
   const datasOrd = Object.keys(grupos).sort((a, b) => a.localeCompare(b)) // Datas crescentes
 
@@ -775,7 +781,12 @@ export default function ContasPagarPage() {
                   </thead>
                   <tbody>
                     {modalDetalheCat.contas
-                      .sort((a, b) => (b.id || 0) - (a.id || 0))
+                      .sort((a, b) => {
+                        if (a.created_at && b.created_at) {
+                          return new Date(b.created_at) - new Date(a.created_at)
+                        }
+                        return (b.id || 0) - (a.id || 0)
+                      })
                       .map(c => (
                         <tr key={c.id}
                           style={{ borderBottom:'1px solid var(--border-light)', background:'var(--body-bg)' }}
