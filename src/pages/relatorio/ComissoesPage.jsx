@@ -277,16 +277,16 @@ export default function ComissoesPage() {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', maxWidth: '900px', margin: '0 auto', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+            <table style={{ width: '100%', maxWidth: '800px', margin: '0 auto', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
-                  <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '8%' }}>Data</th>
-                  <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '8%' }}>Vend.</th>
-                  <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '16%' }}>Bruto</th>
-                  <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '14%' }}>Cancel.</th>
-                  <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '16%' }}>Líquido</th>
-                  <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '10%' }}>%</th>
-                  <th style={{ padding: '8px 4px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '16%' }}>A Pagar</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '6%' }}>Data</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '5%' }}>Vend.</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '13%' }}>Bruto</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '11%' }}>Cancel.</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '13%' }}>Líquido</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '6%' }}>%</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '13%' }}>A Pagar</th>
                 </tr>
               </thead>
               <tbody>
@@ -445,7 +445,7 @@ export default function ComissoesPage() {
             white-space: nowrap !important;
           }
 
-          /* Larguras ultra-compactas - economiza espaço */
+          /* Larguras iguais à página - ultra-compactas */
           table th:nth-child(1),
           table td:nth-child(1) {
             width: 6% !important;
@@ -458,27 +458,27 @@ export default function ComissoesPage() {
 
           table th:nth-child(3),
           table td:nth-child(3) {
-            width: 12% !important;
+            width: 13% !important;
           }
 
           table th:nth-child(4),
           table td:nth-child(4) {
-            width: 10% !important;
+            width: 11% !important;
           }
 
           table th:nth-child(5),
           table td:nth-child(5) {
-            width: 12% !important;
+            width: 13% !important;
           }
 
           table th:nth-child(6),
           table td:nth-child(6) {
-            width: 4% !important;
+            width: 6% !important;
           }
 
           table th:nth-child(7),
           table td:nth-child(7) {
-            width: 12% !important;
+            width: 13% !important;
           }
 
           /* Alinhamentos */
