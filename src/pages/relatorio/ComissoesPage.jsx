@@ -345,7 +345,7 @@ export default function ComissoesPage() {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm 8mm;
+            margin: 8mm 5mm;
           }
 
           * {
@@ -385,18 +385,17 @@ export default function ComissoesPage() {
             padding: 0 !important;
           }
 
-          /* Cabeçalho profissional */
+          /* Cabeçalho */
           [data-print-area] h1 {
-            font-size: 14px !important;
+            font-size: 15px !important;
             font-weight: 700 !important;
             text-align: center !important;
             margin: 0 0 4px 0 !important;
             color: #1a1a1a !important;
-            letter-spacing: 0.3px !important;
           }
 
           [data-print-area] p {
-            font-size: 9px !important;
+            font-size: 10px !important;
             text-align: center !important;
             margin: 0 0 8px 0 !important;
             color: #666 !important;
@@ -404,13 +403,13 @@ export default function ComissoesPage() {
             border-bottom: 1px solid #ddd !important;
           }
 
-          /* Tabela clean e profissional */
+          /* Tabela AUTO-AJUSTÁVEL */
           table {
             width: 100% !important;
-            table-layout: fixed !important;
+            table-layout: auto !important;
             border-collapse: collapse !important;
             margin-top: 6px !important;
-            font-size: 8px !important;
+            font-size: 9px !important;
             color: #1a1a1a !important;
             border: none !important;
           }
@@ -420,13 +419,12 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 4px 2px !important;
+            padding: 4px 1px !important;
             text-align: center !important;
-            font-size: 7.5px !important;
+            font-size: 8px !important;
             font-weight: 700 !important;
             color: #333 !important;
             text-transform: uppercase !important;
-            letter-spacing: 0.2px !important;
             white-space: nowrap !important;
           }
 
@@ -434,10 +432,11 @@ export default function ComissoesPage() {
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 4px 2px !important;
-            font-size: 8px !important;
+            padding: 5px 1px !important;
+            font-size: 9px !important;
             color: #1a1a1a !important;
             line-height: 1.2 !important;
+            white-space: nowrap !important;
           }
 
           /* Alinhamentos */
@@ -463,7 +462,7 @@ export default function ComissoesPage() {
             font-weight: 600 !important;
           }
 
-          /* Rodapé totais */
+          /* Rodapé */
           table tfoot tr {
             background: #f9f9f9 !important;
           }
@@ -472,10 +471,11 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 5px 2px !important;
-            font-size: 8.5px !important;
+            padding: 6px 1px !important;
+            font-size: 9px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
+            white-space: nowrap !important;
           }
 
           table tfoot th:nth-child(1),
@@ -495,43 +495,7 @@ export default function ComissoesPage() {
             text-align: center !important;
           }
 
-          /* Larguras reduzidas - colunas mais estreitas */
-          table th:nth-child(1),
-          table td:nth-child(1) {
-            width: 7% !important;
-          }
-
-          table th:nth-child(2),
-          table td:nth-child(2) {
-            width: 7% !important;
-          }
-
-          table th:nth-child(3),
-          table td:nth-child(3) {
-            width: 13% !important;
-          }
-
-          table th:nth-child(4),
-          table td:nth-child(4) {
-            width: 11% !important;
-          }
-
-          table th:nth-child(5),
-          table td:nth-child(5) {
-            width: 13% !important;
-          }
-
-          table th:nth-child(6),
-          table td:nth-child(6) {
-            width: 5% !important;
-          }
-
-          table th:nth-child(7),
-          table td:nth-child(7) {
-            width: 13% !important;
-          }
-
-          /* Previne quebras */
+          /* Sem quebras */
           tr {
             page-break-inside: avoid !important;
           }
