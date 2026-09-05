@@ -176,6 +176,11 @@ export default function CobrancasPage() {
   const [dividindo,      setDividindo]      = useState(false)
   const [erroDivisao,    setErroDivisao]    = useState('')
 
+  // Modal mensagem personalizada
+  const [showMsgModal,     setShowMsgModal]     = useState(false)
+  const [mensagemCustom,   setMensagemCustom]   = useState('')
+  const [msgTemporaria,    setMsgTemporaria]    = useState('')
+
   // ── Carga de dados ─────────────────────────────────────────
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -200,6 +205,11 @@ export default function CobrancasPage() {
     getConfig(tenantId).then(setConfig).catch(() => {})
     getClientesParaCobranca(tenantId).then(setListaClientes)
     getMapaCreditosClientes(tenantId).then(setCreditosMap).catch(() => {})
+
+    // Carrega mensagem personalizada salva
+    const msgSalva = localStorage.getItem('mensagemCobrancaCustom')
+    if (msgSalva) setMensagemCustom(msgSalva)
+
     carregar()
   }, [tenantId, carregar])
 
@@ -211,6 +221,19 @@ export default function CobrancasPage() {
         .filter(c => String(c.instagram).toLowerCase().includes(texto.toLowerCase()))
         .slice(0, 8)
     )
+  }
+
+  // ── Mensagem Personalizada ──────────────────────────────────
+  function abrirModalMensagem() {
+    setMsgTemporaria(mensagemCustom)
+    setShowMsgModal(true)
+  }
+
+  function salvarMensagem() {
+    setMensagemCustom(msgTemporaria)
+    localStorage.setItem('mensagemCobrancaCustom', msgTemporaria)
+    setShowMsgModal(false)
+    showToast(msgTemporaria.trim() ? 'Mensagem salva!' : 'Mensagem removida')
   }
 
   // ── Ação modal ─────────────────────────────────────────────
@@ -244,10 +267,24 @@ export default function CobrancasPage() {
     const reciboUrl = `https://sellcontrol.app/recibo/${cobranca.id}`
     let url = `https://wa.me/55${zap}`
     if (tipo === 'lembrete') {
-      const msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* ainda está aguardando o pagamento.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
+      let msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* ainda está aguardando o pagamento.`
+
+      // Adiciona mensagem personalizada se houver
+      if (mensagemCustom.trim()) {
+        msg += `\n\n${mensagemCustom.trim()}`
+      }
+
+      msg += `\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     } else if (tipo === 'enviar') {
-      const msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nSegue sua compra do dia *${fmtData(cobranca.data)}*.\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
+      let msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nSegue sua compra do dia *${fmtData(cobranca.data)}*.`
+
+      // Adiciona mensagem personalizada se houver
+      if (mensagemCustom.trim()) {
+        msg += `\n\n${mensagemCustom.trim()}`
+      }
+
+      msg += `\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${reciboUrl}`
       url += `?text=${encodeURIComponent(msg)}`
     }
     // tipo === 'chat': abre só o WhatsApp sem mensagem pré-definida
@@ -621,6 +658,32 @@ export default function CobrancasPage() {
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                 </svg>
               </button>
+              <button
+                className="btn-acao btn-ghost"
+                onClick={abrirModalMensagem}
+                style={{
+                  minWidth: 44,
+                  padding: '0 10px',
+                  position: 'relative',
+                  border: mensagemCustom.trim() ? '1px solid var(--blue)' : '1px solid var(--border-light)'
+                }}
+                title={mensagemCustom.trim() ? `Mensagem: "${mensagemCustom.substring(0, 30)}..."` : 'Configurar mensagem personalizada'}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                {mensagemCustom.trim() && (
+                  <span style={{
+                    position: 'absolute',
+                    top: -4,
+                    right: -4,
+                    width: 8,
+                    height: 8,
+                    background: 'var(--blue)',
+                    borderRadius: '50%'
+                  }}/>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -982,6 +1045,100 @@ export default function CobrancasPage() {
               <button className="btn-acao btn-green" style={{ width: '100%', minHeight: 46, fontSize: 14, color: '#171717' }} onClick={aplicarDesconto} disabled={aplicandoDesc}>
                 {aplicandoDesc ? 'Aplicando…' : 'Aplicar e Recalcular'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          MODAL: MENSAGEM PERSONALIZADA
+      ══════════════════════════════════════════════════════ */}
+      {showMsgModal && (
+        <div className="modal-overlay" onClick={() => setShowMsgModal(false)}>
+          <div className="modal-card" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0 }}>💬 Mensagem Personalizada</h3>
+              <button style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, lineHeight: 1 }} onClick={() => setShowMsgModal(false)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ paddingBottom: 20 }}>
+              <div style={{ marginBottom: 12, padding: 10, background: 'rgba(138,180,248,0.1)', borderRadius: 6, border: '1px solid rgba(138,180,248,0.3)' }}>
+                <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 600, marginBottom: 4 }}>
+                  📌 Como funciona
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+                  Esta mensagem será incluída entre a saudação e o link de pagamento ao enviar cobranças via WhatsApp.
+                  <br/><br/>
+                  <strong>Exemplo:</strong> "Aproveite nosso desconto especial!"
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+                  Mensagem (opcional)
+                </label>
+                <textarea
+                  value={msgTemporaria}
+                  onChange={e => setMsgTemporaria(e.target.value)}
+                  placeholder="Digite aqui a mensagem que será incluída nos envios..."
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 6,
+                    color: 'var(--text-body)',
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    minHeight: 80
+                  }}
+                />
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                  {msgTemporaria.length}/500 caracteres
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    setMsgTemporaria('')
+                    setMensagemCustom('')
+                    localStorage.removeItem('mensagemCobrancaCustom')
+                    setShowMsgModal(false)
+                    showToast('Mensagem removida')
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: 'rgba(242,139,130,0.1)',
+                    color: '#f28b82',
+                    border: '1px solid rgba(242,139,130,0.3)',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: 13
+                  }}
+                >
+                  Limpar
+                </button>
+                <button
+                  onClick={salvarMensagem}
+                  style={{
+                    flex: 2,
+                    padding: '12px',
+                    background: 'var(--blue)',
+                    color: '#171717',
+                    border: 'none',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    fontSize: 14
+                  }}
+                >
+                  Salvar
+                </button>
+              </div>
             </div>
           </div>
         </div>
