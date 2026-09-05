@@ -134,17 +134,13 @@ export default function ComissoesPage() {
       // Agrupar por data + vendedora
       const grouped = {}
       ;(vendas || []).forEach(v => {
-        // Filtra apenas vendas com cliente
+        // Filtra apenas vendas com cliente (mesma lógica do dashboard)
         if (!(v.cliente_nome || '').trim()) return
 
         const status = (v.status || '').toUpperCase()
 
-        // Verifica se é vendido ou cancelado
-        const isVendido = ['ENVIADO', 'VENDIDO'].includes(status)
+        // Verifica se é cancelado/devolvido
         const isCancelado = status === 'CANCELADO' || status === 'DEVOLVIDO'
-
-        // Ignora se não for vendido nem cancelado
-        if (!isVendido && !isCancelado) return
 
         // Usa data_live se disponível, senão usa created_at
         let dataVenda = v.data_live
@@ -166,10 +162,10 @@ export default function ComissoesPage() {
         // Usa preço promocional se existir, senão usa preço normal
         const valor = Number(v.preco_promocional || v.preco) || 0
 
-        // Soma no bruto ou cancelado dependendo do status
+        // Se cancelado/devolvido: soma em cancelados; senão: soma em bruto
         if (isCancelado) {
           grouped[key].cancelado += valor
-        } else if (isVendido) {
+        } else {
           grouped[key].bruto += valor
         }
       })
