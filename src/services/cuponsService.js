@@ -112,7 +112,7 @@ export async function validarCupom(tenantId, codigo) {
   if (data.limite_usos !== null && data.limite_usos !== undefined) {
     const usosRealizados = data.usos_realizados || 0
     if (usosRealizados >= data.limite_usos) {
-      throw new Error(`Cupom esgotado (limite de ${data.limite_usos} usos atingido)`)
+      throw new Error('CUPONS ESGOTADO')
     }
   }
 

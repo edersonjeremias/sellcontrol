@@ -674,15 +674,16 @@ export default function ReciboPage() {
             {erroCupom && (
               <div style={{
                 marginTop: 8,
-                padding: '8px 12px',
-                background: 'rgba(242,139,130,0.1)',
-                border: '1px solid rgba(242,139,130,0.3)',
-                borderRadius: 6,
-                color: '#f28b82',
-                fontSize: 12,
+                padding: '10px 12px',
+                background: erroCupom === 'CUPONS ESGOTADO' ? 'rgba(251,188,4,0.15)' : 'rgba(242,139,130,0.1)',
+                border: erroCupom === 'CUPONS ESGOTADO' ? '2px solid rgba(251,188,4,0.5)' : '1px solid rgba(242,139,130,0.3)',
+                borderRadius: 8,
+                color: erroCupom === 'CUPONS ESGOTADO' ? '#fbbc04' : '#f28b82',
+                fontSize: erroCupom === 'CUPONS ESGOTADO' ? 14 : 12,
+                fontWeight: erroCupom === 'CUPONS ESGOTADO' ? 700 : 400,
                 textAlign: 'center',
               }}>
-                {erroCupom}
+                {erroCupom === 'CUPONS ESGOTADO' ? '⚠️ CUPONS ESGOTADO ⚠️' : erroCupom}
               </div>
             )}
           </div>

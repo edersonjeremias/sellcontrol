@@ -78,7 +78,7 @@ export default async function handler(req, res) {
 
         const { data: cobranca } = await supabase
           .from('cobrancas')
-          .select('tenant_id')
+          .select('tenant_id, cupom_id')
           .eq('id', cobrancaId)
           .maybeSingle()
 
@@ -105,8 +105,31 @@ export default async function handler(req, res) {
           .eq('id', cobrancaId)
           .neq('status', 'PAGO')
 
-        if (error) console.error('Erro Supabase:', error)
-        else console.log(`Cobrança ${cobrancaId} PAGA! Líquido: ${valorLiquido}`)
+        if (error) {
+          console.error('Erro Supabase:', error)
+        } else {
+          console.log(`Cobrança ${cobrancaId} PAGA! Líquido: ${valorLiquido}`)
+
+          // 🎟️ Incrementa uso do cupom se foi usado
+          if (cobranca?.cupom_id) {
+            const { data: cupom } = await supabase
+              .from('cupons')
+              .select('usos_realizados')
+              .eq('id', cobranca.cupom_id)
+              .single()
+
+            if (cupom) {
+              const novosUsos = (cupom.usos_realizados || 0) + 1
+              const { error: cupomErr } = await supabase
+                .from('cupons')
+                .update({ usos_realizados: novosUsos })
+                .eq('id', cobranca.cupom_id)
+
+              if (cupomErr) console.error('Erro ao incrementar cupom:', cupomErr)
+              else console.log(`✅ Cupom ${cobranca.cupom_id} incrementado: ${novosUsos} usos`)
+            }
+          }
+        }
       }
     }
 
