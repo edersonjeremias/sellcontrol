@@ -411,10 +411,10 @@ export default function ComissoesPage() {
           /* Tabela clean e profissional */
           table {
             width: 100% !important;
-            table-layout: fixed !important;
+            table-layout: auto !important;
             border-collapse: collapse !important;
             margin-top: 6px !important;
-            font-size: 7.5px !important;
+            font-size: 7px !important;
             color: #1a1a1a !important;
             border: none !important;
           }
@@ -424,23 +424,25 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 4px 3px !important;
+            padding: 3px 2px !important;
             text-align: center !important;
-            font-size: 7px !important;
+            font-size: 6.5px !important;
             font-weight: 700 !important;
             color: #333 !important;
             text-transform: uppercase !important;
-            letter-spacing: 0.3px !important;
+            letter-spacing: 0.2px !important;
+            white-space: nowrap !important;
           }
 
           /* Células do corpo */
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 5px 3px !important;
-            font-size: 7.5px !important;
+            padding: 4px 2px !important;
+            font-size: 7px !important;
             color: #1a1a1a !important;
             line-height: 1.2 !important;
+            white-space: nowrap !important;
           }
 
           /* Alinhamentos */
@@ -451,7 +453,6 @@ export default function ComissoesPage() {
 
           table tbody td:nth-child(2) {
             text-align: center !important;
-            padding-left: 3px !important;
           }
 
           table tbody td:nth-child(3),
@@ -460,7 +461,6 @@ export default function ComissoesPage() {
           table tbody td:nth-child(7) {
             text-align: right !important;
             font-family: 'Courier New', monospace !important;
-            padding-right: 4px !important;
           }
 
           table tbody td:nth-child(6) {
@@ -477,16 +477,16 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 6px 3px !important;
-            font-size: 8px !important;
+            padding: 5px 2px !important;
+            font-size: 7.5px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
+            white-space: nowrap !important;
           }
 
           table tfoot th:nth-child(1),
           table tfoot th:nth-child(2) {
             text-align: center !important;
-            padding-left: 3px !important;
           }
 
           table tfoot th:nth-child(3),
@@ -495,47 +495,10 @@ export default function ComissoesPage() {
           table tfoot th:nth-child(7) {
             text-align: right !important;
             font-family: 'Courier New', monospace !important;
-            padding-right: 4px !important;
           }
 
           table tfoot th:nth-child(6) {
             text-align: center !important;
-          }
-
-          /* Larguras otimizadas para A4 - mais compactas */
-          table th:nth-child(1),
-          table td:nth-child(1) {
-            width: 10% !important;
-          }
-
-          table th:nth-child(2),
-          table td:nth-child(2) {
-            width: 11% !important;
-          }
-
-          table th:nth-child(3),
-          table td:nth-child(3) {
-            width: 15% !important;
-          }
-
-          table th:nth-child(4),
-          table td:nth-child(4) {
-            width: 13% !important;
-          }
-
-          table th:nth-child(5),
-          table td:nth-child(5) {
-            width: 15% !important;
-          }
-
-          table th:nth-child(6),
-          table td:nth-child(6) {
-            width: 7% !important;
-          }
-
-          table th:nth-child(7),
-          table td:nth-child(7) {
-            width: 15% !important;
           }
 
           /* Previne quebras */
