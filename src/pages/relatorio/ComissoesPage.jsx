@@ -277,27 +277,27 @@ export default function ComissoesPage() {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', maxWidth: '800px', margin: '0 auto', borderCollapse: 'collapse', fontSize: 12, tableLayout: 'fixed' }}>
+            <table style={{ width: '100%', maxWidth: '600px', margin: '0 auto', borderCollapse: 'collapse', fontSize: 11, tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
-                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '6%' }}>Data</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '5%' }}>Vend.</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '13%' }}>Bruto</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '11%' }}>Cancel.</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '13%' }}>Líquido</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '6%' }}>%</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 11, width: '13%' }}>A Pagar</th>
+                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '11%' }}>Data</th>
+                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '9%' }}>Vend.</th>
+                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '16%' }}>Bruto</th>
+                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '14%' }}>Cancel.</th>
+                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '16%' }}>Líquido</th>
+                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '10%' }}>%</th>
+                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '16%' }}>A Pagar</th>
                 </tr>
               </thead>
               <tbody>
                 {dados.map(item => (
                   <tr key={item.chave} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-body)', fontSize: 11 }}>{fmtData(item.data)}</td>
-                    <td style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-body)', fontSize: 11 }}>{item.vendedora}</td>
-                    <td style={{ padding: '6px 2px', textAlign: 'right', color: 'var(--blue)', fontWeight: 600, fontSize: 11 }}>{fmtR(item.bruto)}</td>
-                    <td style={{ padding: '6px 2px', textAlign: 'right', color: 'var(--red)', fontWeight: 600, fontSize: 11 }}>{fmtR(item.cancelado)}</td>
-                    <td style={{ padding: '6px 2px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 11 }}>{fmtR(item.liquido)}</td>
-                    <td style={{ padding: '6px 2px', textAlign: 'center' }}>
+                    <td style={{ padding: '5px 2px', textAlign: 'center', color: 'var(--text-body)', fontSize: 10 }}>{fmtData(item.data)}</td>
+                    <td style={{ padding: '5px 2px', textAlign: 'center', color: 'var(--text-body)', fontSize: 10 }}>{item.vendedora}</td>
+                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--blue)', fontWeight: 600, fontSize: 10 }}>{fmtR(item.bruto)}</td>
+                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--red)', fontWeight: 600, fontSize: 10 }}>{fmtR(item.cancelado)}</td>
+                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 10 }}>{fmtR(item.liquido)}</td>
+                    <td style={{ padding: '5px 2px', textAlign: 'center' }}>
                       <input
                         className="print:hidden"
                         type="number"
@@ -318,9 +318,9 @@ export default function ComissoesPage() {
                         max="100"
                         step="0.1"
                       />
-                      <span className="hidden print:inline" style={{ fontSize: 11 }}>{comissoes[item.chave] || ''} %</span>
+                      <span className="hidden print:inline" style={{ fontSize: 10 }}>{comissoes[item.chave] || ''} %</span>
                     </td>
-                    <td style={{ padding: '6px 2px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 11 }}>
+                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 10 }}>
                       {fmtR(calcValorPagar(item.liquido, item.chave))}
                     </td>
                   </tr>
@@ -328,12 +328,12 @@ export default function ComissoesPage() {
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: '3px solid var(--border-light)', background: 'rgba(138,180,248,0.05)' }}>
-                  <th colSpan="2" style={{ padding: '10px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 700, fontSize: 12 }}>TOTAIS:</th>
-                  <th style={{ padding: '10px 2px', textAlign: 'right', color: 'var(--blue)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.bruto)}</th>
-                  <th style={{ padding: '10px 2px', textAlign: 'right', color: 'var(--red)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.cancelado)}</th>
-                  <th style={{ padding: '10px 2px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.liquido)}</th>
-                  <th style={{ padding: '10px 2px' }}></th>
-                  <th style={{ padding: '10px 2px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 12 }}>{fmtR(totais.comissao)}</th>
+                  <th colSpan="2" style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 700, fontSize: 11 }}>TOTAIS:</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--blue)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.bruto)}</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--red)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.cancelado)}</th>
+                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.liquido)}</th>
+                  <th style={{ padding: '8px 2px' }}></th>
+                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.comissao)}</th>
                 </tr>
               </tfoot>
             </table>
@@ -445,40 +445,40 @@ export default function ComissoesPage() {
             white-space: nowrap !important;
           }
 
-          /* Larguras iguais à página - ultra-compactas */
+          /* Larguras iguais à página - tabela de 600px */
           table th:nth-child(1),
           table td:nth-child(1) {
-            width: 6% !important;
+            width: 11% !important;
           }
 
           table th:nth-child(2),
           table td:nth-child(2) {
-            width: 5% !important;
+            width: 9% !important;
           }
 
           table th:nth-child(3),
           table td:nth-child(3) {
-            width: 13% !important;
+            width: 16% !important;
           }
 
           table th:nth-child(4),
           table td:nth-child(4) {
-            width: 11% !important;
+            width: 14% !important;
           }
 
           table th:nth-child(5),
           table td:nth-child(5) {
-            width: 13% !important;
+            width: 16% !important;
           }
 
           table th:nth-child(6),
           table td:nth-child(6) {
-            width: 6% !important;
+            width: 10% !important;
           }
 
           table th:nth-child(7),
           table td:nth-child(7) {
-            width: 13% !important;
+            width: 16% !important;
           }
 
           /* Alinhamentos */
