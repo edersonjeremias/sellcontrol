@@ -139,8 +139,12 @@ export default function ComissoesPage() {
 
         const status = (v.status || '').toUpperCase()
 
-        // Ignora CANCELADOS e DEVOLVIDOS (mesma lógica do dashboard)
-        if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
+        // Verifica se é vendido ou cancelado
+        const isVendido = ['ENVIADO', 'VENDIDO'].includes(status)
+        const isCancelado = status === 'CANCELADO' || status === 'DEVOLVIDO'
+
+        // Ignora se não for vendido nem cancelado
+        if (!isVendido && !isCancelado) return
 
         // Usa data_live se disponível, senão usa created_at
         let dataVenda = v.data_live
@@ -161,7 +165,13 @@ export default function ComissoesPage() {
 
         // Usa preço promocional se existir, senão usa preço normal
         const valor = Number(v.preco_promocional || v.preco) || 0
-        grouped[key].bruto += valor
+
+        // Soma no bruto ou cancelado dependendo do status
+        if (isCancelado) {
+          grouped[key].cancelado += valor
+        } else if (isVendido) {
+          grouped[key].bruto += valor
+        }
       })
 
       // Converter para array e calcular líquido
