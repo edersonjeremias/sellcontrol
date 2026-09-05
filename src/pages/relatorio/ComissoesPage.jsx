@@ -345,8 +345,8 @@ export default function ComissoesPage() {
       <style>{`
         @media print {
           @page {
-            size: A4 landscape;
-            margin: 10mm;
+            size: A4 portrait;
+            margin: 8mm 4mm;
           }
 
           * {
@@ -386,31 +386,36 @@ export default function ComissoesPage() {
             padding: 0 !important;
           }
 
+          /* Esconde inputs na impressão */
+          input {
+            display: none !important;
+          }
+
           /* Cabeçalho */
           [data-print-area] h1 {
-            font-size: 16px !important;
+            font-size: 14px !important;
             font-weight: 700 !important;
             text-align: center !important;
-            margin: 0 0 6px 0 !important;
+            margin: 0 0 4px 0 !important;
             color: #1a1a1a !important;
           }
 
           [data-print-area] p {
-            font-size: 11px !important;
+            font-size: 9px !important;
             text-align: center !important;
-            margin: 0 0 10px 0 !important;
+            margin: 0 0 6px 0 !important;
             color: #666 !important;
-            padding-bottom: 8px !important;
+            padding-bottom: 4px !important;
             border-bottom: 1px solid #ddd !important;
           }
 
-          /* Tabela limpa e legível */
+          /* Tabela compacta */
           table {
             width: 100% !important;
-            table-layout: auto !important;
+            table-layout: fixed !important;
             border-collapse: collapse !important;
-            margin-top: 8px !important;
-            font-size: 10px !important;
+            margin-top: 4px !important;
+            font-size: 8px !important;
             color: #1a1a1a !important;
             border: none !important;
           }
@@ -420,9 +425,9 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 6px 4px !important;
+            padding: 3px 1px !important;
             text-align: center !important;
-            font-size: 9px !important;
+            font-size: 7px !important;
             font-weight: 700 !important;
             color: #333 !important;
             text-transform: uppercase !important;
@@ -433,11 +438,47 @@ export default function ComissoesPage() {
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 6px 4px !important;
-            font-size: 10px !important;
+            padding: 4px 1px !important;
+            font-size: 8px !important;
             color: #1a1a1a !important;
-            line-height: 1.3 !important;
+            line-height: 1.2 !important;
             white-space: nowrap !important;
+          }
+
+          /* Larguras muito compactas */
+          table th:nth-child(1),
+          table td:nth-child(1) {
+            width: 8% !important;
+          }
+
+          table th:nth-child(2),
+          table td:nth-child(2) {
+            width: 7% !important;
+          }
+
+          table th:nth-child(3),
+          table td:nth-child(3) {
+            width: 14% !important;
+          }
+
+          table th:nth-child(4),
+          table td:nth-child(4) {
+            width: 12% !important;
+          }
+
+          table th:nth-child(5),
+          table td:nth-child(5) {
+            width: 14% !important;
+          }
+
+          table th:nth-child(6),
+          table td:nth-child(6) {
+            width: 5% !important;
+          }
+
+          table th:nth-child(7),
+          table td:nth-child(7) {
+            width: 14% !important;
           }
 
           /* Alinhamentos */
@@ -472,8 +513,8 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 8px 4px !important;
-            font-size: 10px !important;
+            padding: 5px 1px !important;
+            font-size: 8.5px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
             white-space: nowrap !important;
