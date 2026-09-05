@@ -425,7 +425,7 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 3px 1px !important;
+            padding: 3px 0px !important;
             text-align: center !important;
             font-size: 7px !important;
             font-weight: 700 !important;
@@ -438,47 +438,47 @@ export default function ComissoesPage() {
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 4px 1px !important;
+            padding: 4px 0px !important;
             font-size: 8px !important;
             color: #1a1a1a !important;
             line-height: 1.2 !important;
             white-space: nowrap !important;
           }
 
-          /* Larguras muito compactas */
+          /* Larguras ultra-compactas - economiza espaço */
           table th:nth-child(1),
           table td:nth-child(1) {
-            width: 8% !important;
+            width: 6% !important;
           }
 
           table th:nth-child(2),
           table td:nth-child(2) {
-            width: 7% !important;
+            width: 5% !important;
           }
 
           table th:nth-child(3),
           table td:nth-child(3) {
-            width: 14% !important;
+            width: 12% !important;
           }
 
           table th:nth-child(4),
           table td:nth-child(4) {
-            width: 12% !important;
+            width: 10% !important;
           }
 
           table th:nth-child(5),
           table td:nth-child(5) {
-            width: 14% !important;
+            width: 12% !important;
           }
 
           table th:nth-child(6),
           table td:nth-child(6) {
-            width: 5% !important;
+            width: 4% !important;
           }
 
           table th:nth-child(7),
           table td:nth-child(7) {
-            width: 14% !important;
+            width: 12% !important;
           }
 
           /* Alinhamentos */
@@ -513,7 +513,7 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 5px 1px !important;
+            padding: 5px 0px !important;
             font-size: 8.5px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
