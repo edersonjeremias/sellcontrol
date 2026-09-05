@@ -180,6 +180,8 @@ export default function CobrancasPage() {
   const [showMsgModal,     setShowMsgModal]     = useState(false)
   const [mensagemCustom,   setMensagemCustom]   = useState('')
   const [msgTemporaria,    setMsgTemporaria]    = useState('')
+  const [mensagemAtiva,    setMensagemAtiva]    = useState(true)
+  const [ativaTemporaria,  setAtivaTemporaria]  = useState(true)
 
   // ── Carga de dados ─────────────────────────────────────────
   const carregar = useCallback(async () => {
@@ -208,7 +210,9 @@ export default function CobrancasPage() {
 
     // Carrega mensagem personalizada salva
     const msgSalva = localStorage.getItem('mensagemCobrancaCustom')
+    const msgAtiva = localStorage.getItem('mensagemCobrancaAtiva')
     if (msgSalva) setMensagemCustom(msgSalva)
+    if (msgAtiva !== null) setMensagemAtiva(msgAtiva === 'true')
 
     carregar()
   }, [tenantId, carregar])
@@ -226,14 +230,24 @@ export default function CobrancasPage() {
   // ── Mensagem Personalizada ──────────────────────────────────
   function abrirModalMensagem() {
     setMsgTemporaria(mensagemCustom)
+    setAtivaTemporaria(mensagemAtiva)
     setShowMsgModal(true)
   }
 
   function salvarMensagem() {
     setMensagemCustom(msgTemporaria)
+    setMensagemAtiva(ativaTemporaria)
     localStorage.setItem('mensagemCobrancaCustom', msgTemporaria)
+    localStorage.setItem('mensagemCobrancaAtiva', String(ativaTemporaria))
     setShowMsgModal(false)
-    showToast(msgTemporaria.trim() ? 'Mensagem salva!' : 'Mensagem removida')
+
+    if (!msgTemporaria.trim()) {
+      showToast('Mensagem removida')
+    } else if (ativaTemporaria) {
+      showToast('Mensagem salva e ativada!')
+    } else {
+      showToast('Mensagem salva (inativa)')
+    }
   }
 
   // ── Ação modal ─────────────────────────────────────────────
@@ -269,8 +283,8 @@ export default function CobrancasPage() {
     if (tipo === 'lembrete') {
       let msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* ainda está aguardando o pagamento.`
 
-      // Adiciona mensagem personalizada se houver
-      if (mensagemCustom.trim()) {
+      // Adiciona mensagem personalizada se houver E estiver ativa
+      if (mensagemCustom.trim() && mensagemAtiva) {
         msg += `\n\n${mensagemCustom.trim()}`
       }
 
@@ -279,8 +293,8 @@ export default function CobrancasPage() {
     } else if (tipo === 'enviar') {
       let msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nSegue sua compra do dia *${fmtData(cobranca.data)}*.`
 
-      // Adiciona mensagem personalizada se houver
-      if (mensagemCustom.trim()) {
+      // Adiciona mensagem personalizada se houver E estiver ativa
+      if (mensagemCustom.trim() && mensagemAtiva) {
         msg += `\n\n${mensagemCustom.trim()}`
       }
 
@@ -665,9 +679,13 @@ export default function CobrancasPage() {
                   minWidth: 44,
                   padding: '0 10px',
                   position: 'relative',
-                  border: mensagemCustom.trim() ? '1px solid var(--blue)' : '1px solid var(--border-light)'
+                  border: mensagemCustom.trim() && mensagemAtiva ? '1px solid var(--green)' : '1px solid var(--border-light)'
                 }}
-                title={mensagemCustom.trim() ? `Mensagem: "${mensagemCustom.substring(0, 30)}..."` : 'Configurar mensagem personalizada'}
+                title={
+                  mensagemCustom.trim()
+                    ? (mensagemAtiva ? `✅ ATIVA: "${mensagemCustom.substring(0, 30)}..."` : `⏸️ INATIVA: "${mensagemCustom.substring(0, 30)}..."`)
+                    : 'Configurar mensagem personalizada'
+                }
               >
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -679,7 +697,7 @@ export default function CobrancasPage() {
                     right: -4,
                     width: 8,
                     height: 8,
-                    background: 'var(--blue)',
+                    background: mensagemAtiva ? 'var(--green)' : 'var(--muted)',
                     borderRadius: '50%'
                   }}/>
                 )}
@@ -1099,12 +1117,55 @@ export default function CobrancasPage() {
                 </div>
               </div>
 
+              {/* Checkbox Ativar/Desativar */}
+              {msgTemporaria.trim() && (
+                <div style={{
+                  marginBottom: 16,
+                  padding: '12px 14px',
+                  background: ativaTemporaria ? 'rgba(129,201,149,0.1)' : 'rgba(154,160,166,0.1)',
+                  border: `1px solid ${ativaTemporaria ? 'rgba(129,201,149,0.3)' : 'rgba(154,160,166,0.3)'}`,
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10
+                }}>
+                  <input
+                    type="checkbox"
+                    id="ativarMsg"
+                    checked={ativaTemporaria}
+                    onChange={e => setAtivaTemporaria(e.target.checked)}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      cursor: 'pointer',
+                      accentColor: 'var(--green)',
+                      flexShrink: 0
+                    }}
+                  />
+                  <label
+                    htmlFor="ativarMsg"
+                    style={{
+                      fontSize: 13,
+                      color: ativaTemporaria ? 'var(--green)' : 'var(--muted)',
+                      cursor: 'pointer',
+                      fontWeight: ativaTemporaria ? 700 : 600,
+                      flex: 1
+                    }}
+                  >
+                    {ativaTemporaria ? '✅ Mensagem ativa (será enviada junto com as cobranças)' : '⏸️ Mensagem inativa (salva, mas não será enviada)'}
+                  </label>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => {
                     setMsgTemporaria('')
                     setMensagemCustom('')
+                    setMensagemAtiva(true)
+                    setAtivaTemporaria(true)
                     localStorage.removeItem('mensagemCobrancaCustom')
+                    localStorage.removeItem('mensagemCobrancaAtiva')
                     setShowMsgModal(false)
                     showToast('Mensagem removida')
                   }}
