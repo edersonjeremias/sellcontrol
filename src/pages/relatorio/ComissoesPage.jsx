@@ -345,8 +345,8 @@ export default function ComissoesPage() {
       <style>{`
         @media print {
           @page {
-            size: A4 portrait;
-            margin: 8mm 5mm;
+            size: A4 landscape;
+            margin: 10mm;
           }
 
           * {
@@ -388,29 +388,29 @@ export default function ComissoesPage() {
 
           /* Cabeçalho */
           [data-print-area] h1 {
-            font-size: 15px !important;
+            font-size: 16px !important;
             font-weight: 700 !important;
             text-align: center !important;
-            margin: 0 0 4px 0 !important;
+            margin: 0 0 6px 0 !important;
             color: #1a1a1a !important;
           }
 
           [data-print-area] p {
-            font-size: 10px !important;
+            font-size: 11px !important;
             text-align: center !important;
-            margin: 0 0 8px 0 !important;
+            margin: 0 0 10px 0 !important;
             color: #666 !important;
-            padding-bottom: 6px !important;
+            padding-bottom: 8px !important;
             border-bottom: 1px solid #ddd !important;
           }
 
-          /* Tabela AUTO-AJUSTÁVEL */
+          /* Tabela limpa e legível */
           table {
             width: 100% !important;
             table-layout: auto !important;
             border-collapse: collapse !important;
-            margin-top: 6px !important;
-            font-size: 9px !important;
+            margin-top: 8px !important;
+            font-size: 10px !important;
             color: #1a1a1a !important;
             border: none !important;
           }
@@ -420,9 +420,9 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 4px 1px !important;
+            padding: 6px 4px !important;
             text-align: center !important;
-            font-size: 8px !important;
+            font-size: 9px !important;
             font-weight: 700 !important;
             color: #333 !important;
             text-transform: uppercase !important;
@@ -433,10 +433,10 @@ export default function ComissoesPage() {
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 5px 1px !important;
-            font-size: 9px !important;
+            padding: 6px 4px !important;
+            font-size: 10px !important;
             color: #1a1a1a !important;
-            line-height: 1.2 !important;
+            line-height: 1.3 !important;
             white-space: nowrap !important;
           }
 
@@ -472,8 +472,8 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 6px 1px !important;
-            font-size: 9px !important;
+            padding: 8px 4px !important;
+            font-size: 10px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
             white-space: nowrap !important;
