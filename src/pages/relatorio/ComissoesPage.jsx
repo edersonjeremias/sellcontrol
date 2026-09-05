@@ -301,8 +301,9 @@ export default function ComissoesPage() {
                       <input
                         className="print:hidden"
                         type="number"
-                        value={comissoes[item.chave] || 0}
+                        value={comissoes[item.chave] || ''}
                         onChange={e => setComissao(item.chave, e.target.value)}
+                        placeholder="0"
                         style={{
                           width: 60,
                           background: 'var(--input-bg)',
@@ -317,7 +318,7 @@ export default function ComissoesPage() {
                         max="100"
                         step="0.1"
                       />
-                      <span className="hidden print:inline" style={{ fontSize: 11 }}>{comissoes[item.chave] || 0} %</span>
+                      <span className="hidden print:inline" style={{ fontSize: 11 }}>{comissoes[item.chave] || ''} %</span>
                     </td>
                     <td style={{ padding: '6px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 11 }}>
                       {fmtR(calcValorPagar(item.liquido, item.chave))}
