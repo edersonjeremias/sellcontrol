@@ -377,7 +377,7 @@ export default function ComissoesPage() {
               <tfoot>
                 <tr className="border-t-2 print:border-t-2 print:border-gray-400 print:bg-gray-100"
                     style={{ borderColor: 'var(--border-light)', background: 'rgba(138,180,248,0.05)' }}>
-                  <th colSpan="2" className="px-2 py-3 text-center font-bold text-xs
+                  <th colSpan="2" className="px-2 py-3 text-right font-bold text-xs
                                            print:border print:border-gray-400 print:text-black print:!text-lg"
                       style={{ color: 'var(--text-header)' }}>
                     TOTAIS:
@@ -462,20 +462,20 @@ export default function ComissoesPage() {
 
           /* Cabeçalho */
           [data-print-area] h1 {
-            font-size: 14px !important;
+            font-size: 24px !important;
             font-weight: 700 !important;
             text-align: center !important;
-            margin: 0 0 4px 0 !important;
+            margin: 0 0 8px 0 !important;
             color: #1a1a1a !important;
           }
 
           [data-print-area] p {
-            font-size: 9px !important;
+            font-size: 16px !important;
             text-align: center !important;
-            margin: 0 0 6px 0 !important;
+            margin: 0 0 10px 0 !important;
             color: #666 !important;
-            padding-bottom: 4px !important;
-            border-bottom: 1px solid #ddd !important;
+            padding-bottom: 6px !important;
+            border-bottom: 2px solid #ddd !important;
           }
 
           /* Tabela compacta */
@@ -483,8 +483,8 @@ export default function ComissoesPage() {
             width: 100% !important;
             table-layout: fixed !important;
             border-collapse: collapse !important;
-            margin-top: 4px !important;
-            font-size: 8px !important;
+            margin-top: 8px !important;
+            font-size: 14px !important;
             color: #1a1a1a !important;
             border: none !important;
           }
@@ -494,9 +494,9 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 3px 0px !important;
+            padding: 6px 4px !important;
             text-align: center !important;
-            font-size: 7px !important;
+            font-size: 13px !important;
             font-weight: 700 !important;
             color: #333 !important;
             text-transform: uppercase !important;
@@ -507,10 +507,10 @@ export default function ComissoesPage() {
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 4px 0px !important;
-            font-size: 8px !important;
+            padding: 6px 4px !important;
+            font-size: 14px !important;
             color: #1a1a1a !important;
-            line-height: 1.2 !important;
+            line-height: 1.3 !important;
             white-space: nowrap !important;
           }
 
@@ -582,28 +582,32 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 5px 0px !important;
-            font-size: 8.5px !important;
+            padding: 8px 4px !important;
+            font-size: 15px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
             white-space: nowrap !important;
           }
 
-          table tfoot th:nth-child(1),
-          table tfoot th:nth-child(2) {
-            text-align: center !important;
+          table tfoot th:nth-child(1) {
+            text-align: right !important;
           }
 
+          table tfoot th:nth-child(2),
           table tfoot th:nth-child(3),
           table tfoot th:nth-child(4),
-          table tfoot th:nth-child(5),
-          table tfoot th:nth-child(7) {
+          table tfoot th:nth-child(5) {
             text-align: right !important;
             font-family: 'Courier New', monospace !important;
           }
 
           table tfoot th:nth-child(6) {
             text-align: center !important;
+          }
+
+          table tfoot th:nth-child(7) {
+            text-align: right !important;
+            font-family: 'Courier New', monospace !important;
           }
 
           /* Sem quebras */
