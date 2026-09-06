@@ -262,10 +262,10 @@ export default function ComissoesPage() {
       <div className="p-4 print:p-0 print:bg-white" data-print-area>
         {/* Cabeçalho para impressão - só aparece ao imprimir */}
         <div className="hidden print:block text-center mb-6 pb-4 border-b-2 border-gray-300">
-          <h1 className="text-2xl font-bold mb-2 print:text-black print:text-3xl">
+          <h1 className="text-2xl font-bold mb-2 print:text-black print:text-4xl">
             Relatório de Comissões{nomeEmpresa && ` - ${nomeEmpresa}`}
           </h1>
-          <p className="text-base print:text-gray-600 print:text-lg">
+          <p className="text-base print:text-gray-600 print:text-xl">
             Período: {fmtData(dataInicio)} a {fmtData(dataFim)}
             {vendedoraSel && ` | Vendedora: ${vendedoraSel}`}
           </p>
@@ -278,41 +278,41 @@ export default function ComissoesPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full max-w-4xl mx-auto border-collapse text-sm
-                           print:max-w-full print:text-black print:text-base">
+                           print:max-w-full print:text-black print:text-lg">
               <thead>
                 <tr className="border-b-2 print:border-gray-400" style={{ borderColor: 'var(--border-light)' }}>
                   <th className="px-2 py-2 text-center font-semibold text-xs
-                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     Data
                   </th>
                   <th className="px-2 py-2 text-center font-semibold text-xs
-                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     Vendedora (Live)
                   </th>
                   <th className="px-2 py-2 text-center font-semibold text-xs
-                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     Vendido Bruto
                   </th>
                   <th className="px-2 py-2 text-center font-semibold text-xs
-                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     Cancelados
                   </th>
                   <th className="px-2 py-2 text-center font-semibold text-xs
-                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     Líquido Base
                   </th>
                   <th className="px-2 py-2 text-center font-semibold text-xs
-                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     % Comissão
                   </th>
                   <th className="px-2 py-2 text-center font-semibold text-xs
-                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     Valor a Pagar
                   </th>
@@ -322,39 +322,39 @@ export default function ComissoesPage() {
                 {dados.map(item => (
                   <tr key={item.chave} className="border-b print:border-gray-400" style={{ borderColor: 'var(--border-light)' }}>
                     <td className="px-2 py-2 text-center text-xs
-                                 print:border print:border-gray-400 print:text-black print:text-sm"
+                                 print:border print:border-gray-400 print:text-black print:text-base"
                         style={{ color: 'var(--text-body)' }}>
                       {fmtData(item.data)}
                     </td>
                     <td className="px-2 py-2 text-center text-xs
-                                 print:border print:border-gray-400 print:text-black print:text-sm"
+                                 print:border print:border-gray-400 print:text-black print:text-base"
                         style={{ color: 'var(--text-body)' }}>
                       {item.vendedora}
                     </td>
                     <td className="px-2 py-2 text-right text-xs font-semibold
-                                 print:border print:border-gray-400 print:text-black print:text-sm"
+                                 print:border print:border-gray-400 print:text-black print:text-base"
                         style={{ color: 'var(--blue)' }}>
                       {fmtR(item.bruto)}
                     </td>
                     <td className="px-2 py-2 text-right text-xs font-semibold
-                                 print:border print:border-gray-400 print:text-black print:text-sm"
+                                 print:border print:border-gray-400 print:text-black print:text-base"
                         style={{ color: 'var(--red)' }}>
                       {fmtR(item.cancelado)}
                     </td>
                     <td className="px-2 py-2 text-right text-xs font-bold
-                                 print:border print:border-gray-400 print:text-black print:text-sm"
+                                 print:border print:border-gray-400 print:text-black print:text-base"
                         style={{ color: 'var(--green)' }}>
                       {fmtR(item.liquido)}
                     </td>
                     <td className="px-2 py-2 text-center text-xs
-                                 print:border print:border-gray-400 print:text-black print:text-sm">
+                                 print:border print:border-gray-400 print:text-black print:text-base">
                       <input
                         type="number"
                         value={comissoes[item.chave] || ''}
                         onChange={e => setComissao(item.chave, e.target.value)}
                         placeholder="0"
                         className="w-16 px-2 py-1 text-center text-xs rounded
-                                 print:border-none print:bg-transparent print:w-auto print:p-0 print:appearance-none print:text-black print:text-sm"
+                                 print:border-none print:bg-transparent print:w-auto print:p-0 print:appearance-none print:text-black print:text-base"
                         style={{
                           background: 'var(--input-bg)',
                           border: '1px solid var(--input-border)',
@@ -364,10 +364,10 @@ export default function ComissoesPage() {
                         max="100"
                         step="0.1"
                       />
-                      <span className="ml-1 print:text-sm">%</span>
+                      <span className="ml-1 print:text-base">%</span>
                     </td>
                     <td className="px-2 py-2 text-right text-xs font-bold
-                                 print:border print:border-gray-400 print:text-black print:text-sm"
+                                 print:border print:border-gray-400 print:text-black print:text-base"
                         style={{ color: 'var(--yellow)' }}>
                       {fmtR(calcValorPagar(item.liquido, item.chave))}
                     </td>
@@ -378,28 +378,28 @@ export default function ComissoesPage() {
                 <tr className="border-t-2 print:border-t-2 print:border-gray-400 print:bg-gray-100"
                     style={{ borderColor: 'var(--border-light)', background: 'rgba(138,180,248,0.05)' }}>
                   <th colSpan="2" className="px-2 py-3 text-center font-bold text-xs
-                                           print:border print:border-gray-400 print:text-black print:text-sm"
+                                           print:border print:border-gray-400 print:text-black print:text-base"
                       style={{ color: 'var(--text-header)' }}>
                     TOTAIS:
                   </th>
                   <th className="px-2 py-3 text-right font-bold text-xs
-                               print:border print:border-gray-400 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:text-black print:text-base"
                       style={{ color: 'var(--blue)' }}>
                     {fmtR(totais.bruto)}
                   </th>
                   <th className="px-2 py-3 text-right font-bold text-xs
-                               print:border print:border-gray-400 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:text-black print:text-base"
                       style={{ color: 'var(--red)' }}>
                     {fmtR(totais.cancelado)}
                   </th>
                   <th className="px-2 py-3 text-right font-bold text-xs
-                               print:border print:border-gray-400 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:text-black print:text-base"
                       style={{ color: 'var(--green)' }}>
                     {fmtR(totais.liquido)}
                   </th>
                   <th className="px-2 py-3 print:border print:border-gray-400"></th>
                   <th className="px-2 py-3 text-right font-bold text-xs
-                               print:border print:border-gray-400 print:text-black print:text-sm"
+                               print:border print:border-gray-400 print:text-black print:text-base"
                       style={{ color: 'var(--yellow)' }}>
                     {fmtR(totais.comissao)}
                   </th>
