@@ -259,81 +259,150 @@ export default function ComissoesPage() {
       </div>
 
       {/* Conteúdo principal */}
-      <div style={{ padding: '8px 16px' }} data-print-area>
+      <div className="p-4 print:p-0 print:bg-white" data-print-area>
         {/* Cabeçalho para impressão - só aparece ao imprimir */}
-        <div className="hidden print:block" style={{ marginBottom: 16, textAlign: 'center' }}>
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: '#000', margin: '0 0 4px 0' }}>
+        <div className="hidden print:block text-center mb-6 pb-4 border-b-2 border-gray-300">
+          <h1 className="text-2xl font-bold mb-2 print:text-black">
             Relatório de Comissões{nomeEmpresa && ` - ${nomeEmpresa}`}
           </h1>
-          <p style={{ fontSize: 11, color: '#666', margin: 0 }}>
+          <p className="text-base print:text-gray-600">
             Período: {fmtData(dataInicio)} a {fmtData(dataFim)}
             {vendedoraSel && ` | Vendedora: ${vendedoraSel}`}
           </p>
         </div>
 
         {dados.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>
+          <div className="text-center py-10" style={{ color: 'var(--muted)' }}>
             {carregando ? 'Carregando...' : 'Selecione o período e clique em Buscar'}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', maxWidth: '600px', margin: '0 auto', borderCollapse: 'collapse', fontSize: 11, tableLayout: 'fixed' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full max-w-4xl mx-auto border-collapse text-sm
+                           print:max-w-full print:text-black">
               <thead>
-                <tr style={{ borderBottom: '2px solid var(--border-light)' }}>
-                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '11%' }}>Data</th>
-                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '9%' }}>Vend.</th>
-                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '16%' }}>Bruto</th>
-                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '14%' }}>Cancel.</th>
-                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '16%' }}>Líquido</th>
-                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '10%' }}>%</th>
-                  <th style={{ padding: '6px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 600, fontSize: 10, width: '16%' }}>A Pagar</th>
+                <tr className="border-b-2 print:border-gray-400" style={{ borderColor: 'var(--border-light)' }}>
+                  <th className="px-2 py-2 text-center font-semibold text-xs
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    Data
+                  </th>
+                  <th className="px-2 py-2 text-center font-semibold text-xs
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    Vendedora (Live)
+                  </th>
+                  <th className="px-2 py-2 text-center font-semibold text-xs
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    Vendido Bruto
+                  </th>
+                  <th className="px-2 py-2 text-center font-semibold text-xs
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    Cancelados
+                  </th>
+                  <th className="px-2 py-2 text-center font-semibold text-xs
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    Líquido Base
+                  </th>
+                  <th className="px-2 py-2 text-center font-semibold text-xs
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    % Comissão
+                  </th>
+                  <th className="px-2 py-2 text-center font-semibold text-xs
+                               print:border print:border-gray-400 print:bg-gray-100 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    Valor a Pagar
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {dados.map(item => (
-                  <tr key={item.chave} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                    <td style={{ padding: '5px 2px', textAlign: 'center', color: 'var(--text-body)', fontSize: 10 }}>{fmtData(item.data)}</td>
-                    <td style={{ padding: '5px 2px', textAlign: 'center', color: 'var(--text-body)', fontSize: 10 }}>{item.vendedora}</td>
-                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--blue)', fontWeight: 600, fontSize: 10 }}>{fmtR(item.bruto)}</td>
-                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--red)', fontWeight: 600, fontSize: 10 }}>{fmtR(item.cancelado)}</td>
-                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 10 }}>{fmtR(item.liquido)}</td>
-                    <td style={{ padding: '5px 2px', textAlign: 'center' }}>
+                  <tr key={item.chave} className="border-b print:border-gray-400" style={{ borderColor: 'var(--border-light)' }}>
+                    <td className="px-2 py-2 text-center text-xs
+                                 print:border print:border-gray-400 print:text-black"
+                        style={{ color: 'var(--text-body)' }}>
+                      {fmtData(item.data)}
+                    </td>
+                    <td className="px-2 py-2 text-center text-xs
+                                 print:border print:border-gray-400 print:text-black"
+                        style={{ color: 'var(--text-body)' }}>
+                      {item.vendedora}
+                    </td>
+                    <td className="px-2 py-2 text-right text-xs font-semibold
+                                 print:border print:border-gray-400 print:text-black"
+                        style={{ color: 'var(--blue)' }}>
+                      {fmtR(item.bruto)}
+                    </td>
+                    <td className="px-2 py-2 text-right text-xs font-semibold
+                                 print:border print:border-gray-400 print:text-black"
+                        style={{ color: 'var(--red)' }}>
+                      {fmtR(item.cancelado)}
+                    </td>
+                    <td className="px-2 py-2 text-right text-xs font-bold
+                                 print:border print:border-gray-400 print:text-black"
+                        style={{ color: 'var(--green)' }}>
+                      {fmtR(item.liquido)}
+                    </td>
+                    <td className="px-2 py-2 text-center text-xs
+                                 print:border print:border-gray-400 print:text-black">
                       <input
-                        className="print:hidden"
                         type="number"
                         value={comissoes[item.chave] || ''}
                         onChange={e => setComissao(item.chave, e.target.value)}
                         placeholder="0"
+                        className="w-16 px-2 py-1 text-center text-xs rounded
+                                 print:border-none print:bg-transparent print:w-auto print:p-0 print:appearance-none print:text-black"
                         style={{
-                          width: 60,
                           background: 'var(--input-bg)',
                           border: '1px solid var(--input-border)',
-                          borderRadius: 4,
-                          color: 'var(--input-text)',
-                          padding: '4px 6px',
-                          fontSize: 11,
-                          textAlign: 'center'
+                          color: 'var(--input-text)'
                         }}
                         min="0"
                         max="100"
                         step="0.1"
                       />
-                      <span className="hidden print:inline" style={{ fontSize: 10 }}>{comissoes[item.chave] || ''} %</span>
+                      <span className="ml-1">%</span>
                     </td>
-                    <td style={{ padding: '5px 2px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 10 }}>
+                    <td className="px-2 py-2 text-right text-xs font-bold
+                                 print:border print:border-gray-400 print:text-black"
+                        style={{ color: 'var(--yellow)' }}>
                       {fmtR(calcValorPagar(item.liquido, item.chave))}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
-                <tr style={{ borderTop: '3px solid var(--border-light)', background: 'rgba(138,180,248,0.05)' }}>
-                  <th colSpan="2" style={{ padding: '8px 2px', textAlign: 'center', color: 'var(--text-header)', fontWeight: 700, fontSize: 11 }}>TOTAIS:</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--blue)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.bruto)}</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--red)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.cancelado)}</th>
-                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--green)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.liquido)}</th>
-                  <th style={{ padding: '8px 2px' }}></th>
-                  <th style={{ padding: '8px 2px', textAlign: 'right', color: 'var(--yellow)', fontWeight: 700, fontSize: 11 }}>{fmtR(totais.comissao)}</th>
+                <tr className="border-t-2 print:border-t-2 print:border-gray-400 print:bg-gray-100"
+                    style={{ borderColor: 'var(--border-light)', background: 'rgba(138,180,248,0.05)' }}>
+                  <th colSpan="2" className="px-2 py-3 text-center font-bold text-xs
+                                           print:border print:border-gray-400 print:text-black"
+                      style={{ color: 'var(--text-header)' }}>
+                    TOTAIS:
+                  </th>
+                  <th className="px-2 py-3 text-right font-bold text-xs
+                               print:border print:border-gray-400 print:text-black"
+                      style={{ color: 'var(--blue)' }}>
+                    {fmtR(totais.bruto)}
+                  </th>
+                  <th className="px-2 py-3 text-right font-bold text-xs
+                               print:border print:border-gray-400 print:text-black"
+                      style={{ color: 'var(--red)' }}>
+                    {fmtR(totais.cancelado)}
+                  </th>
+                  <th className="px-2 py-3 text-right font-bold text-xs
+                               print:border print:border-gray-400 print:text-black"
+                      style={{ color: 'var(--green)' }}>
+                    {fmtR(totais.liquido)}
+                  </th>
+                  <th className="px-2 py-3 print:border print:border-gray-400"></th>
+                  <th className="px-2 py-3 text-right font-bold text-xs
+                               print:border print:border-gray-400 print:text-black"
+                      style={{ color: 'var(--yellow)' }}>
+                    {fmtR(totais.comissao)}
+                  </th>
                 </tr>
               </tfoot>
             </table>
