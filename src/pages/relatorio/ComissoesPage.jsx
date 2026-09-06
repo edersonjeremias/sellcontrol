@@ -463,27 +463,29 @@ export default function ComissoesPage() {
             -moz-appearance: none !important;
             appearance: none !important;
             padding: 0 !important;
+            margin: 0 !important;
             width: auto !important;
             color: #1a1a1a !important;
-            font-size: 16px !important;
-            font-weight: 600 !important;
+            font-size: 18px !important;
+            font-weight: normal !important;
+            text-align: center !important;
           }
 
           /* Cabeçalho */
           [data-print-area] h1 {
-            font-size: 32px !important;
+            font-size: 36px !important;
             font-weight: 700 !important;
             text-align: center !important;
-            margin: 0 0 10px 0 !important;
+            margin: 0 0 12px 0 !important;
             color: #1a1a1a !important;
           }
 
           [data-print-area] p {
-            font-size: 18px !important;
+            font-size: 20px !important;
             text-align: center !important;
-            margin: 0 0 12px 0 !important;
+            margin: 0 0 14px 0 !important;
             color: #666 !important;
-            padding-bottom: 8px !important;
+            padding-bottom: 10px !important;
             border-bottom: 2px solid #ddd !important;
           }
 
@@ -492,8 +494,8 @@ export default function ComissoesPage() {
             width: 100% !important;
             table-layout: fixed !important;
             border-collapse: collapse !important;
-            margin-top: 10px !important;
-            font-size: 16px !important;
+            margin-top: 12px !important;
+            font-size: 18px !important;
             color: #1a1a1a !important;
             border: none !important;
           }
@@ -503,9 +505,9 @@ export default function ComissoesPage() {
             background: #f5f5f5 !important;
             border: none !important;
             border-bottom: 2px solid #333 !important;
-            padding: 8px 5px !important;
+            padding: 10px 6px !important;
             text-align: center !important;
-            font-size: 15px !important;
+            font-size: 17px !important;
             font-weight: 700 !important;
             color: #333 !important;
             text-transform: uppercase !important;
@@ -516,10 +518,10 @@ export default function ComissoesPage() {
           table tbody td {
             border: none !important;
             border-bottom: 1px solid #e0e0e0 !important;
-            padding: 8px 5px !important;
-            font-size: 16px !important;
+            padding: 10px 6px !important;
+            font-size: 18px !important;
             color: #1a1a1a !important;
-            line-height: 1.4 !important;
+            line-height: 1.5 !important;
             white-space: nowrap !important;
           }
 
@@ -582,6 +584,13 @@ export default function ComissoesPage() {
             font-weight: 600 !important;
           }
 
+          /* Span do % junto do número */
+          table tbody td span {
+            margin-left: 2px !important;
+            font-size: 18px !important;
+            font-weight: normal !important;
+          }
+
           /* Rodapé */
           table tfoot tr {
             background: #f9f9f9 !important;
@@ -591,8 +600,8 @@ export default function ComissoesPage() {
             border: none !important;
             border-top: 2px solid #333 !important;
             border-bottom: 2px solid #333 !important;
-            padding: 10px 5px !important;
-            font-size: 17px !important;
+            padding: 12px 6px !important;
+            font-size: 19px !important;
             font-weight: 700 !important;
             color: #1a1a1a !important;
             white-space: nowrap !important;
