@@ -7,7 +7,7 @@ import { criarPagamentoPIX, buscarPagamentoRomaneio } from '../../services/merca
 
 export default function MeuFrete() {
   const { cliente, tenantId } = usePortalAuth()
-  const { showToast } = usePortalToast()
+  const showToast = usePortalToast()
 
   const [romaneios, setRomaneios] = useState([])
   const [loading, setLoading] = useState(true)
@@ -77,23 +77,47 @@ export default function MeuFrete() {
   useEffect(() => { carregar() }, [carregar])
 
   const handleCotarFrete = async (romaneio) => {
+    console.log('🚚 Iniciando cotação de frete', { romaneio, enderecoSelecionado })
+
+    // Validação 1: Endereço selecionado
     if (!enderecoSelecionado) {
+      console.warn('❌ Nenhum endereço selecionado')
       return showToast('Selecione um endereço de entrega', 'error')
     }
 
     const endereco = enderecos.find(e => e.id === enderecoSelecionado)
-    if (!endereco) return
+    if (!endereco) {
+      console.warn('❌ Endereço não encontrado na lista')
+      return showToast('Endereço não encontrado', 'error')
+    }
+
+    console.log('✅ Endereço encontrado:', endereco)
+
+    // Validação 2: Dimensões do romaneio
+    if (!romaneio.peso || !romaneio.altura || !romaneio.largura || !romaneio.comprimento) {
+      console.warn('⚠️ Romaneio sem dimensões completas:', {
+        peso: romaneio.peso,
+        altura: romaneio.altura,
+        largura: romaneio.largura,
+        comprimento: romaneio.comprimento
+      })
+      showToast('⚠️ Romaneio sem dimensões. Usando valores padrão para cotação.', 'warning')
+    }
 
     setCotando(true)
     setRomaneioSelecionado(romaneio.id)
 
     try {
+      console.log('🔍 Buscando cotações existentes...')
       const cotacoesExistentes = await buscarCotacoes(romaneio.id)
 
       if (cotacoesExistentes.length > 0) {
+        console.log('✅ Cotações encontradas:', cotacoesExistentes.length)
         setCotacoes(cotacoesExistentes)
         showToast('Cotações carregadas', 'success')
       } else {
+        console.log('📦 Preparando cotação via API...')
+
         const enderecoOrigem = {
           postal_code: '13560340',
           address: 'Rua Antonio Bueno de Camargo',
@@ -119,21 +143,44 @@ export default function MeuFrete() {
           weight: romaneio.peso || 1,
         }
 
+        console.log('📍 Origem:', enderecoOrigem)
+        console.log('📍 Destino:', enderecoDestino)
+        console.log('📦 Pacote:', pacote)
+
+        console.log('🌐 Chamando API Melhor Envio...')
         const cotacoesAPI = await calcularFrete(tenantId, {
           from: enderecoOrigem,
           to: enderecoDestino,
           package: pacote,
         })
 
+        console.log('✅ Cotações recebidas da API:', cotacoesAPI)
+
+        console.log('💾 Salvando cotações no banco...')
         await salvarCotacoes(romaneio.id, cotacoesAPI)
 
+        console.log('🔍 Buscando cotações salvas...')
         const cotacoesSalvas = await buscarCotacoes(romaneio.id)
+        console.log('✅ Cotações salvas:', cotacoesSalvas)
+
         setCotacoes(cotacoesSalvas)
         showToast('Frete cotado com sucesso!', 'success')
       }
     } catch (err) {
-      showToast(err.message || 'Erro ao cotar frete', 'error')
-      console.error(err)
+      console.error('❌ ERRO ao cotar frete:', err)
+      console.error('❌ Stack:', err.stack)
+
+      // Mensagem mais detalhada para o usuário
+      let mensagemErro = err.message || 'Erro ao cotar frete'
+
+      // Detecta erros comuns
+      if (mensagemErro.includes('Token do Melhor Envio não configurado')) {
+        mensagemErro = '⚠️ Token do Melhor Envio não configurado. Contate o administrador.'
+      } else if (mensagemErro.includes('fetch')) {
+        mensagemErro = '🌐 Erro de conexão com API. Verifique sua internet.'
+      }
+
+      showToast(mensagemErro, 'error')
     } finally {
       setCotando(false)
     }
