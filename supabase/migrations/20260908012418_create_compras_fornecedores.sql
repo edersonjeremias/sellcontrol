@@ -19,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_fornecedores_nome ON fornecedores(tenant_id, nome
 -- RLS
 ALTER TABLE fornecedores ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS fornecedores_tenant_isolation ON fornecedores;
 CREATE POLICY fornecedores_tenant_isolation ON fornecedores
   USING (tenant_id = current_setting('app.current_tenant')::uuid);
 
@@ -49,6 +50,7 @@ CREATE INDEX IF NOT EXISTS idx_compras_usuario ON compras(usuario_id);
 -- RLS
 ALTER TABLE compras ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS compras_tenant_isolation ON compras;
 CREATE POLICY compras_tenant_isolation ON compras
   USING (tenant_id = current_setting('app.current_tenant')::uuid);
 
@@ -92,11 +94,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS compras_updated_at ON compras;
 CREATE TRIGGER compras_updated_at
   BEFORE UPDATE ON compras
   FOR EACH ROW
   EXECUTE FUNCTION update_compras_updated_at();
 
+DROP TRIGGER IF EXISTS fornecedores_updated_at ON fornecedores;
 CREATE TRIGGER fornecedores_updated_at
   BEFORE UPDATE ON fornecedores
   FOR EACH ROW
