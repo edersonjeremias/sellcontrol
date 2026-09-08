@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -28,6 +28,11 @@ function formatDate(date) {
   return `${day}/${month}/${year}`
 }
 
+function formatDateToInput(date) {
+  if (!date) return ''
+  return date.split('T')[0]
+}
+
 export default function ComprasPage() {
   const { toast } = useApp()
   const { user, profile } = useAuth()
@@ -37,7 +42,7 @@ export default function ComprasPage() {
   const [fornecedores, setFornecedores] = useState([])
   const [totalDia, setTotalDia] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('compras') // 'compras' ou 'fornecedores'
+  const [view, setView] = useState('compras') // 'compras', 'fornecedores' ou 'historico'
 
   // Estados do formulário
   const [descricao, setDescricao] = useState('')
@@ -45,11 +50,16 @@ export default function ComprasPage() {
   const [precoUnitario, setPrecoUnitario] = useState('')
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState(null)
 
+  // Estados do histórico
+  const hoje = new Date().toISOString().split('T')[0]
+  const [dataInicial, setDataInicial] = useState(hoje)
+  const [dataFinal, setDataFinal] = useState(hoje)
+  const [buscaHistorico, setBuscaHistorico] = useState('')
+
   // Estados do modal
   const [showModalFornecedor, setShowModalFornecedor] = useState(false)
   const [fornecedorEdit, setFornecedorEdit] = useState(null)
   const [compraEdit, setCompraEdit] = useState(null)
-  const [showModalEditarCompra, setShowModalEditarCompra] = useState(false)
 
   // ─── CARREGAR DADOS ────────────────────────────────────────
   useEffect(() => {
@@ -106,7 +116,6 @@ export default function ComprasPage() {
   }
 
   async function carregarTotalDia() {
-    // Calcular total do dia de TODAS as compras (não filtrar por usuário)
     const hoje = new Date().toISOString().split('T')[0]
 
     const { data, error } = await supabase
@@ -116,7 +125,6 @@ export default function ComprasPage() {
 
     if (error) {
       console.error('Erro ao carregar total do dia:', error)
-      // Se der erro, tenta calcular a partir das compras já carregadas
       const totalLocal = compras
         .filter(c => c.data === hoje)
         .reduce((acc, c) => acc + parseFloat(c.total || 0), 0)
@@ -158,7 +166,6 @@ export default function ComprasPage() {
       }
 
       if (compraEdit) {
-        // Atualizar
         const { error } = await supabase
           .from('compras')
           .update(dados)
@@ -166,10 +173,8 @@ export default function ComprasPage() {
 
         if (error) throw error
         toast?.success('Compra atualizada!')
-        setShowModalEditarCompra(false)
         setCompraEdit(null)
       } else {
-        // Inserir
         const { error } = await supabase
           .from('compras')
           .insert(dados)
@@ -199,7 +204,7 @@ export default function ComprasPage() {
     setQuantidade(String(compra.quantidade))
     setPrecoUnitario(formatMoney(compra.preco_unitario))
     setFornecedorSelecionado(compra.fornecedor)
-    setShowModalEditarCompra(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // ─── EXCLUIR COMPRA ────────────────────────────────────────
@@ -256,13 +261,41 @@ export default function ComprasPage() {
     return partes.join(' • ')
   }
 
-  // Lista de fornecedores formatados para o autocomplete
   const fornecedoresFormatados = fornecedores.map(formatarFornecedor)
 
   function selecionarFornecedor(textoSelecionado) {
     const fornecedor = fornecedores.find(f => formatarFornecedor(f) === textoSelecionado)
     setFornecedorSelecionado(fornecedor || null)
   }
+
+  // ─── FILTRO DE HISTÓRICO (BUSCA MULTI-TERMO) ────────────────────────────────────────
+  const comprasFiltradas = useMemo(() => {
+    let resultado = compras.filter(c => {
+      const data = c.data
+      return data >= dataInicial && data <= dataFinal
+    })
+
+    if (buscaHistorico.trim()) {
+      const termos = buscaHistorico.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+
+      resultado = resultado.filter(compra => {
+        const descricao = (compra.descricao || '').toLowerCase()
+        const fornecedorNome = (compra.fornecedor?.nome || '').toLowerCase()
+        const fornecedorEndereco = (compra.fornecedor?.endereco || '').toLowerCase()
+        const fornecedorWhatsapp = (compra.fornecedor?.whatsapp || '').toLowerCase()
+
+        const textoCompleto = `${descricao} ${fornecedorNome} ${fornecedorEndereco} ${fornecedorWhatsapp}`
+
+        return termos.every(termo => textoCompleto.includes(termo))
+      })
+    }
+
+    return resultado
+  }, [compras, dataInicial, dataFinal, buscaHistorico])
+
+  const totalHistorico = useMemo(() => {
+    return comprasFiltradas.reduce((acc, c) => acc + parseFloat(c.total || 0), 0)
+  }, [comprasFiltradas])
 
   // ─── CALCULAR TOTAL ────────────────────────────────────────
   const totalCalculado = quantidade && precoUnitario
@@ -292,6 +325,12 @@ export default function ComprasPage() {
             onClick={() => setView('fornecedores')}
           >
             Fornecedores
+          </button>
+          <button
+            className={`tab ${view === 'historico' ? 'active' : ''}`}
+            onClick={() => setView('historico')}
+          >
+            Histórico
           </button>
         </div>
 
@@ -349,9 +388,7 @@ export default function ComprasPage() {
                     <AutocompleteInput
                       value={fornecedorSelecionado ? formatarFornecedor(fornecedorSelecionado) : ''}
                       onChange={(valor) => {
-                        if (!valor) {
-                          setFornecedorSelecionado(null)
-                        }
+                        if (!valor) setFornecedorSelecionado(null)
                       }}
                       onSelect={(textoSelecionado) => selecionarFornecedor(textoSelecionado)}
                       list={fornecedoresFormatados}
@@ -405,7 +442,6 @@ export default function ComprasPage() {
               ) : (
                 compras.map((compra, index) => (
                   <div key={compra.id} className="compra-card">
-                    {/* HEADER: Data + Fornecedor + Botões */}
                     <div className="compra-header">
                       <div className="header-left">
                         <div className="compra-data">{formatDate(compra.data)}</div>
@@ -437,7 +473,6 @@ export default function ComprasPage() {
                       </div>
                     </div>
 
-                    {/* DETALHES: Descrição, Qtde, Preço, Total em UMA LINHA */}
                     <div className="compra-detalhes-inline">
                       <div className="descricao">{compra.descricao}</div>
                       <div className="valores">
@@ -503,6 +538,82 @@ export default function ComprasPage() {
             )}
           </div>
         )}
+
+        {/* VIEW: HISTÓRICO */}
+        {view === 'historico' && (
+          <div className="historico-page">
+            {/* FILTROS */}
+            <div className="filtros-historico">
+              <div className="filtro-datas">
+                <div className="form-group">
+                  <label>Data Inicial</label>
+                  <input
+                    type="date"
+                    value={dataInicial}
+                    onChange={(e) => setDataInicial(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Data Final</label>
+                  <input
+                    type="date"
+                    value={dataFinal}
+                    onChange={(e) => setDataFinal(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Busca Inteligente (separe termos com vírgula)</label>
+                <input
+                  type="text"
+                  value={buscaHistorico}
+                  onChange={(e) => setBuscaHistorico(e.target.value)}
+                  placeholder="Ex: calça, maria (busca calça E maria)"
+                />
+              </div>
+
+              <div className="total-historico">
+                <strong>Total do período:</strong> R$ {formatMoney(totalHistorico)}
+              </div>
+            </div>
+
+            {/* LISTA DE COMPRAS FILTRADAS */}
+            <div className="lista-compras">
+              {loading ? (
+                <div className="loading">Carregando...</div>
+              ) : comprasFiltradas.length === 0 ? (
+                <div className="empty-state">Nenhuma compra encontrada no período</div>
+              ) : (
+                comprasFiltradas.map(compra => (
+                  <div key={compra.id} className="compra-card">
+                    <div className="compra-header">
+                      <div className="header-left">
+                        <div className="compra-data">{formatDate(compra.data)}</div>
+                        {compra.fornecedor && (
+                          <div className="compra-fornecedor-header">
+                            <strong>{compra.fornecedor.nome}</strong>
+                            {compra.fornecedor.endereco && <span> • {compra.fornecedor.endereco}</span>}
+                            {compra.fornecedor.whatsapp && <span> • {compra.fornecedor.whatsapp}</span>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="compra-detalhes-inline">
+                      <div className="descricao">{compra.descricao}</div>
+                      <div className="valores">
+                        <span className="qtde">{compra.quantidade}x</span>
+                        <span className="preco">R$ {formatMoney(compra.preco_unitario)}</span>
+                        <span className="total">= R$ {formatMoney(compra.total)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL FORNECEDOR */}
@@ -528,7 +639,7 @@ export default function ComprasPage() {
           padding: 0 0 80px 0;
         }
 
-        /* TOTAL DO DIA FIXO NO TOPO - ENCOSTADO NO MENU */
+        /* TOTAL DO DIA FIXO NO TOPO */
         .total-dia-fixo {
           position: sticky;
           top: 0;
@@ -677,7 +788,8 @@ export default function ComprasPage() {
         }
 
         .btn-salvar-compra,
-        .btn-cancelar-edicao {
+        .btn-cancelar-edicao,
+        .btn-novo-fornecedor {
           width: 100%;
           padding: 14px;
           border: none;
@@ -689,13 +801,15 @@ export default function ComprasPage() {
           margin-bottom: 8px;
         }
 
-        .btn-salvar-compra {
+        .btn-salvar-compra,
+        .btn-novo-fornecedor {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
 
-        .btn-salvar-compra:active {
+        .btn-salvar-compra:active,
+        .btn-novo-fornecedor:active {
           transform: scale(0.98);
           box-shadow: 0 1px 4px rgba(102, 126, 234, 0.3);
         }
@@ -708,6 +822,38 @@ export default function ComprasPage() {
 
         .btn-cancelar-edicao:active {
           background: rgba(128, 128, 128, 0.15);
+        }
+
+        /* HISTÓRICO */
+        .historico-page {
+          padding-top: 8px;
+        }
+
+        .filtros-historico {
+          background: var(--card-bg);
+          padding: 16px;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          margin-bottom: 16px;
+        }
+
+        .filtro-datas {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .total-historico {
+          padding: 14px;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+          border-radius: 8px;
+          text-align: center;
+          font-size: 16px;
+          color: var(--text-primary);
+        }
+
+        .total-historico strong {
+          color: #667eea;
         }
 
         /* LISTA DE COMPRAS */
@@ -785,8 +931,8 @@ export default function ComprasPage() {
         }
 
         .btn-excluir {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           flex-shrink: 0;
           border: none;
           background: rgba(239, 68, 68, 0.1);
@@ -848,25 +994,6 @@ export default function ComprasPage() {
         /* LISTA DE FORNECEDORES */
         .lista-fornecedores {
           padding-top: 8px;
-        }
-
-        .btn-novo-fornecedor {
-          width: 100%;
-          padding: 14px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 16px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-          margin-bottom: 16px;
-        }
-
-        .btn-novo-fornecedor:active {
-          transform: scale(0.98);
         }
 
         .fornecedor-card {
@@ -956,6 +1083,15 @@ export default function ComprasPage() {
             padding: 0 0 60px 0;
           }
 
+          .tabs {
+            gap: 4px;
+          }
+
+          .tab {
+            font-size: 12px;
+            padding: 8px 4px;
+          }
+
           .form-row {
             grid-template-columns: 0.7fr 1fr 1fr;
             gap: 6px;
@@ -995,6 +1131,10 @@ export default function ComprasPage() {
 
           .compra-detalhes-inline .valores {
             align-self: flex-end;
+          }
+
+          .filtro-datas {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
