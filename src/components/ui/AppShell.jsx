@@ -17,6 +17,7 @@ const SLUG_TO_CATEGORY = {
   'dashboard-financeiro':        'Financeiro',
   'contas-pagar':                'Financeiro',
   'creditos-clientes':           'Financeiro',
+  'compras':                     'Financeiro',
   'producao':                    'Produção',
   'expedicao':                   'Produção',
   'impressao-pedidos':           'Impressão',
