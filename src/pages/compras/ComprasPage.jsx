@@ -4,12 +4,13 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import ModalFornecedor from '../../components/compras/ModalFornecedor'
+import AutocompleteInput from '../../components/ui/AutocompleteInput'
 
 // ─── HELPERS ────────────────────────────────────────
 function formatMoney(value) {
-  if (!value) return ''
+  if (!value) return '0,00'
   const num = parseFloat(value)
-  if (isNaN(num)) return ''
+  if (isNaN(num)) return '0,00'
   return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
@@ -42,12 +43,13 @@ export default function ComprasPage() {
   const [descricao, setDescricao] = useState('')
   const [quantidade, setQuantidade] = useState('1')
   const [precoUnitario, setPrecoUnitario] = useState('')
-  const [fornecedorId, setFornecedorId] = useState('')
-  const [buscaFornecedor, setBuscaFornecedor] = useState('')
+  const [fornecedorSelecionado, setFornecedorSelecionado] = useState(null)
 
   // Estados do modal
   const [showModalFornecedor, setShowModalFornecedor] = useState(false)
   const [fornecedorEdit, setFornecedorEdit] = useState(null)
+  const [compraEdit, setCompraEdit] = useState(null)
+  const [showModalEditarCompra, setShowModalEditarCompra] = useState(false)
 
   // ─── CARREGAR DADOS ────────────────────────────────────────
   useEffect(() => {
@@ -104,19 +106,26 @@ export default function ComprasPage() {
   }
 
   async function carregarTotalDia() {
+    // Calcular total do dia manualmente (mais confiável que RPC)
+    const hoje = new Date().toISOString().split('T')[0]
+
     const { data, error } = await supabase
-      .rpc('get_total_compras_dia')
+      .from('compras')
+      .select('total')
+      .eq('data', hoje)
+      .eq('usuario_id', user?.id)
 
     if (error) {
       console.error('Erro ao carregar total do dia:', error)
       return
     }
 
-    setTotalDia(data || 0)
+    const total = data?.reduce((acc, item) => acc + parseFloat(item.total || 0), 0) || 0
+    setTotalDia(total)
   }
 
-  // ─── ADICIONAR COMPRA ────────────────────────────────────────
-  async function adicionarCompra(e) {
+  // ─── ADICIONAR/EDITAR COMPRA ────────────────────────────────────────
+  async function salvarCompra(e) {
     e.preventDefault()
 
     if (!descricao.trim()) {
@@ -135,34 +144,58 @@ export default function ComprasPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('compras')
-        .insert({
-          tenant_id: profile?.tenant_id,
-          descricao: descricao.trim(),
-          quantidade: parseFloat(quantidade),
-          preco_unitario: parseMoney(precoUnitario),
-          fornecedor_id: fornecedorId || null,
-          usuario_id: user?.id
-        })
+      const dados = {
+        tenant_id: profile?.tenant_id,
+        descricao: descricao.trim(),
+        quantidade: parseFloat(quantidade),
+        preco_unitario: parseMoney(precoUnitario),
+        fornecedor_id: fornecedorSelecionado?.id || null,
+        usuario_id: user?.id
+      }
 
-      if (error) throw error
+      if (compraEdit) {
+        // Atualizar
+        const { error } = await supabase
+          .from('compras')
+          .update(dados)
+          .eq('id', compraEdit.id)
 
-      toast?.success('Compra adicionada!')
+        if (error) throw error
+        toast?.success('Compra atualizada!')
+        setShowModalEditarCompra(false)
+        setCompraEdit(null)
+      } else {
+        // Inserir
+        const { error } = await supabase
+          .from('compras')
+          .insert(dados)
+
+        if (error) throw error
+        toast?.success('Compra adicionada!')
+      }
 
       // Limpar formulário
       setDescricao('')
       setQuantidade('1')
       setPrecoUnitario('')
-      setFornecedorId('')
-      setBuscaFornecedor('')
+      setFornecedorSelecionado(null)
 
       // Recarregar dados
       await carregarDados()
     } catch (error) {
-      console.error('Erro ao adicionar compra:', error)
-      toast?.error('Erro ao adicionar compra')
+      console.error('Erro ao salvar compra:', error)
+      toast?.error('Erro ao salvar compra')
     }
+  }
+
+  // ─── EDITAR COMPRA ────────────────────────────────────────
+  function editarCompra(compra) {
+    setCompraEdit(compra)
+    setDescricao(compra.descricao)
+    setQuantidade(String(compra.quantidade))
+    setPrecoUnitario(formatMoney(compra.preco_unitario))
+    setFornecedorSelecionado(compra.fornecedor)
+    setShowModalEditarCompra(true)
   }
 
   // ─── EXCLUIR COMPRA ────────────────────────────────────────
@@ -210,10 +243,28 @@ export default function ComprasPage() {
     }
   }
 
-  // ─── FORNECEDORES FILTRADOS ────────────────────────────────────────
-  const fornecedoresFiltrados = fornecedores.filter(f =>
-    f.nome.toLowerCase().includes(buscaFornecedor.toLowerCase())
-  )
+  // ─── BUSCA INTELIGENTE DE FORNECEDORES ────────────────────────────────────────
+  function buscarFornecedor(termo) {
+    if (!termo || termo.length < 2) return fornecedores
+
+    const t = termo.toLowerCase()
+    return fornecedores.filter(f => {
+      const nome = (f.nome || '').toLowerCase()
+      const endereco = (f.endereco || '').toLowerCase()
+      const whatsapp = (f.whatsapp || '').toLowerCase()
+
+      // Busca em qualquer campo
+      return nome.includes(t) || endereco.includes(t) || whatsapp.includes(t)
+    })
+  }
+
+  function formatarFornecedor(fornecedor) {
+    if (!fornecedor) return ''
+    const partes = [fornecedor.nome]
+    if (fornecedor.whatsapp) partes.push(fornecedor.whatsapp)
+    if (fornecedor.endereco) partes.push(fornecedor.endereco)
+    return partes.join(' • ')
+  }
 
   // ─── CALCULAR TOTAL ────────────────────────────────────────
   const totalCalculado = quantidade && precoUnitario
@@ -222,7 +273,7 @@ export default function ComprasPage() {
 
   // ─── RENDER ────────────────────────────────────────
   return (
-    <AppShell title="Compras">
+    <AppShell title="Compras" hideTitle={true}>
       <div className="compras-page">
         {/* TOTAL DO DIA - FIXO NO TOPO */}
         <div className="total-dia-fixo">
@@ -250,7 +301,7 @@ export default function ComprasPage() {
         {view === 'compras' && (
           <>
             {/* FORMULÁRIO DE COMPRA */}
-            <form onSubmit={adicionarCompra} className="form-compra">
+            <form onSubmit={salvarCompra} className="form-compra">
               <div className="form-group">
                 <label>Descrição do Produto</label>
                 <input
@@ -293,19 +344,22 @@ export default function ComprasPage() {
                 </div>
               </div>
 
-              <div className="form-group fornecedor-group">
+              <div className="form-group">
                 <label>Fornecedor</label>
                 <div className="fornecedor-input-wrapper">
-                  <input
-                    type="text"
-                    value={buscaFornecedor}
-                    onChange={(e) => {
-                      setBuscaFornecedor(e.target.value)
-                      setFornecedorId('')
-                    }}
-                    placeholder="Buscar fornecedor..."
-                    list="fornecedores-list"
-                  />
+                  <div style={{ flex: 1 }}>
+                    <AutocompleteInput
+                      value={fornecedorSelecionado ? formatarFornecedor(fornecedorSelecionado) : ''}
+                      onChange={(termo) => {
+                        if (!termo) setFornecedorSelecionado(null)
+                      }}
+                      onSelect={(fornecedor) => setFornecedorSelecionado(fornecedor)}
+                      getSuggestions={buscarFornecedor}
+                      formatSuggestion={formatarFornecedor}
+                      placeholder="Buscar por nome, whatsapp ou endereço..."
+                      minChars={2}
+                    />
+                  </div>
                   <button
                     type="button"
                     className="btn-add-fornecedor"
@@ -318,28 +372,27 @@ export default function ComprasPage() {
                     +
                   </button>
                 </div>
-
-                {buscaFornecedor && fornecedoresFiltrados.length > 0 && !fornecedorId && (
-                  <div className="fornecedores-dropdown">
-                    {fornecedoresFiltrados.map(f => (
-                      <div
-                        key={f.id}
-                        className="fornecedor-item"
-                        onClick={() => {
-                          setFornecedorId(f.id)
-                          setBuscaFornecedor(f.nome)
-                        }}
-                      >
-                        {f.nome}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <button type="submit" className="btn-salvar-compra">
-                Adicionar Compra
+                {compraEdit ? 'Atualizar Compra' : 'Adicionar Compra'}
               </button>
+
+              {compraEdit && (
+                <button
+                  type="button"
+                  className="btn-cancelar-edicao"
+                  onClick={() => {
+                    setCompraEdit(null)
+                    setDescricao('')
+                    setQuantidade('1')
+                    setPrecoUnitario('')
+                    setFornecedorSelecionado(null)
+                  }}
+                >
+                  Cancelar Edição
+                </button>
+              )}
             </form>
 
             {/* LISTA DE COMPRAS */}
@@ -351,9 +404,9 @@ export default function ComprasPage() {
               ) : compras.length === 0 ? (
                 <div className="empty-state">Nenhuma compra cadastrada</div>
               ) : (
-                compras.map(compra => (
+                compras.map((compra, index) => (
                   <div key={compra.id} className="compra-card">
-                    {/* HEADER: Data + Fornecedor + Botão Excluir */}
+                    {/* HEADER: Data + Fornecedor + Botões */}
                     <div className="compra-header">
                       <div className="header-left">
                         <div className="compra-data">{formatDate(compra.data)}</div>
@@ -365,13 +418,24 @@ export default function ComprasPage() {
                           </div>
                         )}
                       </div>
-                      <button
-                        className="btn-excluir"
-                        onClick={() => excluirCompra(compra.id)}
-                        title="Excluir"
-                      >
-                        ×
-                      </button>
+                      <div className="compra-acoes">
+                        {index === 0 && (
+                          <button
+                            className="btn-editar-compra"
+                            onClick={() => editarCompra(compra)}
+                            title="Editar última compra"
+                          >
+                            ✎
+                          </button>
+                        )}
+                        <button
+                          className="btn-excluir"
+                          onClick={() => excluirCompra(compra.id)}
+                          title="Excluir"
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
 
                     {/* DETALHES: Descrição, Qtde, Preço, Total em UMA LINHA */}
@@ -465,7 +529,7 @@ export default function ComprasPage() {
           padding: 0 0 80px 0;
         }
 
-        /* TOTAL DO DIA FIXO NO TOPO */
+        /* TOTAL DO DIA FIXO NO TOPO - ENCOSTADO NO MENU */
         .total-dia-fixo {
           position: sticky;
           top: 0;
@@ -586,22 +650,15 @@ export default function ComprasPage() {
         }
 
         /* FORNECEDOR */
-        .fornecedor-group {
-          position: relative;
-        }
-
         .fornecedor-input-wrapper {
           display: flex;
           gap: 8px;
         }
 
-        .fornecedor-input-wrapper input {
-          flex: 1;
-        }
-
         .btn-add-fornecedor {
           width: 44px;
           height: 44px;
+          flex-shrink: 0;
           border: none;
           background: #667eea;
           color: white;
@@ -620,53 +677,38 @@ export default function ComprasPage() {
           background: #5568d3;
         }
 
-        .fornecedores-dropdown {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 48px;
-          background: var(--card-bg);
-          border: 1px solid var(--border);
-          border-radius: 8px;
-          margin-top: 4px;
-          max-height: 200px;
-          overflow-y: auto;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          z-index: 1000;
-        }
-
-        .fornecedor-item {
-          padding: 12px;
-          cursor: pointer;
-          border-bottom: 1px solid var(--border);
-          font-size: 15px;
-        }
-
-        .fornecedor-item:last-child {
-          border-bottom: none;
-        }
-
-        .fornecedor-item:active {
-          background: rgba(102, 126, 234, 0.1);
-        }
-
-        .btn-salvar-compra {
+        .btn-salvar-compra,
+        .btn-cancelar-edicao {
           width: 100%;
           padding: 14px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
           border: none;
           border-radius: 8px;
           font-size: 16px;
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
+          margin-bottom: 8px;
+        }
+
+        .btn-salvar-compra {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
           box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
 
         .btn-salvar-compra:active {
           transform: scale(0.98);
           box-shadow: 0 1px 4px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-cancelar-edicao {
+          background: rgba(128, 128, 128, 0.1);
+          color: var(--text-primary);
+          margin-bottom: 0;
+        }
+
+        .btn-cancelar-edicao:active {
+          background: rgba(128, 128, 128, 0.15);
         }
 
         /* LISTA DE COMPRAS */
@@ -697,6 +739,12 @@ export default function ComprasPage() {
           min-width: 0;
         }
 
+        .compra-acoes {
+          display: flex;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+
         .compra-data {
           font-size: 12px;
           color: var(--text-secondary);
@@ -714,6 +762,25 @@ export default function ComprasPage() {
         .compra-fornecedor-header strong {
           color: var(--text-primary);
           font-weight: 600;
+        }
+
+        .btn-editar-compra {
+          width: 28px;
+          height: 28px;
+          flex-shrink: 0;
+          border: none;
+          background: rgba(102, 126, 234, 0.1);
+          color: #667eea;
+          border-radius: 6px;
+          font-size: 16px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .btn-editar-compra:active {
+          background: rgba(102, 126, 234, 0.2);
         }
 
         .btn-excluir {
