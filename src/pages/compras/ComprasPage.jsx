@@ -454,15 +454,13 @@ export default function ComprasPage() {
                         )}
                       </div>
                       <div className="compra-acoes">
-                        {index === 0 && (
-                          <button
-                            className="btn-editar-compra"
-                            onClick={() => editarCompra(compra)}
-                            title="Editar última compra"
-                          >
-                            ✎
-                          </button>
-                        )}
+                        <button
+                          className="btn-editar-compra"
+                          onClick={() => editarCompra(compra)}
+                          title="Editar compra"
+                        >
+                          ✎
+                        </button>
                         <button
                           className="btn-excluir"
                           onClick={() => excluirCompra(compra.id)}
