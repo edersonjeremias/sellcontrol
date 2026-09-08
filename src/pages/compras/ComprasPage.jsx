@@ -244,26 +244,20 @@ export default function ComprasPage() {
   }
 
   // ─── BUSCA INTELIGENTE DE FORNECEDORES ────────────────────────────────────────
-  function buscarFornecedor(termo) {
-    if (!termo || termo.length < 2) return fornecedores
-
-    const t = termo.toLowerCase()
-    return fornecedores.filter(f => {
-      const nome = (f.nome || '').toLowerCase()
-      const endereco = (f.endereco || '').toLowerCase()
-      const whatsapp = (f.whatsapp || '').toLowerCase()
-
-      // Busca em qualquer campo
-      return nome.includes(t) || endereco.includes(t) || whatsapp.includes(t)
-    })
-  }
-
   function formatarFornecedor(fornecedor) {
     if (!fornecedor) return ''
     const partes = [fornecedor.nome]
     if (fornecedor.whatsapp) partes.push(fornecedor.whatsapp)
     if (fornecedor.endereco) partes.push(fornecedor.endereco)
     return partes.join(' • ')
+  }
+
+  // Lista de fornecedores formatados para o autocomplete
+  const fornecedoresFormatados = fornecedores.map(formatarFornecedor)
+
+  function selecionarFornecedor(textoSelecionado) {
+    const fornecedor = fornecedores.find(f => formatarFornecedor(f) === textoSelecionado)
+    setFornecedorSelecionado(fornecedor || null)
   }
 
   // ─── CALCULAR TOTAL ────────────────────────────────────────
@@ -347,17 +341,18 @@ export default function ComprasPage() {
               <div className="form-group">
                 <label>Fornecedor</label>
                 <div className="fornecedor-input-wrapper">
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, position: 'relative' }}>
                     <AutocompleteInput
                       value={fornecedorSelecionado ? formatarFornecedor(fornecedorSelecionado) : ''}
-                      onChange={(termo) => {
-                        if (!termo) setFornecedorSelecionado(null)
+                      onChange={(valor) => {
+                        if (!valor) {
+                          setFornecedorSelecionado(null)
+                        }
                       }}
-                      onSelect={(fornecedor) => setFornecedorSelecionado(fornecedor)}
-                      getSuggestions={buscarFornecedor}
-                      formatSuggestion={formatarFornecedor}
+                      onSelect={(textoSelecionado) => selecionarFornecedor(textoSelecionado)}
+                      list={fornecedoresFormatados}
                       placeholder="Buscar por nome, whatsapp ou endereço..."
-                      minChars={2}
+                      showOnFocus={true}
                     />
                   </div>
                   <button
