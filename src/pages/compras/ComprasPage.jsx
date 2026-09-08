@@ -109,18 +109,28 @@ export default function ComprasPage() {
     // Calcular total do dia manualmente (mais confiável que RPC)
     const hoje = new Date().toISOString().split('T')[0]
 
+    console.log('🔍 Calculando total do dia:', { hoje, user_id: user?.id })
+
     const { data, error } = await supabase
       .from('compras')
-      .select('total')
+      .select('total, data, usuario_id')
       .eq('data', hoje)
       .eq('usuario_id', user?.id)
 
     if (error) {
-      console.error('Erro ao carregar total do dia:', error)
+      console.error('❌ Erro ao carregar total do dia:', error)
       return
     }
 
-    const total = data?.reduce((acc, item) => acc + parseFloat(item.total || 0), 0) || 0
+    console.log('📊 Compras do dia:', data)
+
+    const total = data?.reduce((acc, item) => {
+      const valor = parseFloat(item.total || 0)
+      console.log('💰 Somando:', valor)
+      return acc + valor
+    }, 0) || 0
+
+    console.log('✅ Total calculado:', total)
     setTotalDia(total)
   }
 
@@ -399,7 +409,9 @@ export default function ComprasPage() {
               ) : compras.length === 0 ? (
                 <div className="empty-state">Nenhuma compra cadastrada</div>
               ) : (
-                compras.map((compra, index) => (
+                compras.map((compra, index) => {
+                  console.log(`🔍 Compra ${index}:`, compra.descricao, 'Mostrar editar?', index === 0)
+                  return (
                   <div key={compra.id} className="compra-card">
                     {/* HEADER: Data + Fornecedor + Botões */}
                     <div className="compra-header">
@@ -443,7 +455,7 @@ export default function ComprasPage() {
                       </div>
                     </div>
                   </div>
-                ))
+                )})
               )}
             </div>
           </>
