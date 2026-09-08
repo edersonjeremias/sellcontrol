@@ -106,31 +106,25 @@ export default function ComprasPage() {
   }
 
   async function carregarTotalDia() {
-    // Calcular total do dia manualmente (mais confiável que RPC)
+    // Calcular total do dia de TODAS as compras (não filtrar por usuário)
     const hoje = new Date().toISOString().split('T')[0]
-
-    console.log('🔍 Calculando total do dia:', { hoje, user_id: user?.id })
 
     const { data, error } = await supabase
       .from('compras')
-      .select('total, data, usuario_id')
+      .select('total')
       .eq('data', hoje)
-      .eq('usuario_id', user?.id)
 
     if (error) {
-      console.error('❌ Erro ao carregar total do dia:', error)
+      console.error('Erro ao carregar total do dia:', error)
+      // Se der erro, tenta calcular a partir das compras já carregadas
+      const totalLocal = compras
+        .filter(c => c.data === hoje)
+        .reduce((acc, c) => acc + parseFloat(c.total || 0), 0)
+      setTotalDia(totalLocal)
       return
     }
 
-    console.log('📊 Compras do dia:', data)
-
-    const total = data?.reduce((acc, item) => {
-      const valor = parseFloat(item.total || 0)
-      console.log('💰 Somando:', valor)
-      return acc + valor
-    }, 0) || 0
-
-    console.log('✅ Total calculado:', total)
+    const total = data?.reduce((acc, item) => acc + parseFloat(item.total || 0), 0) || 0
     setTotalDia(total)
   }
 
@@ -409,9 +403,7 @@ export default function ComprasPage() {
               ) : compras.length === 0 ? (
                 <div className="empty-state">Nenhuma compra cadastrada</div>
               ) : (
-                compras.map((compra, index) => {
-                  console.log(`🔍 Compra ${index}:`, compra.descricao, 'Mostrar editar?', index === 0)
-                  return (
+                compras.map((compra, index) => (
                   <div key={compra.id} className="compra-card">
                     {/* HEADER: Data + Fornecedor + Botões */}
                     <div className="compra-header">
@@ -455,7 +447,7 @@ export default function ComprasPage() {
                       </div>
                     </div>
                   </div>
-                )})
+                ))
               )}
             </div>
           </>
@@ -772,14 +764,15 @@ export default function ComprasPage() {
         }
 
         .btn-editar-compra {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           flex-shrink: 0;
-          border: none;
-          background: rgba(102, 126, 234, 0.1);
+          border: 2px solid #667eea;
+          background: rgba(102, 126, 234, 0.15);
           color: #667eea;
           border-radius: 6px;
-          font-size: 16px;
+          font-size: 18px;
+          font-weight: bold;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -787,7 +780,8 @@ export default function ComprasPage() {
         }
 
         .btn-editar-compra:active {
-          background: rgba(102, 126, 234, 0.2);
+          background: rgba(102, 126, 234, 0.3);
+          transform: scale(0.95);
         }
 
         .btn-excluir {
