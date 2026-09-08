@@ -19,9 +19,21 @@ CREATE INDEX IF NOT EXISTS idx_fornecedores_nome ON fornecedores(tenant_id, nome
 -- RLS
 ALTER TABLE fornecedores ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS fornecedores_tenant_isolation ON fornecedores;
-CREATE POLICY fornecedores_tenant_isolation ON fornecedores
-  USING (tenant_id = current_setting('app.current_tenant')::uuid);
+DROP POLICY IF EXISTS fornecedores_select ON fornecedores;
+CREATE POLICY fornecedores_select ON fornecedores
+  FOR SELECT USING (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS fornecedores_insert ON fornecedores;
+CREATE POLICY fornecedores_insert ON fornecedores
+  FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS fornecedores_update ON fornecedores;
+CREATE POLICY fornecedores_update ON fornecedores
+  FOR UPDATE USING (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS fornecedores_delete ON fornecedores;
+CREATE POLICY fornecedores_delete ON fornecedores
+  FOR DELETE USING (tenant_id = get_tenant_id());
 
 -- ============================================================================
 -- TABELA: compras
@@ -50,9 +62,21 @@ CREATE INDEX IF NOT EXISTS idx_compras_usuario ON compras(usuario_id);
 -- RLS
 ALTER TABLE compras ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS compras_tenant_isolation ON compras;
-CREATE POLICY compras_tenant_isolation ON compras
-  USING (tenant_id = current_setting('app.current_tenant')::uuid);
+DROP POLICY IF EXISTS compras_select ON compras;
+CREATE POLICY compras_select ON compras
+  FOR SELECT USING (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS compras_insert ON compras;
+CREATE POLICY compras_insert ON compras
+  FOR INSERT WITH CHECK (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS compras_update ON compras;
+CREATE POLICY compras_update ON compras
+  FOR UPDATE USING (tenant_id = get_tenant_id());
+
+DROP POLICY IF EXISTS compras_delete ON compras;
+CREATE POLICY compras_delete ON compras
+  FOR DELETE USING (tenant_id = get_tenant_id());
 
 -- ============================================================================
 -- FUNÇÃO: Retorna total de compras do dia para o usuário logado
@@ -66,7 +90,7 @@ DECLARE
 BEGIN
   -- Pega tenant e usuário atual
   BEGIN
-    current_tenant := current_setting('app.current_tenant')::uuid;
+    current_tenant := get_tenant_id();
   EXCEPTION WHEN OTHERS THEN
     current_tenant := NULL;
   END;

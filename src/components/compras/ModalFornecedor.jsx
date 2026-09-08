@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 
 export default function ModalFornecedor({ onClose, onSave, fornecedorEdit = null }) {
   const { toast } = useApp()
+  const { profile } = useAuth()
 
   const [nome, setNome] = useState(fornecedorEdit?.nome || '')
   const [endereco, setEndereco] = useState(fornecedorEdit?.endereco || '')
@@ -38,6 +40,7 @@ export default function ModalFornecedor({ onClose, onSave, fornecedorEdit = null
         const { error } = await supabase
           .from('fornecedores')
           .insert({
+            tenant_id: profile?.tenant_id,
             nome: nome.trim(),
             endereco: endereco.trim() || null,
             whatsapp: whatsapp.trim() || null

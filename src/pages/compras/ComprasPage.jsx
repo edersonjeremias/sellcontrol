@@ -29,7 +29,7 @@ function formatDate(date) {
 
 export default function ComprasPage() {
   const { toast } = useApp()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
 
   // Estados principais
   const [compras, setCompras] = useState([])
@@ -136,6 +136,7 @@ export default function ComprasPage() {
       const { error } = await supabase
         .from('compras')
         .insert({
+          tenant_id: profile?.tenant_id,
           descricao: descricao.trim(),
           quantidade: parseFloat(quantidade),
           preco_unitario: parseMoney(precoUnitario),
