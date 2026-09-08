@@ -36,6 +36,7 @@ export default function ComprasPage() {
   const [fornecedores, setFornecedores] = useState([])
   const [totalDia, setTotalDia] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState('compras') // 'compras' ou 'fornecedores'
 
   // Estados do formulário
   const [descricao, setDescricao] = useState('')
@@ -46,6 +47,7 @@ export default function ComprasPage() {
 
   // Estados do modal
   const [showModalFornecedor, setShowModalFornecedor] = useState(false)
+  const [fornecedorEdit, setFornecedorEdit] = useState(null)
 
   // ─── CARREGAR DADOS ────────────────────────────────────────
   useEffect(() => {
@@ -73,7 +75,7 @@ export default function ComprasPage() {
       .from('compras')
       .select(`
         *,
-        fornecedor:fornecedores(nome)
+        fornecedor:fornecedores(id, nome, endereco, whatsapp)
       `)
       .order('data', { ascending: false })
       .order('created_at', { ascending: false })
@@ -183,6 +185,31 @@ export default function ComprasPage() {
     }
   }
 
+  // ─── FORNECEDORES ────────────────────────────────────────
+  function editarFornecedor(fornecedor) {
+    setFornecedorEdit(fornecedor)
+    setShowModalFornecedor(true)
+  }
+
+  async function excluirFornecedor(id) {
+    if (!confirm('Deseja realmente excluir este fornecedor?')) return
+
+    try {
+      const { error } = await supabase
+        .from('fornecedores')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      toast?.success('Fornecedor excluído!')
+      await carregarFornecedores()
+    } catch (error) {
+      console.error('Erro ao excluir fornecedor:', error)
+      toast?.error('Erro ao excluir fornecedor')
+    }
+  }
+
   // ─── FORNECEDORES FILTRADOS ────────────────────────────────────────
   const fornecedoresFiltrados = fornecedores.filter(f =>
     f.nome.toLowerCase().includes(buscaFornecedor.toLowerCase())
@@ -203,153 +230,230 @@ export default function ComprasPage() {
           <div className="total-dia-valor">R$ {formatMoney(totalDia)}</div>
         </div>
 
-        {/* FORMULÁRIO DE COMPRA */}
-        <form onSubmit={adicionarCompra} className="form-compra">
-          <div className="form-group">
-            <label>Descrição do Produto</label>
-            <input
-              type="text"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Ex: calça listrada"
-              autoFocus
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Qtde</label>
-              <input
-                type="number"
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-                step="0.01"
-                min="0"
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Preço Unit.</label>
-              <input
-                type="text"
-                value={precoUnitario}
-                onChange={(e) => setPrecoUnitario(e.target.value)}
-                placeholder="0,00"
-                onFocus={(e) => e.target.select()}
-              />
-            </div>
-
-            <div className="form-group total-field">
-              <label>Total</label>
-              <div className="total-display">
-                R$ {formatMoney(totalCalculado)}
-              </div>
-            </div>
-          </div>
-
-          <div className="form-group fornecedor-group">
-            <label>Fornecedor</label>
-            <div className="fornecedor-input-wrapper">
-              <input
-                type="text"
-                value={buscaFornecedor}
-                onChange={(e) => {
-                  setBuscaFornecedor(e.target.value)
-                  setFornecedorId('')
-                }}
-                placeholder="Buscar fornecedor..."
-                list="fornecedores-list"
-              />
-              <button
-                type="button"
-                className="btn-add-fornecedor"
-                onClick={() => setShowModalFornecedor(true)}
-                title="Adicionar fornecedor"
-              >
-                +
-              </button>
-            </div>
-
-            {buscaFornecedor && fornecedoresFiltrados.length > 0 && !fornecedorId && (
-              <div className="fornecedores-dropdown">
-                {fornecedoresFiltrados.map(f => (
-                  <div
-                    key={f.id}
-                    className="fornecedor-item"
-                    onClick={() => {
-                      setFornecedorId(f.id)
-                      setBuscaFornecedor(f.nome)
-                    }}
-                  >
-                    {f.nome}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <button type="submit" className="btn-salvar-compra">
-            Adicionar Compra
+        {/* TABS */}
+        <div className="tabs">
+          <button
+            className={`tab ${view === 'compras' ? 'active' : ''}`}
+            onClick={() => setView('compras')}
+          >
+            Compras
           </button>
-        </form>
+          <button
+            className={`tab ${view === 'fornecedores' ? 'active' : ''}`}
+            onClick={() => setView('fornecedores')}
+          >
+            Fornecedores
+          </button>
+        </div>
 
-        {/* LISTA DE COMPRAS */}
-        <div className="lista-compras">
-          <h3>Últimas Compras</h3>
+        {/* VIEW: COMPRAS */}
+        {view === 'compras' && (
+          <>
+            {/* FORMULÁRIO DE COMPRA */}
+            <form onSubmit={adicionarCompra} className="form-compra">
+              <div className="form-group">
+                <label>Descrição do Produto</label>
+                <input
+                  type="text"
+                  value={descricao}
+                  onChange={(e) => setDescricao(e.target.value)}
+                  placeholder="Ex: calça listrada"
+                  autoFocus
+                />
+              </div>
 
-          {loading ? (
-            <div className="loading">Carregando...</div>
-          ) : compras.length === 0 ? (
-            <div className="empty-state">Nenhuma compra cadastrada</div>
-          ) : (
-            compras.map(compra => (
-              <div key={compra.id} className="compra-card">
-                <div className="compra-header">
-                  <div className="compra-data">{formatDate(compra.data)}</div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Qtde</label>
+                  <input
+                    type="number"
+                    value={quantidade}
+                    onChange={(e) => setQuantidade(e.target.value)}
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Preço Unit.</label>
+                  <input
+                    type="text"
+                    value={precoUnitario}
+                    onChange={(e) => setPrecoUnitario(e.target.value)}
+                    placeholder="0,00"
+                    onFocus={(e) => e.target.select()}
+                  />
+                </div>
+
+                <div className="form-group total-field">
+                  <label>Total</label>
+                  <div className="total-display">
+                    R$ {formatMoney(totalCalculado)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group fornecedor-group">
+                <label>Fornecedor</label>
+                <div className="fornecedor-input-wrapper">
+                  <input
+                    type="text"
+                    value={buscaFornecedor}
+                    onChange={(e) => {
+                      setBuscaFornecedor(e.target.value)
+                      setFornecedorId('')
+                    }}
+                    placeholder="Buscar fornecedor..."
+                    list="fornecedores-list"
+                  />
                   <button
-                    className="btn-excluir"
-                    onClick={() => excluirCompra(compra.id)}
-                    title="Excluir"
+                    type="button"
+                    className="btn-add-fornecedor"
+                    onClick={() => {
+                      setFornecedorEdit(null)
+                      setShowModalFornecedor(true)
+                    }}
+                    title="Adicionar fornecedor"
                   >
-                    ×
+                    +
                   </button>
                 </div>
 
-                <div className="compra-descricao">{compra.descricao}</div>
-
-                <div className="compra-detalhes">
-                  <div className="detalhe">
-                    <span className="label">Qtde:</span>
-                    <span className="valor">{compra.quantidade}</span>
-                  </div>
-                  <div className="detalhe">
-                    <span className="label">Preço:</span>
-                    <span className="valor">R$ {formatMoney(compra.preco_unitario)}</span>
-                  </div>
-                  <div className="detalhe total">
-                    <span className="label">Total:</span>
-                    <span className="valor">R$ {formatMoney(compra.total)}</span>
-                  </div>
-                </div>
-
-                {compra.fornecedor && (
-                  <div className="compra-fornecedor">
-                    <span className="label">Fornecedor:</span> {compra.fornecedor.nome}
+                {buscaFornecedor && fornecedoresFiltrados.length > 0 && !fornecedorId && (
+                  <div className="fornecedores-dropdown">
+                    {fornecedoresFiltrados.map(f => (
+                      <div
+                        key={f.id}
+                        className="fornecedor-item"
+                        onClick={() => {
+                          setFornecedorId(f.id)
+                          setBuscaFornecedor(f.nome)
+                        }}
+                      >
+                        {f.nome}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            ))
-          )}
-        </div>
+
+              <button type="submit" className="btn-salvar-compra">
+                Adicionar Compra
+              </button>
+            </form>
+
+            {/* LISTA DE COMPRAS */}
+            <div className="lista-compras">
+              <h3>Últimas Compras</h3>
+
+              {loading ? (
+                <div className="loading">Carregando...</div>
+              ) : compras.length === 0 ? (
+                <div className="empty-state">Nenhuma compra cadastrada</div>
+              ) : (
+                compras.map(compra => (
+                  <div key={compra.id} className="compra-card">
+                    {/* HEADER: Data + Fornecedor + Botão Excluir */}
+                    <div className="compra-header">
+                      <div className="header-left">
+                        <div className="compra-data">{formatDate(compra.data)}</div>
+                        {compra.fornecedor && (
+                          <div className="compra-fornecedor-header">
+                            <strong>{compra.fornecedor.nome}</strong>
+                            {compra.fornecedor.endereco && <span> • {compra.fornecedor.endereco}</span>}
+                            {compra.fornecedor.whatsapp && <span> • {compra.fornecedor.whatsapp}</span>}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        className="btn-excluir"
+                        onClick={() => excluirCompra(compra.id)}
+                        title="Excluir"
+                      >
+                        ×
+                      </button>
+                    </div>
+
+                    {/* DETALHES: Descrição, Qtde, Preço, Total em UMA LINHA */}
+                    <div className="compra-detalhes-inline">
+                      <div className="descricao">{compra.descricao}</div>
+                      <div className="valores">
+                        <span className="qtde">{compra.quantidade}x</span>
+                        <span className="preco">R$ {formatMoney(compra.preco_unitario)}</span>
+                        <span className="total">= R$ {formatMoney(compra.total)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
+
+        {/* VIEW: FORNECEDORES */}
+        {view === 'fornecedores' && (
+          <div className="lista-fornecedores">
+            <button
+              className="btn-novo-fornecedor"
+              onClick={() => {
+                setFornecedorEdit(null)
+                setShowModalFornecedor(true)
+              }}
+            >
+              + Novo Fornecedor
+            </button>
+
+            {loading ? (
+              <div className="loading">Carregando...</div>
+            ) : fornecedores.length === 0 ? (
+              <div className="empty-state">Nenhum fornecedor cadastrado</div>
+            ) : (
+              fornecedores.map(fornecedor => (
+                <div key={fornecedor.id} className="fornecedor-card">
+                  <div className="fornecedor-info">
+                    <div className="fornecedor-nome">{fornecedor.nome}</div>
+                    {fornecedor.endereco && (
+                      <div className="fornecedor-detalhe">📍 {fornecedor.endereco}</div>
+                    )}
+                    {fornecedor.whatsapp && (
+                      <div className="fornecedor-detalhe">📱 {fornecedor.whatsapp}</div>
+                    )}
+                  </div>
+                  <div className="fornecedor-acoes">
+                    <button
+                      className="btn-editar"
+                      onClick={() => editarFornecedor(fornecedor)}
+                      title="Editar"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="btn-excluir-fornecedor"
+                      onClick={() => excluirFornecedor(fornecedor.id)}
+                      title="Excluir"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* MODAL FORNECEDOR */}
       {showModalFornecedor && (
         <ModalFornecedor
-          onClose={() => setShowModalFornecedor(false)}
+          fornecedorEdit={fornecedorEdit}
+          onClose={() => {
+            setShowModalFornecedor(false)
+            setFornecedorEdit(null)
+          }}
           onSave={async () => {
             await carregarFornecedores()
             setShowModalFornecedor(false)
+            setFornecedorEdit(null)
           }}
         />
       )}
@@ -386,6 +490,38 @@ export default function ComprasPage() {
           font-size: 24px;
           font-weight: 700;
           text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* TABS */
+        .tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+          background: var(--card-bg);
+          padding: 8px;
+          border-radius: 12px;
+        }
+
+        .tab {
+          flex: 1;
+          padding: 10px;
+          background: transparent;
+          border: none;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .tab.active {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+
+        .tab:active {
+          transform: scale(0.98);
         }
 
         /* FORMULÁRIO */
@@ -429,7 +565,7 @@ export default function ComprasPage() {
 
         .form-row {
           display: grid;
-          grid-template-columns: 1fr 1fr 1.2fr;
+          grid-template-columns: 0.8fr 1fr 1.2fr;
           gap: 12px;
           margin-bottom: 16px;
         }
@@ -543,7 +679,7 @@ export default function ComprasPage() {
         .compra-card {
           background: var(--card-bg);
           border-radius: 12px;
-          padding: 14px;
+          padding: 12px;
           margin-bottom: 12px;
           box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
@@ -551,19 +687,39 @@ export default function ComprasPage() {
         .compra-header {
           display: flex;
           justify-content: space-between;
-          align-items: center;
+          align-items: flex-start;
           margin-bottom: 10px;
+          gap: 8px;
+        }
+
+        .header-left {
+          flex: 1;
+          min-width: 0;
         }
 
         .compra-data {
-          font-size: 13px;
+          font-size: 12px;
           color: var(--text-secondary);
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+
+        .compra-fornecedor-header {
+          font-size: 11px;
+          color: var(--text-secondary);
+          line-height: 1.4;
+          word-break: break-word;
+        }
+
+        .compra-fornecedor-header strong {
+          color: var(--text-primary);
           font-weight: 600;
         }
 
         .btn-excluir {
           width: 28px;
           height: 28px;
+          flex-shrink: 0;
           border: none;
           background: rgba(239, 68, 68, 0.1);
           color: #ef4444;
@@ -580,54 +736,143 @@ export default function ComprasPage() {
           background: rgba(239, 68, 68, 0.2);
         }
 
-        .compra-descricao {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-primary);
-          margin-bottom: 12px;
-        }
-
-        .compra-detalhes {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 8px;
-          margin-bottom: 8px;
-        }
-
-        .detalhe {
+        /* DETALHES EM LINHA */
+        .compra-detalhes-inline {
           display: flex;
-          flex-direction: column;
-          gap: 2px;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
         }
 
-        .detalhe .label {
-          font-size: 11px;
-          color: var(--text-secondary);
-          text-transform: uppercase;
-          font-weight: 600;
-        }
-
-        .detalhe .valor {
-          font-size: 14px;
+        .compra-detalhes-inline .descricao {
+          flex: 1;
+          font-size: 15px;
           font-weight: 600;
           color: var(--text-primary);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
-        .detalhe.total .valor {
+        .compra-detalhes-inline .valores {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          flex-shrink: 0;
+        }
+
+        .compra-detalhes-inline .qtde {
+          color: var(--text-secondary);
+          font-weight: 600;
+        }
+
+        .compra-detalhes-inline .preco {
+          color: var(--text-secondary);
+        }
+
+        .compra-detalhes-inline .total {
           color: #667eea;
-          font-size: 16px;
+          font-weight: 700;
+          font-size: 14px;
         }
 
-        .compra-fornecedor {
-          margin-top: 10px;
-          padding-top: 10px;
-          border-top: 1px solid var(--border);
+        /* LISTA DE FORNECEDORES */
+        .lista-fornecedores {
+          padding-top: 8px;
+        }
+
+        .btn-novo-fornecedor {
+          width: 100%;
+          padding: 14px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+          margin-bottom: 16px;
+        }
+
+        .btn-novo-fornecedor:active {
+          transform: scale(0.98);
+        }
+
+        .fornecedor-card {
+          background: var(--card-bg);
+          border-radius: 12px;
+          padding: 14px;
+          margin-bottom: 12px;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .fornecedor-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .fornecedor-nome {
+          font-size: 16px;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin-bottom: 6px;
+        }
+
+        .fornecedor-detalhe {
           font-size: 13px;
           color: var(--text-secondary);
+          margin-bottom: 4px;
+          word-break: break-word;
         }
 
-        .compra-fornecedor .label {
-          font-weight: 600;
+        .fornecedor-acoes {
+          display: flex;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+
+        .btn-editar {
+          width: 36px;
+          height: 36px;
+          border: none;
+          background: rgba(102, 126, 234, 0.1);
+          color: #667eea;
+          border-radius: 6px;
+          font-size: 18px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .btn-editar:active {
+          background: rgba(102, 126, 234, 0.2);
+        }
+
+        .btn-excluir-fornecedor {
+          width: 36px;
+          height: 36px;
+          border: none;
+          background: rgba(239, 68, 68, 0.1);
+          color: #ef4444;
+          border-radius: 6px;
+          font-size: 20px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+        }
+
+        .btn-excluir-fornecedor:active {
+          background: rgba(239, 68, 68, 0.2);
         }
 
         .loading,
@@ -644,8 +889,8 @@ export default function ComprasPage() {
           }
 
           .form-row {
-            grid-template-columns: 0.8fr 1fr 1.2fr;
-            gap: 8px;
+            grid-template-columns: 0.7fr 1fr 1fr;
+            gap: 6px;
           }
 
           .form-group label {
@@ -653,13 +898,13 @@ export default function ComprasPage() {
           }
 
           .form-group input {
-            padding: 10px;
-            font-size: 15px;
+            padding: 10px 8px;
+            font-size: 14px;
           }
 
           .total-display {
-            font-size: 14px;
-            padding: 10px;
+            font-size: 13px;
+            padding: 10px 6px;
           }
 
           .total-dia-fixo {
@@ -668,6 +913,20 @@ export default function ComprasPage() {
 
           .total-dia-valor {
             font-size: 20px;
+          }
+
+          .compra-detalhes-inline {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+
+          .compra-detalhes-inline .descricao {
+            white-space: normal;
+          }
+
+          .compra-detalhes-inline .valores {
+            align-self: flex-end;
           }
         }
       `}</style>
