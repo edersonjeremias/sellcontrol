@@ -75,6 +75,7 @@ import NotificacoesPage               from './pages/notificacoes/NotificacoesPag
 import CuponsPage                     from './pages/cupons/CuponsPage'
 import DebugPage                      from './pages/DebugPage'
 import LimparUsuariosPage             from './pages/admin/LimparUsuariosPage'
+import ComprasPage                    from './pages/compras/ComprasPage'
 
 export default function App() {
   return (
@@ -116,6 +117,7 @@ export default function App() {
             <Route path="/creditos-clientes"     element={<RequireAuth><CreditosPage /></RequireAuth>} />
             <Route path="/comissoes"             element={<RequireAuth><ComissoesPage /></RequireAuth>} />
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
+            <Route path="/compras"               element={<RequireAuth><ComprasPage /></RequireAuth>} />
             <Route path="/portal/:slug" element={<PortalApp />} />
             <Route path="/portal" element={<PortalApp />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
