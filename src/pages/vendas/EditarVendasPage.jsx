@@ -170,56 +170,130 @@ export default function EditarVendasPage() {
                   : 'Nenhuma venda encontrada com este filtro.'}
               </div>
             ) : (
-              <table id="tabela">
-                <thead>
-                  <tr>
-                    <th className="col-data">Data</th>
-                    <th className="col-live">Live</th>
-                    <th className="col-cod">Cód.</th>
-                    <th className="col-sacola">Sacola</th>
-                    <th className="col-produto">Produto</th>
-                    <th className="col-modelo">Modelo</th>
-                    <th className="col-cor">Cor</th>
-                    <th>Marca</th>
-                    <th className="col-tam">Tam.</th>
-                    <th className="col-preco">Preço</th>
-                    <th className="col-cliente">Cliente</th>
-                    <th>Status</th>
-                    <th className="col-acoes">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <>
+                {/* LAYOUT DESKTOP - TABELA */}
+                <table id="tabela" className="vendas-table-desktop">
+                  <thead>
+                    <tr>
+                      <th className="col-data">Data</th>
+                      <th className="col-live">Live</th>
+                      <th className="col-cod">Cód.</th>
+                      <th className="col-sacola">Sacola</th>
+                      <th className="col-produto">Produto</th>
+                      <th className="col-modelo">Modelo</th>
+                      <th className="col-cor">Cor</th>
+                      <th>Marca</th>
+                      <th className="col-tam">Tam.</th>
+                      <th className="col-preco">Preço</th>
+                      <th className="col-cliente">Cliente</th>
+                      <th>Status</th>
+                      <th className="col-acoes">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendasFiltradas.map(v => (
+                      <tr key={v.id} onClick={() => setModalEdicao(v)}>
+                        <td className="col-data">{v.data_live ? new Date(v.data_live + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
+                        <td className="col-live">{v.live_nome}</td>
+                        <td className="col-cod">{v.codigo}</td>
+                        <td className="col-sacola">{v.sacolinha || ''}</td>
+                        <td className="col-produto">{v.produto}</td>
+                        <td className="col-modelo">{v.modelo}</td>
+                        <td className="col-cor">{v.cor}</td>
+                        <td>{v.marca}</td>
+                        <td className="col-tam">{v.tamanho}</td>
+                        <td className="col-preco">{formatMoney(v.preco)}</td>
+                        <td className="col-cliente">{v.cliente_nome}</td>
+                        <td>{v.status}</td>
+                        <td className="col-acoes">
+                          <button
+                            className="btn-icon"
+                            onClick={(e) => { e.stopPropagation(); handleExcluir(v) }}
+                            title="Excluir venda"
+                            style={{ color: 'var(--red)' }}
+                          >
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* LAYOUT MOBILE - CARDS */}
+                <div className="vendas-cards-mobile">
                   {vendasFiltradas.map(v => (
-                    <tr key={v.id} onClick={() => setModalEdicao(v)}>
-                      <td className="col-data">{v.data_live ? new Date(v.data_live + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
-                      <td className="col-live">{v.live_nome}</td>
-                      <td className="col-cod">{v.codigo}</td>
-                      <td className="col-sacola">{v.sacolinha || ''}</td>
-                      <td className="col-produto">{v.produto}</td>
-                      <td className="col-modelo">{v.modelo}</td>
-                      <td className="col-cor">{v.cor}</td>
-                      <td>{v.marca}</td>
-                      <td className="col-tam">{v.tamanho}</td>
-                      <td className="col-preco">{formatMoney(v.preco)}</td>
-                      <td className="col-cliente">{v.cliente_nome}</td>
-                      <td>{v.status}</td>
-                      <td className="col-acoes">
+                    <div key={v.id} className="venda-card-mobile" onClick={() => setModalEdicao(v)}>
+                      <div className="venda-card-header">
+                        <div className="venda-card-titulo">
+                          <strong>{v.produto} {v.modelo}</strong>
+                          <span className="venda-card-codigo">#{v.codigo}</span>
+                        </div>
                         <button
                           className="btn-icon"
                           onClick={(e) => { e.stopPropagation(); handleExcluir(v) }}
                           title="Excluir venda"
-                          style={{ color: 'var(--red)' }}
+                          style={{ color: 'var(--red)', padding: 8 }}
                         >
-                          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                           </svg>
                         </button>
-                      </td>
-                    </tr>
+                      </div>
+
+                      <div className="venda-card-grid">
+                        <div className="venda-card-item">
+                          <span className="venda-card-label">Cor:</span>
+                          <span className="venda-card-value">{v.cor}</span>
+                        </div>
+                        <div className="venda-card-item">
+                          <span className="venda-card-label">Marca:</span>
+                          <span className="venda-card-value">{v.marca}</span>
+                        </div>
+                        <div className="venda-card-item">
+                          <span className="venda-card-label">Tamanho:</span>
+                          <span className="venda-card-value">{v.tamanho}</span>
+                        </div>
+                        <div className="venda-card-item">
+                          <span className="venda-card-label">Preço:</span>
+                          <span className="venda-card-value venda-card-preco">{formatMoney(v.preco)}</span>
+                        </div>
+                      </div>
+
+                      <div className="venda-card-info">
+                        <div className="venda-card-item">
+                          <span className="venda-card-label">Cliente:</span>
+                          <span className="venda-card-value">{v.cliente_nome || '—'}</span>
+                        </div>
+                        <div className="venda-card-item">
+                          <span className="venda-card-label">Live:</span>
+                          <span className="venda-card-value">{v.live_nome}</span>
+                        </div>
+                        <div className="venda-card-item">
+                          <span className="venda-card-label">Data:</span>
+                          <span className="venda-card-value">{v.data_live ? new Date(v.data_live + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</span>
+                        </div>
+                        {v.sacolinha && (
+                          <div className="venda-card-item">
+                            <span className="venda-card-label">Sacola:</span>
+                            <span className="venda-card-value">{v.sacolinha}</span>
+                          </div>
+                        )}
+                        {v.status && (
+                          <div className="venda-card-item">
+                            <span className="venda-card-label">Status:</span>
+                            <span className="venda-card-value venda-card-status">{v.status}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </>
             )}
           </div>
         </div>
