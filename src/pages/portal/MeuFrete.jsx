@@ -193,7 +193,6 @@ export default function MeuFrete() {
 
     try {
       const romaneio = romaneios.find(r => r.id === romaneioSelecionado)
-      const endereco = enderecos.find(e => e.id === enderecoSelecionado)
 
       // Atualiza o romaneio com a escolha do frete
       await supabase
@@ -208,31 +207,32 @@ export default function MeuFrete() {
         })
         .eq('id', romaneioSelecionado)
 
-      // Monta mensagem para o WhatsApp
-      const mensagem = encodeURIComponent(
-        `🚚 *Frete Escolhido*\n\n` +
-        `Romaneio: ${romaneio?.numero}\n` +
-        `Transportadora: ${cotacao.transportadora}\n` +
-        `Serviço: ${cotacao.servico}\n` +
-        `Valor: R$ ${cotacao.valor.toFixed(2)}\n` +
-        `Prazo: ${cotacao.prazo} dias\n\n` +
-        `Endereço de entrega:\n` +
-        `${endereco?.destinatario}\n` +
-        `${endereco?.logradouro}, ${endereco?.numero}\n` +
-        `${endereco?.bairro} - ${endereco?.cidade}/${endereco?.uf}\n` +
-        `CEP: ${endereco?.cep}\n\n` +
-        `Por favor, gere a etiqueta e me envie o link de pagamento do Melhor Envio.`
-      )
+      // Cria pagamento PIX
+      console.log('💳 Criando pagamento PIX...')
 
-      // Abre WhatsApp para solicitar etiqueta
-      const whatsappUrl = `https://wa.me/5516988193339?text=${mensagem}`
-      window.open(whatsappUrl, '_blank')
+      const pix = await criarPagamentoPIX(tenantId, romaneioSelecionado, cotacao.valor, {
+        numeroRomaneio: romaneio?.numero,
+        email: cliente?.email || 'cliente@email.com',
+        nome: cliente?.nome || 'Cliente',
+      })
 
+      console.log('✅ PIX criado:', pix)
+
+      setPagamentoPIX(pix)
+      setShowPIX(true)
       setRomaneioSelecionado(null)
       setCotacoes([])
-      showToast('Solicitação enviada! Aguarde o link de pagamento via WhatsApp.', 'success')
+
+      if (pix.margem) {
+        showToast(
+          `PIX gerado! Valor: R$ ${pix.valor_cobrado.toFixed(2)} (frete R$ ${pix.valor_original.toFixed(2)} + ${pix.margem}% margem)`,
+          'success'
+        )
+      } else {
+        showToast('PIX gerado! Escaneie o QR Code para pagar.', 'success')
+      }
     } catch (err) {
-      showToast(err.message || 'Erro ao processar', 'error')
+      showToast(err.message || 'Erro ao gerar PIX', 'error')
       console.error(err)
     }
   }

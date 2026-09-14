@@ -52,65 +52,40 @@ async function getMercadoPagoToken(tenantId) {
  * @returns {Promise<Object>} - Dados do pagamento criado (QR Code, etc)
  */
 export async function criarPagamentoPIX(tenantId, romaneioId, valor, dados = {}) {
-  const token = await getMercadoPagoToken(tenantId)
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
   try {
-    const payload = {
-      transaction_amount: Number(valor),
-      description: `Pagamento de frete - Romaneio ${dados.numeroRomaneio || romaneioId}`,
-      payment_method_id: 'pix',
-      payer: {
-        email: dados.email || 'cliente@email.com',
-        first_name: dados.nome || 'Cliente',
-        last_name: dados.sobrenome || '',
-        identification: {
-          type: dados.tipoDoc || 'CPF',
-          number: dados.documento || '00000000000',
-        },
-      },
-    }
-
-    const response = await fetch(`${MERCADO_PAGO_API_URL}/v1/payments`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/criar-pagamento-pix-frete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        tenant_id: tenantId,
+        romaneio_id: romaneioId,
+        valor: Number(valor),
+        dados,
+      }),
     })
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.message || 'Erro ao criar pagamento PIX')
+      throw new Error(error.error || 'Erro ao criar pagamento PIX')
     }
 
-    const pagamento = await response.json()
-
-    const expiracao = new Date()
-    expiracao.setMinutes(expiracao.getMinutes() + 30)
-
-    const { error: dbError } = await supabase
-      .from('pagamentos_frete')
-      .insert([{
-        romaneio_id: romaneioId,
-        valor: Number(valor),
-        metodo: 'pix',
-        status: 'pendente',
-        gateway_transaction_id: String(pagamento.id),
-        gateway_response: pagamento,
-        pix_qr_code: pagamento.point_of_interaction?.transaction_data?.qr_code || null,
-        pix_qr_code_base64: pagamento.point_of_interaction?.transaction_data?.qr_code_base64 || null,
-        pix_expiracao: expiracao.toISOString(),
-      }])
-
-    if (dbError) throw dbError
+    const result = await response.json()
 
     return {
-      id: pagamento.id,
-      qr_code: pagamento.point_of_interaction?.transaction_data?.qr_code,
-      qr_code_base64: pagamento.point_of_interaction?.transaction_data?.qr_code_base64,
-      expiracao: expiracao,
-      ticket_url: pagamento.point_of_interaction?.transaction_data?.ticket_url,
+      id: result.id,
+      qr_code: result.qr_code,
+      qr_code_base64: result.qr_code_base64,
+      expiracao: new Date(result.expiracao),
+      ticket_url: result.ticket_url,
+      valor_original: result.valor_original,
+      valor_cobrado: result.valor_cobrado,
+      margem: result.margem,
     }
   } catch (err) {
     console.error('Erro ao criar pagamento PIX:', err)
