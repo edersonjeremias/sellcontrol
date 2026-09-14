@@ -60,6 +60,12 @@ function AbaConfiguracoes({ tenantId, showToast }) {
   useEffect(() => {
     if (!tenantId) return
     getConfig(tenantId).then(cfg => {
+      console.log('📥 Config carregada do banco:', {
+        mp_token: cfg?.mp_access_token?.substring(0, 20) + '...',
+        mp_token_length: cfg?.mp_access_token?.length || 0,
+        whatsapp: cfg?.whatsapp,
+        token_me_length: cfg?.token_melhor_envio?.length || 0
+      })
       if (cfg) {
         setForm({
           mp_access_token: cfg.mp_access_token || '',
