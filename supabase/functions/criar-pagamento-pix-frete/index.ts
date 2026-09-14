@@ -17,6 +17,8 @@ serve(async (req) => {
   try {
     const { tenant_id, romaneio_id, valor, dados = {} } = await req.json()
 
+    console.log('📥 Requisição recebida:', { tenant_id, romaneio_id, valor })
+
     if (!tenant_id || !romaneio_id || !valor) {
       return new Response(
         JSON.stringify({ error: 'Parâmetros obrigatórios: tenant_id, romaneio_id, valor' }),
@@ -24,10 +26,23 @@ serve(async (req) => {
       )
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    console.log('🔑 Variáveis:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseKey,
+      url: supabaseUrl?.substring(0, 30) + '...'
+    })
+
+    if (!supabaseUrl || !supabaseKey) {
+      return new Response(
+        JSON.stringify({ error: 'Variáveis de ambiente não configuradas' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
     // Busca configurações (token MP + margem)
     const { data: config, error: configError } = await supabaseClient
