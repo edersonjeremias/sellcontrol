@@ -142,6 +142,7 @@ export default function ContasPagarPage() {
   const [salvando,    setSalvando]    = useState(false)
   const [modalDetalheCat, setModalDetalheCat] = useState(null) // { categoria, contas }
   const [subcatsAbertas, setSubcatsAbertas] = useState(new Set()) // Subcategorias expandidas
+  const [buscaModal,  setBuscaModal]  = useState('') // Busca inteligente no modal
 
   // ── Formulário modal novo / editar ─────────────────────────
   const [form,    setForm]    = useState(FORM_VAZIO)
@@ -286,11 +287,16 @@ export default function ContasPagarPage() {
     if (!modalEdit) return
     setSalvando(true)
     try {
+      // Se for Pro labore e tiver subcat, usa subcat como tipo_despesa
+      const tipoFinal = isProLabore(form.categoria) && form.subcat
+        ? form.subcat
+        : form.tipo_despesa
+
       await salvarContaPagar(tenantId, {
         id:              modalEdit.id,
         observacao:      form.observacao,
         categoria:       form.categoria,
-        tipo_despesa:    form.tipo_despesa,
+        tipo_despesa:    tipoFinal,
         valor:           parseValor(form.valor),
         data_vencimento: form.data_vencimento,
         status:          form.status,
@@ -304,10 +310,13 @@ export default function ContasPagarPage() {
   }
 
   function abrirEditar(c) {
+    // Se for Pro labore, o tipo_despesa é a subcategoria
+    const ehProLabore = isProLabore(c.categoria)
     setForm({
       observacao:      c.observacao || '',
       categoria:       c.categoria || '',
-      tipo_despesa:    c.tipo_despesa || 'Fixa',
+      tipo_despesa:    ehProLabore ? 'Pro labore' : (c.tipo_despesa || 'Fixa'),
+      subcat:          ehProLabore ? (c.tipo_despesa || '') : '',
       valor:           mascaraValor(String(Math.round((Number(c.valor)||0)*100))),
       data_vencimento: c.data_vencimento || HOJE,
       status:          c.status || 'A PAGAR',
@@ -345,6 +354,7 @@ export default function ContasPagarPage() {
     const contasDaCategoria = contasFiltradas.filter(c => (c.categoria || 'Sem categoria') === categoria)
     setModalDetalheCat({ categoria, contas: contasDaCategoria })
     setSubcatsAbertas(new Set()) // Reset subcategorias expandidas
+    setBuscaModal('') // Reset busca do modal
   }
 
   // ── Toggle subcategoria (accordion) ────────────────────────
@@ -764,9 +774,20 @@ export default function ContasPagarPage() {
 
       {/* ═══ MODAL: DETALHES DA CATEGORIA (ACCORDION POR SUBCATEGORIA) ═══ */}
       {modalDetalheCat && (() => {
-        // Agrupa lançamentos por subcategoria (tipo_despesa)
+        // Filtra lançamentos pela busca
+        let contasFiltradas = modalDetalheCat.contas
+        if (buscaModal.trim()) {
+          const termos = buscaModal.toLowerCase().split(/[\s,]+/).filter(Boolean)
+          contasFiltradas = contasFiltradas.filter(c => {
+            const txt = [c.observacao, c.tipo_despesa, c.valor, fmtData(c.data_vencimento), c.status]
+              .join(' ').toLowerCase()
+            return termos.every(t => txt.includes(t))
+          })
+        }
+
+        // Agrupa lançamentos filtrados por subcategoria (tipo_despesa)
         const gruposSubcat = {}
-        modalDetalheCat.contas.forEach(c => {
+        contasFiltradas.forEach(c => {
           const subcat = c.tipo_despesa || 'Sem tipo'
           if (!gruposSubcat[subcat]) gruposSubcat[subcat] = []
           gruposSubcat[subcat].push(c)
@@ -774,18 +795,30 @@ export default function ContasPagarPage() {
         const subcatsOrd = Object.keys(gruposSubcat).sort()
 
         return (
-          <div className="modal-overlay" onClick={() => { setModalDetalheCat(null); setSubcatsAbertas(new Set()) }}>
+          <div className="modal-overlay" onClick={() => { setModalDetalheCat(null); setSubcatsAbertas(new Set()); setBuscaModal('') }}>
             <div className="modal-card modal-contas-cat" onClick={e => e.stopPropagation()}>
               {/* Cabeçalho */}
               <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid var(--border-light)', padding:'14px 16px', flexShrink:0 }}>
                 <div>
                   <h3 style={{ margin:0, fontSize:17, color:'var(--blue)' }}>{modalDetalheCat.categoria}</h3>
                   <p style={{ margin:'4px 0 0 0', fontSize:12, color:'var(--muted)' }}>
-                    {modalDetalheCat.contas.length} {modalDetalheCat.contas.length === 1 ? 'lançamento' : 'lançamentos'}
+                    {contasFiltradas.length} {contasFiltradas.length === 1 ? 'lançamento' : 'lançamentos'}
+                    {buscaModal.trim() && <span style={{ color:'var(--blue)', marginLeft:6 }}>· filtrado</span>}
                   </p>
                 </div>
-                <button onClick={() => { setModalDetalheCat(null); setSubcatsAbertas(new Set()) }}
+                <button onClick={() => { setModalDetalheCat(null); setSubcatsAbertas(new Set()); setBuscaModal('') }}
                   style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer', padding:4 }}>✕</button>
+              </div>
+
+              {/* Campo de busca */}
+              <div style={{ padding:'12px 16px', borderBottom:'1px solid var(--border-light)', background:'var(--header-bg)' }}>
+                <input
+                  type="text"
+                  placeholder="Busca inteligente: descrição, tipo, valor, data... (separe termos por vírgula ou espaço)"
+                  value={buscaModal}
+                  onChange={e => setBuscaModal(e.target.value)}
+                  style={{ ...S.inp, fontSize:13 }}
+                />
               </div>
 
               {/* Corpo do modal: subcategorias em accordion */}
@@ -907,7 +940,7 @@ export default function ContasPagarPage() {
               <div style={{ borderTop:'1px solid var(--border-light)', padding:'12px 16px', textAlign:'center', flexShrink:0, background:'var(--header-bg)' }}>
                 <div style={{ fontSize:14, fontWeight:700, color:'var(--text-body)' }}>
                   Total: <span style={{ color:'var(--blue)', fontSize:17 }}>
-                    {fmtR(modalDetalheCat.contas.reduce((s, c) => s + (Number(c.valor)||0), 0))}
+                    {fmtR(contasFiltradas.reduce((s, c) => s + (Number(c.valor)||0), 0))}
                   </span>
                 </div>
               </div>
