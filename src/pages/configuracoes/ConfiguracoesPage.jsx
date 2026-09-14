@@ -116,6 +116,11 @@ function AbaConfiguracoes({ tenantId, showToast }) {
   async function salvar() {
     setSalvando(true)
     try {
+      console.log('🔍 Salvando configurações:', {
+        mp_token_length: form.mp_access_token?.length || 0,
+        whatsapp: form.whatsapp,
+        token_me_length: form.token_melhor_envio?.length || 0
+      })
       await saveConfig(tenantId, form)
       invalidateMpTokenCache()
       showToast('Configurações salvas!')
@@ -148,6 +153,9 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           onChange={e => setForm(p => ({ ...p, whatsapp: e.target.value }))}
           placeholder="11999999999"
           style={SI}
+          autoComplete="off"
+          name="loja-whatsapp"
+          data-form-type="other"
         />
       </div>
 

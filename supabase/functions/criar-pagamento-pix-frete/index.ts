@@ -15,6 +15,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Função iniciada')
+
     const { tenant_id, romaneio_id, valor, dados = {} } = await req.json()
 
     console.log('📥 Requisição recebida:', { tenant_id, romaneio_id, valor })
@@ -26,32 +28,51 @@ serve(async (req) => {
       )
     }
 
+    // Cria cliente Supabase com Service Role Key
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    console.log('🔑 Variáveis:', {
+    console.log('🔑 Env check:', {
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseKey,
-      url: supabaseUrl?.substring(0, 30) + '...'
+      keyLength: supabaseKey?.length || 0
     })
 
-    if (!supabaseUrl || !supabaseKey) {
-      return new Response(
-        JSON.stringify({ error: 'Variáveis de ambiente não configuradas' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    const supabaseClient = createClient(
+      supabaseUrl!,
+      supabaseKey!
+    )
 
-    const supabaseClient = createClient(supabaseUrl, supabaseKey)
+    console.log('✅ Cliente Supabase criado')
 
     // Busca configurações (token MP + margem)
+    console.log('🔍 Buscando config para tenant:', tenant_id)
+
     const { data: config, error: configError } = await supabaseClient
       .from('configuracoes')
       .select('mp_access_token, margem_frete')
       .eq('tenant_id', tenant_id)
       .single()
 
-    if (configError || !config?.mp_access_token) {
+    console.log('📊 Resultado config:', {
+      hasData: !!config,
+      hasError: !!configError,
+      errorMsg: configError?.message,
+      hasToken: !!config?.mp_access_token,
+      tokenLength: config?.mp_access_token?.length || 0,
+      margem: config?.margem_frete
+    })
+
+    if (configError) {
+      console.error('❌ Erro ao buscar config:', configError)
+      return new Response(
+        JSON.stringify({ error: 'Erro ao buscar configurações' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!config?.mp_access_token) {
+      console.error('❌ Token MP ausente!')
       return new Response(
         JSON.stringify({ error: 'Token do Mercado Pago não configurado' }),
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -60,6 +81,12 @@ serve(async (req) => {
 
     const token = config.mp_access_token
     const margemFrete = config.margem_frete || 10
+
+    console.log('💰 Calculando pagamento:', {
+      valorOriginal: valor,
+      margem: margemFrete,
+      valorFinal: (valor * (1 + margemFrete / 100)).toFixed(2)
+    })
 
     // Calcula valor final com margem
     const valorComMargem = valor * (1 + margemFrete / 100)
@@ -79,6 +106,11 @@ serve(async (req) => {
         },
       },
     }
+
+    console.log('📲 Chamando Mercado Pago...', {
+      amount: mpPayload.transaction_amount,
+      method: mpPayload.payment_method_id
+    })
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
