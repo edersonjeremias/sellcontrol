@@ -257,6 +257,39 @@ export default function MeuFrete() {
     }
   }
 
+  const handleCancelarPagamento = async (romaneio) => {
+    if (!window.confirm('Cancelar pagamento e cotar frete novamente?')) {
+      return
+    }
+
+    try {
+      // Deleta pagamento pendente
+      await supabase
+        .from('pagamentos_frete')
+        .delete()
+        .eq('romaneio_id', romaneio.id)
+        .eq('status', 'pendente')
+
+      // Volta status para pronto
+      await supabase
+        .from('romaneios')
+        .update({
+          status: 'pronto',
+          transportadora: null,
+          servico: null,
+          valor_frete: null,
+          prazo_entrega: null,
+        })
+        .eq('id', romaneio.id)
+
+      carregarRomaneios()
+      showToast('Pagamento cancelado! Você pode cotar o frete novamente.', 'success')
+    } catch (err) {
+      showToast('Erro ao cancelar pagamento', 'error')
+      console.error(err)
+    }
+  }
+
   const copiarPIX = () => {
     if (pagamentoPIX?.qr_code) {
       navigator.clipboard.writeText(pagamentoPIX.qr_code)
@@ -481,23 +514,40 @@ export default function MeuFrete() {
                     <div style={{ color: '#9aa0a6', fontSize: 13 }}>
                       Valor: R$ {(rom.valor_frete || 0).toFixed(2)} • Prazo: {rom.prazo_entrega || 0} dia(s) útil(is)
                     </div>
-                    <button
-                      onClick={() => handleVerPIX(rom)}
-                      style={{
-                        width: '100%',
-                        background: 'var(--p-yellow)',
-                        color: '#0f0f0f',
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: '10px',
-                        fontWeight: 700,
-                        fontSize: 13,
-                        cursor: 'pointer',
-                        marginTop: 10,
-                      }}
-                    >
-                      💳 Ver PIX
-                    </button>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                      <button
+                        onClick={() => handleVerPIX(rom)}
+                        style={{
+                          flex: 1,
+                          background: 'var(--p-yellow)',
+                          color: '#0f0f0f',
+                          border: 'none',
+                          borderRadius: 6,
+                          padding: '10px',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        💳 Ver PIX
+                      </button>
+                      <button
+                        onClick={() => handleCancelarPagamento(rom)}
+                        style={{
+                          flex: 1,
+                          background: 'rgba(244, 67, 54, 0.1)',
+                          color: '#f44336',
+                          border: '1px solid rgba(244, 67, 54, 0.3)',
+                          borderRadius: 6,
+                          padding: '10px',
+                          fontWeight: 700,
+                          fontSize: 13,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ❌ Cancelar
+                      </button>
+                    </div>
                   </div>
                 )}
 
