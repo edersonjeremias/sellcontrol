@@ -193,7 +193,9 @@ export default function MeuFrete() {
 
     try {
       const romaneio = romaneios.find(r => r.id === romaneioSelecionado)
+      const endereco = enderecos.find(e => e.id === enderecoSelecionado)
 
+      // Atualiza o romaneio com a escolha do frete
       await supabase
         .from('romaneios')
         .update({
@@ -206,19 +208,31 @@ export default function MeuFrete() {
         })
         .eq('id', romaneioSelecionado)
 
-      const pix = await criarPagamentoPIX(tenantId, romaneioSelecionado, cotacao.valor, {
-        numeroRomaneio: romaneio?.numero,
-        email: cliente?.email || 'cliente@email.com',
-        nome: cliente?.nome || 'Cliente',
-      })
+      // Monta mensagem para o WhatsApp
+      const mensagem = encodeURIComponent(
+        `🚚 *Frete Escolhido*\n\n` +
+        `Romaneio: ${romaneio?.numero}\n` +
+        `Transportadora: ${cotacao.transportadora}\n` +
+        `Serviço: ${cotacao.servico}\n` +
+        `Valor: R$ ${cotacao.valor.toFixed(2)}\n` +
+        `Prazo: ${cotacao.prazo} dias\n\n` +
+        `Endereço de entrega:\n` +
+        `${endereco?.destinatario}\n` +
+        `${endereco?.logradouro}, ${endereco?.numero}\n` +
+        `${endereco?.bairro} - ${endereco?.cidade}/${endereco?.uf}\n` +
+        `CEP: ${endereco?.cep}\n\n` +
+        `Por favor, gere a etiqueta e me envie o link de pagamento do Melhor Envio.`
+      )
 
-      setPagamentoPIX(pix)
-      setShowPIX(true)
+      // Abre WhatsApp para solicitar etiqueta
+      const whatsappUrl = `https://wa.me/5516988193339?text=${mensagem}`
+      window.open(whatsappUrl, '_blank')
+
       setRomaneioSelecionado(null)
       setCotacoes([])
-      showToast('PIX gerado! Escaneie o QR Code para pagar.', 'success')
+      showToast('Solicitação enviada! Aguarde o link de pagamento via WhatsApp.', 'success')
     } catch (err) {
-      showToast(err.message || 'Erro ao gerar PIX', 'error')
+      showToast(err.message || 'Erro ao processar', 'error')
       console.error(err)
     }
   }
