@@ -342,9 +342,12 @@ function AbaConfiguracoes({ tenantId, showToast }) {
             onChange={e => setForm(p => ({ ...p, mp_access_token: e.target.value }))}
             placeholder="APP_USR-..."
             style={{ ...SI, flex: 1, fontFamily: 'monospace', fontSize: 12 }}
-            autoComplete="off"
-            name="mercadopago-access-token"
+            autoComplete="new-password"
+            name="mp-token-do-not-autofill"
             data-form-type="other"
+            data-lpignore="true"
+            readOnly
+            onFocus={e => e.target.removeAttribute('readOnly')}
           />
           <button
             onClick={() => setMostrarToken(v => !v)}
@@ -394,7 +397,11 @@ function AbaConfiguracoes({ tenantId, showToast }) {
               onChange={e => setForm(p => ({ ...p, token_melhor_envio: e.target.value }))}
               placeholder="eyJ0eXAiOiJKV1QiLCJhbGc..."
               style={{ ...SI, flex: 1, fontFamily: 'monospace', fontSize: 11 }}
-              autoComplete="off"
+              autoComplete="new-password"
+              name="me-token-do-not-autofill"
+              data-lpignore="true"
+              readOnly
+              onFocus={e => e.target.removeAttribute('readOnly')}
             />
             <button
               onClick={() => setMostrarTokenME(v => !v)}
