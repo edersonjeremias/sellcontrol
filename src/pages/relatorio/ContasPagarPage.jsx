@@ -141,6 +141,7 @@ export default function ContasPagarPage() {
   const [confirmDel,  setConfirmDel]  = useState(null)
   const [salvando,    setSalvando]    = useState(false)
   const [modalDetalheCat, setModalDetalheCat] = useState(null) // { categoria, contas }
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState(null) // Para navegação mobile
 
   // ── Formulário modal novo / editar ─────────────────────────
   const [form,    setForm]    = useState(FORM_VAZIO)
@@ -343,6 +344,7 @@ export default function ContasPagarPage() {
   function abrirDetalhesCategoria(categoria) {
     const contasDaCategoria = contasFiltradas.filter(c => (c.categoria || 'Sem categoria') === categoria)
     setModalDetalheCat({ categoria, contas: contasDaCategoria })
+    setCategoriaSelecionada(null) // Reset para mobile
   }
 
   // ── Relatórios: gastos por categoria ──────────────────────
@@ -751,103 +753,234 @@ export default function ContasPagarPage() {
         </div>
       )}
 
-      {/* ═══ MODAL: DETALHES DA CATEGORIA ═══ */}
+      {/* ═══ MODAL: DETALHES DA CATEGORIA (RESPONSIVO) ═══ */}
       {modalDetalheCat && (
-        <div className="modal-overlay" onClick={() => setModalDetalheCat(null)}>
-          <div className="modal-card" style={{ width:'95%', maxWidth:1100, maxHeight:'85vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid var(--border-light)', padding:'16px 20px', flexShrink:0 }}>
-              <div>
-                <h3 style={{ margin:0, fontSize:18, color:'var(--blue)' }}>{modalDetalheCat.categoria}</h3>
-                <p style={{ margin:'4px 0 0 0', fontSize:12, color:'var(--muted)' }}>
-                  {modalDetalheCat.contas.length} {modalDetalheCat.contas.length === 1 ? 'lançamento' : 'lançamentos'}
-                </p>
-              </div>
-              <button onClick={() => setModalDetalheCat(null)} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:22, cursor:'pointer', padding:4 }}>✕</button>
-            </div>
-            <div className="modal-body" style={{ padding:0, overflowY:'auto', flex:1 }}>
-              {modalDetalheCat.contas.length === 0 ? (
-                <p style={{ padding:20, color:'var(--muted)', textAlign:'center' }}>Nenhum lançamento encontrado.</p>
+        <div className="modal-overlay" onClick={() => { setModalDetalheCat(null); setCategoriaSelecionada(null) }}>
+          <div className="modal-card modal-contas-cat" onClick={e => e.stopPropagation()}>
+            {/* Mobile: Lista de categorias ou lançamentos */}
+            <div className="mobile-only">
+              {!categoriaSelecionada ? (
+                // Tela 1: Lista de categorias
+                <>
+                  <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid var(--border-light)', padding:'14px 16px', flexShrink:0 }}>
+                    <h3 style={{ margin:0, fontSize:16, color:'var(--text-header)' }}>Categorias</h3>
+                    <button onClick={() => { setModalDetalheCat(null); setCategoriaSelecionada(null) }}
+                      style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer', padding:4 }}>✕</button>
+                  </div>
+                  <div style={{ overflowY:'auto', flex:1, padding:12 }}>
+                    <div style={{ display:'grid', gap:8 }}>
+                      {catOrdenadas.map(([cat, valor]) => {
+                        const contasCat = contasFiltradas.filter(c => (c.categoria || 'Sem categoria') === cat)
+                        const pct = totalPeriodo > 0 ? (valor / totalPeriodo * 100).toFixed(1) : 0
+                        return (
+                          <div key={cat}
+                            onClick={() => setCategoriaSelecionada(cat)}
+                            style={{
+                              background:'var(--card-bg)', border:'1px solid var(--border-light)',
+                              borderRadius:8, padding:'12px 14px', cursor:'pointer',
+                              display:'flex', justifyContent:'space-between', alignItems:'center',
+                            }}
+                          >
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:13, color:'var(--muted)', marginBottom:4, fontWeight:600 }}>{cat}</div>
+                              <div style={{ fontSize:18, fontWeight:800, color:'var(--text-body)', marginBottom:4 }}>{fmtR(valor)}</div>
+                              <div style={{ fontSize:11, color:'var(--muted)' }}>
+                                {contasCat.length} {contasCat.length === 1 ? 'lançamento' : 'lançamentos'} • {pct}%
+                              </div>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
               ) : (
-                <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                  <thead style={{ position:'sticky', top:0, zIndex:1 }}>
-                    <tr>
-                      <th style={{...S.th, width:'100px'}}>DATA</th>
-                      <th style={{...S.th, minWidth:'200px'}}>DESCRIÇÃO</th>
-                      <th style={{...S.th, width:'120px'}}>TIPO</th>
-                      <th style={{...S.th, width:'120px', textAlign:'right'}}>VALOR</th>
-                      <th style={{...S.th, width:'100px'}}>STATUS</th>
-                      <th style={{...S.th, width:'180px', textAlign:'center'}}>AÇÕES</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {modalDetalheCat.contas
+                // Tela 2: Lançamentos da categoria selecionada
+                <>
+                  <div className="modal-header" style={{ display:'flex', alignItems:'center', borderBottom:'1px solid var(--border-light)', padding:'14px 16px', flexShrink:0, gap:8 }}>
+                    <button onClick={() => setCategoriaSelecionada(null)}
+                      style={{ background:'none', border:'none', color:'var(--blue)', fontSize:20, cursor:'pointer', padding:4, marginRight:4 }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="15 18 9 12 15 6"/>
+                      </svg>
+                    </button>
+                    <div style={{ flex:1 }}>
+                      <h3 style={{ margin:0, fontSize:15, color:'var(--blue)', fontWeight:700 }}>{categoriaSelecionada}</h3>
+                      <p style={{ margin:'2px 0 0 0', fontSize:11, color:'var(--muted)' }}>
+                        {contasFiltradas.filter(c => (c.categoria || 'Sem categoria') === categoriaSelecionada).length} lançamentos
+                      </p>
+                    </div>
+                    <button onClick={() => { setModalDetalheCat(null); setCategoriaSelecionada(null) }}
+                      style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer', padding:4 }}>✕</button>
+                  </div>
+                  <div style={{ overflowY:'auto', flex:1 }}>
+                    {contasFiltradas
+                      .filter(c => (c.categoria || 'Sem categoria') === categoriaSelecionada)
                       .sort((a, b) => {
-                        if (a.created_at && b.created_at) {
-                          return new Date(b.created_at) - new Date(a.created_at)
-                        }
+                        if (a.created_at && b.created_at) return new Date(b.created_at) - new Date(a.created_at)
                         return (b.id || 0) - (a.id || 0)
                       })
                       .map(c => (
-                        <tr key={c.id}
-                          style={{ borderBottom:'1px solid var(--border-light)', background:'var(--body-bg)' }}
-                          onMouseEnter={e=>e.currentTarget.style.background='var(--table-row-hover)'}
-                          onMouseLeave={e=>e.currentTarget.style.background='var(--body-bg)'}
+                        <div key={c.id}
+                          style={{
+                            padding:'12px 16px', borderBottom:'1px solid var(--border-light)',
+                            background:'var(--body-bg)',
+                          }}
                         >
-                          <td style={{...S.td, whiteSpace:'nowrap', color:'var(--blue)', fontWeight:600, fontSize:13}}>{fmtData(c.data_vencimento)}</td>
-                          <td style={S.td}>
-                            <div style={{ fontSize:13, color:'var(--text-header)', fontWeight:500 }}>{c.observacao || c.categoria}</div>
-                            {c.status==='PAGO' && c.data_pagamento && (
-                              <div style={{ fontSize:10, color:'var(--green)', marginTop:2 }}>✓ pago em {fmtData(c.data_pagamento)}</div>
-                            )}
-                          </td>
-                          <td style={{...S.td, fontSize:12, color:'var(--muted)'}}>{c.tipo_despesa}</td>
-                          <td style={{...S.td, textAlign:'right', fontWeight:700, fontSize:13, color: c.status==='PAGO'?'var(--green)':'var(--red)', whiteSpace:'nowrap'}}>{fmtR(c.valor)}</td>
-                          <td style={{...S.td, textAlign:'center'}}>
-                            <span style={{
-                              fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:4, display:'inline-block',
-                              color: c.status==='PAGO'?'var(--green)':'var(--yellow)',
-                            }}>
-                              {c.status==='PAGO' ? 'Pago' : 'Pendente'}
-                            </span>
-                          </td>
-                          <td style={{...S.td, textAlign:'center'}}>
-                            <div style={{ display:'flex', gap:4, justifyContent:'center' }}>
-                              {c.status !== 'PAGO' && (
-                                <button onClick={() => { setModalPagar({id:c.id}); setDataPag(HOJE); setModalDetalheCat(null) }}
-                                  className="btn-action-sm send" title="Marcar como pago">
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="20 6 9 17 4 12"/>
-                                  </svg>
-                                </button>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ fontSize:14, fontWeight:600, color:'var(--text-header)', marginBottom:2 }}>
+                                {c.observacao || c.categoria}
+                              </div>
+                              <div style={{ fontSize:11, color:'var(--muted)' }}>
+                                {fmtData(c.data_vencimento)} • {c.tipo_despesa}
+                              </div>
+                              {c.status==='PAGO' && c.data_pagamento && (
+                                <div style={{ fontSize:10, color:'var(--green)', marginTop:2 }}>✓ pago em {fmtData(c.data_pagamento)}</div>
                               )}
-                              <button onClick={() => { abrirEditar(c); setModalDetalheCat(null) }}
-                                className="btn-action-sm copy" title="Editar">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                </svg>
-                              </button>
-                              <button onClick={() => { setConfirmDel(c); setModalDetalheCat(null) }}
-                                className="btn-action-sm del" title="Excluir">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6"/>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                </svg>
-                              </button>
                             </div>
-                          </td>
-                        </tr>
+                            <div style={{ textAlign:'right', marginLeft:8 }}>
+                              <div style={{ fontSize:16, fontWeight:700, color: c.status==='PAGO'?'var(--green)':'var(--red)', marginBottom:2 }}>
+                                {fmtR(c.valor)}
+                              </div>
+                              <span style={{
+                                fontSize:9, fontWeight:700, padding:'2px 6px', borderRadius:4, display:'inline-block',
+                                color: c.status==='PAGO'?'var(--green)':'var(--yellow)',
+                              }}>
+                                {c.status==='PAGO' ? 'Pago' : 'Pendente'}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ display:'flex', gap:6, justifyContent:'flex-end', marginTop:8 }}>
+                            {c.status !== 'PAGO' && (
+                              <button onClick={() => { setModalPagar({id:c.id}); setDataPag(HOJE); setModalDetalheCat(null); setCategoriaSelecionada(null) }}
+                                style={{ ...S.ok, padding:'5px 10px', fontSize:11 }}>
+                                ✓ Pagar
+                              </button>
+                            )}
+                            <button onClick={() => { abrirEditar(c); setModalDetalheCat(null); setCategoriaSelecionada(null) }}
+                              style={{ ...S.btn, padding:'5px 10px', fontSize:11 }}>
+                              Editar
+                            </button>
+                            <button onClick={() => { setConfirmDel(c); setModalDetalheCat(null); setCategoriaSelecionada(null) }}
+                              style={{ ...S.del, padding:'5px 10px', fontSize:11 }}>
+                              Excluir
+                            </button>
+                          </div>
+                        </div>
                       ))
                     }
-                  </tbody>
-                </table>
+                  </div>
+                  <div style={{ borderTop:'1px solid var(--border-light)', padding:'12px 16px', textAlign:'center', flexShrink:0, background:'var(--header-bg)' }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:'var(--text-body)' }}>
+                      Total: <span style={{ color:'var(--blue)', fontSize:16 }}>
+                        {fmtR(contasFiltradas.filter(c => (c.categoria || 'Sem categoria') === categoriaSelecionada).reduce((s, c) => s + (Number(c.valor)||0), 0))}
+                      </span>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
-            <div className="modal-footer" style={{ borderTop:'1px solid var(--border-light)', padding:'14px 20px', textAlign:'center', flexShrink:0 }}>
-              <div style={{ fontSize:15, fontWeight:700, color:'var(--text-body)' }}>
-                Total: <span style={{ color:'var(--blue)', fontSize:18 }}>
-                  {fmtR(modalDetalheCat.contas.reduce((s, c) => s + (Number(c.valor)||0), 0))}
-                </span>
+
+            {/* Desktop: Tabela direta */}
+            <div className="desktop-only" style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+              <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid var(--border-light)', padding:'16px 20px', flexShrink:0 }}>
+                <div>
+                  <h3 style={{ margin:0, fontSize:18, color:'var(--blue)' }}>{modalDetalheCat.categoria}</h3>
+                  <p style={{ margin:'4px 0 0 0', fontSize:12, color:'var(--muted)' }}>
+                    {modalDetalheCat.contas.length} {modalDetalheCat.contas.length === 1 ? 'lançamento' : 'lançamentos'}
+                  </p>
+                </div>
+                <button onClick={() => setModalDetalheCat(null)} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:22, cursor:'pointer', padding:4 }}>✕</button>
+              </div>
+              <div className="modal-body" style={{ padding:0, overflowY:'auto', flex:1 }}>
+                {modalDetalheCat.contas.length === 0 ? (
+                  <p style={{ padding:20, color:'var(--muted)', textAlign:'center' }}>Nenhum lançamento encontrado.</p>
+                ) : (
+                  <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                    <thead style={{ position:'sticky', top:0, zIndex:1 }}>
+                      <tr>
+                        <th style={{...S.th, width:'100px'}}>DATA</th>
+                        <th style={{...S.th, minWidth:'200px'}}>DESCRIÇÃO</th>
+                        <th style={{...S.th, width:'120px'}}>TIPO</th>
+                        <th style={{...S.th, width:'120px', textAlign:'right'}}>VALOR</th>
+                        <th style={{...S.th, width:'100px'}}>STATUS</th>
+                        <th style={{...S.th, width:'180px', textAlign:'center'}}>AÇÕES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalDetalheCat.contas
+                        .sort((a, b) => {
+                          if (a.created_at && b.created_at) {
+                            return new Date(b.created_at) - new Date(a.created_at)
+                          }
+                          return (b.id || 0) - (a.id || 0)
+                        })
+                        .map(c => (
+                          <tr key={c.id}
+                            style={{ borderBottom:'1px solid var(--border-light)', background:'var(--body-bg)' }}
+                            onMouseEnter={e=>e.currentTarget.style.background='var(--table-row-hover)'}
+                            onMouseLeave={e=>e.currentTarget.style.background='var(--body-bg)'}
+                          >
+                            <td style={{...S.td, whiteSpace:'nowrap', color:'var(--blue)', fontWeight:600, fontSize:13}}>{fmtData(c.data_vencimento)}</td>
+                            <td style={S.td}>
+                              <div style={{ fontSize:13, color:'var(--text-header)', fontWeight:500 }}>{c.observacao || c.categoria}</div>
+                              {c.status==='PAGO' && c.data_pagamento && (
+                                <div style={{ fontSize:10, color:'var(--green)', marginTop:2 }}>✓ pago em {fmtData(c.data_pagamento)}</div>
+                              )}
+                            </td>
+                            <td style={{...S.td, fontSize:12, color:'var(--muted)'}}>{c.tipo_despesa}</td>
+                            <td style={{...S.td, textAlign:'right', fontWeight:700, fontSize:13, color: c.status==='PAGO'?'var(--green)':'var(--red)', whiteSpace:'nowrap'}}>{fmtR(c.valor)}</td>
+                            <td style={{...S.td, textAlign:'center'}}>
+                              <span style={{
+                                fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:4, display:'inline-block',
+                                color: c.status==='PAGO'?'var(--green)':'var(--yellow)',
+                              }}>
+                                {c.status==='PAGO' ? 'Pago' : 'Pendente'}
+                              </span>
+                            </td>
+                            <td style={{...S.td, textAlign:'center'}}>
+                              <div style={{ display:'flex', gap:4, justifyContent:'center' }}>
+                                {c.status !== 'PAGO' && (
+                                  <button onClick={() => { setModalPagar({id:c.id}); setDataPag(HOJE); setModalDetalheCat(null) }}
+                                    className="btn-action-sm send" title="Marcar como pago">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                  </button>
+                                )}
+                                <button onClick={() => { abrirEditar(c); setModalDetalheCat(null) }}
+                                  className="btn-action-sm copy" title="Editar">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                  </svg>
+                                </button>
+                                <button onClick={() => { setConfirmDel(c); setModalDetalheCat(null) }}
+                                  className="btn-action-sm del" title="Excluir">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                  </svg>
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      }
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="modal-footer" style={{ borderTop:'1px solid var(--border-light)', padding:'14px 20px', textAlign:'center', flexShrink:0 }}>
+                <div style={{ fontSize:15, fontWeight:700, color:'var(--text-body)' }}>
+                  Total: <span style={{ color:'var(--blue)', fontSize:18 }}>
+                    {fmtR(modalDetalheCat.contas.reduce((s, c) => s + (Number(c.valor)||0), 0))}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
