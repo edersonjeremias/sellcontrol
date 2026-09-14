@@ -48,6 +48,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
     proximo_codigo: 100,
     token_melhor_envio: '',
     melhor_envio_api_url: 'https://sandbox.melhorenvio.com.br',
+    margem_frete: 10,
   })
   const [salvando, setSalvando] = useState(false)
   const [mostrarToken, setMostrarToken] = useState(false)
@@ -70,6 +71,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           proximo_codigo: cfg.proximo_codigo || 100,
           token_melhor_envio: cfg.token_melhor_envio || '',
           melhor_envio_api_url: cfg.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br',
+          margem_frete: cfg.margem_frete || 10,
         })
         setPacotes(cfg.pacotes || [])
       }
@@ -414,6 +416,27 @@ function AbaConfiguracoes({ tenantId, showToast }) {
               ? '🧪 Modo Teste: Os envios não serão cobrados. Use para testar a integração.'
               : '⚠️ Modo Produção: Os envios serão COBRADOS de verdade. Certifique-se de ter saldo na conta.'
             }
+          </div>
+        </div>
+
+        {/* Margem de Frete */}
+        <div style={{ marginTop: 16 }}>
+          <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+            💰 Margem de Frete (%)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.1"
+            value={form.margem_frete}
+            onChange={e => setForm(p => ({ ...p, margem_frete: parseFloat(e.target.value) || 0 }))}
+            style={{ ...SI, maxWidth: 150 }}
+          />
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
+            Percentual adicionado sobre o frete para cobrir taxas e ter margem de lucro.
+            <br />
+            <strong>Exemplo:</strong> Frete R$ 50,00 + {form.margem_frete}% = <span style={{ color: 'var(--green)' }}>R$ {(50 * (1 + form.margem_frete / 100)).toFixed(2)}</span> cobrado do cliente
           </div>
         </div>
       </div>
