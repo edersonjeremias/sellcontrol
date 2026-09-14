@@ -234,6 +234,10 @@ export default function MeuFrete() {
     } catch (err) {
       showToast(err.message || 'Erro ao gerar PIX', 'error')
       console.error(err)
+
+      // Fecha modal e limpa seleção em caso de erro
+      setRomaneioSelecionado(null)
+      setCotacoes([])
     }
   }
 
