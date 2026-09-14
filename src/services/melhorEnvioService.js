@@ -59,28 +59,27 @@ async function getMelhorEnvioConfig(tenantId) {
  * @returns {Promise<Array>} - Lista de opções de frete
  */
 export async function calcularFrete(tenantId, { from, to, package: pkg }) {
-  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
-
-  const payload = {
-    from,
-    to,
-    package: pkg,
-  }
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
   try {
-    const response = await fetch(`${apiUrl}/api/v2/me/shipment/calculate`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/calcular-frete-melhor-envio`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        tenant_id: tenantId,
+        from,
+        to,
+        package: pkg,
+      }),
     })
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.message || 'Erro ao calcular frete')
+      throw new Error(error.error || 'Erro ao calcular frete')
     }
 
     const cotacoes = await response.json()
@@ -191,24 +190,25 @@ export async function comprarEtiqueta(tenantId, serviceId, orderData) {
  * @returns {Promise<Object>} - URL da etiqueta gerada
  */
 export async function gerarEtiqueta(tenantId, orderIds) {
-  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
   try {
-    const response = await fetch(`${apiUrl}/api/v2/me/shipment/generate`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/gerar-etiqueta-melhor-envio`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
-        orders: orderIds,
+        tenant_id: tenantId,
+        order_ids: orderIds,
       }),
     })
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.message || 'Erro ao gerar etiqueta')
+      throw new Error(error.error || 'Erro ao gerar etiqueta')
     }
 
     return await response.json()
@@ -225,24 +225,25 @@ export async function gerarEtiqueta(tenantId, orderIds) {
  * @returns {Promise<string>} - URL do PDF da etiqueta
  */
 export async function imprimirEtiqueta(tenantId, orderIds) {
-  const { token, apiUrl } = await getMelhorEnvioConfig(tenantId)
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+  const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
   try {
-    const response = await fetch(`${apiUrl}/api/v2/me/shipment/print`, {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/imprimir-etiqueta-melhor-envio`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
-        orders: orderIds,
+        tenant_id: tenantId,
+        order_ids: orderIds,
       }),
     })
 
     if (!response.ok) {
       const error = await response.json()
-      throw new Error(error.message || 'Erro ao imprimir etiqueta')
+      throw new Error(error.error || 'Erro ao imprimir etiqueta')
     }
 
     const result = await response.json()
