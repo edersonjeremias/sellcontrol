@@ -96,20 +96,40 @@ export async function calcularFrete(tenantId, { from, to, package: pkg }) {
  * @param {Array} cotacoes - Lista de cotações do Melhor Envio
  */
 export async function salvarCotacoes(romaneioId, cotacoes) {
-  const registros = cotacoes.map(c => ({
-    romaneio_id: romaneioId,
-    transportadora: c.company?.name || c.name,
-    servico: c.name,
-    valor: c.price || c.custom_price,
-    prazo: c.delivery_time,
-    melhor_envio_data: c,
-  }))
+  console.log('📝 Salvando cotações:', cotacoes)
+
+  const registros = cotacoes.map(c => {
+    const valor = parseFloat(c.price || c.custom_price || c.final_price || 0)
+
+    console.log('📊 Cotação:', {
+      transportadora: c.company?.name || c.name,
+      servico: c.name,
+      valor_original: c.price,
+      custom_price: c.custom_price,
+      final_price: c.final_price,
+      valor_usado: valor
+    })
+
+    return {
+      romaneio_id: romaneioId,
+      transportadora: c.company?.name || c.name,
+      servico: c.name,
+      valor: valor,
+      prazo: c.delivery_time || c.delivery_range?.max || 0,
+      melhor_envio_data: c,
+    }
+  })
 
   const { error } = await supabase
     .from('cotacoes_frete')
     .insert(registros)
 
-  if (error) throw error
+  if (error) {
+    console.error('❌ Erro ao salvar cotações:', error)
+    throw error
+  }
+
+  console.log('✅ Cotações salvas com sucesso!')
 }
 
 /**
