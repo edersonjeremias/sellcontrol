@@ -204,6 +204,7 @@ export default function MeuFrete() {
           prazo_entrega: cotacao.prazo,
           status: 'frete_cotado',
           endereco_id: enderecoSelecionado,
+          melhor_envio_cotacao_id: cotacao.id, // Salva ID da cotação
         })
         .eq('id', romaneioSelecionado)
 
