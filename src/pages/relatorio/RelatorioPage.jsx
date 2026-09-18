@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import { fmtR, getVendasRelatorio } from '../../services/relatorioService'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 const S = {
   inp: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'7px 10px', fontSize:13, outline:'none' },
@@ -87,6 +89,87 @@ export default function RelatorioPage() {
     return s + (st === 'CANCELADO' || st === 'DEVOLVIDO' ? 0 : Number(v.preco) || 0)
   }, 0)
 
+  // Agrupa produtos iguais e conta quantidades
+  const produtosAgrupados = useMemo(() => {
+    const grupos = {}
+
+    vendas.forEach(v => {
+      const st = (v.status || '').toUpperCase()
+      if (st === 'CANCELADO' || st === 'DEVOLVIDO') return
+
+      const chave = [
+        v.codigo || '',
+        v.produto || '',
+        v.modelo || '',
+        v.marca || '',
+        v.cor || '',
+        v.tamanho || ''
+      ].join('|')
+
+      if (!grupos[chave]) {
+        grupos[chave] = {
+          codigo: v.codigo,
+          produto: v.produto,
+          modelo: v.modelo,
+          marca: v.marca,
+          cor: v.cor,
+          tamanho: v.tamanho,
+          quantidade: 0,
+          preco: Number(v.preco) || 0
+        }
+      }
+      grupos[chave].quantidade++
+    })
+
+    return Object.values(grupos).sort((a, b) => b.quantidade - a.quantidade)
+  }, [vendas])
+
+  const gerarPDF = () => {
+    const doc = new jsPDF()
+
+    // Título
+    doc.setFontSize(16)
+    doc.text('Relatório de Vendas - Agrupado', 14, 15)
+
+    // Período
+    doc.setFontSize(10)
+    doc.text(`Período: ${fmtData(dataIni)} até ${fmtData(dataFim)}`, 14, 22)
+    doc.text(`Total de produtos: ${produtosAgrupados.reduce((s, p) => s + p.quantidade, 0)}`, 14, 28)
+
+    // Tabela
+    const colunas = ['Qtd', 'Código', 'Produto', 'Modelo', 'Marca', 'Cor', 'Tam']
+    const linhas = produtosAgrupados.map(p => [
+      p.quantidade,
+      p.codigo || '—',
+      p.produto || '—',
+      p.modelo || '—',
+      p.marca || '—',
+      p.cor || '—',
+      p.tamanho || '—'
+    ])
+
+    doc.autoTable({
+      head: [colunas],
+      body: linhas,
+      startY: 32,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185], fontStyle: 'bold' },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 15 }, // Qtd
+        1: { cellWidth: 20 }, // Código
+        2: { cellWidth: 35 }, // Produto
+        3: { cellWidth: 30 }, // Modelo
+        4: { cellWidth: 30 }, // Marca
+        5: { cellWidth: 25 }, // Cor
+        6: { halign: 'center', cellWidth: 15 } // Tam
+      }
+    })
+
+    // Salvar
+    const nomeArquivo = `relatorio_${dataIni}_${dataFim}.pdf`
+    doc.save(nomeArquivo)
+  }
+
   return (
     <AppShell title="Relatório" hideTitle>
       {/* Filtros de período */}
@@ -106,7 +189,22 @@ export default function RelatorioPage() {
           <option value="DEVOLVIDO">↩️ Devolvido</option>
         </select>
         <button onClick={carregar} style={S.btn}>Filtrar</button>
+        <button onClick={gerarPDF} style={{ ...S.btn, background:'var(--green)' }}>📄 Gerar PDF</button>
       </div>
+
+      {/* Contador de registros filtrados */}
+      {!carregando && (
+        <div style={{ padding:'8px 16px', background:'var(--bg-secondary)', borderBottom:'1px solid var(--border-light)' }}>
+          <span style={{ fontSize:13, color:'var(--text-body)', fontWeight:600 }}>
+            Total: {vendas.length} registro(s)
+          </span>
+          {busca.trim() && (
+            <span style={{ marginLeft:12, fontSize:12, color:'var(--muted)' }}>
+              filtrado por "{busca.trim()}"
+            </span>
+          )}
+        </div>
+      )}
 
       <div style={{ padding:16 }}>
         {/* Busca inteligente em tempo real */}
