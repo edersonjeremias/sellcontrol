@@ -166,7 +166,7 @@ export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
 
   const { data: vendas, error: eV } = await supabase
     .from('vendas')
-    .select('produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live, cliente_nome')
+    .select('id, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live, cliente_nome')
     .eq('tenant_id', tid(tenantId))
     .eq('data_live', cobranca.data)
     .ilike('cliente_nome', cobranca.cliente.trim())
@@ -201,7 +201,7 @@ export async function sincronizarCobrancaComVendas(tenantId, cobranca) {
     const cancelado = String(v.status || '').toLowerCase().includes('cancelado')
     // Usa preço promocional se existir, senão usa preço normal
     const valor = Number(v.preco_promocional || v.preco) || 0
-    novosItens.push({ descricao: desc, valor, cancelado })
+    novosItens.push({ descricao: desc, valor, cancelado, venda_id: v.id })
     if (!cancelado) novoTotal += valor
   })
 
@@ -529,7 +529,7 @@ export async function getHistoricoCreditos(tenantId, cliente = null) {
 // ── Importação ───────────────────────────────────────────────
 export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   console.log('🔍 Buscando vendas para cobrança:', { dataISO, live, tenantId: tid(tenantId) })
-  let qV = supabase.from('vendas').select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO).in('status', ['ENVIADO', 'Vendido', 'VENDIDO'])
+  let qV = supabase.from('vendas').select('id, cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).eq('data_live', dataISO).in('status', ['ENVIADO', 'Vendido', 'VENDIDO'])
   if (live) qV = qV.eq('live_nome', live)
   const { data: vendas } = await qV
   console.log('📦 Vendas encontradas:', vendas?.length || 0, vendas)
@@ -556,7 +556,7 @@ export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
     const canc = String(v.status || '').toUpperCase().includes('CANCELADO')
     // Usa preço promocional se existir, senão usa preço normal
     const valorItem = Number(v.preco_promocional || v.preco) || 0
-    agrup[n].itens.push({ descricao: d, valor: valorItem, cancelado: canc })
+    agrup[n].itens.push({ descricao: d, valor: valorItem, cancelado: canc, venda_id: v.id })
     if (!canc) agrup[n].total += valorItem
   })
   const resultado = Object.values(agrup)

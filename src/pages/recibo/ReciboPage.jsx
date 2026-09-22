@@ -57,52 +57,37 @@ export default function ReciboPage() {
       // ✅ Busca status ATUAL dos itens no banco (para detectar cancelamentos posteriores)
       if (res.itens && Array.isArray(res.itens) && res.itens.length > 0 && res.tenant_id) {
         try {
-          // Extrai códigos únicos dos itens (assume formato: "1234 Produto...")
-          const codigosStr = res.itens
-            .map(item => {
-              const match = item.descricao?.match(/^\d+/)
-              return match ? match[0] : null
-            })
+          // ✅ Extrai IDs das vendas (novo método - mais preciso!)
+          const vendasIds = res.itens
+            .map(item => item.venda_id)
             .filter(Boolean)
 
-          // Converte para número E string (pois não sabemos o tipo do campo no banco)
-          const codigosNum = codigosStr.map(c => parseInt(c, 10)).filter(c => !isNaN(c))
-
-          if (codigosStr.length > 0 && codigosNum.length > 0) {
-            // ✅ Busca vendas filtrando por CLIENTE e DATA para evitar pegar vendas de outras pessoas
-            const clienteNome = res.cliente?.replace(/_$/, '').trim() // Remove _ do final
-
+          if (vendasIds.length > 0) {
+            // Busca vendas pelos IDs específicos (cada ID é único!)
             const { data: vendasAtuais } = await supabase
               .from('vendas')
-              .select('codigo, status, cliente_nome, data_live')
+              .select('id, status')
               .eq('tenant_id', res.tenant_id)
-              .or(`codigo.in.(${codigosNum.join(',')}),codigo.in.(${codigosStr.map(c => `"${c}"`).join(',')})`)
-              .ilike('cliente_nome', `%${clienteNome}%`)  // Filtra por cliente
-              .gte('data_live', res.data)  // Vendas da data da cobrança ou posterior
+              .in('id', vendasIds)
 
-            console.log('🔍 Buscando itens cancelados:', {
-              cliente: clienteNome,
-              data: res.data,
-              codigos: codigosNum,
+            console.log('🔍 Buscando status dos itens por ID:', {
+              ids: vendasIds,
               encontrados: vendasAtuais?.length || 0,
               itens: vendasAtuais
             })
 
             if (vendasAtuais && vendasAtuais.length > 0) {
-              // Mapa código → status atual (normaliza para string)
+              // Mapa ID → status atual
               const statusMap = {}
               vendasAtuais.forEach(v => {
-                const cod = String(v.codigo)
-                statusMap[cod] = v.status
-                console.log(`📌 Código ${cod} → status: ${v.status}`)
+                statusMap[v.id] = v.status
+                console.log(`📌 ID ${v.id} → status: ${v.status}`)
               })
 
               // Atualiza campo cancelado nos itens
               res.itens = res.itens.map(item => {
-                const match = item.descricao?.match(/^\d+/)
-                if (match) {
-                  const codigo = match[0]
-                  const statusAtual = statusMap[codigo]
+                if (item.venda_id && statusMap[item.venda_id]) {
+                  const statusAtual = statusMap[item.venda_id]
                   // Marca como cancelado se status atual é "Cancelado"
                   if (statusAtual && String(statusAtual).toUpperCase().includes('CANCELADO')) {
                     console.log(`❌ Marcando como cancelado: ${item.descricao}`)
@@ -111,6 +96,40 @@ export default function ReciboPage() {
                 }
                 return item
               })
+            }
+          } else {
+            // 🔄 FALLBACK: Cobrança antiga sem venda_id - mantém comportamento anterior
+            console.log('⚠️ Cobrança antiga detectada (sem venda_id). Usando busca por código + cliente.')
+
+            const codigosStr = res.itens
+              .map(item => item.descricao?.match(/^\d+/)?.[0])
+              .filter(Boolean)
+
+            const codigosNum = codigosStr.map(c => parseInt(c, 10)).filter(c => !isNaN(c))
+
+            if (codigosNum.length > 0) {
+              const clienteNome = res.cliente?.replace(/_$/, '').trim()
+
+              const { data: vendasAtuais } = await supabase
+                .from('vendas')
+                .select('codigo, status')
+                .eq('tenant_id', res.tenant_id)
+                .or(`codigo.in.(${codigosNum.join(',')}),codigo.in.(${codigosStr.map(c => `"${c}"`).join(',')})`)
+                .ilike('cliente_nome', `%${clienteNome}%`)
+                .gte('data_live', res.data)
+
+              if (vendasAtuais && vendasAtuais.length > 0) {
+                const statusMap = {}
+                vendasAtuais.forEach(v => { statusMap[String(v.codigo)] = v.status })
+
+                res.itens = res.itens.map(item => {
+                  const codigo = item.descricao?.match(/^\d+/)?.[0]
+                  if (codigo && statusMap[codigo]?.toUpperCase().includes('CANCELADO')) {
+                    return { ...item, cancelado: true }
+                  }
+                  return item
+                })
+              }
             }
           }
         } catch (err) {
