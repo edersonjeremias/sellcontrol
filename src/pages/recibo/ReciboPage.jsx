@@ -69,14 +69,20 @@ export default function ReciboPage() {
           const codigosNum = codigosStr.map(c => parseInt(c, 10)).filter(c => !isNaN(c))
 
           if (codigosStr.length > 0 && codigosNum.length > 0) {
-            // Busca por código numérico OU string
+            // ✅ Busca vendas filtrando por CLIENTE e DATA para evitar pegar vendas de outras pessoas
+            const clienteNome = res.cliente?.replace(/_$/, '').trim() // Remove _ do final
+
             const { data: vendasAtuais } = await supabase
               .from('vendas')
-              .select('codigo, status')
+              .select('codigo, status, cliente_nome, data_live')
               .eq('tenant_id', res.tenant_id)
               .or(`codigo.in.(${codigosNum.join(',')}),codigo.in.(${codigosStr.map(c => `"${c}"`).join(',')})`)
+              .ilike('cliente_nome', `%${clienteNome}%`)  // Filtra por cliente
+              .gte('data_live', res.data)  // Vendas da data da cobrança ou posterior
 
             console.log('🔍 Buscando itens cancelados:', {
+              cliente: clienteNome,
+              data: res.data,
               codigos: codigosNum,
               encontrados: vendasAtuais?.length || 0,
               itens: vendasAtuais
