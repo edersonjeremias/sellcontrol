@@ -39,9 +39,26 @@ export default function AutocompleteInput({
   const inputRef = useRef(null)
   const listRef = useRef(null)
 
-  const filtered = (list || []).filter(item =>
-    !value || item.toLowerCase().includes(value.toLowerCase())
-  )
+  // ✅ Filtra E ordena: itens que COMEÇAM com o texto digitado aparecem PRIMEIRO
+  const filtered = (list || [])
+    .filter(item => !value || item.toLowerCase().includes(value.toLowerCase()))
+    .sort((a, b) => {
+      if (!value) return 0 // Se não digitou nada, mantém ordem original
+
+      const search = value.toLowerCase()
+      const aLower = a.toLowerCase()
+      const bLower = b.toLowerCase()
+
+      // Itens que COMEÇAM com o texto digitado vêm PRIMEIRO
+      const aStarts = aLower.startsWith(search)
+      const bStarts = bLower.startsWith(search)
+
+      if (aStarts && !bStarts) return -1 // 'a' começa, 'b' não → 'a' vem primeiro
+      if (!aStarts && bStarts) return 1  // 'b' começa, 'a' não → 'b' vem primeiro
+
+      // Se ambos começam (ou ambos não começam), mantém ordem alfabética
+      return a.localeCompare(b)
+    })
 
   const visible = open && filtered.length > 0 && (showOnFocus || value?.trim())
 
@@ -80,9 +97,10 @@ export default function AutocompleteInput({
       // Shift+Tab = navega para trás
       if (e.shiftKey) {
         e.preventDefault()
-        // ✅ SÓ seleciona se usuário navegou manualmente pela lista (activeIdx >= 0)
-        if (visible && activeIdx >= 0) {
-          select(filtered[activeIdx])
+        if (visible) {
+          // ✅ Seleciona: item ativo OU primeiro da lista filtrada (agora ordenada!)
+          const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
+          if (chosen) select(chosen)
         }
         setOpen(false); setActiveIdx(-1)
         navigatePrevious(e.target)
@@ -90,9 +108,10 @@ export default function AutocompleteInput({
       }
 
       // Tab normal = navega para frente
-      // ✅ SÓ seleciona se usuário navegou manualmente pela lista (activeIdx >= 0)
-      if (visible && activeIdx >= 0) {
-        select(filtered[activeIdx])
+      if (visible) {
+        // ✅ Seleciona: item ativo OU primeiro da lista filtrada (agora ordenada!)
+        const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
+        if (chosen) select(chosen)
       }
       setOpen(false); setActiveIdx(-1)
       return
@@ -100,17 +119,19 @@ export default function AutocompleteInput({
     if (e.key === 'Enter') {
       e.preventDefault()
 
-      // ✅ SÓ seleciona se usuário navegou manualmente pela lista (activeIdx >= 0)
-      if (visible && activeIdx >= 0) {
-        const chosen = filtered[activeIdx]
-        select(chosen)
-        // Após selecionar: se há handler de nova linha, só pula se NÃO estiver bloqueado
-        if (onEnterNewRow) {
-          if (!isBlocked?.(chosen)) onEnterNewRow()
-        } else {
-          navigateNext(e.target)
+      if (visible) {
+        // ✅ Seleciona: item ativo OU primeiro da lista filtrada (agora ordenada!)
+        const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
+        if (chosen) {
+          select(chosen)
+          // Após selecionar: se há handler de nova linha, só pula se NÃO estiver bloqueado
+          if (onEnterNewRow) {
+            if (!isBlocked?.(chosen)) onEnterNewRow()
+          } else {
+            navigateNext(e.target)
+          }
+          return
         }
-        return
       }
 
       // Permite Enter se: campo vazio OU valor está na lista
