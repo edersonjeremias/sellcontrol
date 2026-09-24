@@ -80,9 +80,9 @@ export default function AutocompleteInput({
       // Shift+Tab = navega para trás
       if (e.shiftKey) {
         e.preventDefault()
-        if (visible) {
-          const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
-          if (chosen) select(chosen)
+        // ✅ SÓ seleciona se usuário navegou manualmente pela lista (activeIdx >= 0)
+        if (visible && activeIdx >= 0) {
+          select(filtered[activeIdx])
         }
         setOpen(false); setActiveIdx(-1)
         navigatePrevious(e.target)
@@ -90,9 +90,9 @@ export default function AutocompleteInput({
       }
 
       // Tab normal = navega para frente
-      if (visible) {
-        const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
-        if (chosen) select(chosen)
+      // ✅ SÓ seleciona se usuário navegou manualmente pela lista (activeIdx >= 0)
+      if (visible && activeIdx >= 0) {
+        select(filtered[activeIdx])
       }
       setOpen(false); setActiveIdx(-1)
       return
@@ -100,18 +100,17 @@ export default function AutocompleteInput({
     if (e.key === 'Enter') {
       e.preventDefault()
 
-      if (visible) {
-        const chosen = activeIdx >= 0 ? filtered[activeIdx] : value?.trim() ? filtered[0] : null
-        if (chosen) {
-          select(chosen)
-          // Após selecionar: se há handler de nova linha, só pula se NÃO estiver bloqueado
-          if (onEnterNewRow) {
-            if (!isBlocked?.(chosen)) onEnterNewRow()
-          } else {
-            navigateNext(e.target)
-          }
-          return
+      // ✅ SÓ seleciona se usuário navegou manualmente pela lista (activeIdx >= 0)
+      if (visible && activeIdx >= 0) {
+        const chosen = filtered[activeIdx]
+        select(chosen)
+        // Após selecionar: se há handler de nova linha, só pula se NÃO estiver bloqueado
+        if (onEnterNewRow) {
+          if (!isBlocked?.(chosen)) onEnterNewRow()
+        } else {
+          navigateNext(e.target)
         }
+        return
       }
 
       // Permite Enter se: campo vazio OU valor está na lista
