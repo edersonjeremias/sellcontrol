@@ -10,6 +10,7 @@ const SLUG_TO_CATEGORY = {
   'notificacoes':                'Principal',
   'vendas':                      'Vendas',
   'editar-vendas':               'Vendas',
+  'produtos':                    'Cadastro',
   'cobrancas':                   'Financeiro',
   'cupons':                      'Vendas',
   'relatorio':                   'Financeiro',
