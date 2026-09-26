@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   getProdutos, criarProduto, atualizarProduto, desativarProduto, reativarProduto,
   getProximoCodigo, verificarCodigoExiste, formatMoney, parseMoney
 } from '../../services/produtosService'
+import { getListas } from '../../services/vendasService'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
+import AutocompleteInput from '../../components/ui/AutocompleteInput'
+import './produtos.css'
 
 // ─── HELPERS ──
 function gerarId() {
@@ -23,7 +26,7 @@ function novoProduto(codigo = '') {
     marca: '',
     tamanho: '',
     genero: '',
-    condicao: 'Novo',
+    condicao: 'N',
     custo: '',
     preco: '',
     preco_promocional: '',
@@ -45,10 +48,10 @@ function mapProduto(p) {
     marca: p.marca || '',
     tamanho: p.tamanho || '',
     genero: p.genero || '',
-    condicao: p.condicao || 'Novo',
-    custo: formatMoney(p.custo),
-    preco: formatMoney(p.preco),
-    preco_promocional: formatMoney(p.preco_promocional),
+    condicao: p.condicao === 'Novo' ? 'N' : p.condicao === 'Usado' ? 'U' : p.condicao || 'N',
+    custo: p.custo ? String(Math.round(p.custo)) : '',
+    preco: p.preco ? String(Math.round(p.preco)) : '',
+    preco_promocional: p.preco_promocional ? String(Math.round(p.preco_promocional)) : '',
     quantidade: String(p.quantidade || 0),
     ativo: p.ativo !== false,
     isNew: false,
@@ -63,22 +66,52 @@ export default function ProdutosPage() {
   const tenantId = profile?.tenant_id
 
   const [produtos, setProdutos] = useState([])
+  const [listas, setListas] = useState({ produtos: [], modelos: [], cores: [], marcas: [] })
   const [filtro, setFiltro] = useState('')
   const [mostrarInativos, setMostrarInativos] = useState(false)
   const [busy, setBusy] = useState(false)
   const [pronto, setPronto] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [cols, setCols] = useState({
+    genero: true,
+    condicao: true,
+    custo: true,
+    preco_promocional: true,
+  })
 
-  // Carrega produtos ao abrir a página
+  const produtosRef = useRef(produtos)
+  useEffect(() => { produtosRef.current = produtos }, [produtos])
+
+  // Carrega configuração de colunas do localStorage
+  useEffect(() => {
+    if (!tenantId) return
+    try {
+      const saved = localStorage.getItem(`sc_cols_produtos_${tenantId}`)
+      if (saved) setCols(JSON.parse(saved))
+    } catch {}
+  }, [tenantId])
+
+  // Salva configuração de colunas
+  useEffect(() => {
+    if (!tenantId) return
+    localStorage.setItem(`sc_cols_produtos_${tenantId}`, JSON.stringify(cols))
+  }, [cols, tenantId])
+
+  // Carrega produtos e listas
   useEffect(() => {
     async function carregar() {
       if (!tenantId) return
       setBusy(true)
       try {
-        const data = await getProdutos(tenantId, { ativo: !mostrarInativos })
+        const [data, lst] = await Promise.all([
+          getProdutos(tenantId, { ativo: !mostrarInativos }),
+          getListas(tenantId)
+        ])
         setProdutos(data.map(mapProduto))
+        setListas(lst)
         setPronto(true)
       } catch (err) {
-        console.error('Erro ao carregar produtos:', err)
+        console.error('Erro ao carregar:', err)
         showToast('Erro ao carregar produtos', 'error')
       } finally {
         setBusy(false)
@@ -115,7 +148,7 @@ export default function ProdutosPage() {
     setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
 
     setTimeout(() => {
-      const input = document.querySelector('#tabela-produtos tbody tr:first-child .cell-input')
+      const input = document.querySelector('#tabela-produtos tbody tr:first-child .col-codigo .cell-input')
       input?.focus()
     }, 100)
   }, [busy, tenantId])
@@ -125,14 +158,27 @@ export default function ProdutosPage() {
     setProdutos(prev => prev.map(p => {
       if (p._key !== key) return p
 
-      // Limpa formatação de valores
+      // Limpa formatação de valores (só números)
       if (field === 'custo' || field === 'preco' || field === 'preco_promocional') {
-        value = value.replace(/[^\d,]/g, '')
+        value = value.replace(/\D/g, '') // Remove tudo que não é número
       }
 
       return { ...p, [field]: value }
     }))
   }, [])
+
+  // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
+  const handleProdutoBlur = useCallback(async (key) => {
+    const p = produtosRef.current.find(pr => pr._key === key)
+    if (!p || !p.produto?.trim() || !p.isNew) return
+
+    // Produto preenchido - cria nova linha no topo
+    const proximoCodigo = await getProximoCodigo(tenantId)
+    setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
+
+    // Salva automaticamente o produto atual
+    setTimeout(() => salvar(key), 300)
+  }, [tenantId])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
@@ -151,66 +197,74 @@ export default function ProdutosPage() {
     }
 
     // Verifica se código já existe
-    if (p.isNew || p.codigo !== p.codigoOriginal) {
-      const existe = await verificarCodigoExiste(tenantId, p.codigo, p.id)
-      if (existe) {
-        showToast(`Código ${p.codigo} já existe!`, 'error')
-        return
-      }
+    const existe = await verificarCodigoExiste(tenantId, p.codigo, p.id)
+    if (existe) {
+      showToast(`Código ${p.codigo} já existe!`, 'error')
+      return
     }
 
     setBusy(true)
     try {
+      // Converte letra para texto completo
+      const condicaoCompleta = p.condicao === 'N' ? 'Novo' : p.condicao === 'U' ? 'Usado' : 'Novo'
+
+      const dados = {
+        ...p,
+        condicao: condicaoCompleta,
+        custo: p.custo || '0',
+        preco: p.preco || '0',
+        preco_promocional: p.preco_promocional || '0',
+      }
+
       if (p.isNew) {
         // Criar
-        const novo = await criarProduto(tenantId, p)
+        const novo = await criarProduto(tenantId, dados)
         setProdutos(prev => prev.map(pr =>
           pr._key === key ? mapProduto(novo) : pr
         ))
         showToast('Produto cadastrado!', 'success')
       } else {
         // Atualizar
-        const atualizado = await atualizarProduto(p.id, p)
+        const atualizado = await atualizarProduto(p.id, dados)
         setProdutos(prev => prev.map(pr =>
           pr._key === key ? mapProduto(atualizado) : pr
         ))
         showToast('Produto atualizado!', 'success')
       }
     } catch (err) {
+      console.error('Erro ao salvar:', err)
       showToast('Erro ao salvar produto', 'error')
     } finally {
       setBusy(false)
     }
   }, [produtos, tenantId, showToast])
 
-  // Desativar/Reativar
-  const toggleAtivo = useCallback(async (key) => {
+  // Copiar produto
+  const copiar = useCallback(async (key) => {
     const p = produtos.find(pr => pr._key === key)
-    if (!p || !p.id) return
+    if (!p) return
 
-    setBusy(true)
-    try {
-      if (p.ativo) {
-        await desativarProduto(p.id)
-        showToast('Produto desativado', 'success')
-      } else {
-        await reativarProduto(p.id)
-        showToast('Produto reativado', 'success')
-      }
-
-      // Atualiza estado local
-      setProdutos(prev => prev.map(pr =>
-        pr._key === key ? { ...pr, ativo: !pr.ativo } : pr
-      ))
-    } catch (err) {
-      showToast('Erro ao alterar status', 'error')
-    } finally {
-      setBusy(false)
+    const proximoCodigo = await getProximoCodigo(tenantId)
+    const copia = {
+      ...novoProduto(String(proximoCodigo)),
+      produto: p.produto,
+      modelo: p.modelo,
+      cor: p.cor,
+      marca: p.marca,
+      tamanho: p.tamanho,
+      genero: p.genero,
+      condicao: p.condicao,
+      custo: p.custo,
+      preco: p.preco,
+      preco_promocional: p.preco_promocional,
     }
-  }, [produtos, showToast])
 
-  // Excluir (marca como deleted, depois salva desativando)
-  const excluir = useCallback((key) => {
+    setProdutos(prev => [copia, ...prev])
+    showToast('Produto copiado!', 'success')
+  }, [produtos, tenantId, showToast])
+
+  // Excluir (desativa)
+  const excluir = useCallback(async (key) => {
     const p = produtos.find(pr => pr._key === key)
     if (!p) return
 
@@ -218,99 +272,108 @@ export default function ProdutosPage() {
       // Remove da lista (ainda não foi salvo)
       setProdutos(prev => prev.filter(pr => pr._key !== key))
     } else {
-      // Marca como deleted
-      setProdutos(prev => prev.map(pr =>
-        pr._key === key ? { ...pr, deleted: true } : pr
-      ))
-      toggleAtivo(key)
+      // Desativa no banco
+      setBusy(true)
+      try {
+        await desativarProduto(p.id)
+        setProdutos(prev => prev.filter(pr => pr._key !== key))
+        showToast('Produto removido', 'success')
+      } catch (err) {
+        showToast('Erro ao remover produto', 'error')
+      } finally {
+        setBusy(false)
+      }
     }
-  }, [produtos, toggleAtivo])
+  }, [produtos, showToast])
 
   return (
     <AppShell title="Cadastro de Produtos">
-      <div style={{ padding: '20px' }}>
+      <div className="vendas-container">
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          marginBottom: '20px',
-          alignItems: 'center',
-          flexWrap: 'wrap'
-        }}>
-          <input
-            type="text"
-            placeholder="Buscar produtos (código, nome, cor, marca...)"
-            value={filtro}
-            onChange={e => setFiltro(e.target.value)}
-            style={{
-              flex: 1,
-              minWidth: '300px',
-              padding: '10px 14px',
-              background: '#1a1a1a',
-              border: '1px solid #333',
-              borderRadius: '6px',
-              color: '#e0e0e0',
-              fontSize: '14px',
-            }}
-          />
+        <div className="vendas-header">
+          <div className="busca-wrapper" style={{ flex: 1, maxWidth: '600px' }}>
+            <input
+              type="text"
+              placeholder="Buscar produtos (código, nome, cor, marca...)"
+              value={filtro}
+              onChange={e => setFiltro(e.target.value)}
+              className="filtro-rapido"
+              style={{ width: '100%' }}
+            />
+          </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px' }}>
             <input
               type="checkbox"
               checked={mostrarInativos}
               onChange={e => setMostrarInativos(e.target.checked)}
             />
-            Mostrar Inativos
+            Inativos
           </label>
 
-          <button
-            onClick={novo}
-            disabled={busy}
-            style={{
-              padding: '10px 20px',
-              background: '#4a9eff',
-              border: 'none',
-              borderRadius: '6px',
-              color: '#fff',
-              fontWeight: 600,
-              cursor: busy ? 'not-allowed' : 'pointer',
-              opacity: busy ? 0.6 : 1,
-            }}
-          >
-            + Novo Produto
+          <button className="btn-config" onClick={() => setShowSettings(!showSettings)} title="Configurações">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m-6-6h6m6 0h6"/>
+            </svg>
+          </button>
+
+          <button onClick={novo} disabled={busy} className="btn-primary">
+            + Novo
           </button>
         </div>
 
+        {/* Modal de Configurações */}
+        {showSettings && (
+          <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+            <div className="modal-config" onClick={e => e.stopPropagation()}>
+              <h3>Colunas Visíveis</h3>
+              <label>
+                <input type="checkbox" checked={cols.genero} onChange={e => setCols(c => ({ ...c, genero: e.target.checked }))} />
+                Gênero
+              </label>
+              <label>
+                <input type="checkbox" checked={cols.condicao} onChange={e => setCols(c => ({ ...c, condicao: e.target.checked }))} />
+                Condição
+              </label>
+              <label>
+                <input type="checkbox" checked={cols.custo} onChange={e => setCols(c => ({ ...c, custo: e.target.checked }))} />
+                Custo
+              </label>
+              <label>
+                <input type="checkbox" checked={cols.preco_promocional} onChange={e => setCols(c => ({ ...c, preco_promocional: e.target.checked }))} />
+                Preço Promoção
+              </label>
+              <button onClick={() => setShowSettings(false)} className="btn-primary" style={{ marginTop: '16px' }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tabela */}
-        <div style={{
-          background: '#0d0d0d',
-          borderRadius: '8px',
-          overflow: 'auto',
-          maxHeight: 'calc(100vh - 200px)',
-        }}>
-          <table id="tabela-produtos" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="tabela-scroll">
+          <table id="tabela-produtos" className="tabela-vendas">
             <thead>
-              <tr style={{ background: '#1a1a1a', position: 'sticky', top: 0, zIndex: 1 }}>
-                <th style={thStyle}>Código</th>
-                <th style={thStyle}>Produto</th>
-                <th style={thStyle}>Modelo</th>
-                <th style={thStyle}>Cor</th>
-                <th style={thStyle}>Marca</th>
-                <th style={thStyle}>Tam.</th>
-                <th style={thStyle}>Gênero</th>
-                <th style={thStyle}>Condição</th>
-                <th style={thStyle}>Custo</th>
-                <th style={thStyle}>Preço</th>
-                <th style={thStyle}>Promoção</th>
-                <th style={thStyle}>Qtd.</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Ações</th>
+              <tr>
+                <th className="th-codigo">Cód.</th>
+                <th>Produto</th>
+                <th>Modelo</th>
+                {cols.genero && <th className="th-genero">Gên.</th>}
+                <th>Cor</th>
+                <th>Marca</th>
+                <th className="th-tam">Tam.</th>
+                {cols.condicao && <th className="th-condicao">Cond.</th>}
+                {cols.custo && <th className="th-preco">Custo</th>}
+                <th className="th-preco">Preço</th>
+                {cols.preco_promocional && <th className="th-preco">Promo</th>}
+                <th className="th-qtd">Qtd.</th>
+                <th className="th-acoes">Ações</th>
               </tr>
             </thead>
             <tbody>
               {!pronto && (
                 <tr>
-                  <td colSpan={14} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                  <td colSpan={20} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
                     Carregando produtos...
                   </td>
                 </tr>
@@ -318,8 +381,8 @@ export default function ProdutosPage() {
 
               {pronto && produtosFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan={14} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
-                    {filtro ? 'Nenhum produto encontrado' : 'Clique em "+ Novo Produto" para começar'}
+                  <td colSpan={20} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
+                    {filtro ? 'Nenhum produto encontrado' : 'Clique em "+ Novo" para começar'}
                   </td>
                 </tr>
               )}
@@ -328,10 +391,13 @@ export default function ProdutosPage() {
                 <ProdutoRow
                   key={p._key}
                   produto={p}
+                  listas={listas}
+                  cols={cols}
                   onChange={handleChange}
+                  onProdutoBlur={handleProdutoBlur}
                   onSalvar={salvar}
+                  onCopiar={copiar}
                   onExcluir={excluir}
-                  onToggleAtivo={toggleAtivo}
                 />
               ))}
             </tbody>
@@ -343,219 +409,209 @@ export default function ProdutosPage() {
 }
 
 // ─── LINHA DA TABELA ──
-function ProdutoRow({ produto, onChange, onSalvar, onExcluir, onToggleAtivo }) {
+function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onSalvar, onCopiar, onExcluir }) {
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
 
   return (
-    <tr
-      style={{
-        opacity: desabilitado ? 0.5 : 1,
-        background: p.isNew ? 'rgba(74, 158, 255, 0.05)' : 'transparent',
-      }}
-    >
-      <td style={tdStyle}>
+    <tr className={p.isNew ? 'linha-nova' : ''} style={{ opacity: desabilitado ? 0.5 : 1 }}>
+      {/* CÓDIGO */}
+      <td className="col-codigo">
         <input
           className="cell-input"
           value={p.codigo}
           onChange={e => onChange(p._key, 'codigo', e.target.value)}
           disabled={desabilitado}
-          style={inputStyle}
+          placeholder="100"
         />
       </td>
 
-      <td style={tdStyle}>
-        <input
+      {/* PRODUTO */}
+      <td className="col-produto">
+        <AutocompleteInput
           className="cell-input"
           value={p.produto}
-          onChange={e => onChange(p._key, 'produto', e.target.value)}
+          list={listas.produtos}
+          onChange={v => onChange(p._key, 'produto', v)}
+          onBlur={() => onProdutoBlur(p._key)}
+          disabled={desabilitado}
           placeholder="Nome do produto"
-          disabled={desabilitado}
-          style={inputStyle}
         />
       </td>
 
-      <td style={tdStyle}>
-        <input
+      {/* MODELO */}
+      <td className="col-modelo">
+        <AutocompleteInput
+          className="cell-input"
           value={p.modelo}
-          onChange={e => onChange(p._key, 'modelo', e.target.value)}
+          list={listas.modelos}
+          onChange={v => onChange(p._key, 'modelo', v)}
           disabled={desabilitado}
-          style={inputStyle}
         />
       </td>
 
-      <td style={tdStyle}>
-        <input
+      {/* GÊNERO */}
+      {cols.genero && (
+        <td className="col-genero">
+          <select
+            className="cell-input cell-select"
+            value={p.genero}
+            onChange={e => onChange(p._key, 'genero', e.target.value)}
+            disabled={desabilitado}
+          >
+            <option value=""></option>
+            <option value="M">M</option>
+            <option value="F">F</option>
+            <option value="U">U</option>
+          </select>
+        </td>
+      )}
+
+      {/* COR */}
+      <td className="col-cor">
+        <AutocompleteInput
+          className="cell-input"
           value={p.cor}
-          onChange={e => onChange(p._key, 'cor', e.target.value)}
+          list={listas.cores}
+          onChange={v => onChange(p._key, 'cor', v)}
           disabled={desabilitado}
-          style={inputStyle}
         />
       </td>
 
-      <td style={tdStyle}>
-        <input
+      {/* MARCA */}
+      <td className="col-marca">
+        <AutocompleteInput
+          className="cell-input"
           value={p.marca}
-          onChange={e => onChange(p._key, 'marca', e.target.value)}
+          list={listas.marcas}
+          onChange={v => onChange(p._key, 'marca', v)}
           disabled={desabilitado}
-          style={inputStyle}
         />
       </td>
 
-      <td style={tdStyle}>
+      {/* TAMANHO */}
+      <td className="col-tam">
         <input
+          className="cell-input"
           value={p.tamanho}
           onChange={e => onChange(p._key, 'tamanho', e.target.value)}
           disabled={desabilitado}
-          style={{ ...inputStyle, width: '60px' }}
         />
       </td>
 
-      <td style={tdStyle}>
-        <select
-          value={p.genero}
-          onChange={e => onChange(p._key, 'genero', e.target.value)}
-          disabled={desabilitado}
-          style={inputStyle}
-        >
-          <option value="">-</option>
-          <option value="M">Masculino</option>
-          <option value="F">Feminino</option>
-          <option value="U">Unissex</option>
-        </select>
-      </td>
+      {/* CONDIÇÃO */}
+      {cols.condicao && (
+        <td className="col-condicao">
+          <select
+            className="cell-input cell-select"
+            value={p.condicao}
+            onChange={e => onChange(p._key, 'condicao', e.target.value)}
+            disabled={desabilitado}
+          >
+            <option value="N">N</option>
+            <option value="U">U</option>
+          </select>
+        </td>
+      )}
 
-      <td style={tdStyle}>
-        <select
-          value={p.condicao}
-          onChange={e => onChange(p._key, 'condicao', e.target.value)}
-          disabled={desabilitado}
-          style={inputStyle}
-        >
-          <option value="Novo">Novo</option>
-          <option value="Usado">Usado</option>
-        </select>
-      </td>
+      {/* CUSTO */}
+      {cols.custo && (
+        <td className="col-preco">
+          <input
+            className="cell-input"
+            value={p.custo}
+            onChange={e => onChange(p._key, 'custo', e.target.value)}
+            placeholder="0"
+            disabled={desabilitado}
+            style={{ textAlign: 'right' }}
+          />
+        </td>
+      )}
 
-      <td style={tdStyle}>
+      {/* PREÇO */}
+      <td className="col-preco">
         <input
-          value={p.custo}
-          onChange={e => onChange(p._key, 'custo', e.target.value)}
-          placeholder="0,00"
-          disabled={desabilitado}
-          style={{ ...inputStyle, width: '80px', textAlign: 'right' }}
-        />
-      </td>
-
-      <td style={tdStyle}>
-        <input
+          className="cell-input"
           value={p.preco}
           onChange={e => onChange(p._key, 'preco', e.target.value)}
-          placeholder="0,00"
+          placeholder="0"
           disabled={desabilitado}
-          style={{ ...inputStyle, width: '80px', textAlign: 'right' }}
+          style={{ textAlign: 'right' }}
         />
       </td>
 
-      <td style={tdStyle}>
-        <input
-          value={p.preco_promocional}
-          onChange={e => onChange(p._key, 'preco_promocional', e.target.value)}
-          placeholder="0,00"
-          disabled={desabilitado}
-          style={{ ...inputStyle, width: '80px', textAlign: 'right' }}
-        />
-      </td>
+      {/* PREÇO PROMOCIONAL */}
+      {cols.preco_promocional && (
+        <td className="col-preco">
+          <input
+            className="cell-input"
+            value={p.preco_promocional}
+            onChange={e => onChange(p._key, 'preco_promocional', e.target.value)}
+            placeholder="0"
+            disabled={desabilitado}
+            style={{ textAlign: 'right' }}
+          />
+        </td>
+      )}
 
-      <td style={tdStyle}>
+      {/* QUANTIDADE */}
+      <td className="col-qtd">
         <input
           type="number"
+          className="cell-input"
           value={p.quantidade}
           onChange={e => onChange(p._key, 'quantidade', e.target.value)}
           disabled={desabilitado}
-          style={{ ...inputStyle, width: '60px', textAlign: 'center' }}
+          style={{ textAlign: 'center' }}
         />
       </td>
 
-      <td style={tdStyle}>
-        <span style={{
-          padding: '4px 8px',
-          borderRadius: '4px',
-          fontSize: '11px',
-          fontWeight: 600,
-          background: p.ativo ? '#1a4d2e' : '#4a1a1a',
-          color: p.ativo ? '#4ade80' : '#f87171',
-        }}>
-          {p.ativo ? 'ATIVO' : 'INATIVO'}
-        </span>
-      </td>
-
-      <td style={tdStyle}>
-        <div style={{ display: 'flex', gap: '4px' }}>
+      {/* AÇÕES */}
+      <td className="col-acoes">
+        <div className="acoes-wrapper">
+          {/* Salvar */}
           <button
+            type="button"
+            className="btn-action-sm send"
+            title="Salvar"
             onClick={() => onSalvar(p._key)}
             disabled={desabilitado}
-            title="Salvar"
-            style={btnStyle('#4ade80')}
           >
-            💾
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
           </button>
 
-          {!p.isNew && (
-            <button
-              onClick={() => onToggleAtivo(p._key)}
-              title={p.ativo ? 'Desativar' : 'Reativar'}
-              style={btnStyle(p.ativo ? '#f59e0b' : '#4ade80')}
-            >
-              {p.ativo ? '⏸️' : '▶️'}
-            </button>
-          )}
-
+          {/* Copiar */}
           <button
-            onClick={() => onExcluir(p._key)}
-            title="Excluir"
-            style={btnStyle('#ef4444')}
+            type="button"
+            className="btn-action-sm copy"
+            title="Copiar produto"
+            onClick={() => onCopiar(p._key)}
+            disabled={desabilitado}
           >
-            🗑️
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+
+          {/* Excluir */}
+          <button
+            type="button"
+            className="btn-action-sm del"
+            title="Excluir produto"
+            onClick={() => onExcluir(p._key)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
           </button>
         </div>
       </td>
     </tr>
   )
 }
-
-// ─── ESTILOS ──
-const thStyle = {
-  padding: '12px 8px',
-  textAlign: 'left',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: '#888',
-  borderBottom: '1px solid #222',
-  whiteSpace: 'nowrap',
-}
-
-const tdStyle = {
-  padding: '8px',
-  borderBottom: '1px solid #1a1a1a',
-}
-
-const inputStyle = {
-  width: '100%',
-  padding: '6px 8px',
-  background: '#1a1a1a',
-  border: '1px solid #333',
-  borderRadius: '4px',
-  color: '#e0e0e0',
-  fontSize: '13px',
-}
-
-const btnStyle = (color) => ({
-  padding: '4px 8px',
-  background: 'transparent',
-  border: `1px solid ${color}`,
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontSize: '14px',
-  transition: 'all 0.2s',
-})

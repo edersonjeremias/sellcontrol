@@ -1,0 +1,156 @@
+/* Importa estilos base de vendas */
+@import '../vendas/vendas.css';
+
+/* ═══════════════════════════════════════════════════════════════
+   PRODUTOS - AJUSTES ESPECÍFICOS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Código menor (50%) */
+.th-codigo,
+.col-codigo {
+  width: 50px !important;
+  min-width: 50px !important;
+}
+
+.col-codigo .cell-input {
+  width: 50px !important;
+  text-align: center;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+/* Gênero compacto */
+.th-genero,
+.col-genero {
+  width: 45px !important;
+  min-width: 45px !important;
+}
+
+.col-genero .cell-select {
+  width: 45px !important;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Condição compacta */
+.th-condicao,
+.col-condicao {
+  width: 45px !important;
+  min-width: 45px !important;
+}
+
+.col-condicao .cell-select {
+  width: 45px !important;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Preços 30% menores */
+.th-preco,
+.col-preco {
+  width: 60px !important;
+  min-width: 60px !important;
+}
+
+.col-preco .cell-input {
+  width: 60px !important;
+  font-weight: 600;
+  color: var(--green);
+}
+
+/* Quantidade */
+.th-qtd,
+.col-qtd {
+  width: 50px !important;
+  min-width: 50px !important;
+}
+
+.col-qtd .cell-input {
+  width: 50px !important;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Reduz espaçamento entre colunas (50%) */
+#tabela-produtos th,
+#tabela-produtos td {
+  padding: 4px 6px !important; /* Era 8px 12px */
+}
+
+/* Linha nova (destaque) */
+.linha-nova {
+  background: rgba(74, 158, 255, 0.05) !important;
+}
+
+/* Modal de Configurações */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal-config {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 300px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-config h3 {
+  margin: 0 0 16px 0;
+  color: #e0e0e0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.modal-config label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modal-config label:hover {
+  color: #fff;
+}
+
+.modal-config input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* Botão de configuração */
+.btn-config {
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-config:hover {
+  border-color: #666;
+  color: #ccc;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-config svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
