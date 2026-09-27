@@ -118,7 +118,7 @@
   width: 100%;
   min-width: 1000px;
   border-collapse: separate;
-  border-spacing: 0 4px; /* Espaçamento vertical entre linhas */
+  border-spacing: 8px 8px; /* Espaçamento horizontal e vertical entre células */
 }
 
 .tabela-vendas thead th {
@@ -130,10 +130,10 @@
   font-weight: 700;
   font-size: 10px;
   text-transform: uppercase;
-  padding: 8px 3px; /* Espaçamento reduzido */
+  padding: 8px 8px; /* Padding consistente */
   text-align: left;
   white-space: nowrap;
-  border-bottom: none; /* SEM BORDA */
+  border: none !important; /* SEM BORDA */
 }
 
 .tabela-vendas tbody tr {
@@ -145,8 +145,8 @@
 }
 
 .tabela-vendas tbody td {
-  padding: 4px 3px; /* Espaçamento reduzido para aproveitar espaço */
-  border-bottom: none; /* SEM BORDA */
+  padding: 0; /* Zero padding - espaçamento vem do border-spacing */
+  border: none !important; /* SEM BORDA */
   vertical-align: middle;
   position: relative;
 }
@@ -263,9 +263,12 @@
 
 .cell-input {
   width: 100%;
-  padding: 7px 8px;
-  border: none; /* SEM BORDA */
-  border-radius: 0; /* SEM CANTOS ARREDONDADOS */
+  height: 36px; /* Altura fixa para todos */
+  padding: 0 8px; /* Padding horizontal apenas */
+  border: none !important; /* SEM BORDA - FORÇADO */
+  border-radius: 0 !important; /* SEM CANTOS ARREDONDADOS - FORÇADO */
+  outline: none !important; /* SEM OUTLINE */
+  box-shadow: none !important; /* SEM SOMBRA */
   font-size: 14px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #252525; /* Fundo um pouco mais claro */
@@ -274,7 +277,6 @@
 }
 
 .cell-input:focus {
-  outline: none;
   background: #2a2a2a; /* Mais claro ainda no focus */
 }
 
@@ -285,6 +287,11 @@
 
 .cell-select {
   cursor: pointer;
+  height: 36px !important; /* Mesma altura dos inputs */
+  border: none !important; /* SEM BORDA */
+  border-radius: 0 !important; /* SEM CANTOS */
+  outline: none !important; /* SEM OUTLINE */
+  box-shadow: none !important; /* SEM SOMBRA */
 }
 
 /* ═══════════════════════════════════════════════════════════════
