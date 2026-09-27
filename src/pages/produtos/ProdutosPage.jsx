@@ -210,28 +210,11 @@ export default function ProdutosPage() {
   }, [])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
-  const handleProdutoBlur = useCallback(async (key) => {
-    const p = produtosRef.current.find(pr => pr._key === key)
-    if (!p || !p.produto?.trim() || !p.isNew) return
-
-    // Verifica se já existe linha vazia no topo
-    const temLinhaVazia = produtosRef.current.some(pr =>
-      pr.isNew && !pr.produto?.trim() && pr._key !== key
-    )
-
-    if (temLinhaVazia) {
-      // Já tem linha vazia, não cria outra
-      setTimeout(() => salvar(key), 300)
-      return
-    }
-
-    // Produto preenchido - cria nova linha no topo
-    const proximoCodigo = await getProximoCodigo(tenantId)
-    setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
-
-    // Salva automaticamente o produto atual
-    setTimeout(() => salvar(key), 300)
-  }, [tenantId])
+  // REMOVIDO: não cria mais linha automaticamente ao sair do campo produto
+  // Nova linha só é criada ao dar Enter no campo QUANTIDADE
+  const handleProdutoBlur = useCallback(() => {
+    // Função vazia - mantida para não quebrar a interface
+  }, [])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
