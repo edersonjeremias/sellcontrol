@@ -7,7 +7,7 @@ import {
   enviarVenda,
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
-import { getProdutos, deduzirQuantidade } from '../../services/produtosService'
+import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -1166,6 +1166,18 @@ export default function VendasPage() {
       const linhaAtualizada = { ...prev[idx], [field]: value }
 
       if (field === 'cliente_nome') {
+        // ✅ DEVOLVE ESTOQUE se estava preenchido e agora ficou vazio
+        const linhaAnterior = prev[idx]
+        const tinhaCliente = linhaAnterior.cliente_nome?.trim()
+        const ficaraVazio = !value?.trim()
+
+        if (tinhaCliente && ficaraVazio && linhaAnterior._produtoId) {
+          // Devolve 1 unidade ao estoque
+          devolverQuantidade(linhaAnterior._produtoId, 1)
+            .then(() => console.log('✅ Estoque devolvido:', linhaAnterior.codigo || linhaAnterior.produto))
+            .catch(err => console.error('❌ Erro ao devolver estoque:', err))
+        }
+
         linhaAtualizada.liberado = false
         linhaAtualizada.sacolinha = null  // ✅ Limpa sacolinha (será recalculada no onBlur)
         // Recalcula isSent: só deve ser true se tiver status ENVIADO/VENDIDO E cliente
@@ -1472,12 +1484,21 @@ export default function VendasPage() {
       mensagem: 'Deseja realmente EXCLUIR esta linha?',
       onSim: () => {
         setConfirmacao(null)
+
+        // ✅ DEVOLVE ESTOQUE se linha foi adicionada do catálogo
+        const linha = linhas.find(l => l._key === rowKey)
+        if (linha && linha._produtoId && linha.cliente_nome?.trim()) {
+          devolverQuantidade(linha._produtoId, 1)
+            .then(() => console.log('✅ Estoque devolvido ao excluir:', linha.codigo || linha.produto))
+            .catch(err => console.error('❌ Erro ao devolver estoque:', err))
+        }
+
         setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, deleted: true, cliente_nome: '', sacolinha: null } : r)))
         salvarAgora()
       },
       onNao: () => setConfirmacao(null),
     })
-  }, [salvarAgora])
+  }, [salvarAgora, linhas])
 
   // ── MODAL EDIÇÃO ──
   const salvarDiretoDoModal = useCallback(async (key, campos) => {
