@@ -26,7 +26,7 @@ function novoProduto(codigo = '') {
     marca: '',
     tamanho: '',
     genero: '',
-    condicao: 'N',
+    condicao: '', // Vazio por padrão, usuário escolhe
     custo: '',
     preco: '',
     preco_promocional: '',
@@ -48,7 +48,7 @@ function mapProduto(p) {
     marca: p.marca || '',
     tamanho: p.tamanho || '',
     genero: p.genero || '',
-    condicao: p.condicao === 'Novo' ? 'N' : p.condicao === 'Usado' ? 'U' : p.condicao || 'N',
+    condicao: p.condicao === 'Novo' ? 'N' : p.condicao === 'Usado' ? 'U' : p.condicao || '',
     custo: p.custo ? String(Math.round(p.custo)) : '',
     preco: p.preco ? String(Math.round(p.preco)) : '',
     preco_promocional: p.preco_promocional ? String(Math.round(p.preco_promocional)) : '',
@@ -153,6 +153,25 @@ export default function ProdutosPage() {
     }, 100)
   }, [busy, tenantId])
 
+  // Nova linha ao dar Enter no último campo (quantidade)
+  const handleEnterNoQuantidade = useCallback(async () => {
+    if (busy) return
+
+    // Busca próximo código automático
+    const proximoCodigo = await getProximoCodigo(tenantId)
+
+    setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
+
+    // Foca no campo CÓDIGO da primeira linha (nova linha criada)
+    setTimeout(() => {
+      const firstRow = document.querySelector('#tabela-produtos tbody tr:first-child')
+      const codigoInput = firstRow?.querySelector('.col-codigo .cell-input')
+      codigoInput?.focus()
+      // Scroll para o topo
+      document.querySelector('.tabela-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
+    }, 50)
+  }, [busy, tenantId])
+
   // Atualiza campo
   const handleChange = useCallback((key, field, value) => {
     setProdutos(prev => prev.map(p => {
@@ -205,8 +224,8 @@ export default function ProdutosPage() {
 
     setBusy(true)
     try {
-      // Converte letra para texto completo
-      const condicaoCompleta = p.condicao === 'N' ? 'Novo' : p.condicao === 'U' ? 'Usado' : 'Novo'
+      // Converte letra para texto completo (ou vazio se não preenchido)
+      const condicaoCompleta = p.condicao === 'N' ? 'Novo' : p.condicao === 'U' ? 'Usado' : ''
 
       const dados = {
         ...p,
@@ -312,9 +331,9 @@ export default function ProdutosPage() {
           </label>
 
           <button className="btn-config" onClick={() => setShowSettings(!showSettings)} title="Configurações">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3"/>
-              <path d="M12 1v6m0 6v6M5.6 5.6l4.2 4.2m4.2 4.2l4.2 4.2M1 12h6m6 0h6M5.6 18.4l4.2-4.2m4.2-4.2l4.2-4.2"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </button>
 
@@ -396,6 +415,7 @@ export default function ProdutosPage() {
                   cols={cols}
                   onChange={handleChange}
                   onProdutoBlur={handleProdutoBlur}
+                  onEnterNoQuantidade={handleEnterNoQuantidade}
                   onSalvar={salvar}
                   onCopiar={copiar}
                   onExcluir={excluir}
@@ -410,9 +430,17 @@ export default function ProdutosPage() {
 }
 
 // ─── LINHA DA TABELA ──
-function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onSalvar, onCopiar, onExcluir }) {
+function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onExcluir }) {
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
+
+  // Detecta Enter para criar nova linha
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      onEnterNoQuantidade?.()
+    }
+  }
 
   return (
     <tr className={p.isNew ? 'linha-nova' : ''} style={{ opacity: desabilitado ? 0.5 : 1 }}>
@@ -509,6 +537,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onSalvar, 
             onChange={e => onChange(p._key, 'condicao', e.target.value)}
             disabled={desabilitado}
           >
+            <option value=""></option>
             <option value="N">N</option>
             <option value="U">U</option>
           </select>
@@ -562,6 +591,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onSalvar, 
           className="cell-input"
           value={p.quantidade}
           onChange={e => onChange(p._key, 'quantidade', e.target.value)}
+          onKeyDown={handleKeyDown}
           disabled={desabilitado}
           style={{ textAlign: 'center' }}
         />
