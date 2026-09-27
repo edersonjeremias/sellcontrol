@@ -1106,16 +1106,16 @@ export default function VendasPage() {
       _key: gerarId(),
       isNew: true,
       deleted: false,
-      produto: produto.produto,
+      produto: produto.produto || '',
       modelo: produto.modelo || '',
       genero: produto.genero || '',
       cor: produto.cor || '',
       marca: produto.marca || '',
       tamanho: produto.tamanho || '',
       condicao: produto.condicao || '',
-      custo: produto.custo || 0,
-      preco: produto.preco || 0,
-      preco_promocional: produto.preco_promocional || 0,
+      custo: String(produto.custo || 0), // Converte para string
+      preco: String(produto.preco || 0), // Converte para string
+      preco_promocional: String(produto.preco_promocional || 0), // Converte para string
       codigo: produto.codigo || '',
       cliente_nome: '',
       sacolinha: null,

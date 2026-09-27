@@ -634,8 +634,8 @@ input[type="date"] { color-scheme: dark; }
 .filter-header-bar { padding: 12px 16px 0; display: flex; gap: 8px; align-items: center; }
 .filter-header-bar input { flex: 1; height: 36px; padding: 0 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.9rem; background: var(--input-bg); color: var(--input-text); outline: none; transition: all 0.2s; }
 .filter-header-bar input:focus { border-color: var(--blue); background: #252525; }
-.filter-header-bar .filtro-vendas { min-width: 250px; }
-.filter-header-bar .filtro-produtos { min-width: 250px; position: relative; }
+.filter-header-bar .filtro-vendas { flex: 1; }
+.filter-header-bar .filtro-produtos { flex: 1; position: relative; }
 
 /* ── AUTOCOMPLETE ── */
 .autocomplete-wrapper { position: relative; width: 100%; }
