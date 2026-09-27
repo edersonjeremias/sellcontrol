@@ -375,7 +375,7 @@ export default function ProdutosPage() {
     <AppShell>
       <div className="vendas-container">
         {/* Header com Título e Controles na mesma linha */}
-        <div style={{ padding: '12px 24px 8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ padding: '6px 24px 8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
           {/* Título */}
           <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
             Cadastro de Produtos
