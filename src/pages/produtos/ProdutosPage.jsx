@@ -157,6 +157,22 @@ export default function ProdutosPage() {
   const handleEnterNoQuantidade = useCallback(async () => {
     if (busy) return
 
+    // Verifica se já existe linha vazia no topo
+    const temLinhaVazia = produtosRef.current.some(pr =>
+      pr.isNew && !pr.produto?.trim()
+    )
+
+    if (temLinhaVazia) {
+      // Já tem linha vazia, apenas foca nela
+      setTimeout(() => {
+        const firstRow = document.querySelector('#tabela-produtos tbody tr:first-child')
+        const produtoInput = firstRow?.querySelector('.col-produto .cell-input')
+        produtoInput?.focus()
+        document.querySelector('.tabela-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
+      }, 50)
+      return
+    }
+
     // Busca próximo código automático
     const proximoCodigo = await getProximoCodigo(tenantId)
 
@@ -191,13 +207,24 @@ export default function ProdutosPage() {
     const p = produtosRef.current.find(pr => pr._key === key)
     if (!p || !p.produto?.trim() || !p.isNew) return
 
+    // Verifica se já existe linha vazia no topo
+    const temLinhaVazia = produtosRef.current.some(pr =>
+      pr.isNew && !pr.produto?.trim() && pr._key !== key
+    )
+
+    if (temLinhaVazia) {
+      // Já tem linha vazia, não cria outra
+      setTimeout(() => salvar(key), 300)
+      return
+    }
+
     // Produto preenchido - cria nova linha no topo
     const proximoCodigo = await getProximoCodigo(tenantId)
     setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
 
     // Salva automaticamente o produto atual
     setTimeout(() => salvar(key), 300)
-  }, [tenantId])
+  }, [tenantId, salvar])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
@@ -434,11 +461,33 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
 
-  // Detecta Enter para criar nova linha
-  const handleKeyDown = (e) => {
+  // Navegação entre campos com Tab/Enter
+  const navegarProximo = (e) => {
+    if (e.key !== 'Enter' && e.key !== 'Tab') return
+    e.preventDefault()
+
+    const tr = e.target.closest('tr')
+    if (!tr) return
+
+    const inputs = Array.from(tr.querySelectorAll('input:not([disabled]), select:not([disabled])'))
+    const currentIndex = inputs.indexOf(e.target)
+
+    if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
+      inputs[currentIndex + 1]?.focus()
+    }
+  }
+
+  // Detecta Enter no último campo (quantidade) para criar nova linha
+  const handleQuantidadeKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault()
       onEnterNoQuantidade?.()
+    } else if (e.key === 'Tab') {
+      // Tab no último campo também cria nova linha
+      if (!e.shiftKey) {
+        e.preventDefault()
+        onEnterNoQuantidade?.()
+      }
     }
   }
 
@@ -450,6 +499,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           className="cell-input"
           value={p.codigo}
           onChange={e => onChange(p._key, 'codigo', e.target.value)}
+          onKeyDown={navegarProximo}
           disabled={desabilitado}
           placeholder="100"
         />
@@ -486,6 +536,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             className="cell-input cell-select"
             value={p.genero}
             onChange={e => onChange(p._key, 'genero', e.target.value)}
+            onKeyDown={navegarProximo}
             disabled={desabilitado}
           >
             <option value=""></option>
@@ -524,6 +575,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           className="cell-input"
           value={p.tamanho}
           onChange={e => onChange(p._key, 'tamanho', e.target.value)}
+          onKeyDown={navegarProximo}
           disabled={desabilitado}
         />
       </td>
@@ -535,6 +587,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             className="cell-input cell-select"
             value={p.condicao}
             onChange={e => onChange(p._key, 'condicao', e.target.value)}
+            onKeyDown={navegarProximo}
             disabled={desabilitado}
           >
             <option value=""></option>
@@ -551,6 +604,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             className="cell-input"
             value={p.custo}
             onChange={e => onChange(p._key, 'custo', e.target.value)}
+            onKeyDown={navegarProximo}
             placeholder="0"
             disabled={desabilitado}
             style={{ textAlign: 'right' }}
@@ -564,6 +618,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           className="cell-input"
           value={p.preco}
           onChange={e => onChange(p._key, 'preco', e.target.value)}
+          onKeyDown={navegarProximo}
           placeholder="0"
           disabled={desabilitado}
           style={{ textAlign: 'right' }}
@@ -577,6 +632,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             className="cell-input"
             value={p.preco_promocional}
             onChange={e => onChange(p._key, 'preco_promocional', e.target.value)}
+            onKeyDown={navegarProximo}
             placeholder="0"
             disabled={desabilitado}
             style={{ textAlign: 'right' }}
@@ -591,7 +647,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           className="cell-input"
           value={p.quantidade}
           onChange={e => onChange(p._key, 'quantidade', e.target.value)}
-          onKeyDown={handleKeyDown}
+          onKeyDown={handleQuantidadeKeyDown}
           disabled={desabilitado}
           style={{ textAlign: 'center' }}
         />
