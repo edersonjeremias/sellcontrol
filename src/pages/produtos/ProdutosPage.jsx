@@ -142,8 +142,18 @@ export default function ProdutosPage() {
   const novo = useCallback(async () => {
     if (busy) return
 
-    // Busca próximo código automático
-    const proximoCodigo = await getProximoCodigo(tenantId)
+    // Busca o maior código do banco
+    let proximoCodigo = await getProximoCodigo(tenantId)
+
+    // Verifica o maior código em memória (produtos não salvos)
+    const codigosEmMemoria = produtosRef.current
+      .map(pr => parseInt(pr.codigo))
+      .filter(c => !isNaN(c))
+      .sort((a, b) => b - a)
+
+    if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
+      proximoCodigo = codigosEmMemoria[0] + 1
+    }
 
     setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
 
@@ -173,8 +183,18 @@ export default function ProdutosPage() {
       return
     }
 
-    // Busca próximo código automático
-    const proximoCodigo = await getProximoCodigo(tenantId)
+    // Busca o maior código do banco
+    let proximoCodigo = await getProximoCodigo(tenantId)
+
+    // Verifica o maior código em memória (produtos não salvos)
+    const codigosEmMemoria = produtosRef.current
+      .map(pr => parseInt(pr.codigo))
+      .filter(c => !isNaN(c))
+      .sort((a, b) => b - a)
+
+    if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
+      proximoCodigo = codigosEmMemoria[0] + 1
+    }
 
     setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
 
@@ -280,7 +300,19 @@ export default function ProdutosPage() {
     const p = produtos.find(pr => pr._key === key)
     if (!p) return
 
-    const proximoCodigo = await getProximoCodigo(tenantId)
+    // Busca o maior código do banco
+    let proximoCodigo = await getProximoCodigo(tenantId)
+
+    // Verifica o maior código em memória (produtos não salvos)
+    const codigosEmMemoria = produtos
+      .map(pr => parseInt(pr.codigo))
+      .filter(c => !isNaN(c))
+      .sort((a, b) => b - a)
+
+    if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
+      proximoCodigo = codigosEmMemoria[0] + 1
+    }
+
     const copia = {
       ...novoProduto(String(proximoCodigo)),
       produto: p.produto,
@@ -462,6 +494,15 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
     const inputs = Array.from(tr.querySelectorAll('input:not([disabled]), select:not([disabled])'))
     const currentIndex = inputs.indexOf(e.target)
 
+    // Shift+Tab = volta para campo anterior
+    if (e.shiftKey && e.key === 'Tab') {
+      if (currentIndex > 0) {
+        inputs[currentIndex - 1]?.focus()
+      }
+      return
+    }
+
+    // Tab/Enter = próximo campo
     if (currentIndex >= 0 && currentIndex < inputs.length - 1) {
       inputs[currentIndex + 1]?.focus()
     }
