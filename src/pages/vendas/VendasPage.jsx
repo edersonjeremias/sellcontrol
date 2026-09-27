@@ -515,8 +515,8 @@ export default function VendasPage() {
       qtd++
 
       // ✅ Usa PROMOÇÃO se existir, senão usa PREÇO normal
-      const precoPromocional = parseFloat((l.preco_promocional || '').replace(/\./g, '').replace(',', '.'))
-      const precoNormal = parseFloat((l.preco || '').replace(/\./g, '').replace(',', '.'))
+      const precoPromocional = parseFloat(String(l.preco_promocional || '').replace(/\./g, '').replace(',', '.'))
+      const precoNormal = parseFloat(String(l.preco || '').replace(/\./g, '').replace(',', '.'))
 
       // Se tem promoção E é maior que zero, usa promoção; senão usa preço normal
       const precoFinal = (precoPromocional > 0) ? precoPromocional : precoNormal
