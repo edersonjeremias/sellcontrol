@@ -130,7 +130,7 @@
   font-weight: 700;
   font-size: 10px;
   text-transform: uppercase;
-  padding: 8px 6px;
+  padding: 8px 3px; /* Espaçamento reduzido */
   text-align: left;
   white-space: nowrap;
   border-bottom: 2px solid var(--border-light);
@@ -145,7 +145,7 @@
 }
 
 .tabela-vendas tbody td {
-  padding: 4px 6px; /* 50% do original (era 8px 12px) */
+  padding: 4px 3px; /* Espaçamento reduzido para aproveitar espaço */
   border-bottom: 1px solid var(--table-border);
   vertical-align: middle;
   position: relative;
@@ -160,11 +160,11 @@
    COLUNAS ESPECÍFICAS
    ═══════════════════════════════════════════════════════════════ */
 
-/* Código menor (50%) */
+/* Código (cabe 4 dígitos: 1000) */
 .th-codigo,
 .col-codigo {
-  width: 50px !important;
-  min-width: 50px !important;
+  width: 70px !important;
+  min-width: 70px !important;
 }
 
 .col-codigo .cell-input {
@@ -172,6 +172,7 @@
   text-align: center;
   font-weight: 600;
   color: var(--blue);
+  font-size: 14px;
 }
 
 /* Gênero compacto */
@@ -204,11 +205,11 @@
   font-weight: 600;
 }
 
-/* Preços 30% menores */
+/* Preços com fonte menor */
 .th-preco,
 .col-preco {
-  width: 60px !important;
-  min-width: 60px !important;
+  width: 65px !important;
+  min-width: 65px !important;
 }
 
 .col-preco .cell-input {
@@ -216,13 +217,15 @@
   font-weight: 600;
   color: var(--green);
   text-align: right;
+  font-size: 13px;
+  padding: 7px 4px;
 }
 
-/* Quantidade */
+/* Quantidade (cabe 4 dígitos: 9999) */
 .th-qtd,
 .col-qtd {
-  width: 50px !important;
-  min-width: 50px !important;
+  width: 65px !important;
+  min-width: 65px !important;
   text-align: center;
 }
 
@@ -230,6 +233,7 @@
   width: 100%;
   text-align: center;
   font-weight: 600;
+  font-size: 13px;
 }
 
 /* Outras colunas */
