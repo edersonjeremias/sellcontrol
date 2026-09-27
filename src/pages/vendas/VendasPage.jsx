@@ -7,6 +7,7 @@ import {
   enviarVenda,
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
+import { getProdutos, deduzirQuantidade } from '../../services/produtosService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -137,6 +138,8 @@ export default function VendasPage() {
   const [busyMsg,     setBusyMsg]     = useState('')
   const [hasUnsaved,  setHasUnsaved]  = useState(false)
   const [filtro,      setFiltro]      = useState('')
+  const [filtroProduto, setFiltroProduto] = useState('')
+  const [produtosSugestoes, setProdutosSugestoes] = useState([])
   const [tabelaMsg,   setTabelaMsg]   = useState('Iniciando sistema...')
   const [pronto,      setPronto]      = useState(false)
   const [scrollTop,   setScrollTop]   = useState(false)
@@ -1059,6 +1062,94 @@ export default function VendasPage() {
     }
   }, [pronto, tenantId])
 
+  // ── BUSCA DE PRODUTOS NO CATÁLOGO ──
+  const handleFiltroProdutoChange = useCallback(async (e) => {
+    const valor = e.target.value
+    setFiltroProduto(valor)
+
+    if (!valor.trim()) {
+      setProdutosSugestoes([])
+      return
+    }
+
+    try {
+      const produtos = await getProdutos(tenantId, { busca: valor, ativo: true })
+      setProdutosSugestoes(produtos.slice(0, 10)) // Máximo 10 sugestões
+    } catch (err) {
+      console.error('❌ Erro ao buscar produtos:', err)
+      setProdutosSugestoes([])
+    }
+  }, [tenantId])
+
+  // ── ADICIONAR PRODUTO NA VENDA AO PRESSIONAR ENTER ──
+  const handleFiltroProdutoKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && produtosSugestoes.length > 0) {
+      e.preventDefault()
+      adicionarProdutoNaVenda(produtosSugestoes[0]) // Adiciona o primeiro da lista
+    }
+    if (e.key === 'Escape') {
+      setProdutosSugestoes([])
+      setFiltroProduto('')
+    }
+  }, [produtosSugestoes])
+
+  // ── ADICIONAR PRODUTO DA BUSCA NA TABELA DE VENDAS ──
+  const adicionarProdutoNaVenda = useCallback(async (produto) => {
+    // Verifica estoque
+    if (produto.quantidade === 0) {
+      const confirma = window.confirm(`⚠️ Produto "${produto.produto}" sem estoque!\n\nUsar mesmo assim?`)
+      if (!confirma) return
+    }
+
+    // Cria nova linha com dados do produto
+    const novaLinha = {
+      _key: gerarId(),
+      isNew: true,
+      deleted: false,
+      produto: produto.produto,
+      modelo: produto.modelo || '',
+      genero: produto.genero || '',
+      cor: produto.cor || '',
+      marca: produto.marca || '',
+      tamanho: produto.tamanho || '',
+      condicao: produto.condicao || '',
+      custo: produto.custo || 0,
+      preco: produto.preco || 0,
+      preco_promocional: produto.preco_promocional || 0,
+      codigo: produto.codigo || '',
+      cliente_nome: '',
+      sacolinha: null,
+      status: '',
+      isSent: false,
+      liberado: false,
+      _produtoId: produto.id, // Guarda ID do produto para deduzir estoque depois
+    }
+
+    // Adiciona no topo da tabela
+    setLinhas(prev => [novaLinha, ...prev])
+    setHasUnsaved(true)
+
+    // Deduz estoque se tiver quantidade disponível
+    if (produto.quantidade > 0) {
+      try {
+        await deduzirQuantidade(produto.id, 1)
+        console.log('✅ Estoque deduzido:', produto.codigo, '-1')
+      } catch (err) {
+        console.error('❌ Erro ao deduzir estoque:', err)
+      }
+    }
+
+    // Limpa busca
+    setFiltroProduto('')
+    setProdutosSugestoes([])
+
+    // Foca no campo cliente da nova linha
+    setTimeout(() => {
+      const primeiraLinha = document.querySelector('#tabela tbody tr:first-child .col-cliente input')
+      primeiraLinha?.focus()
+    }, 100)
+  }, [tenantId])
+
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((key, field, value) => {
     console.log('🔧 handleFieldChange:', { key, field, value })
@@ -1948,8 +2039,37 @@ export default function VendasPage() {
             </div>
           </div>
           <div className="filter-header-bar">
-            <input type="text" value={filtro} onChange={e => setFiltro(e.target.value)}
-              placeholder="Filtro Rápido: Digite para buscar (Ex: camiseta, verde, zara)" />
+            <div className="filtro-vendas">
+              <input
+                type="text"
+                value={filtro}
+                onChange={e => setFiltro(e.target.value)}
+                placeholder="Vendas: Buscar (Ex: camiseta, verde, zara)"
+              />
+            </div>
+            <div className="filtro-produtos">
+              <input
+                type="text"
+                value={filtroProduto}
+                onChange={handleFiltroProdutoChange}
+                onKeyDown={handleFiltroProdutoKeyDown}
+                placeholder="Produtos: Buscar no catálogo (Enter para adicionar)"
+              />
+              {produtosSugestoes.length > 0 && (
+                <ul className="autocomplete-list">
+                  {produtosSugestoes.map((p, idx) => (
+                    <li
+                      key={p.id}
+                      className={idx === 0 ? 'active' : ''}
+                      onClick={() => adicionarProdutoNaVenda(p)}
+                    >
+                      {p.codigo} - {p.produto} {p.modelo && `(${p.modelo})`} - {p.cor} - {p.marca} - R$ {p.preco}
+                      {p.quantidade === 0 && ' ⚠️ SEM ESTOQUE'}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
       )}
