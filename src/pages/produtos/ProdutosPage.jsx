@@ -72,6 +72,7 @@ export default function ProdutosPage() {
   const [busy, setBusy] = useState(false)
   const [pronto, setPronto] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [produtoEditando, setProdutoEditando] = useState(null) // Modal mobile
   const [cols, setCols] = useState({
     genero: true,
     condicao: true,
@@ -502,7 +503,75 @@ export default function ProdutosPage() {
             </table>
           </div>
         </div>
+
+        {/* CARDS MOBILE (só aparece em telas pequenas) */}
+        <div className="mobile-only">
+          {produtosFiltrados.length === 0 ? (
+            <div className="mobile-empty">
+              {filtro ? 'Nenhum produto encontrado' : 'Clique em "+ Novo" para começar'}
+            </div>
+          ) : (
+            produtosFiltrados.map(p => (
+              <div
+                key={p._key}
+                className={`produto-card-mobile ${!p.ativo ? 'inativo' : ''}`}
+                onClick={() => setProdutoEditando(p)}
+              >
+                <div className="card-header">
+                  <div className="card-titulo">
+                    {p.produto || 'Nome do produto'}
+                    {p.modelo && <div style={{ fontWeight: 400, fontSize: 12, marginTop: 2 }}>{p.modelo}</div>}
+                  </div>
+                  <div className="card-preco">R$ {p.preco || 0}</div>
+                </div>
+                <div className="card-detalhes">
+                  {p.marca && <span>{p.marca}</span>}
+                  {p.cor && <span> · {p.cor}</span>}
+                  {p.tamanho && <span> · Tam {p.tamanho}</span>}
+                  {!p.ativo && <span style={{ color: 'var(--red)', marginLeft: 8 }}>INATIVO</span>}
+                </div>
+                <div className="card-footer">
+                  <div className="card-codigo">#{p.codigo}</div>
+                  <div className="card-qtd">Estoque: {p.quantidade || 0}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
       </div>
+
+      {/* MODAL MOBILE DE EDIÇÃO */}
+      {produtoEditando && (
+        <div className="modal-overlay" onClick={() => setProdutoEditando(null)}>
+          <div className="modal-card" style={{ maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
+              <h3 style={{ margin: 0, fontSize: 16 }}>{produtoEditando.produto || 'Produto'}</h3>
+              <button onClick={() => setProdutoEditando(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 24, cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding: '16px' }}>
+              <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>
+                📱 Edição completa disponível na versão desktop
+              </p>
+              <div style={{ marginTop: 16, padding: 12, background: '#1a1a1a', borderRadius: 6 }}>
+                <div style={{ marginBottom: 8 }}><strong>Código:</strong> {produtoEditando.codigo}</div>
+                <div style={{ marginBottom: 8 }}><strong>Produto:</strong> {produtoEditando.produto}</div>
+                <div style={{ marginBottom: 8 }}><strong>Marca:</strong> {produtoEditando.marca}</div>
+                <div style={{ marginBottom: 8 }}><strong>Preço:</strong> R$ {produtoEditando.preco}</div>
+                <div style={{ marginBottom: 8 }}><strong>Estoque:</strong> {produtoEditando.quantidade}</div>
+                {!produtoEditando.ativo && (
+                  <div style={{ marginTop: 12, padding: 8, background: 'rgba(242,139,130,0.1)', borderRadius: 4, color: 'var(--red)' }}>
+                    ⚠️ Produto inativo
+                    <button onClick={() => { reativar(produtoEditando._key); setProdutoEditando(null) }} style={{ marginTop: 8, width: '100%', padding: 8, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}>
+                      Reativar Produto
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   )
 }
