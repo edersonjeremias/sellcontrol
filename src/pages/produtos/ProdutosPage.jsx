@@ -421,25 +421,26 @@ export default function ProdutosPage() {
 
         {/* Tabela */}
         <div className="tabela-scroll">
-          <table id="tabela-produtos" className="tabela-vendas">
-            <thead>
-              <tr>
-                <th className="th-codigo">Cód.</th>
-                <th>Produto</th>
-                <th>Modelo</th>
-                {cols.genero && <th className="th-genero">Gên.</th>}
-                <th>Cor</th>
-                <th>Marca</th>
-                <th className="th-tam">Tam.</th>
-                {cols.condicao && <th className="th-condicao">Cond.</th>}
-                {cols.custo && <th className="th-preco">Custo</th>}
-                <th className="th-preco">Preço</th>
-                {cols.preco_promocional && <th className="th-preco">Promo</th>}
-                <th className="th-qtd">Qtd.</th>
-                <th className="th-acoes">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div>
+            <table id="tabela-produtos" className="tabela-vendas">
+              <thead>
+                <tr>
+                  <th className="th-codigo">Cód.</th>
+                  <th>Produto</th>
+                  <th>Modelo</th>
+                  {cols.genero && <th className="th-genero">Gên.</th>}
+                  <th>Cor</th>
+                  <th>Marca</th>
+                  <th className="th-tam">Tam.</th>
+                  {cols.condicao && <th className="th-condicao">Cond.</th>}
+                  {cols.custo && <th className="th-preco">Custo</th>}
+                  <th className="th-preco">Preço</th>
+                  {cols.preco_promocional && <th className="th-preco">Promo</th>}
+                  <th className="th-qtd">Qtd.</th>
+                  <th className="th-acoes">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
               {!pronto && (
                 <tr>
                   <td colSpan={20} style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
@@ -470,8 +471,9 @@ export default function ProdutosPage() {
                   onExcluir={excluir}
                 />
               ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </AppShell>
