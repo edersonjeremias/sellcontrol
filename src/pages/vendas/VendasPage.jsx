@@ -2043,6 +2043,7 @@ export default function VendasPage() {
                 </svg>
               </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
+              <button className="btn-acao btn-ghost" onClick={buscarProdutosDisponiveis} disabled={busy}>📦 Produtos</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
 
               {/* INDICADOR DE STATUS */}
