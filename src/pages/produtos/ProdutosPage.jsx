@@ -477,16 +477,24 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
     }
   }
 
-  // Detecta Enter no último campo (quantidade) para criar nova linha
-  const handleQuantidadeKeyDown = (e) => {
+  // Detecta Enter no último campo (quantidade) para salvar e criar nova linha
+  const handleQuantidadeKeyDown = async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      onEnterNoQuantidade?.()
+      // Salva o produto atual antes de criar nova linha
+      await onSalvar?.(p._key)
+      // Aguarda um pouco para garantir que salvou
+      setTimeout(() => {
+        onEnterNoQuantidade?.()
+      }, 100)
     } else if (e.key === 'Tab') {
-      // Tab no último campo também cria nova linha
+      // Tab no último campo também salva e cria nova linha
       if (!e.shiftKey) {
         e.preventDefault()
-        onEnterNoQuantidade?.()
+        await onSalvar?.(p._key)
+        setTimeout(() => {
+          onEnterNoQuantidade?.()
+        }, 100)
       }
     }
   }
