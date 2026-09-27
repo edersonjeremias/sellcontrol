@@ -30,7 +30,7 @@ function novoProduto(codigo = '') {
     custo: '',
     preco: '',
     preco_promocional: '',
-    quantidade: '0',
+    quantidade: '', // Vazio por padrão
     ativo: true,
     isNew: true,
     deleted: false,
@@ -193,9 +193,16 @@ export default function ProdutosPage() {
     setProdutos(prev => prev.map(p => {
       if (p._key !== key) return p
 
-      // Limpa formatação de valores (só números)
+      // Limpa formatação de valores (só números) e limita a 4 dígitos
       if (field === 'custo' || field === 'preco' || field === 'preco_promocional') {
         value = value.replace(/\D/g, '') // Remove tudo que não é número
+        if (value.length > 4) value = value.slice(0, 4) // Max 9999
+      }
+
+      // Limita quantidade a 3 dígitos
+      if (field === 'quantidade') {
+        value = value.replace(/\D/g, '') // Remove tudo que não é número
+        if (value.length > 3) value = value.slice(0, 3) // Max 999
       }
 
       return { ...p, [field]: value }
@@ -651,12 +658,14 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
       {/* QUANTIDADE */}
       <td className="col-qtd">
         <input
-          type="number"
+          type="text"
           className="cell-input"
           value={p.quantidade}
           onChange={e => onChange(p._key, 'quantidade', e.target.value)}
           onKeyDown={handleQuantidadeKeyDown}
           disabled={desabilitado}
+          placeholder=""
+          maxLength={3}
           style={{ textAlign: 'center' }}
         />
       </td>
