@@ -2044,7 +2044,6 @@ export default function VendasPage() {
                 </svg>
               </button>
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
-              <button className="btn-acao btn-ghost" onClick={buscarProdutosDisponiveis} disabled={busy}>📦 Produtos</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
 
               {/* INDICADOR DE STATUS */}
@@ -2084,7 +2083,7 @@ export default function VendasPage() {
                       className={idx === 0 ? 'active' : ''}
                       onClick={() => adicionarProdutoNaVenda(p)}
                     >
-                      {p.codigo} - {p.produto} {p.modelo && `(${p.modelo})`} - {p.cor} - {p.marca} - R$ {p.preco}
+                      {p.codigo} - {p.produto} {p.modelo && `(${p.modelo})`} - {p.cor} - {p.marca} - R$ {p.preco} - Qtd: {p.quantidade}
                       {p.quantidade === 0 && ' ⚠️ SEM ESTOQUE'}
                     </li>
                   ))}
