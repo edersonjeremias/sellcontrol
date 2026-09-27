@@ -224,7 +224,7 @@ export default function ProdutosPage() {
 
     // Salva automaticamente o produto atual
     setTimeout(() => salvar(key), 300)
-  }, [tenantId, salvar])
+  }, [tenantId])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
