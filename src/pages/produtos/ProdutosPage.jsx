@@ -354,6 +354,23 @@ export default function ProdutosPage() {
     }
   }, [produtos, showToast])
 
+  // Reativar produto
+  const reativar = useCallback(async (key) => {
+    const p = produtos.find(pr => pr._key === key)
+    if (!p || !p.id) return
+
+    setBusy(true)
+    try {
+      await reativarProduto(p.id)
+      setProdutos(prev => prev.map(pr => pr._key === key ? { ...pr, ativo: true } : pr))
+      showToast('Produto reativado!', 'success')
+    } catch (err) {
+      showToast('Erro ao reativar produto', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }, [produtos, showToast])
+
   return (
     <AppShell title="Cadastro de Produtos">
       <div className="vendas-container">
@@ -469,6 +486,7 @@ export default function ProdutosPage() {
                   onSalvar={salvar}
                   onCopiar={copiar}
                   onExcluir={excluir}
+                  onReativar={reativar}
                 />
               ))}
               </tbody>
@@ -481,7 +499,7 @@ export default function ProdutosPage() {
 }
 
 // ─── LINHA DA TABELA ──
-function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onExcluir }) {
+function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onExcluir, onReativar }) {
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
 
@@ -728,18 +746,35 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             </svg>
           </button>
 
-          {/* Excluir */}
-          <button
-            type="button"
-            className="btn-action-sm del"
-            title="Excluir produto"
-            onClick={() => onExcluir(p._key)}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            </svg>
-          </button>
+          {/* Reativar (só aparece se inativo) */}
+          {!p.ativo && !p.isNew && (
+            <button
+              type="button"
+              className="btn-action-sm"
+              style={{ color: '#81c995' }}
+              title="Reativar produto"
+              onClick={() => onReativar(p._key)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          )}
+
+          {/* Excluir (só aparece se ativo) */}
+          {p.ativo && (
+            <button
+              type="button"
+              className="btn-action-sm del"
+              title="Excluir produto"
+              onClick={() => onExcluir(p._key)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          )}
         </div>
       </td>
     </tr>
