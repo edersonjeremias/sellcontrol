@@ -361,3 +361,68 @@
   width: 16px;
   height: 16px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVO MOBILE
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Header mobile: stack vertical */
+  .vendas-container > div:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* Título menor */
+  .vendas-container > div:first-child h1 {
+    font-size: 16px !important;
+  }
+
+  /* Busca full width */
+  .vendas-container > div:first-child > div:nth-child(2) {
+    max-width: 100% !important;
+  }
+
+  /* Controles em linha */
+  .vendas-container > div:first-child label,
+  .vendas-container > div:first-child button {
+    font-size: 12px !important;
+  }
+
+  /* Container tabela */
+  .tabela-scroll {
+    width: calc(100% - 16px) !important;
+    margin: 8px 8px 8px !important;
+    border-radius: 0 !important;
+  }
+
+  /* Tabela scroll horizontal */
+  .tabela-vendas {
+    min-width: 1200px;
+  }
+
+  /* Fonte menor nas células */
+  .cell-input,
+  .cell-select {
+    font-size: 12px !important;
+    padding: 6px 4px !important;
+  }
+
+  /* Header tabela */
+  .tabela-vendas thead th {
+    font-size: 9px !important;
+    padding: 6px 4px !important;
+  }
+
+  /* Botões ação menores */
+  .acoes-wrapper button {
+    padding: 4px !important;
+  }
+
+  .acoes-wrapper svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
