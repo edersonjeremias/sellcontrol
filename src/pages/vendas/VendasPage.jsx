@@ -1129,15 +1129,8 @@ export default function VendasPage() {
     setLinhas(prev => [novaLinha, ...prev])
     setHasUnsaved(true)
 
-    // Deduz estoque se tiver quantidade disponível
-    if (produto.quantidade > 0) {
-      try {
-        await deduzirQuantidade(produto.id, 1)
-        console.log('✅ Estoque deduzido:', produto.codigo, '-1')
-      } catch (err) {
-        console.error('❌ Erro ao deduzir estoque:', err)
-      }
-    }
+    // ✅ ESTOQUE SÓ SERÁ DEDUZIDO AO COLOCAR CLIENTE
+    // (não deduz aqui, deduz no handleFieldChange)
 
     // Limpa busca
     setFiltroProduto('')
@@ -1166,15 +1159,21 @@ export default function VendasPage() {
       const linhaAtualizada = { ...prev[idx], [field]: value }
 
       if (field === 'cliente_nome') {
-        // ✅ DEVOLVE ESTOQUE se estava preenchido e agora ficou vazio
         const linhaAnterior = prev[idx]
         const tinhaCliente = linhaAnterior.cliente_nome?.trim()
-        const ficaraVazio = !value?.trim()
+        const teraCliente = value?.trim()
 
-        if (tinhaCliente && ficaraVazio && linhaAnterior._produtoId) {
-          // Devolve 1 unidade ao estoque
+        // ✅ DEDUZ ESTOQUE se estava vazio e agora tem cliente
+        if (!tinhaCliente && teraCliente && linhaAnterior._produtoId) {
+          deduzirQuantidade(linhaAnterior._produtoId, 1)
+            .then(() => console.log('✅ Estoque deduzido ao colocar cliente:', linhaAnterior.codigo || linhaAnterior.produto))
+            .catch(err => console.error('❌ Erro ao deduzir estoque:', err))
+        }
+
+        // ✅ DEVOLVE ESTOQUE se tinha cliente e agora ficou vazio
+        if (tinhaCliente && !teraCliente && linhaAnterior._produtoId) {
           devolverQuantidade(linhaAnterior._produtoId, 1)
-            .then(() => console.log('✅ Estoque devolvido:', linhaAnterior.codigo || linhaAnterior.produto))
+            .then(() => console.log('✅ Estoque devolvido ao remover cliente:', linhaAnterior.codigo || linhaAnterior.produto))
             .catch(err => console.error('❌ Erro ao devolver estoque:', err))
         }
 
