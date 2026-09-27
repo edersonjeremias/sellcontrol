@@ -372,11 +372,17 @@ export default function ProdutosPage() {
   }, [produtos, showToast])
 
   return (
-    <AppShell title="Cadastro de Produtos">
+    <AppShell>
       <div className="vendas-container">
-        {/* Header */}
-        <div className="vendas-header">
-          <div className="busca-wrapper" style={{ flex: 1, maxWidth: '600px' }}>
+        {/* Header com Título e Controles na mesma linha */}
+        <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border-header)' }}>
+          {/* Título */}
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
+            Cadastro de Produtos
+          </h1>
+
+          {/* Busca */}
+          <div style={{ flex: 1, maxWidth: '600px' }}>
             <input
               type="text"
               placeholder="Buscar produtos (código, nome, cor, marca...)"
@@ -387,7 +393,8 @@ export default function ProdutosPage() {
             />
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px' }}>
+          {/* Checkbox Inativos */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
             <input
               type="checkbox"
               checked={mostrarInativos}
@@ -396,6 +403,7 @@ export default function ProdutosPage() {
             Inativos
           </label>
 
+          {/* Botão Configurações */}
           <button className="btn-config" onClick={() => setShowSettings(!showSettings)} title="Configurações">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3"/>
@@ -403,6 +411,7 @@ export default function ProdutosPage() {
             </svg>
           </button>
 
+          {/* Botão Novo */}
           <button onClick={novo} disabled={busy} className="btn-primary">
             + Novo
           </button>
