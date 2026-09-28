@@ -402,7 +402,7 @@ export default function ProdutosPage() {
     <AppShell>
       <div className="vendas-container">
         {/* Header com Título e Controles na mesma linha */}
-        <div style={{ padding: '4px 24px 6px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ padding: '2px 24px 4px', display: 'flex', alignItems: 'center', gap: '16px' }}>
           {/* Título */}
           <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
             Cadastro de Produtos
@@ -439,8 +439,8 @@ export default function ProdutosPage() {
               </svg>
             </button>
 
-            {/* Botão Novo - compacto */}
-            <button onClick={novo} disabled={busy} style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            {/* Botão Novo - ocupa espaço restante */}
+            <button onClick={novo} disabled={busy} style={{ flex: 1, padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
               + Novo
             </button>
           </div>
@@ -545,22 +545,17 @@ export default function ProdutosPage() {
                 className={`produto-card-mobile ${!p.ativo ? 'inativo' : ''}`}
                 onClick={() => setProdutoEditando(p)}
               >
-                <div className="card-header">
-                  <div className="card-titulo">
-                    {p.produto || 'Nome do produto'}
-                    {p.modelo && <div style={{ fontWeight: 400, fontSize: 12, marginTop: 2 }}>{p.modelo}</div>}
-                  </div>
-                  <div className="card-preco">R$ {p.preco || 0}</div>
-                </div>
-                <div className="card-detalhes">
+                {/* Código Produto Modelo Cor Marca (Tamanho) Preço Estoque */}
+                <div style={{ fontSize: 14, lineHeight: 1.5, color: 'var(--text-header)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--blue)' }}>#{p.codigo}</span>
+                  <span style={{ fontWeight: 700 }}>{p.produto || 'Produto'}</span>
+                  {p.modelo && <span>{p.modelo}</span>}
+                  {p.cor && <span>{p.cor}</span>}
                   {p.marca && <span>{p.marca}</span>}
-                  {p.cor && <span> · {p.cor}</span>}
-                  {p.tamanho && <span> · Tam {p.tamanho}</span>}
-                  {!p.ativo && <span style={{ color: 'var(--red)', marginLeft: 8 }}>INATIVO</span>}
-                </div>
-                <div className="card-footer">
-                  <div className="card-codigo">#{p.codigo}</div>
-                  <div className="card-qtd">Estoque: {p.quantidade || 0}</div>
+                  {p.tamanho && <span>({p.tamanho})</span>}
+                  <span style={{ fontWeight: 700, color: 'var(--green)' }}>R$ {p.preco || 0}</span>
+                  <span style={{ color: 'var(--muted)' }}>Estoque: {p.quantidade || 0}</span>
+                  {!p.ativo && <span style={{ color: 'var(--red)', fontWeight: 600 }}>· INATIVO</span>}
                 </div>
               </div>
             ))
@@ -764,14 +759,12 @@ export default function ProdutosPage() {
                       alert('Preencha Produto e Preço')
                       return
                     }
-                    // Atualiza o produto no array antes de salvar
-                    setProdutos(prev => {
-                      const novoProdutos = prev.map(pr =>
-                        pr._key === produtoEditando._key ? produtoEditando : pr
-                      )
-                      produtosRef.current = novoProdutos
-                      return novoProdutos
-                    })
+                    // Atualiza produtosRef PRIMEIRO (síncrono)
+                    produtosRef.current = produtosRef.current.map(pr =>
+                      pr._key === produtoEditando._key ? produtoEditando : pr
+                    )
+                    // Depois atualiza o estado
+                    setProdutos(produtosRef.current)
                     // Agora salva
                     await salvar(produtoEditando._key)
                     setProdutoEditando(null)
