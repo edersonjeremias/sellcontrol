@@ -73,6 +73,7 @@ export default function ProdutosPage() {
   const [pronto, setPronto] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null) // Modal mobile
+  const [confirmarExclusao, setConfirmarExclusao] = useState(false) // Modal confirmação exclusão
   const [cols, setCols] = useState({
     genero: true,
     condicao: true,
@@ -746,11 +747,33 @@ export default function ProdutosPage() {
               {/* Botões */}
               <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
                 {!produtoEditando.isNew && (
+                  <>
+                    <button
+                      onClick={() => setConfirmarExclusao(true)}
+                      style={{ flex: 1, padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      🗑️ Excluir
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await copiar(produtoEditando._key)
+                        setProdutoEditando(null)
+                      }}
+                      style={{ flex: 1, padding: 12, background: '#666', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      📋 Duplicar
+                    </button>
+                  </>
+                )}
+                {!produtoEditando.ativo && (
                   <button
-                    onClick={() => { excluir(produtoEditando._key); setProdutoEditando(null) }}
-                    style={{ flex: 1, padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                    onClick={async () => {
+                      await reativar(produtoEditando._key)
+                      setProdutoEditando(null)
+                    }}
+                    style={{ flex: 1, padding: 12, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                   >
-                    🗑️ Excluir
+                    ♻️ Reativar
                   </button>
                 )}
                 <button
@@ -775,6 +798,37 @@ export default function ProdutosPage() {
                 </button>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO */}
+      {confirmarExclusao && produtoEditando && (
+        <div className="modal-overlay" onClick={() => setConfirmarExclusao(false)}>
+          <div className="modal-card" style={{ maxWidth: 400, padding: 24 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: 18, color: 'var(--text-header)' }}>Confirmar Exclusão</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Tem certeza que deseja excluir o produto <strong style={{ color: 'var(--text-header)' }}>{produtoEditando.produto}</strong>?
+              <br />Esta ação não pode ser desfeita.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setConfirmarExclusao(false)}
+                style={{ flex: 1, padding: 12, background: '#444', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  await excluir(produtoEditando._key)
+                  setConfirmarExclusao(false)
+                  setProdutoEditando(null)
+                }}
+                style={{ flex: 1, padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Sim, Excluir
+              </button>
             </div>
           </div>
         </div>
