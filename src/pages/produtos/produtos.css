@@ -431,22 +431,32 @@
    MOBILE OTIMIZADO - VERSÃO 2
    ═══════════════════════════════════════════════════════════════ */
 
-@media (max-width: 768px) {
-  /* Esconde tabela em mobile */
-  .tabela-scroll {
-    display: none !important;
-  }
-  
-  /* Mostra aviso mobile */
-  .mobile-only {
-    display: block !important;
-  }
+/* Desktop (escondida no mobile) */
+.desktop-only {
+  display: block;
 }
 
 /* Lista mobile (escondida no desktop) */
 .mobile-only {
   display: none;
   padding: 12px;
+}
+
+@media (max-width: 768px) {
+  /* Esconde elementos desktop em mobile */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Esconde tabela em mobile */
+  .tabela-scroll {
+    display: none !important;
+  }
+
+  /* Mostra elementos mobile */
+  .mobile-only {
+    display: block !important;
+  }
 }
 
 .produto-card-mobile {

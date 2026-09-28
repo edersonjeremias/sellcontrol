@@ -414,120 +414,234 @@ export default function ProdutosPage() {
       <div className="vendas-container">
         {/* Header com Título e Controles */}
         <div style={{ padding: '2px 24px 4px' }}>
-          {/* Primeira linha: Título + Busca + Controles */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-            {/* Título */}
-            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
-              Cadastro de Produtos
-            </h1>
+          {/* Desktop Layout */}
+          <div className="desktop-only">
+            {/* Primeira linha: Título + Busca + Controles */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+              {/* Título */}
+              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
+                Cadastro de Produtos
+              </h1>
 
-            {/* Busca */}
-            <div style={{ flex: 1, maxWidth: '600px' }}>
+              {/* Busca */}
+              <div style={{ flex: 1, maxWidth: '600px' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar produtos (código, nome, cor, marca...)"
+                  value={filtro}
+                  onChange={e => {
+                    setFiltro(e.target.value)
+                    setPaginaAtual(1)
+                  }}
+                  className="filtro-rapido"
+                  style={{ width: '100%' }}
+                />
+              </div>
+
+              {/* Grupo: Checkbox Inativos + Engrenagem + Botão Novo */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={mostrarInativos}
+                    onChange={e => {
+                      setMostrarInativos(e.target.checked)
+                      setPaginaAtual(1)
+                    }}
+                  />
+                  Inativos
+                </label>
+
+                <button onClick={() => setShowSettings(!showSettings)} title="Configurações" style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                  </svg>
+                </button>
+
+                <button onClick={novo} disabled={busy} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  + Novo
+                </button>
+              </div>
+            </div>
+
+            {/* Segunda linha: Filtros de Data */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                Data inicial:
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={e => {
+                    setDataInicio(e.target.value)
+                    setPaginaAtual(1)
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    background: '#2a2a2a',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 6,
+                    color: '#e0e0e0',
+                    fontSize: '13px'
+                  }}
+                />
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                Data final:
+                <input
+                  type="date"
+                  value={dataFim}
+                  onChange={e => {
+                    setDataFim(e.target.value)
+                    setPaginaAtual(1)
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    background: '#2a2a2a',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 6,
+                    color: '#e0e0e0',
+                    fontSize: '13px'
+                  }}
+                />
+              </label>
+
+              {(dataInicio || dataFim) && (
+                <button
+                  onClick={() => {
+                    setDataInicio('')
+                    setDataFim('')
+                    setPaginaAtual(1)
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#444',
+                    border: 'none',
+                    borderRadius: 6,
+                    color: '#e0e0e0',
+                    fontSize: '13px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Limpar Datas
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Layout */}
+          <div className="mobile-only">
+            {/* Linha 1: Título + Engrenagem + Botão Novo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#e0e0e0', flex: 1 }}>
+                Cadastro de Produtos
+              </h1>
+
+              <button onClick={() => setShowSettings(!showSettings)} title="Configurações" style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              </button>
+
+              <button onClick={novo} disabled={busy} style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                + Novo
+              </button>
+            </div>
+
+            {/* Linha 2: Busca (largura total) */}
+            <div style={{ marginBottom: '8px' }}>
               <input
                 type="text"
-                placeholder="Buscar produtos (código, nome, cor, marca...)"
+                placeholder="Buscar produtos..."
                 value={filtro}
                 onChange={e => {
                   setFiltro(e.target.value)
-                  setPaginaAtual(1) // Volta para primeira página ao buscar
+                  setPaginaAtual(1)
                 }}
                 className="filtro-rapido"
-                style={{ width: '100%' }}
+                style={{ width: '100%', fontSize: '14px', padding: '8px 12px' }}
               />
             </div>
 
-            {/* Grupo: Checkbox Inativos + Engrenagem + Botão Novo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+            {/* Linha 3: Inativos + Filtros de Data */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
                 <input
                   type="checkbox"
                   checked={mostrarInativos}
                   onChange={e => {
                     setMostrarInativos(e.target.checked)
-                    setPaginaAtual(1) // Volta para primeira página
+                    setPaginaAtual(1)
                   }}
                 />
                 Inativos
               </label>
 
-            {/* Botão Configurações SEM BORDA */}
-            <button onClick={() => setShowSettings(!showSettings)} title="Configurações" style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
-            </button>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
+                Dt in:
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={e => {
+                    setDataInicio(e.target.value)
+                    setPaginaAtual(1)
+                  }}
+                  style={{
+                    padding: '4px 6px',
+                    background: '#2a2a2a',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 4,
+                    color: '#e0e0e0',
+                    fontSize: '12px',
+                    width: '110px'
+                  }}
+                />
+              </label>
 
-              {/* Botão Novo - ocupa espaço restante */}
-              <button onClick={novo} disabled={busy} style={{ flex: 1, padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                + Novo
-              </button>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
+                Dt fi:
+                <input
+                  type="date"
+                  value={dataFim}
+                  onChange={e => {
+                    setDataFim(e.target.value)
+                    setPaginaAtual(1)
+                  }}
+                  style={{
+                    padding: '4px 6px',
+                    background: '#2a2a2a',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 4,
+                    color: '#e0e0e0',
+                    fontSize: '12px',
+                    width: '110px'
+                  }}
+                />
+              </label>
+
+              {(dataInicio || dataFim) && (
+                <button
+                  onClick={() => {
+                    setDataInicio('')
+                    setDataFim('')
+                    setPaginaAtual(1)
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    background: '#444',
+                    border: 'none',
+                    borderRadius: 4,
+                    color: '#e0e0e0',
+                    fontSize: '11px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Limpar
+                </button>
+              )}
             </div>
-          </div>
-
-          {/* Segunda linha: Filtros de Data */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
-              Data inicial:
-              <input
-                type="date"
-                value={dataInicio}
-                onChange={e => {
-                  setDataInicio(e.target.value)
-                  setPaginaAtual(1)
-                }}
-                style={{
-                  padding: '6px 10px',
-                  background: '#2a2a2a',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: 6,
-                  color: '#e0e0e0',
-                  fontSize: '13px'
-                }}
-              />
-            </label>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
-              Data final:
-              <input
-                type="date"
-                value={dataFim}
-                onChange={e => {
-                  setDataFim(e.target.value)
-                  setPaginaAtual(1)
-                }}
-                style={{
-                  padding: '6px 10px',
-                  background: '#2a2a2a',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: 6,
-                  color: '#e0e0e0',
-                  fontSize: '13px'
-                }}
-              />
-            </label>
-
-            {/* Botão Limpar Filtros de Data */}
-            {(dataInicio || dataFim) && (
-              <button
-                onClick={() => {
-                  setDataInicio('')
-                  setDataFim('')
-                  setPaginaAtual(1)
-                }}
-                style={{
-                  padding: '6px 12px',
-                  background: '#444',
-                  border: 'none',
-                  borderRadius: 6,
-                  color: '#e0e0e0',
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                Limpar Datas
-              </button>
-            )}
           </div>
         </div>
 
@@ -617,9 +731,9 @@ export default function ProdutosPage() {
           </div>
         </div>
 
-        {/* Paginação */}
+        {/* Paginação Desktop */}
         {pronto && totalRegistros > 0 && (
-          <div style={{
+          <div className="desktop-only" style={{
             padding: '16px 24px',
             display: 'flex',
             justifyContent: 'center',
@@ -718,8 +832,82 @@ export default function ProdutosPage() {
             </button>
 
             {/* Informação de Registros */}
-            <span style={{ marginLeft: '16px', color: '#888', fontSize: '13px' }}>
+            <span style={{ marginLeft: '16px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
               {((paginaAtual - 1) * itensPorPagina) + 1} - {Math.min(paginaAtual * itensPorPagina, totalRegistros)} de {totalRegistros}
+            </span>
+          </div>
+        )}
+
+        {/* Paginação Mobile */}
+        {pronto && totalRegistros > 0 && (
+          <div className="mobile-only" style={{
+            padding: '12px 16px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '6px',
+            borderTop: '1px solid var(--border-light)',
+            background: 'var(--bg-main)',
+            fontSize: '12px'
+          }}>
+            {/* Anterior */}
+            <button
+              onClick={() => setPaginaAtual(prev => Math.max(1, prev - 1))}
+              disabled={paginaAtual === 1}
+              style={{
+                padding: '6px 10px',
+                background: paginaAtual === 1 ? '#2a2a2a' : '#3a3a3a',
+                border: 'none',
+                borderRadius: 4,
+                color: paginaAtual === 1 ? '#666' : '#e0e0e0',
+                fontSize: '12px',
+                cursor: paginaAtual === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Anterior
+            </button>
+
+            {/* Número da Página */}
+            <select
+              value={paginaAtual}
+              onChange={e => setPaginaAtual(Number(e.target.value))}
+              style={{
+                padding: '6px 10px',
+                background: '#3a3a3a',
+                border: '1px solid var(--border-light)',
+                borderRadius: 4,
+                color: '#e0e0e0',
+                fontSize: '12px',
+                cursor: 'pointer'
+              }}
+            >
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(pagina => (
+                <option key={pagina} value={pagina}>
+                  {pagina}
+                </option>
+              ))}
+            </select>
+
+            {/* Próxima */}
+            <button
+              onClick={() => setPaginaAtual(prev => Math.min(totalPaginas, prev + 1))}
+              disabled={paginaAtual === totalPaginas}
+              style={{
+                padding: '6px 10px',
+                background: paginaAtual === totalPaginas ? '#2a2a2a' : '#3a3a3a',
+                border: 'none',
+                borderRadius: 4,
+                color: paginaAtual === totalPaginas ? '#666' : '#e0e0e0',
+                fontSize: '12px',
+                cursor: paginaAtual === totalPaginas ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Próxima
+            </button>
+
+            {/* Informação de Registros */}
+            <span style={{ color: '#888', fontSize: '11px', whiteSpace: 'nowrap' }}>
+              {((paginaAtual - 1) * itensPorPagina) + 1}-{Math.min(paginaAtual * itensPorPagina, totalRegistros)} de {totalRegistros}
             </span>
           </div>
         )}
