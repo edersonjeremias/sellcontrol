@@ -42,6 +42,9 @@ export async function getProdutos(tenantId, filtros = {}) {
       termos.forEach(termo => {
         query = query.or(`produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`)
       })
+    } else {
+      // Se NÃO tem busca, limita a 20 registros mais recentes
+      query = query.limit(20)
     }
 
     const { data, error } = await query

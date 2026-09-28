@@ -265,7 +265,7 @@ export default function ProdutosPage() {
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
-    const p = produtos.find(pr => pr._key === key)
+    const p = produtosRef.current.find(pr => pr._key === key)
     if (!p) return
 
     // Validações
@@ -605,73 +605,61 @@ export default function ProdutosPage() {
                 </datalist>
               </div>
 
-              {/* Modelo e Marca */}
-              {(cols.modelo || cols.marca) && (
-                <div style={{ display: 'grid', gridTemplateColumns: cols.modelo && cols.marca ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
-                  {cols.modelo && (
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Modelo</label>
-                      <input
-                        list="lista-modelos"
-                        value={produtoEditando.modelo}
-                        onChange={e => setProdutoEditando({...produtoEditando, modelo: e.target.value})}
-                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                      />
-                      <datalist id="lista-modelos">
-                        {listas.modelos?.map(item => <option key={item} value={item} />)}
-                      </datalist>
-                    </div>
-                  )}
-                  {cols.marca && (
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Marca</label>
-                      <input
-                        list="lista-marcas"
-                        value={produtoEditando.marca}
-                        onChange={e => setProdutoEditando({...produtoEditando, marca: e.target.value})}
-                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                      />
-                      <datalist id="lista-marcas">
-                        {listas.marcas?.map(item => <option key={item} value={item} />)}
-                      </datalist>
-                    </div>
-                  )}
+              {/* Modelo e Marca - SEMPRE VISÍVEIS */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Modelo</label>
+                  <input
+                    list="lista-modelos"
+                    value={produtoEditando.modelo}
+                    onChange={e => setProdutoEditando({...produtoEditando, modelo: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                  <datalist id="lista-modelos">
+                    {listas.modelos?.map(item => <option key={item} value={item} />)}
+                  </datalist>
                 </div>
-              )}
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Marca</label>
+                  <input
+                    list="lista-marcas"
+                    value={produtoEditando.marca}
+                    onChange={e => setProdutoEditando({...produtoEditando, marca: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                  <datalist id="lista-marcas">
+                    {listas.marcas?.map(item => <option key={item} value={item} />)}
+                  </datalist>
+                </div>
+              </div>
 
-              {/* Cor e Tamanho */}
-              {(cols.cor || cols.tamanho) && (
-                <div style={{ display: 'grid', gridTemplateColumns: cols.cor && cols.tamanho ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
-                  {cols.cor && (
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Cor</label>
-                      <input
-                        list="lista-cores"
-                        value={produtoEditando.cor}
-                        onChange={e => setProdutoEditando({...produtoEditando, cor: e.target.value})}
-                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                      />
-                      <datalist id="lista-cores">
-                        {listas.cores?.map(item => <option key={item} value={item} />)}
-                      </datalist>
-                    </div>
-                  )}
-                  {cols.tamanho && (
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Tamanho</label>
-                      <input
-                        list="lista-tamanhos"
-                        value={produtoEditando.tamanho}
-                        onChange={e => setProdutoEditando({...produtoEditando, tamanho: e.target.value})}
-                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                      />
-                      <datalist id="lista-tamanhos">
-                        {listas.tamanhos?.map(item => <option key={item} value={item} />)}
-                      </datalist>
-                    </div>
-                  )}
+              {/* Cor e Tamanho - SEMPRE VISÍVEIS */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Cor</label>
+                  <input
+                    list="lista-cores"
+                    value={produtoEditando.cor}
+                    onChange={e => setProdutoEditando({...produtoEditando, cor: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                  <datalist id="lista-cores">
+                    {listas.cores?.map(item => <option key={item} value={item} />)}
+                  </datalist>
                 </div>
-              )}
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Tamanho</label>
+                  <input
+                    list="lista-tamanhos"
+                    value={produtoEditando.tamanho}
+                    onChange={e => setProdutoEditando({...produtoEditando, tamanho: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                  <datalist id="lista-tamanhos">
+                    {listas.tamanhos?.map(item => <option key={item} value={item} />)}
+                  </datalist>
+                </div>
+              </div>
 
               {/* Gênero e Condição */}
               {(cols.genero || cols.condicao) && (
