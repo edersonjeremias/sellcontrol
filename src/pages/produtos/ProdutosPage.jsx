@@ -8,6 +8,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import AutocompleteInput from '../../components/ui/AutocompleteInput'
+import { formatarAoDigitar, parsearMoedaInput } from '../../utils/moeda'
 import './produtos.css'
 
 // ─── HELPERS ──
@@ -49,9 +50,10 @@ function mapProduto(p) {
     tamanho: p.tamanho || '',
     genero: p.genero || '',
     condicao: p.condicao === 'Novo' ? 'N' : p.condicao === 'Usado' ? 'U' : p.condicao || '',
-    custo: p.custo ? String(Math.round(p.custo)) : '',
-    preco: p.preco ? String(Math.round(p.preco)) : '',
-    preco_promocional: p.preco_promocional ? String(Math.round(p.preco_promocional)) : '',
+    // Converte de reais (banco) para centavos formatados (ex: 139.90 -> "13990" -> "139,90")
+    custo: p.custo ? formatarAoDigitar(String(Math.round(p.custo * 100))) : '',
+    preco: p.preco ? formatarAoDigitar(String(Math.round(p.preco * 100))) : '',
+    preco_promocional: p.preco_promocional ? formatarAoDigitar(String(Math.round(p.preco_promocional * 100))) : '',
     quantidade: String(p.quantidade || 0),
     ativo: p.ativo !== false,
     isNew: false,
@@ -68,6 +70,8 @@ export default function ProdutosPage() {
   const [produtos, setProdutos] = useState([])
   const [listas, setListas] = useState({ produtos: [], modelos: [], cores: [], marcas: [] })
   const [filtro, setFiltro] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
   const [mostrarInativos, setMostrarInativos] = useState(false)
   const [busy, setBusy] = useState(false)
   const [pronto, setPronto] = useState(false)
@@ -80,6 +84,12 @@ export default function ProdutosPage() {
     custo: true,
     preco_promocional: true,
   })
+
+  // Estados de paginação
+  const [paginaAtual, setPaginaAtual] = useState(1)
+  const [totalPaginas, setTotalPaginas] = useState(1)
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const itensPorPagina = 100
 
   const produtosRef = useRef(produtos)
   useEffect(() => { produtosRef.current = produtos }, [produtos])
@@ -105,11 +115,20 @@ export default function ProdutosPage() {
       if (!tenantId) return
       setBusy(true)
       try {
-        const [data, lst] = await Promise.all([
-          getProdutos(tenantId, { ativo: !mostrarInativos }),
+        const [resultado, lst] = await Promise.all([
+          getProdutos(tenantId, {
+            ativo: !mostrarInativos,
+            busca: filtro.trim() || undefined,
+            dataInicio: dataInicio || undefined,
+            dataFim: dataFim || undefined,
+            page: paginaAtual,
+            limit: itensPorPagina
+          }),
           getListas(tenantId)
         ])
-        setProdutos(data.map(mapProduto))
+        setProdutos(resultado.data.map(mapProduto))
+        setTotalPaginas(resultado.totalPages)
+        setTotalRegistros(resultado.total)
         setListas(lst)
         setPronto(true)
       } catch (err) {
@@ -120,25 +139,12 @@ export default function ProdutosPage() {
       }
     }
     carregar()
-  }, [tenantId, mostrarInativos, showToast])
+  }, [tenantId, mostrarInativos, filtro, dataInicio, dataFim, paginaAtual, showToast])
 
-  // Filtro de busca
+  // Filtro de busca (apenas remove deletados localmente)
   const produtosFiltrados = useMemo(() => {
-    if (!filtro.trim()) return produtos
-
-    const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
-
-    return produtos.filter(p => {
-      if (p.deleted) return false
-
-      const txt = [
-        p.codigo, p.produto, p.modelo, p.cor, p.marca,
-        p.tamanho, p.genero, p.condicao
-      ].join(' ').toLowerCase()
-
-      return termos.every(t => txt.includes(t))
-    })
-  }, [produtos, filtro])
+    return produtos.filter(p => !p.deleted)
+  }, [produtos])
 
   // Novo produto
   const novo = useCallback(async () => {
@@ -241,10 +247,9 @@ export default function ProdutosPage() {
     setProdutos(prev => prev.map(p => {
       if (p._key !== key) return p
 
-      // Limpa formatação de valores (só números) e limita a 4 dígitos
+      // Formata valores monetários enquanto digita (ex: "13990" -> "139,90")
       if (field === 'custo' || field === 'preco' || field === 'preco_promocional') {
-        value = value.replace(/\D/g, '') // Remove tudo que não é número
-        if (value.length > 4) value = value.slice(0, 4) // Max 9999
+        value = formatarAoDigitar(value)
       }
 
       // Limita quantidade a 3 dígitos
@@ -292,12 +297,17 @@ export default function ProdutosPage() {
       // Converte letra para texto completo (ou vazio se não preenchido)
       const condicaoCompleta = p.condicao === 'N' ? 'Novo' : p.condicao === 'U' ? 'Usado' : ''
 
+      // Converte valores formatados (ex: "139,90") para centavos (13990) e depois para reais (139.90)
+      const custoEmCentavos = parsearMoedaInput(p.custo || '0')
+      const precoEmCentavos = parsearMoedaInput(p.preco || '0')
+      const promoEmCentavos = parsearMoedaInput(p.preco_promocional || '0')
+
       const dados = {
         ...p,
         condicao: condicaoCompleta,
-        custo: p.custo || '0',
-        preco: p.preco || '0',
-        preco_promocional: p.preco_promocional || '0',
+        custo: (parseInt(custoEmCentavos) / 100).toString(), // Converte centavos para reais
+        preco: (parseInt(precoEmCentavos) / 100).toString(),
+        preco_promocional: (parseInt(promoEmCentavos) / 100).toString(),
       }
 
       if (p.isNew) {
@@ -402,35 +412,43 @@ export default function ProdutosPage() {
   return (
     <AppShell>
       <div className="vendas-container">
-        {/* Header com Título e Controles na mesma linha */}
-        <div style={{ padding: '2px 24px 4px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Título */}
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
-            Cadastro de Produtos
-          </h1>
+        {/* Header com Título e Controles */}
+        <div style={{ padding: '2px 24px 4px' }}>
+          {/* Primeira linha: Título + Busca + Controles */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+            {/* Título */}
+            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
+              Cadastro de Produtos
+            </h1>
 
-          {/* Busca */}
-          <div style={{ flex: 1, maxWidth: '600px' }}>
-            <input
-              type="text"
-              placeholder="Buscar produtos (código, nome, cor, marca...)"
-              value={filtro}
-              onChange={e => setFiltro(e.target.value)}
-              className="filtro-rapido"
-              style={{ width: '100%' }}
-            />
-          </div>
-
-          {/* Grupo: Checkbox Inativos + Engrenagem + Botão Novo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+            {/* Busca */}
+            <div style={{ flex: 1, maxWidth: '600px' }}>
               <input
-                type="checkbox"
-                checked={mostrarInativos}
-                onChange={e => setMostrarInativos(e.target.checked)}
+                type="text"
+                placeholder="Buscar produtos (código, nome, cor, marca...)"
+                value={filtro}
+                onChange={e => {
+                  setFiltro(e.target.value)
+                  setPaginaAtual(1) // Volta para primeira página ao buscar
+                }}
+                className="filtro-rapido"
+                style={{ width: '100%' }}
               />
-              Inativos
-            </label>
+            </div>
+
+            {/* Grupo: Checkbox Inativos + Engrenagem + Botão Novo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                <input
+                  type="checkbox"
+                  checked={mostrarInativos}
+                  onChange={e => {
+                    setMostrarInativos(e.target.checked)
+                    setPaginaAtual(1) // Volta para primeira página
+                  }}
+                />
+                Inativos
+              </label>
 
             {/* Botão Configurações SEM BORDA */}
             <button onClick={() => setShowSettings(!showSettings)} title="Configurações" style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
@@ -440,10 +458,76 @@ export default function ProdutosPage() {
               </svg>
             </button>
 
-            {/* Botão Novo - ocupa espaço restante */}
-            <button onClick={novo} disabled={busy} style={{ flex: 1, padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              + Novo
-            </button>
+              {/* Botão Novo - ocupa espaço restante */}
+              <button onClick={novo} disabled={busy} style={{ flex: 1, padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                + Novo
+              </button>
+            </div>
+          </div>
+
+          {/* Segunda linha: Filtros de Data */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+              Data inicial:
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={e => {
+                  setDataInicio(e.target.value)
+                  setPaginaAtual(1)
+                }}
+                style={{
+                  padding: '6px 10px',
+                  background: '#2a2a2a',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 6,
+                  color: '#e0e0e0',
+                  fontSize: '13px'
+                }}
+              />
+            </label>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+              Data final:
+              <input
+                type="date"
+                value={dataFim}
+                onChange={e => {
+                  setDataFim(e.target.value)
+                  setPaginaAtual(1)
+                }}
+                style={{
+                  padding: '6px 10px',
+                  background: '#2a2a2a',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 6,
+                  color: '#e0e0e0',
+                  fontSize: '13px'
+                }}
+              />
+            </label>
+
+            {/* Botão Limpar Filtros de Data */}
+            {(dataInicio || dataFim) && (
+              <button
+                onClick={() => {
+                  setDataInicio('')
+                  setDataFim('')
+                  setPaginaAtual(1)
+                }}
+                style={{
+                  padding: '6px 12px',
+                  background: '#444',
+                  border: 'none',
+                  borderRadius: 6,
+                  color: '#e0e0e0',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Limpar Datas
+              </button>
+            )}
           </div>
         </div>
 
@@ -533,6 +617,113 @@ export default function ProdutosPage() {
           </div>
         </div>
 
+        {/* Paginação */}
+        {pronto && totalRegistros > 0 && (
+          <div style={{
+            padding: '16px 24px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '8px',
+            borderTop: '1px solid var(--border-light)',
+            background: 'var(--bg-main)'
+          }}>
+            {/* Primeira */}
+            <button
+              onClick={() => setPaginaAtual(1)}
+              disabled={paginaAtual === 1}
+              style={{
+                padding: '6px 12px',
+                background: paginaAtual === 1 ? '#2a2a2a' : '#3a3a3a',
+                border: 'none',
+                borderRadius: 4,
+                color: paginaAtual === 1 ? '#666' : '#e0e0e0',
+                fontSize: '13px',
+                cursor: paginaAtual === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Primeira
+            </button>
+
+            {/* Anterior */}
+            <button
+              onClick={() => setPaginaAtual(prev => Math.max(1, prev - 1))}
+              disabled={paginaAtual === 1}
+              style={{
+                padding: '6px 12px',
+                background: paginaAtual === 1 ? '#2a2a2a' : '#3a3a3a',
+                border: 'none',
+                borderRadius: 4,
+                color: paginaAtual === 1 ? '#666' : '#e0e0e0',
+                fontSize: '13px',
+                cursor: paginaAtual === 1 ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Anterior
+            </button>
+
+            {/* Número da Página */}
+            <select
+              value={paginaAtual}
+              onChange={e => setPaginaAtual(Number(e.target.value))}
+              style={{
+                padding: '6px 12px',
+                background: '#3a3a3a',
+                border: '1px solid var(--border-light)',
+                borderRadius: 4,
+                color: '#e0e0e0',
+                fontSize: '13px',
+                cursor: 'pointer'
+              }}
+            >
+              {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(pagina => (
+                <option key={pagina} value={pagina}>
+                  {pagina}
+                </option>
+              ))}
+            </select>
+
+            {/* Próxima */}
+            <button
+              onClick={() => setPaginaAtual(prev => Math.min(totalPaginas, prev + 1))}
+              disabled={paginaAtual === totalPaginas}
+              style={{
+                padding: '6px 12px',
+                background: paginaAtual === totalPaginas ? '#2a2a2a' : '#3a3a3a',
+                border: 'none',
+                borderRadius: 4,
+                color: paginaAtual === totalPaginas ? '#666' : '#e0e0e0',
+                fontSize: '13px',
+                cursor: paginaAtual === totalPaginas ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Próxima
+            </button>
+
+            {/* Última */}
+            <button
+              onClick={() => setPaginaAtual(totalPaginas)}
+              disabled={paginaAtual === totalPaginas}
+              style={{
+                padding: '6px 12px',
+                background: paginaAtual === totalPaginas ? '#2a2a2a' : '#3a3a3a',
+                border: 'none',
+                borderRadius: 4,
+                color: paginaAtual === totalPaginas ? '#666' : '#e0e0e0',
+                fontSize: '13px',
+                cursor: paginaAtual === totalPaginas ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Última
+            </button>
+
+            {/* Informação de Registros */}
+            <span style={{ marginLeft: '16px', color: '#888', fontSize: '13px' }}>
+              {((paginaAtual - 1) * itensPorPagina) + 1} - {Math.min(paginaAtual * itensPorPagina, totalRegistros)} de {totalRegistros}
+            </span>
+          </div>
+        )}
+
         {/* CARDS MOBILE (só aparece em telas pequenas) */}
         <div className="mobile-only">
           {produtosFiltrados.length === 0 ? (
@@ -554,7 +745,7 @@ export default function ProdutosPage() {
                   {p.cor && <span>{p.cor}</span>}
                   {p.marca && <span>{p.marca}</span>}
                   {p.tamanho && <span>({p.tamanho})</span>}
-                  <span style={{ fontWeight: 700, color: 'var(--green)' }}>R$ {p.preco || 0}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--green)' }}>R$ {p.preco || '0,00'}</span>
                   <span style={{ color: 'var(--muted)' }}>Estoque: {p.quantidade || 0}</span>
                   {!p.ativo && <span style={{ color: 'var(--red)', fontWeight: 600 }}>· INATIVO</span>}
                 </div>
@@ -696,24 +887,24 @@ export default function ProdutosPage() {
               <div style={{ display: 'grid', gridTemplateColumns: cols.custo ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
                 {cols.custo && (
                   <div>
-                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Custo</label>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Custo (R$)</label>
                     <input
-                      type="number"
+                      type="text"
                       value={produtoEditando.custo}
-                      onChange={e => setProdutoEditando({...produtoEditando, custo: e.target.value})}
+                      onChange={e => setProdutoEditando({...produtoEditando, custo: formatarAoDigitar(e.target.value)})}
                       style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                      placeholder="0"
+                      placeholder="0,00"
                     />
                   </div>
                 )}
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço *</label>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço (R$) *</label>
                   <input
-                    type="number"
+                    type="text"
                     value={produtoEditando.preco}
-                    onChange={e => setProdutoEditando({...produtoEditando, preco: e.target.value})}
+                    onChange={e => setProdutoEditando({...produtoEditando, preco: formatarAoDigitar(e.target.value)})}
                     style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--green)', fontSize: 14, fontWeight: 700 }}
-                    placeholder="0"
+                    placeholder="0,00"
                   />
                 </div>
               </div>
@@ -722,13 +913,13 @@ export default function ProdutosPage() {
               <div style={{ display: 'grid', gridTemplateColumns: cols.preco_promocional ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
                 {cols.preco_promocional && (
                   <div>
-                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço Promocional</label>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço Promocional (R$)</label>
                     <input
-                      type="number"
+                      type="text"
                       value={produtoEditando.preco_promocional}
-                      onChange={e => setProdutoEditando({...produtoEditando, preco_promocional: e.target.value})}
+                      onChange={e => setProdutoEditando({...produtoEditando, preco_promocional: formatarAoDigitar(e.target.value)})}
                       style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                      placeholder="0"
+                      placeholder="0,00"
                     />
                   </div>
                 )}
@@ -999,11 +1190,12 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
       {cols.custo && (
         <td className="col-preco">
           <input
+            type="text"
             className="cell-input"
             value={p.custo}
             onChange={e => onChange(p._key, 'custo', e.target.value)}
             onKeyDown={navegarProximo}
-            placeholder="0"
+            placeholder="0,00"
             disabled={desabilitado}
             style={{ textAlign: 'right' }}
           />
@@ -1013,11 +1205,12 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
       {/* PREÇO */}
       <td className="col-preco">
         <input
+          type="text"
           className="cell-input"
           value={p.preco}
           onChange={e => onChange(p._key, 'preco', e.target.value)}
           onKeyDown={navegarProximo}
-          placeholder="0"
+          placeholder="0,00"
           disabled={desabilitado}
           style={{ textAlign: 'right' }}
         />
@@ -1027,11 +1220,12 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
       {cols.preco_promocional && (
         <td className="col-preco">
           <input
+            type="text"
             className="cell-input"
             value={p.preco_promocional}
             onChange={e => onChange(p._key, 'preco_promocional', e.target.value)}
             onKeyDown={navegarProximo}
-            placeholder="0"
+            placeholder="0,00"
             disabled={desabilitado}
             style={{ textAlign: 'right' }}
           />

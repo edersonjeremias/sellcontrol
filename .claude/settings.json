@@ -8,7 +8,16 @@
       "Bash(node --check scripts/importar.mjs)",
       "Bash(git commit -m 'fix: destacar item ativo no autocomplete ao navegar com setas *)",
       "Bash(git commit -m 'fix: mostrar erros reais no autosave + migration para RLS e colunas *)",
-      "Bash(git commit -m 'fix: reverter filtro OR que causava 400 no Buscar *)"
+      "Bash(git commit -m 'fix: reverter filtro OR que causava 400 no Buscar *)",
+      "PowerShell(git push)",
+      "PowerShell(npm run dev)",
+      "PowerShell(git add .env)",
+      "PowerShell(git commit -m \"fix: reverte VITE_SUPABASE_ANON_KEY para chave correta`n`nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git commit --allow-empty -m \"chore: force redeploy to fix environment variables`n`nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git add src/pages/impressao/EtiquetasPage.jsx)",
+      "PowerShell(git commit -m \"feat: pagina de etiquetas agora puxa produtos ao inves de vendas\" -m \"Alterado para buscar na tabela produtos ao inves de vendas. Campo DATA DA LIVE renomeado para DATA DE CADASTRO. Implementado filtro inteligente: com data busca produtos cadastrados naquela data, sem data busca por texto. Removidos filtros de LIVE e Nao Vendidas/Vendidas. Usa preco_promocional quando disponivel.\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git commit -m \"feat: tamanho do produto agora aparece entre parenteses nas etiquetas\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git commit -m \"fix: filtro de busca agora funciona combinado com filtro de data\" -m \"Agora e possivel filtrar por data E por texto ao mesmo tempo. Os filtros funcionam de forma independente e podem ser combinados.\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")"
     ]
   }
 }

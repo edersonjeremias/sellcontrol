@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import DateSearchInput from '../../components/ui/DateSearchInput'
@@ -142,12 +142,6 @@ export default function EtiquetasPage() {
   }, [tenantId])
 
   const puxarProdutos = useCallback(async () => {
-    // Filtro inteligente: se tiver data, busca por data; se não, busca por texto do filtro
-    if (!dataFiltro && !filtro.trim()) {
-      setErr('Preencha a data ou o campo de busca.')
-      return
-    }
-
     setLoading(true); setErr(null); setGerado(false); setRows([])
     try {
       let query = supabase
@@ -161,14 +155,6 @@ export default function EtiquetasPage() {
         const dataInicio = `${dataFiltro}T00:00:00`
         const dataFim = `${dataFiltro}T23:59:59`
         query = query.gte('created_at', dataInicio).lte('created_at', dataFim)
-      }
-
-      // Filtra por texto (se tiver busca)
-      if (filtro.trim()) {
-        const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
-        termos.forEach(termo => {
-          query = query.or(`produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`)
-        })
       }
 
       query = query.order('created_at', { ascending: false }).limit(500)
@@ -193,15 +179,27 @@ export default function EtiquetasPage() {
     } finally {
       setLoading(false)
     }
-  }, [tenantId, dataFiltro, filtro])
+  }, [tenantId, dataFiltro])
 
-  const allChecked = rows.length > 0 && rows.every(r => selected[r.uid])
+  // Filtro em tempo real dos produtos já carregados
+  const rowsFiltrados = useMemo(() => {
+    if (!filtro.trim()) return rows
+
+    const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+
+    return rows.filter(r => {
+      const txt = [r.desc, r.codigo, r.precoFmt].join(' ').toLowerCase()
+      return termos.every(t => txt.includes(t))
+    })
+  }, [rows, filtro])
+
+  const allChecked = rowsFiltrados.length > 0 && rowsFiltrados.every(r => selected[r.uid])
 
   function toggleAll() {
     const next = !allChecked
     setSelected(prev => {
       const updated = { ...prev }
-      rows.forEach(r => { updated[r.uid] = next })
+      rowsFiltrados.forEach(r => { updated[r.uid] = next })
       return updated
     })
   }
@@ -253,7 +251,7 @@ export default function EtiquetasPage() {
   }
 
   function imprimir() {
-    const selecionados = rows.filter(r => selected[r.uid])
+    const selecionados = rowsFiltrados.filter(r => selected[r.uid])
     if (!selecionados.length) { setErr('Selecione ao menos um item.'); return }
     const labels = []
     selecionados.forEach(r => {
@@ -394,13 +392,13 @@ export default function EtiquetasPage() {
                 options={datasRaw} placeholder="DD/MM/AAAA" />
             </div>
             <div className="sacol-field" style={{ flex: 1, minWidth: 300 }}>
-              <label>BUSCA (código, nome, cor, marca...)</label>
+              <label>BUSCA (filtra em tempo real)</label>
               <input
                 className="eti-filter-input"
                 type="text"
                 value={filtro}
                 onChange={e => setFiltro(e.target.value)}
-                placeholder="Deixe vazio ao usar data, ou preencha para buscar sem data"
+                placeholder="Digite para filtrar: código, nome, cor, marca... (separe termos por vírgula)"
                 style={{
                   height: 44,
                   fontSize: 13,
@@ -430,12 +428,12 @@ export default function EtiquetasPage() {
           {/* Table */}
           <div className="eti-table-wrap">
             {!gerado && (
-              <div className="pedidos-placeholder">Preencha a data ou o campo de busca e clique em Puxar.</div>
+              <div className="pedidos-placeholder">Clique em Puxar para carregar os produtos.</div>
             )}
-            {gerado && rows.length === 0 && (
+            {gerado && rowsFiltrados.length === 0 && (
               <div className="pedidos-placeholder">Nenhum produto encontrado.</div>
             )}
-            {gerado && rows.length > 0 && (
+            {gerado && rowsFiltrados.length > 0 && (
               <table className="eti-table">
                 <thead>
                   <tr>
@@ -449,7 +447,7 @@ export default function EtiquetasPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map(r => (
+                  {rowsFiltrados.map(r => (
                     <tr key={r.uid} className={selected[r.uid] ? '' : 'eti-row-off'}>
                       <td>
                         <input type="checkbox" checked={!!selected[r.uid]}

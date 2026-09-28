@@ -23,6 +23,13 @@ export function parseMoney(str) {
 
 export async function getProdutos(tenantId, filtros = {}) {
   try {
+    // Query para contar total de registros (necessário para paginação)
+    let countQuery = supabase
+      .from('produtos')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+
+    // Query para buscar dados
     let query = supabase
       .from('produtos')
       .select('*')
@@ -32,6 +39,7 @@ export async function getProdutos(tenantId, filtros = {}) {
     // Filtro por ativo/inativo
     if (filtros.ativo !== undefined) {
       query = query.eq('ativo', filtros.ativo)
+      countQuery = countQuery.eq('ativo', filtros.ativo)
     }
 
     // Filtro por busca de texto (produto, modelo, cor, marca, código)
@@ -40,17 +48,50 @@ export async function getProdutos(tenantId, filtros = {}) {
 
       // Para cada termo, busca em múltiplos campos
       termos.forEach(termo => {
-        query = query.or(`produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`)
+        const orCondition = `produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`
+        query = query.or(orCondition)
+        countQuery = countQuery.or(orCondition)
       })
-    } else {
-      // Se NÃO tem busca, limita a 20 registros mais recentes
-      query = query.limit(20)
     }
 
-    const { data, error } = await query
+    // Filtro por data de cadastro
+    if (filtros.dataInicio) {
+      query = query.gte('created_at', filtros.dataInicio)
+      countQuery = countQuery.gte('created_at', filtros.dataInicio)
+    }
+
+    if (filtros.dataFim) {
+      // Adiciona 23:59:59 na data fim para incluir o dia completo
+      const dataFimCompleta = new Date(filtros.dataFim)
+      dataFimCompleta.setHours(23, 59, 59, 999)
+      query = query.lte('created_at', dataFimCompleta.toISOString())
+      countQuery = countQuery.lte('created_at', dataFimCompleta.toISOString())
+    }
+
+    // Paginação
+    const page = filtros.page || 1
+    const limit = filtros.limit || 100
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    query = query.range(from, to)
+
+    // Executa as queries
+    const [{ data, error }, { count, error: countError }] = await Promise.all([
+      query,
+      countQuery
+    ])
 
     if (error) throw error
-    return data || []
+    if (countError) throw countError
+
+    return {
+      data: data || [],
+      total: count || 0,
+      page,
+      limit,
+      totalPages: Math.ceil((count || 0) / limit)
+    }
   } catch (err) {
     console.error('❌ Erro ao buscar produtos:', err)
     throw err
