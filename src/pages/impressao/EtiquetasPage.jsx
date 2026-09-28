@@ -116,13 +116,10 @@ export default function EtiquetasPage() {
 
   const [datasRaw,   setDatasRaw]   = useState([])
   const [dataFiltro, setDataFiltro] = useState('')
-  const [liveOpts,   setLiveOpts]   = useState([])
-  const [liveNome,   setLiveNome]   = useState('')
   const [rows,       setRows]       = useState([])
   const [filtro,     setFiltro]     = useState('')
   const [selected,   setSelected]   = useState({})
   const [qtds,       setQtds]       = useState({})
-  const [fonte,      setFonte]      = useState('nao_vendidas')
   const [loading,    setLoading]    = useState(false)
   const [err,        setErr]        = useState(null)
   const [gerado,     setGerado]     = useState(false)
@@ -130,82 +127,80 @@ export default function EtiquetasPage() {
   useEffect(() => {
     if (!tenantId) return
     supabase
-      .from('vendas').select('data_live')
-      .eq('tenant_id', tenantId).not('data_live', 'is', null)
-      .order('data_live', { ascending: false })
+      .from('produtos')
+      .select('created_at')
+      .eq('tenant_id', tenantId)
+      .not('created_at', 'is', null)
+      .order('created_at', { ascending: false })
       .then(({ data }) => {
-        const unicas = [...new Set((data || []).map(r => r.data_live))].slice(0, 90)
+        const unicas = [...new Set((data || []).map(r => {
+          const date = new Date(r.created_at)
+          return date.toISOString().split('T')[0]
+        }))].slice(0, 90)
         setDatasRaw(unicas)
       })
   }, [tenantId])
 
-  useEffect(() => {
-    setLiveOpts([]); setLiveNome(''); setRows([]); setGerado(false); setSelected({}); setQtds({})
-    if (!tenantId || !dataFiltro) return
-    supabase
-      .from('vendas').select('live_nome')
-      .eq('tenant_id', tenantId).eq('data_live', dataFiltro).not('live_nome', 'is', null)
-      .then(({ data }) => {
-        const unicas = [...new Set((data || []).map(r => r.live_nome).filter(Boolean))].sort()
-        setLiveOpts(unicas)
-        if (unicas.length === 1) setLiveNome(unicas[0])
-      })
-  }, [tenantId, dataFiltro])
+  const puxarProdutos = useCallback(async () => {
+    // Filtro inteligente: se tiver data, busca por data; se não, busca por texto do filtro
+    if (!dataFiltro && !filtro.trim()) {
+      setErr('Preencha a data ou o campo de busca.')
+      return
+    }
 
-  const puxarVendas = useCallback(async (fonteOverride) => {
-    if (!dataFiltro) { setErr('Selecione a data.'); return }
-    const fonteAtual = fonteOverride ?? fonte
     setLoading(true); setErr(null); setGerado(false); setRows([])
     try {
       let query = supabase
-        .from('vendas')
-        .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, cliente_nome')
+        .from('produtos')
+        .select('id, codigo, produto, modelo, cor, marca, tamanho, preco, preco_promocional, ativo')
         .eq('tenant_id', tenantId)
-        .eq('data_live', dataFiltro)
+        .eq('ativo', true)
 
-      // Filtrar por live apenas se estiver selecionada
-      if (liveNome) {
-        query = query.eq('live_nome', liveNome)
+      // Se tiver data, filtra por data de cadastro
+      if (dataFiltro) {
+        const dataInicio = `${dataFiltro}T00:00:00`
+        const dataFim = `${dataFiltro}T23:59:59`
+        query = query.gte('created_at', dataInicio).lte('created_at', dataFim)
       }
+      // Se não tiver data, busca por texto do filtro
+      else if (filtro.trim()) {
+        const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+        termos.forEach(termo => {
+          query = query.or(`produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`)
+        })
+      }
+
+      query = query.order('created_at', { ascending: false }).limit(500)
 
       const { data, error } = await query
       if (error) throw error
+
       const allRows = (data || []).map(r => ({
-        uid:         r.id,
-        codigo:      r.codigo || '',
-        desc:        [r.produto, r.modelo, r.cor, r.marca, r.tamanho].filter(Boolean).join(' '),
-        preco:       r.preco,
-        precoFmt:    fmtPreco(r.preco),
-        clienteNome: r.cliente_nome || '',
+        uid:      r.id,
+        codigo:   r.codigo || '',
+        desc:     [r.produto, r.modelo, r.cor, r.marca, r.tamanho].filter(Boolean).join(' '),
+        preco:    r.preco_promocional || r.preco,
+        precoFmt: fmtPreco(r.preco_promocional || r.preco),
       }))
-      const processed = fonteAtual === 'nao_vendidas'
-        ? allRows.filter(r => !r.clienteNome.trim())
-        : allRows.filter(r => !!r.clienteNome.trim())
-      setRows(processed)
+
+      setRows(allRows)
       const sel = {}; const q = {}
-      processed.forEach(r => { sel[r.uid] = true; q[r.uid] = 1 })
+      allRows.forEach(r => { sel[r.uid] = true; q[r.uid] = 1 })
       setSelected(sel); setQtds(q); setGerado(true)
     } catch (e) {
       setErr(e.message || 'Erro ao carregar.')
     } finally {
       setLoading(false)
     }
-  }, [tenantId, dataFiltro, liveNome, fonte])
+  }, [tenantId, dataFiltro, filtro])
 
-  const terms = filtro.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
-  const filteredRows = rows.filter(r => {
-    if (!terms.length) return true
-    const hay = [r.desc, r.codigo, r.precoFmt].join(' ').toLowerCase()
-    return terms.every(t => hay.includes(t))
-  })
-
-  const allChecked = filteredRows.length > 0 && filteredRows.every(r => selected[r.uid])
+  const allChecked = rows.length > 0 && rows.every(r => selected[r.uid])
 
   function toggleAll() {
     const next = !allChecked
     setSelected(prev => {
       const updated = { ...prev }
-      filteredRows.forEach(r => { updated[r.uid] = next })
+      rows.forEach(r => { updated[r.uid] = next })
       return updated
     })
   }
@@ -257,7 +252,7 @@ export default function EtiquetasPage() {
   }
 
   function imprimir() {
-    const selecionados = filteredRows.filter(r => selected[r.uid])
+    const selecionados = rows.filter(r => selected[r.uid])
     if (!selecionados.length) { setErr('Selecione ao menos um item.'); return }
     const labels = []
     selecionados.forEach(r => {
@@ -272,7 +267,7 @@ export default function EtiquetasPage() {
   }
 
   function limpar() {
-    setDataFiltro(''); setLiveNome(''); setRows([])
+    setDataFiltro(''); setRows([])
     setGerado(false); setSelected({}); setQtds({}); setFiltro(''); setErr(null)
   }
 
@@ -393,39 +388,32 @@ export default function EtiquetasPage() {
           {/* Toolbar */}
           <div className="sacol-toolbar">
             <div className="sacol-field" style={{ flex: '0 0 160px' }}>
-              <label>DATA DA LIVE</label>
+              <label>DATA DE CADASTRO</label>
               <DateSearchInput value={dataFiltro} onChange={setDataFiltro}
                 options={datasRaw} placeholder="DD/MM/AAAA" />
             </div>
-            {liveOpts.length >= 1 && (
-              <div className="sacol-field" style={{ flex: '0 0 180px' }}>
-                <label>LIVE</label>
-                <SearchableSelect value={liveNome} onChange={setLiveNome}
-                  options={liveOpts} emptyLabel="-- Selecione a live --" />
-              </div>
-            )}
-            <div className="sacol-field" style={{ flex: '0 0 auto' }}>
-              <label>PEÇAS</label>
-              <div style={{ display: 'flex', gap: 4, height: 44 }}>
-                <button
-                  className={`sacol-btn${fonte === 'nao_vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
-                  onClick={() => { setFonte('nao_vendidas'); if (dataFiltro) puxarVendas('nao_vendidas') }}
-                  style={{ fontSize: 13, padding: '0 12px' }}
-                >
-                  Não Vendidas
-                </button>
-                <button
-                  className={`sacol-btn${fonte === 'vendidas' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
-                  onClick={() => { setFonte('vendidas'); if (dataFiltro) puxarVendas('vendidas') }}
-                  style={{ fontSize: 13, padding: '0 12px' }}
-                >
-                  Vendidas
-                </button>
-              </div>
+            <div className="sacol-field" style={{ flex: 1, minWidth: 300 }}>
+              <label>BUSCA (código, nome, cor, marca...)</label>
+              <input
+                className="eti-filter-input"
+                type="text"
+                value={filtro}
+                onChange={e => setFiltro(e.target.value)}
+                placeholder="Deixe vazio ao usar data, ou preencha para buscar sem data"
+                style={{
+                  height: 44,
+                  fontSize: 13,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 8,
+                  padding: '0 12px',
+                  color: '#e8eaed'
+                }}
+              />
             </div>
             <div className="sacol-actions">
-              <button className="sacol-btn sacol-btn-green" onClick={puxarVendas}
-                disabled={loading || !dataFiltro}>
+              <button className="sacol-btn sacol-btn-green" onClick={puxarProdutos}
+                disabled={loading}>
                 {loading ? 'Carregando…' : 'Puxar'}
               </button>
               <button className="sacol-btn sacol-btn-blue" onClick={imprimir} disabled={!gerado}>
@@ -438,24 +426,15 @@ export default function EtiquetasPage() {
             {err && <span style={{ color: '#f28b82', fontSize: 13, alignSelf: 'center' }}>{err}</span>}
           </div>
 
-          {/* Filter */}
-          {gerado && (
-            <div className="eti-filter-bar">
-              <input className="eti-filter-input" type="text" value={filtro}
-                onChange={e => setFiltro(e.target.value)}
-                placeholder="Filtrar por produto, código, preço… (separe termos por vírgula)" />
-            </div>
-          )}
-
           {/* Table */}
           <div className="eti-table-wrap">
             {!gerado && (
-              <div className="pedidos-placeholder">Selecione data e live e clique em Puxar Vendas.</div>
+              <div className="pedidos-placeholder">Preencha a data ou o campo de busca e clique em Puxar.</div>
             )}
-            {gerado && filteredRows.length === 0 && (
-              <div className="pedidos-placeholder">Nenhum item encontrado.</div>
+            {gerado && rows.length === 0 && (
+              <div className="pedidos-placeholder">Nenhum produto encontrado.</div>
             )}
-            {gerado && filteredRows.length > 0 && (
+            {gerado && rows.length > 0 && (
               <table className="eti-table">
                 <thead>
                   <tr>
@@ -469,7 +448,7 @@ export default function EtiquetasPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredRows.map(r => (
+                  {rows.map(r => (
                     <tr key={r.uid} className={selected[r.uid] ? '' : 'eti-row-off'}>
                       <td>
                         <input type="checkbox" checked={!!selected[r.uid]}
