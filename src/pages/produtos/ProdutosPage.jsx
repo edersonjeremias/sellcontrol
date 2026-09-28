@@ -159,14 +159,17 @@ export default function ProdutosPage() {
       proximoCodigo = codigosEmMemoria[0] + 1
     }
 
+    const produto = novoProduto(String(proximoCodigo))
+
     if (isMobile) {
-      // Mobile: abre modal
-      setProdutoEditando(novoProduto(String(proximoCodigo)))
+      // Mobile: adiciona no array E abre modal
+      setProdutos(prev => [produto, ...prev])
+      setProdutoEditando(produto)
       return
     }
 
     // Desktop: cria linha na tabela
-    setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
+    setProdutos(prev => [produto, ...prev])
 
     setTimeout(() => {
       const input = document.querySelector('#tabela-produtos tbody tr:first-child .col-codigo .cell-input')
@@ -404,23 +407,25 @@ export default function ProdutosPage() {
             />
           </div>
 
-          {/* Checkbox Inativos */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
-            <input
-              type="checkbox"
-              checked={mostrarInativos}
-              onChange={e => setMostrarInativos(e.target.checked)}
-            />
-            Inativos
-          </label>
+          {/* Grupo: Checkbox Inativos + Botão Configurações */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={mostrarInativos}
+                onChange={e => setMostrarInativos(e.target.checked)}
+              />
+              Inativos
+            </label>
 
-          {/* Botão Configurações */}
-          <button className="btn-config" onClick={() => setShowSettings(!showSettings)} title="Configurações">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3"/>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-            </svg>
-          </button>
+            {/* Botão Configurações SEM BORDA */}
+            <button onClick={() => setShowSettings(!showSettings)} title="Configurações" style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
+          </div>
 
           {/* Botão Novo */}
           <button onClick={novo} disabled={busy} className="btn-primary">
@@ -672,8 +677,18 @@ export default function ProdutosPage() {
                 </div>
               </div>
 
-              {/* Preço e Quantidade */}
+              {/* Custo e Preço */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Custo</label>
+                  <input
+                    type="number"
+                    value={produtoEditando.custo}
+                    onChange={e => setProdutoEditando({...produtoEditando, custo: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                    placeholder="0"
+                  />
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço *</label>
                   <input
@@ -681,6 +696,20 @@ export default function ProdutosPage() {
                     value={produtoEditando.preco}
                     onChange={e => setProdutoEditando({...produtoEditando, preco: e.target.value})}
                     style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--green)', fontSize: 14, fontWeight: 700 }}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {/* Preço Promocional e Quantidade */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço Promocional</label>
+                  <input
+                    type="number"
+                    value={produtoEditando.preco_promocional}
+                    onChange={e => setProdutoEditando({...produtoEditando, preco_promocional: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
                     placeholder="0"
                   />
                 </div>
