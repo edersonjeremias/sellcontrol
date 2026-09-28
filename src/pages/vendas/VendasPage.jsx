@@ -2083,7 +2083,7 @@ export default function VendasPage() {
                       className={idx === 0 ? 'active' : ''}
                       onClick={() => adicionarProdutoNaVenda(p)}
                     >
-                      {p.codigo} - {p.produto} {p.modelo && `(${p.modelo})`} - {p.cor} - {p.marca} - R$ {p.preco} - Qtd: {p.quantidade}
+                      {p.codigo} - {p.produto} - {p.modelo} - {p.cor} - {p.marca} {p.tamanho && `(${p.tamanho})`} - R$ {p.preco} - Qtd: {p.quantidade}
                       {p.quantidade === 0 && ' ⚠️ SEM ESTOQUE'}
                     </li>
                   ))}
