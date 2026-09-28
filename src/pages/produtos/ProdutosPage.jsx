@@ -305,9 +305,9 @@ export default function ProdutosPage() {
       const dados = {
         ...p,
         condicao: condicaoCompleta,
-        custo: (parseInt(custoEmCentavos) / 100).toString(), // Converte centavos para reais
-        preco: (parseInt(precoEmCentavos) / 100).toString(),
-        preco_promocional: (parseInt(promoEmCentavos) / 100).toString(),
+        custo: parseInt(custoEmCentavos || 0) / 100, // Converte centavos para reais como número
+        preco: parseInt(precoEmCentavos || 0) / 100,
+        preco_promocional: parseInt(promoEmCentavos || 0) / 100,
       }
 
       if (p.isNew) {
