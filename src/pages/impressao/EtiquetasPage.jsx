@@ -156,14 +156,15 @@ export default function EtiquetasPage() {
         .eq('tenant_id', tenantId)
         .eq('ativo', true)
 
-      // Se tiver data, filtra por data de cadastro
+      // Filtra por data de cadastro (se tiver data)
       if (dataFiltro) {
         const dataInicio = `${dataFiltro}T00:00:00`
         const dataFim = `${dataFiltro}T23:59:59`
         query = query.gte('created_at', dataInicio).lte('created_at', dataFim)
       }
-      // Se não tiver data, busca por texto do filtro
-      else if (filtro.trim()) {
+
+      // Filtra por texto (se tiver busca)
+      if (filtro.trim()) {
         const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
         termos.forEach(termo => {
           query = query.or(`produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`)
