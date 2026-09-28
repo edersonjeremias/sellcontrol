@@ -551,33 +551,127 @@ export default function ProdutosPage() {
 
       </div>
 
-      {/* MODAL MOBILE DE EDIÇÃO */}
+      {/* MODAL MOBILE DE EDIÇÃO COMPLETO */}
       {produtoEditando && (
         <div className="modal-overlay" onClick={() => setProdutoEditando(null)}>
-          <div className="modal-card" style={{ maxWidth: 500, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
-              <h3 style={{ margin: 0, fontSize: 16 }}>{produtoEditando.produto || 'Produto'}</h3>
+          <div className="modal-card" style={{ maxWidth: 500, maxHeight: '95vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border-light)' }}>
+              <h3 style={{ margin: 0, fontSize: 16 }}>{produtoEditando.isNew ? '✨ Novo Produto' : '✏️ Editar Produto'}</h3>
               <button onClick={() => setProdutoEditando(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 24, cursor: 'pointer', lineHeight: 1 }}>×</button>
             </div>
             <div className="modal-body" style={{ padding: '16px' }}>
-              <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>
-                📱 Edição completa disponível na versão desktop
-              </p>
-              <div style={{ marginTop: 16, padding: 12, background: '#1a1a1a', borderRadius: 6 }}>
-                <div style={{ marginBottom: 8 }}><strong>Código:</strong> {produtoEditando.codigo}</div>
-                <div style={{ marginBottom: 8 }}><strong>Produto:</strong> {produtoEditando.produto}</div>
-                <div style={{ marginBottom: 8 }}><strong>Marca:</strong> {produtoEditando.marca}</div>
-                <div style={{ marginBottom: 8 }}><strong>Preço:</strong> R$ {produtoEditando.preco}</div>
-                <div style={{ marginBottom: 8 }}><strong>Estoque:</strong> {produtoEditando.quantidade}</div>
-                {!produtoEditando.ativo && (
-                  <div style={{ marginTop: 12, padding: 8, background: 'rgba(242,139,130,0.1)', borderRadius: 4, color: 'var(--red)' }}>
-                    ⚠️ Produto inativo
-                    <button onClick={() => { reativar(produtoEditando._key); setProdutoEditando(null) }} style={{ marginTop: 8, width: '100%', padding: 8, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}>
-                      Reativar Produto
-                    </button>
-                  </div>
-                )}
+
+              {/* Código */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Código</label>
+                <input
+                  value={produtoEditando.codigo}
+                  onChange={e => setProdutoEditando({...produtoEditando, codigo: e.target.value})}
+                  style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  placeholder="100"
+                />
               </div>
+
+              {/* Produto */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Produto *</label>
+                <input
+                  value={produtoEditando.produto}
+                  onChange={e => setProdutoEditando({...produtoEditando, produto: e.target.value})}
+                  style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  placeholder="Nome do produto"
+                />
+              </div>
+
+              {/* Modelo e Marca */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Modelo</label>
+                  <input
+                    value={produtoEditando.modelo}
+                    onChange={e => setProdutoEditando({...produtoEditando, modelo: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Marca</label>
+                  <input
+                    value={produtoEditando.marca}
+                    onChange={e => setProdutoEditando({...produtoEditando, marca: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                </div>
+              </div>
+
+              {/* Cor e Tamanho */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Cor</label>
+                  <input
+                    value={produtoEditando.cor}
+                    onChange={e => setProdutoEditando({...produtoEditando, cor: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Tamanho</label>
+                  <input
+                    value={produtoEditando.tamanho}
+                    onChange={e => setProdutoEditando({...produtoEditando, tamanho: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                  />
+                </div>
+              </div>
+
+              {/* Preço e Quantidade */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço *</label>
+                  <input
+                    type="number"
+                    value={produtoEditando.preco}
+                    onChange={e => setProdutoEditando({...produtoEditando, preco: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--green)', fontSize: 14, fontWeight: 700 }}
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Quantidade</label>
+                  <input
+                    type="number"
+                    value={produtoEditando.quantidade}
+                    onChange={e => setProdutoEditando({...produtoEditando, quantidade: e.target.value})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {/* Botões */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                {!produtoEditando.isNew && (
+                  <button
+                    onClick={() => { excluir(produtoEditando._key); setProdutoEditando(null) }}
+                    style={{ flex: 1, padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    🗑️ Excluir
+                  </button>
+                )}
+                <button
+                  onClick={async () => {
+                    if (!produtoEditando.produto || !produtoEditando.preco) {
+                      alert('Preencha Produto e Preço')
+                      return
+                    }
+                    await salvar(produtoEditando._key);
+                    setProdutoEditando(null);
+                  }}
+                  style={{ flex: 2, padding: 12, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  💾 Salvar
+                </button>
+              </div>
+
             </div>
           </div>
         </div>
