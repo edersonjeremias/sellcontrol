@@ -143,6 +143,9 @@ export default function ProdutosPage() {
   const novo = useCallback(async () => {
     if (busy) return
 
+    // Detecta mobile
+    const isMobile = window.innerWidth <= 768
+
     // Busca o maior código do banco
     let proximoCodigo = await getProximoCodigo(tenantId)
 
@@ -156,6 +159,13 @@ export default function ProdutosPage() {
       proximoCodigo = codigosEmMemoria[0] + 1
     }
 
+    if (isMobile) {
+      // Mobile: abre modal
+      setProdutoEditando(novoProduto(String(proximoCodigo)))
+      return
+    }
+
+    // Desktop: cria linha na tabela
     setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
 
     setTimeout(() => {
