@@ -46,11 +46,38 @@ export default function EtiquetasPage() {
           return
         }
 
-        alert('Criando pedido no Melhor Envio...')
+        if (!window.confirm('Este romaneio ainda não tem pedido no Melhor Envio. Deseja criar agora e comprar a etiqueta?')) {
+          return
+        }
 
-        // TODO: Implementar criarPedidoMelhorEnvio(tenantId, romaneio.id)
-        // Por enquanto, mostra erro orientando
-        alert('Por favor, configure o webhook do Mercado Pago para criação automática do pedido. Instruções no README.')
+        alert('Criando pedido no Melhor Envio... Aguarde.')
+
+        // Chama Edge Function para criar pedido
+        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+        const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/criar-pedido-melhor-envio`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            romaneio_id: romaneio.id,
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Erro ao criar pedido')
+        }
+
+        const result = await response.json()
+
+        alert(`Pedido criado com sucesso! Order ID: ${result.order_id}${result.tracking ? '\nRastreio: ' + result.tracking : ''}`)
+
+        // Recarrega para pegar os dados atualizados
+        carregar()
         return
       }
 
