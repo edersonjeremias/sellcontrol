@@ -35,14 +35,27 @@ export default function EtiquetasPage() {
   useEffect(() => { carregar() }, [carregar])
 
   const handleGerarEtiqueta = async (romaneio) => {
-    if (!romaneio.melhor_envio_order_id) {
-      alert('Este romaneio não possui pedido no Melhor Envio')
-      return
-    }
-
     setGerando(romaneio.id)
     try {
-      const result = await gerarEtiqueta(tenantId, [romaneio.melhor_envio_order_id])
+      let orderId = romaneio.melhor_envio_order_id
+
+      // Se não tem pedido, cria primeiro
+      if (!orderId) {
+        if (!romaneio.melhor_envio_cotacao_id) {
+          alert('Este romaneio não possui cotação salva')
+          return
+        }
+
+        alert('Criando pedido no Melhor Envio...')
+
+        // TODO: Implementar criarPedidoMelhorEnvio(tenantId, romaneio.id)
+        // Por enquanto, mostra erro orientando
+        alert('Por favor, configure o webhook do Mercado Pago para criação automática do pedido. Instruções no README.')
+        return
+      }
+
+      // Compra a etiqueta
+      const result = await gerarEtiqueta(tenantId, [orderId])
 
       await supabase
         .from('romaneios')

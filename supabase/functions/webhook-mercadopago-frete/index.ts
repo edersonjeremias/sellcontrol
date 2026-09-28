@@ -116,9 +116,12 @@ serve(async (req) => {
 
       console.log('✅ Status atualizado! Romaneio:', pagamento.romaneio_id)
 
+      // TODO: Aqui vai a criação automática do pedido e compra da etiqueta
+      // Por enquanto, deixamos manual para o usuário gerar na página
+
       return new Response(JSON.stringify({
         status: 'success',
-        message: 'Payment processed and shipping label will be generated'
+        message: 'Payment processed. Create shipping order in Melhor Envio.'
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
