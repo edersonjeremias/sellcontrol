@@ -741,8 +741,15 @@ export default function ProdutosPage() {
                       alert('Preencha Produto e Preço')
                       return
                     }
-                    await salvar(produtoEditando._key);
-                    setProdutoEditando(null);
+                    // Atualiza o produto no array antes de salvar
+                    setProdutos(prev => prev.map(pr =>
+                      pr._key === produtoEditando._key ? produtoEditando : pr
+                    ))
+                    // Aguarda um tick para garantir que o estado foi atualizado
+                    setTimeout(async () => {
+                      await salvar(produtoEditando._key)
+                      setProdutoEditando(null)
+                    }, 0)
                   }}
                   style={{ flex: 2, padding: 12, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
                 >
