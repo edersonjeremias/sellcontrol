@@ -178,7 +178,7 @@ export default function EtiquetasPage() {
       const allRows = (data || []).map(r => ({
         uid:      r.id,
         codigo:   r.codigo || '',
-        desc:     [r.produto, r.modelo, r.cor, r.marca, r.tamanho].filter(Boolean).join(' '),
+        desc:     [r.produto, r.modelo, r.cor, r.marca, r.tamanho ? `(${r.tamanho})` : null].filter(Boolean).join(' '),
         preco:    r.preco_promocional || r.preco,
         precoFmt: fmtPreco(r.preco_promocional || r.preco),
       }))
