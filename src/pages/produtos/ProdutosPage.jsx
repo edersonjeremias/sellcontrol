@@ -146,6 +146,19 @@ export default function ProdutosPage() {
     // Detecta mobile
     const isMobile = window.innerWidth <= 768
 
+    // Mobile: verifica se já tem modal aberto
+    if (isMobile && produtoEditando) {
+      showToast('Salve ou feche o produto atual antes de criar novo', 'error')
+      return
+    }
+
+    // Desktop: verifica se já tem produto não salvo
+    const temNaoSalvo = produtosRef.current.some(pr => pr.isNew && !pr.id)
+    if (!isMobile && temNaoSalvo) {
+      showToast('Salve ou exclua o produto em branco antes de criar novo', 'error')
+      return
+    }
+
     // Busca o maior código do banco
     let proximoCodigo = await getProximoCodigo(tenantId)
 
@@ -389,7 +402,7 @@ export default function ProdutosPage() {
     <AppShell>
       <div className="vendas-container">
         {/* Header com Título e Controles na mesma linha */}
-        <div style={{ padding: '6px 24px 8px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ padding: '4px 24px 6px', display: 'flex', alignItems: 'center', gap: '16px' }}>
           {/* Título */}
           <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#e0e0e0', whiteSpace: 'nowrap' }}>
             Cadastro de Produtos
@@ -407,7 +420,7 @@ export default function ProdutosPage() {
             />
           </div>
 
-          {/* Grupo: Checkbox Inativos + Botão Configurações */}
+          {/* Grupo: Checkbox Inativos + Engrenagem + Botão Novo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
               <input
@@ -425,12 +438,12 @@ export default function ProdutosPage() {
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
             </button>
-          </div>
 
-          {/* Botão Novo */}
-          <button onClick={novo} disabled={busy} className="btn-primary">
-            + Novo
-          </button>
+            {/* Botão Novo - compacto */}
+            <button onClick={novo} disabled={busy} style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: 'var(--blue)', color: '#171717', fontWeight: 600, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              + Novo
+            </button>
+          </div>
         </div>
 
         {/* Modal de Configurações */}
@@ -593,102 +606,122 @@ export default function ProdutosPage() {
               </div>
 
               {/* Modelo e Marca */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Modelo</label>
-                  <input
-                    list="lista-modelos"
-                    value={produtoEditando.modelo}
-                    onChange={e => setProdutoEditando({...produtoEditando, modelo: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                  />
-                  <datalist id="lista-modelos">
-                    {listas.modelos?.map(item => <option key={item} value={item} />)}
-                  </datalist>
+              {(cols.modelo || cols.marca) && (
+                <div style={{ display: 'grid', gridTemplateColumns: cols.modelo && cols.marca ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
+                  {cols.modelo && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Modelo</label>
+                      <input
+                        list="lista-modelos"
+                        value={produtoEditando.modelo}
+                        onChange={e => setProdutoEditando({...produtoEditando, modelo: e.target.value})}
+                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      />
+                      <datalist id="lista-modelos">
+                        {listas.modelos?.map(item => <option key={item} value={item} />)}
+                      </datalist>
+                    </div>
+                  )}
+                  {cols.marca && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Marca</label>
+                      <input
+                        list="lista-marcas"
+                        value={produtoEditando.marca}
+                        onChange={e => setProdutoEditando({...produtoEditando, marca: e.target.value})}
+                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      />
+                      <datalist id="lista-marcas">
+                        {listas.marcas?.map(item => <option key={item} value={item} />)}
+                      </datalist>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Marca</label>
-                  <input
-                    list="lista-marcas"
-                    value={produtoEditando.marca}
-                    onChange={e => setProdutoEditando({...produtoEditando, marca: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                  />
-                  <datalist id="lista-marcas">
-                    {listas.marcas?.map(item => <option key={item} value={item} />)}
-                  </datalist>
-                </div>
-              </div>
+              )}
 
               {/* Cor e Tamanho */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Cor</label>
-                  <input
-                    list="lista-cores"
-                    value={produtoEditando.cor}
-                    onChange={e => setProdutoEditando({...produtoEditando, cor: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                  />
-                  <datalist id="lista-cores">
-                    {listas.cores?.map(item => <option key={item} value={item} />)}
-                  </datalist>
+              {(cols.cor || cols.tamanho) && (
+                <div style={{ display: 'grid', gridTemplateColumns: cols.cor && cols.tamanho ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
+                  {cols.cor && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Cor</label>
+                      <input
+                        list="lista-cores"
+                        value={produtoEditando.cor}
+                        onChange={e => setProdutoEditando({...produtoEditando, cor: e.target.value})}
+                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      />
+                      <datalist id="lista-cores">
+                        {listas.cores?.map(item => <option key={item} value={item} />)}
+                      </datalist>
+                    </div>
+                  )}
+                  {cols.tamanho && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Tamanho</label>
+                      <input
+                        list="lista-tamanhos"
+                        value={produtoEditando.tamanho}
+                        onChange={e => setProdutoEditando({...produtoEditando, tamanho: e.target.value})}
+                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      />
+                      <datalist id="lista-tamanhos">
+                        {listas.tamanhos?.map(item => <option key={item} value={item} />)}
+                      </datalist>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Tamanho</label>
-                  <input
-                    list="lista-tamanhos"
-                    value={produtoEditando.tamanho}
-                    onChange={e => setProdutoEditando({...produtoEditando, tamanho: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                  />
-                  <datalist id="lista-tamanhos">
-                    {listas.tamanhos?.map(item => <option key={item} value={item} />)}
-                  </datalist>
-                </div>
-              </div>
+              )}
 
               {/* Gênero e Condição */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Gênero</label>
-                  <select
-                    value={produtoEditando.genero}
-                    onChange={e => setProdutoEditando({...produtoEditando, genero: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                  >
-                    <option value="">-</option>
-                    <option value="M">M</option>
-                    <option value="F">F</option>
-                    <option value="U">U</option>
-                  </select>
+              {(cols.genero || cols.condicao) && (
+                <div style={{ display: 'grid', gridTemplateColumns: cols.genero && cols.condicao ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
+                  {cols.genero && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Gênero</label>
+                      <select
+                        value={produtoEditando.genero}
+                        onChange={e => setProdutoEditando({...produtoEditando, genero: e.target.value})}
+                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      >
+                        <option value="">-</option>
+                        <option value="M">M</option>
+                        <option value="F">F</option>
+                        <option value="U">U</option>
+                      </select>
+                    </div>
+                  )}
+                  {cols.condicao && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Condição</label>
+                      <select
+                        value={produtoEditando.condicao}
+                        onChange={e => setProdutoEditando({...produtoEditando, condicao: e.target.value})}
+                        style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      >
+                        <option value="">-</option>
+                        <option value="Novo">Novo</option>
+                        <option value="Usado">Usado</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Condição</label>
-                  <select
-                    value={produtoEditando.condicao}
-                    onChange={e => setProdutoEditando({...produtoEditando, condicao: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                  >
-                    <option value="">-</option>
-                    <option value="Novo">Novo</option>
-                    <option value="Usado">Usado</option>
-                  </select>
-                </div>
-              </div>
+              )}
 
               {/* Custo e Preço */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Custo</label>
-                  <input
-                    type="number"
-                    value={produtoEditando.custo}
-                    onChange={e => setProdutoEditando({...produtoEditando, custo: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                    placeholder="0"
-                  />
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: cols.custo ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
+                {cols.custo && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Custo</label>
+                    <input
+                      type="number"
+                      value={produtoEditando.custo}
+                      onChange={e => setProdutoEditando({...produtoEditando, custo: e.target.value})}
+                      style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      placeholder="0"
+                    />
+                  </div>
+                )}
                 <div>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço *</label>
                   <input
@@ -702,17 +735,19 @@ export default function ProdutosPage() {
               </div>
 
               {/* Preço Promocional e Quantidade */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço Promocional</label>
-                  <input
-                    type="number"
-                    value={produtoEditando.preco_promocional}
-                    onChange={e => setProdutoEditando({...produtoEditando, preco_promocional: e.target.value})}
-                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
-                    placeholder="0"
-                  />
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: cols.preco_promocional ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
+                {cols.preco_promocional && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Preço Promocional</label>
+                    <input
+                      type="number"
+                      value={produtoEditando.preco_promocional}
+                      onChange={e => setProdutoEditando({...produtoEditando, preco_promocional: e.target.value})}
+                      style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                      placeholder="0"
+                    />
+                  </div>
+                )}
                 <div>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Quantidade</label>
                   <input
@@ -742,14 +777,16 @@ export default function ProdutosPage() {
                       return
                     }
                     // Atualiza o produto no array antes de salvar
-                    setProdutos(prev => prev.map(pr =>
-                      pr._key === produtoEditando._key ? produtoEditando : pr
-                    ))
-                    // Aguarda um tick para garantir que o estado foi atualizado
-                    setTimeout(async () => {
-                      await salvar(produtoEditando._key)
-                      setProdutoEditando(null)
-                    }, 0)
+                    setProdutos(prev => {
+                      const novoProdutos = prev.map(pr =>
+                        pr._key === produtoEditando._key ? produtoEditando : pr
+                      )
+                      produtosRef.current = novoProdutos
+                      return novoProdutos
+                    })
+                    // Agora salva
+                    await salvar(produtoEditando._key)
+                    setProdutoEditando(null)
                   }}
                   style={{ flex: 2, padding: 12, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
                 >
