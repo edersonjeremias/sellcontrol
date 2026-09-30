@@ -5,6 +5,61 @@ export const STATUS_PEDIDO_OPTS = [
   'Devolução', 'Gerar Crédito', 'Cancelado', 'Pendente',
 ]
 
+/**
+ * Busca status customizados do tenant
+ */
+export async function getStatusExpedicao(tenantId) {
+  try {
+    const { data, error } = await supabase
+      .from('status_expedicao')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('ativo', true)
+      .order('ordem', { ascending: true })
+
+    if (error) throw error
+    return data || []
+  } catch (e) {
+    console.error('Erro ao buscar status:', e)
+    return []
+  }
+}
+
+/**
+ * Busca status customizados e retorna formato compatível
+ */
+export async function getStatusPedido(tenantId) {
+  try {
+    const statusCustomizados = await getStatusExpedicao(tenantId)
+
+    if (statusCustomizados && statusCustomizados.length > 0) {
+      const opts = ['', ...statusCustomizados.map(s => s.nome)]
+      const cores = {}
+      statusCustomizados.forEach(s => {
+        cores[s.nome] = s.cor
+      })
+      return { opts, cores }
+    }
+  } catch (e) {
+    console.error('Erro ao processar status:', e)
+  }
+
+  // Fallback para status padrão
+  return {
+    opts: STATUS_PEDIDO_OPTS,
+    cores: {
+      'Separado':      '#81c995',
+      'Enviado':       '#8ab4f8',
+      'Comprar':       '#fbbc04',
+      'Comprado':      '#81c995',
+      'Devolução':     '#f28b82',
+      'Gerar Crédito': '#c58af9',
+      'Cancelado':     '#9aa0a6',
+      'Pendente':      '#fbbc04',
+    }
+  }
+}
+
 const EXCLUIR_DO_TOTAL   = new Set(['Cancelado', 'Pendente', 'Devolução'])
 const EXCLUIR_DO_PADRAO  = new Set(['Enviado', 'Cancelado', 'Devolução', 'Gerar Crédito'])
 
