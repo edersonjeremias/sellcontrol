@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import {
-  STATUS_PEDIDO_OPTS, calcTotal,
+  STATUS_PEDIDO_OPTS, calcTotal, getStatusPedido,
   buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir,
   atribuirRomaneio, adicionarSeparadosAoRomaneio, criarRomaneioComDimensoes,
   atualizarDimensoesRomaneio,
