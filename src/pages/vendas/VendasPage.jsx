@@ -1073,7 +1073,8 @@ export default function VendasPage() {
     }
 
     try {
-      const produtos = await getProdutos(tenantId, { busca: valor, ativo: true })
+      const resultado = await getProdutos(tenantId, { busca: valor, ativo: true })
+      const produtos = resultado.data || resultado // Suporta ambos os formatos
       setProdutosSugestoes(produtos.slice(0, 10)) // Máximo 10 sugestões
     } catch (err) {
       console.error('❌ Erro ao buscar produtos:', err)
