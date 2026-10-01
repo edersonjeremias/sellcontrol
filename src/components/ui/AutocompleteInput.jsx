@@ -38,6 +38,7 @@ export default function AutocompleteInput({
   const [activeIdx, setActiveIdx] = useState(-1)
   const inputRef = useRef(null)
   const listRef = useRef(null)
+  const wrapperRef = useRef(null)
 
   // ✅ Filtra E ordena: itens que COMEÇAM com o texto digitado aparecem PRIMEIRO
   const filtered = (list || [])
@@ -62,12 +63,28 @@ export default function AutocompleteInput({
 
   const visible = open && filtered.length > 0 && (showOnFocus || value?.trim())
 
+  // Scroll para item ativo
   useEffect(() => {
     if (activeIdx >= 0 && listRef.current) {
       const items = listRef.current.querySelectorAll('li')
       items[activeIdx]?.scrollIntoView({ block: 'nearest' })
     }
   }, [activeIdx])
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setOpen(false)
+        setActiveIdx(-1)
+      }
+    }
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [open])
 
   function select(item) {
     onChange(item)
@@ -150,7 +167,7 @@ export default function AutocompleteInput({
   }
 
   return (
-    <div className="autocomplete-wrapper" style={style}>
+    <div ref={wrapperRef} className="autocomplete-wrapper" style={style}>
       <input
         ref={inputRef}
         className={className}
@@ -161,7 +178,8 @@ export default function AutocompleteInput({
         onChange={e => { onChange(e.target.value); setOpen(true); setActiveIdx(-1) }}
         onFocus={() => { setOpen(true); setActiveIdx(-1) }}
         onBlur={() => {
-          setTimeout(() => { setOpen(false); setActiveIdx(-1) }, 150)
+          // Timeout menor para melhor UX
+          setTimeout(() => { setOpen(false); setActiveIdx(-1) }, 100)
           onBlur?.()
         }}
         onKeyDown={handleKeyDown}

@@ -18,6 +18,15 @@
 body { -ms-overflow-style: none; scrollbar-width: none; }
 input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #252525 inset !important; -webkit-text-fill-color: white !important; }
 
+/* ✅ BORDA AZUL EM TODOS OS INPUTS E SELECTS QUANDO FOCADOS */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--blue) !important;
+  outline: none !important;
+  background: #252525 !important;
+}
+
 .login-screen {
   display: flex;
   min-height: 100vh;
