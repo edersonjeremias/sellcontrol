@@ -431,15 +431,19 @@
    MOBILE OTIMIZADO - VERSÃO 2
    ═══════════════════════════════════════════════════════════════ */
 
-/* Desktop (escondida no mobile) */
-.desktop-only {
-  display: block;
-}
+/* Desktop (escondida no mobile) - NÃO força display para evitar conflitos */
 
 /* Lista mobile (escondida no desktop) */
 .mobile-only {
-  display: none;
+  display: none !important;
   padding: 12px;
+}
+
+/* Paginação desktop em linha horizontal */
+.paginacao-desktop {
+  display: flex !important;
+  flex-direction: row !important;
+  height: auto !important;
 }
 
 @media (max-width: 768px) {

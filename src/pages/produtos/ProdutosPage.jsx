@@ -733,7 +733,7 @@ export default function ProdutosPage() {
 
         {/* Paginação Desktop */}
         {pronto && totalRegistros > 0 && (
-          <div className="desktop-only" style={{
+          <div className="desktop-only paginacao-desktop" style={{
             padding: '16px 24px',
             display: 'flex',
             justifyContent: 'center',
