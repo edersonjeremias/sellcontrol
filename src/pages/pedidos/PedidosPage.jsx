@@ -162,7 +162,7 @@ function PrintModal({ data, onClose }) {
         </div>
 
         <div style={{ textAlign: 'right', color: '#81c995', fontWeight: 700, fontSize: 14 }}>
-          Total: R$ {fmtMoney(total)}
+          Total: R$ {fmtMoney(total)} • {data.itens.length} {data.itens.length === 1 ? 'peça' : 'peças'}
         </div>
       </div>
     </div>
@@ -665,7 +665,7 @@ export default function PedidosPage() {
                 placeholder="Romaneio" style={{ ...SI, width: 90 }} />
 
               <span style={{ color: '#81c995', fontWeight: 700, fontSize: 14, marginLeft: 6, whiteSpace: 'nowrap' }}>
-                R$ {fmtMoney(total)}
+                R$ {fmtMoney(total)} • {itensFiltrados.length} {itensFiltrados.length === 1 ? 'peça' : 'peças'}
               </span>
             </>
           )}
@@ -724,7 +724,7 @@ export default function PedidosPage() {
 
           {isMobile && (
             <span style={{ color: '#81c995', fontWeight: 700, fontSize: 16, marginLeft: 'auto' }}>
-              R$ {fmtMoney(total)}
+              R$ {fmtMoney(total)} • {itensFiltrados.length} {itensFiltrados.length === 1 ? 'peça' : 'peças'}
             </span>
           )}
 
