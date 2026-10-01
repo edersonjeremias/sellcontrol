@@ -177,12 +177,10 @@ export default function AutocompleteInput({
         autoComplete="off"
         onChange={e => { onChange(e.target.value); setOpen(true); setActiveIdx(-1) }}
         onFocus={() => { setOpen(true); setActiveIdx(-1) }}
-        onBlur={() => {
-          // Timeout curto apenas para permitir click no item
-          setTimeout(() => {
-            setOpen(false)
-            setActiveIdx(-1)
-          }, 50)
+        onBlur={(e) => {
+          // Fecha imediatamente - o onMouseDown nos itens previne o blur
+          setOpen(false)
+          setActiveIdx(-1)
           onBlur?.()
         }}
         onKeyDown={handleKeyDown}
