@@ -91,6 +91,10 @@ export default function ProdutosPage() {
   const [totalRegistros, setTotalRegistros] = useState(0)
   const itensPorPagina = 100
 
+  // Estados de ordenação
+  const [ordenarPor, setOrdenarPor] = useState(null) // 'preco' | 'quantidade' | null
+  const [ordenarDirecao, setOrdenarDirecao] = useState('asc') // 'asc' | 'desc'
+
   const produtosRef = useRef(produtos)
   useEffect(() => { produtosRef.current = produtos }, [produtos])
 
@@ -143,8 +147,44 @@ export default function ProdutosPage() {
 
   // Filtro de busca (apenas remove deletados localmente)
   const produtosFiltrados = useMemo(() => {
-    return produtos.filter(p => !p.deleted)
-  }, [produtos])
+    let resultado = produtos.filter(p => !p.deleted)
+
+    // Aplica ordenação
+    if (ordenarPor) {
+      resultado = [...resultado].sort((a, b) => {
+        let valorA, valorB
+
+        if (ordenarPor === 'preco') {
+          // Converte "139,90" para número 139.90
+          valorA = parseFloat((a.preco || '0').replace(',', '.')) || 0
+          valorB = parseFloat((b.preco || '0').replace(',', '.')) || 0
+        } else if (ordenarPor === 'quantidade') {
+          valorA = parseInt(a.quantidade) || 0
+          valorB = parseInt(b.quantidade) || 0
+        }
+
+        if (ordenarDirecao === 'asc') {
+          return valorA - valorB
+        } else {
+          return valorB - valorA
+        }
+      })
+    }
+
+    return resultado
+  }, [produtos, ordenarPor, ordenarDirecao])
+
+  // Toggle ordenação
+  const toggleOrdenacao = (campo) => {
+    if (ordenarPor === campo) {
+      // Se já está ordenando por este campo, inverte a direção
+      setOrdenarDirecao(ordenarDirecao === 'asc' ? 'desc' : 'asc')
+    } else {
+      // Se é um campo novo, ordena crescente
+      setOrdenarPor(campo)
+      setOrdenarDirecao('asc')
+    }
+  }
 
   // Novo produto
   const novo = useCallback(async () => {
@@ -688,9 +728,21 @@ export default function ProdutosPage() {
                   <th className="th-tam">Tam.</th>
                   {cols.condicao && <th className="th-condicao">Cond.</th>}
                   {cols.custo && <th className="th-preco">Custo</th>}
-                  <th className="th-preco">Preço</th>
+                  <th
+                    className="th-preco"
+                    onClick={() => toggleOrdenacao('preco')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Preço {ordenarPor === 'preco' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
+                  </th>
                   {cols.preco_promocional && <th className="th-preco">Promo</th>}
-                  <th className="th-qtd">Qtd.</th>
+                  <th
+                    className="th-qtd"
+                    onClick={() => toggleOrdenacao('quantidade')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Qtd. {ordenarPor === 'quantidade' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
+                  </th>
                   <th className="th-acoes">Ações</th>
                 </tr>
               </thead>

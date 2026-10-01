@@ -279,19 +279,20 @@
   width: 100%;
   height: 36px; /* Altura fixa para todos */
   padding: 0 8px; /* Padding horizontal apenas */
-  border: none !important; /* SEM BORDA - FORÇADO */
+  border: 1px solid var(--border-light) !important; /* BORDA PADRÃO */
   border-radius: 0 !important; /* SEM CANTOS ARREDONDADOS - FORÇADO */
   outline: none !important; /* SEM OUTLINE */
   box-shadow: none !important; /* SEM SOMBRA */
   font-size: 14px;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #3a3a3a; /* CINZA ESCURO (não preto) */
+  background: #505050; /* CINZA MAIS CLARO */
   color: var(--input-text);
   transition: all 0.2s;
 }
 
 .cell-input:focus {
-  background: #404040; /* Mais claro no focus */
+  border-color: var(--blue) !important; /* BORDA AZUL NO FOCUS */
+  background: #252525 !important; /* FUNDO ESCURO NO FOCUS */
 }
 
 .cell-input:disabled {
@@ -302,10 +303,18 @@
 .cell-select {
   cursor: pointer;
   height: 36px !important; /* Mesma altura dos inputs */
-  border: none !important; /* SEM BORDA */
+  border: 1px solid var(--border-light) !important; /* BORDA PADRÃO */
   border-radius: 0 !important; /* SEM CANTOS */
   outline: none !important; /* SEM OUTLINE */
   box-shadow: none !important; /* SEM SOMBRA */
+  background: #505050 !important; /* CINZA MAIS CLARO */
+  color: var(--input-text) !important;
+  transition: all 0.2s;
+}
+
+.cell-select:focus {
+  border-color: var(--blue) !important; /* BORDA AZUL NO FOCUS */
+  background: #252525 !important; /* FUNDO ESCURO NO FOCUS */
 }
 
 /* ═══════════════════════════════════════════════════════════════
