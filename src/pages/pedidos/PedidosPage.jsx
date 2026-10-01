@@ -195,6 +195,9 @@ export default function PedidosPage() {
   const [statusOpts, setStatusOpts] = useState(STATUS_PEDIDO_OPTS)
   const [statusCores, setStatusCores] = useState(STATUS_COR)
 
+  // Estado de ordenação
+  const [ordenacao, setOrdenacao] = useState({ campo: null, direcao: 'asc' })
+
   // Modal dimensões para gerar romaneio
   const [showDimensoesModal, setShowDimensoesModal] = useState(false)
   const [dimensoes, setDimensoes] = useState({ peso: '', altura: '', largura: '', comprimento: '' })
@@ -539,18 +542,60 @@ export default function PedidosPage() {
   }, [])
 
   const itensFiltrados = useMemo(() => {
-    if (!filtros.busca.trim()) return itens
-    const termos = filtros.busca.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
-    return itens.filter(i => {
-      const txt = [i.produto, i.modelo, i.cor, i.marca, i.tamanho, i.codigo, i.cliente_nome]
-        .join(' ').toLowerCase()
-      return termos.every(t => txt.includes(t))
-    })
-  }, [itens, filtros.busca])
+    let resultado = itens
+
+    // Aplica filtro de busca
+    if (filtros.busca.trim()) {
+      const termos = filtros.busca.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+      resultado = resultado.filter(i => {
+        const txt = [i.produto, i.modelo, i.cor, i.marca, i.tamanho, i.codigo, i.cliente_nome]
+          .join(' ').toLowerCase()
+        return termos.every(t => txt.includes(t))
+      })
+    }
+
+    // Aplica ordenação
+    if (ordenacao.campo) {
+      resultado = [...resultado].sort((a, b) => {
+        let valA = a[ordenacao.campo] || ''
+        let valB = b[ordenacao.campo] || ''
+
+        // Tratamento especial para preço (numérico)
+        if (ordenacao.campo === 'preco') {
+          valA = Number(valA) || 0
+          valB = Number(valB) || 0
+        } else if (ordenacao.campo === 'codigo') {
+          valA = String(valA)
+          valB = String(valB)
+        } else {
+          valA = String(valA).toLowerCase()
+          valB = String(valB).toLowerCase()
+        }
+
+        if (valA < valB) return ordenacao.direcao === 'asc' ? -1 : 1
+        if (valA > valB) return ordenacao.direcao === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
+    return resultado
+  }, [itens, filtros.busca, ordenacao])
 
   const total = useMemo(() => calcTotal(itensFiltrados), [itensFiltrados])
 
   function setF(key, val) { setFiltros(p => ({ ...p, [key]: val })) }
+
+  // Função para alternar ordenação
+  const toggleOrdenacao = useCallback((campo) => {
+    setOrdenacao(prev => {
+      if (prev.campo === campo) {
+        // Se já está ordenando por esse campo, inverte a direção
+        return { campo, direcao: prev.direcao === 'asc' ? 'desc' : 'asc' }
+      }
+      // Novo campo, começa com ascendente
+      return { campo, direcao: 'asc' }
+    })
+  }, [])
 
   return (
     <AppShell>
@@ -730,11 +775,29 @@ export default function PedidosPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 900 }}>
               <thead>
                 <tr>
-                  {COLS.map(c => (
-                    <th key={c.key} style={{ ...TH, width: c.w, position: 'sticky', top: 0, zIndex: 2 }}>
-                      {c.label}
-                    </th>
-                  ))}
+                  {COLS.map(c => {
+                    const ordenavel = ['produto', 'modelo', 'cor', 'marca', 'tamanho', 'preco', 'codigo', 'cliente_nome'].includes(c.key)
+                    const estaOrdenado = ordenacao.campo === c.key
+                    const seta = estaOrdenado ? (ordenacao.direcao === 'asc' ? ' ↑' : ' ↓') : ''
+
+                    return (
+                      <th
+                        key={c.key}
+                        style={{
+                          ...TH,
+                          width: c.w,
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: 2,
+                          cursor: ordenavel ? 'pointer' : 'default',
+                          userSelect: 'none',
+                        }}
+                        onClick={ordenavel ? () => toggleOrdenacao(c.key) : undefined}
+                      >
+                        {c.label}{seta}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
