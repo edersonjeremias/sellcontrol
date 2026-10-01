@@ -440,7 +440,11 @@
    MOBILE OTIMIZADO - VERSÃO 2
    ═══════════════════════════════════════════════════════════════ */
 
-/* Desktop (escondida no mobile) - NÃO força display para evitar conflitos */
+/* Desktop (forçar display) */
+.tabela-scroll {
+  display: flex !important;
+  flex-direction: column !important;
+}
 
 /* Lista mobile (escondida no desktop) */
 .mobile-only {
