@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import { fmtR, getVendasRelatorio } from '../../services/relatorioService'
+import { getStatusExpedicao } from '../../services/statusExpedicaoService'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
@@ -41,6 +42,8 @@ export default function RelatorioPage() {
   const [dataFim, setDataFim]       = useState(ultimoDiaMes)
   const [busca, setBusca]           = useState('')
   const [filtroStatus, setFiltroStatus] = useState('todos') // 'todos' | 'vendidos' | 'cadastrados' | 'ENVIADO' | 'CANCELADO' | 'DEVOLVIDO'
+  const [filtroStatusExpedicao, setFiltroStatusExpedicao] = useState('todos') // Filtro de status da expedição
+  const [statusExpedicaoList, setStatusExpedicaoList] = useState([]) // Lista de status de expedição
   const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
   const [carregando, setCarregando] = useState(false)
 
@@ -57,17 +60,30 @@ export default function RelatorioPage() {
 
   useEffect(() => { carregar() }, [carregar])
 
+  // Carrega status de expedição disponíveis
+  useEffect(() => {
+    if (!tenantId) return
+    getStatusExpedicao(tenantId)
+      .then(setStatusExpedicaoList)
+      .catch(() => {})
+  }, [tenantId])
+
   // Filtro de busca aplicado CLIENT-SIDE em tempo real (sem chamada ao servidor)
   const vendas = useMemo(() => {
     let resultado = vendasBase
 
-    // ✅ Filtro por STATUS
+    // ✅ Filtro por STATUS (vendidos/cadastrados/ENVIADO/CANCELADO/DEVOLVIDO)
     if (filtroStatus === 'vendidos') {
       resultado = resultado.filter(v => v.cliente_nome?.trim())
     } else if (filtroStatus === 'cadastrados') {
       resultado = resultado.filter(v => !v.cliente_nome?.trim())
     } else if (['ENVIADO', 'CANCELADO', 'DEVOLVIDO'].includes(filtroStatus)) {
       resultado = resultado.filter(v => (v.status || '').toUpperCase() === filtroStatus)
+    }
+
+    // ✅ Filtro por STATUS DA EXPEDIÇÃO (Comprar, Vendido, Comprar URGENTE, etc)
+    if (filtroStatusExpedicao !== 'todos') {
+      resultado = resultado.filter(v => (v.status || '') === filtroStatusExpedicao)
     }
 
     // ✅ Filtro por BUSCA
@@ -82,7 +98,7 @@ export default function RelatorioPage() {
     }
 
     return resultado
-  }, [vendasBase, busca, filtroStatus])
+  }, [vendasBase, busca, filtroStatus, filtroStatusExpedicao])
 
   const totalLiquido = vendas.reduce((s, v) => {
     const st = (v.status || '').toUpperCase()
@@ -187,6 +203,12 @@ export default function RelatorioPage() {
           <option value="ENVIADO">📤 Enviado</option>
           <option value="CANCELADO">❌ Cancelado</option>
           <option value="DEVOLVIDO">↩️ Devolvido</option>
+        </select>
+        <select value={filtroStatusExpedicao} onChange={e => setFiltroStatusExpedicao(e.target.value)} style={{ ...S.inp, minWidth:160 }}>
+          <option value="todos">📦 Status Expedição: Todos</option>
+          {statusExpedicaoList.map(status => (
+            <option key={status.id} value={status.nome}>{status.nome}</option>
+          ))}
         </select>
         <button onClick={carregar} style={S.btn}>Filtrar</button>
         <button onClick={gerarPDF} style={{ ...S.btn, background:'var(--green)' }}>📄 Gerar PDF</button>
