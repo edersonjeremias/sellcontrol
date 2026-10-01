@@ -2074,6 +2074,13 @@ export default function VendasPage() {
                 value={filtroProduto}
                 onChange={handleFiltroProdutoChange}
                 onKeyDown={handleFiltroProdutoKeyDown}
+                onBlur={() => {
+                  // Aguarda 200ms para permitir clique na lista antes de fechar
+                  setTimeout(() => {
+                    setProdutosSugestoes([])
+                    setFiltroProduto('')
+                  }, 200)
+                }}
                 placeholder="Produtos: Buscar no catálogo (Enter para adicionar)"
               />
               {produtosSugestoes.length > 0 && (
