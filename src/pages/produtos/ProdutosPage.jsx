@@ -98,6 +98,10 @@ export default function ProdutosPage() {
   const produtosRef = useRef(produtos)
   useEffect(() => { produtosRef.current = produtos }, [produtos])
 
+  // Refs para salvamento automático
+  const saveTimerRef = useRef(null)
+  const isSavingRef = useRef(false)
+
   // Carrega configuração de colunas do localStorage
   useEffect(() => {
     if (!tenantId) return
@@ -185,6 +189,77 @@ export default function ProdutosPage() {
       setOrdenarDirecao('asc')
     }
   }
+
+  // Salvamento automático com debounce
+  const salvarAgora = useCallback(() => {
+    // Limpa timer anterior
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+
+    // Debounce de 300ms
+    saveTimerRef.current = setTimeout(async () => {
+      if (isSavingRef.current || busy) return
+
+      // Filtra produtos que precisam ser salvos (não vazios e modificados)
+      const produtosParaSalvar = produtosRef.current.filter(p =>
+        !p.deleted &&
+        p.produto?.trim() &&
+        p.codigo?.trim()
+      )
+
+      if (produtosParaSalvar.length === 0) return
+
+      isSavingRef.current = true
+
+      try {
+        for (const p of produtosParaSalvar) {
+          // Verifica se código já existe (apenas para produtos novos)
+          if (p.isNew) {
+            const existe = await verificarCodigoExiste(tenantId, p.codigo, p.id)
+            if (existe) {
+              console.warn(`Código ${p.codigo} já existe, pulando salvamento`)
+              continue
+            }
+          }
+
+          // Converte letra para texto completo
+          const condicaoCompleta = p.condicao === 'N' ? 'Novo' : p.condicao === 'U' ? 'Usado' : ''
+
+          // Converte valores formatados para reais
+          const custoEmCentavos = parsearMoedaInput(p.custo || '0')
+          const precoEmCentavos = parsearMoedaInput(p.preco || '0')
+          const promoEmCentavos = parsearMoedaInput(p.preco_promocional || '0')
+
+          const dados = {
+            ...p,
+            condicao: condicaoCompleta,
+            custo: parseInt(custoEmCentavos || 0) / 100,
+            preco: parseInt(precoEmCentavos || 0) / 100,
+            preco_promocional: parseInt(promoEmCentavos || 0) / 100,
+          }
+
+          if (p.isNew) {
+            // Criar
+            const novo = await criarProduto(tenantId, dados)
+            setProdutos(prev => prev.map(pr =>
+              pr._key === p._key ? mapProduto(novo) : pr
+            ))
+          } else {
+            // Atualizar
+            const atualizado = await atualizarProduto(p.id, dados)
+            setProdutos(prev => prev.map(pr =>
+              pr._key === p._key ? mapProduto(atualizado) : pr
+            ))
+          }
+        }
+      } catch (err) {
+        console.error('Erro no salvamento automático:', err)
+      } finally {
+        isSavingRef.current = false
+      }
+    }, 300)
+  }, [busy, tenantId])
 
   // Novo produto
   const novo = useCallback(async () => {
@@ -300,7 +375,10 @@ export default function ProdutosPage() {
 
       return { ...p, [field]: value }
     }))
-  }, [])
+
+    // Salva automaticamente após cada mudança
+    salvarAgora()
+  }, [salvarAgora])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
   // REMOVIDO: não cria mais linha automaticamente ao sair do campo produto
