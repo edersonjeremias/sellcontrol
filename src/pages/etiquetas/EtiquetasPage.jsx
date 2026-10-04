@@ -56,6 +56,9 @@ export default function EtiquetasPage() {
         const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
         const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+        console.log('🔍 DEBUG - SUPABASE_URL:', SUPABASE_URL)
+        console.log('🔍 DEBUG - URL completa:', `${SUPABASE_URL}/functions/v1/criar-pedido-melhor-envio`)
+
         const response = await fetch(`${SUPABASE_URL}/functions/v1/criar-pedido-melhor-envio`, {
           method: 'POST',
           headers: {
