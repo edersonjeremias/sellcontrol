@@ -29,14 +29,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Busca romaneio com cotação e endereço
+    // Busca romaneio
     const { data: romaneio, error: romError } = await supabase
       .from('romaneios')
-      .select(`
-        *,
-        cotacao:cotacoes_frete!romaneios_melhor_envio_cotacao_id_fkey(*),
-        endereco:enderecos_clientes(*)
-      `)
+      .select('*')
       .eq('id', romaneio_id)
       .single()
 
@@ -48,22 +44,61 @@ serve(async (req) => {
       )
     }
 
-    if (!romaneio.cotacao) {
+    if (!romaneio.melhor_envio_cotacao_id) {
       return new Response(
         JSON.stringify({ error: 'Romaneio não possui cotação vinculada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    if (!romaneio.endereco) {
+    if (!romaneio.endereco_id) {
       return new Response(
         JSON.stringify({ error: 'Romaneio não possui endereço de entrega' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    // Busca cotação
+    console.log('🔍 Buscando cotação:', romaneio.melhor_envio_cotacao_id)
+    const { data: cotacao, error: cotacaoError } = await supabase
+      .from('cotacoes_frete')
+      .select('*')
+      .eq('id', romaneio.melhor_envio_cotacao_id)
+      .single()
+
+    if (cotacaoError) {
+      console.error('❌ Erro ao buscar cotação:', cotacaoError)
+    }
+
+    // Busca endereço
+    console.log('🔍 Buscando endereço:', romaneio.endereco_id)
+    const { data: endereco, error: enderecoError } = await supabase
+      .from('enderecos_clientes')
+      .select('*')
+      .eq('id', romaneio.endereco_id)
+      .single()
+
+    if (enderecoError) {
+      console.error('❌ Erro ao buscar endereço:', enderecoError)
+    }
+
+    if (!cotacao || !endereco) {
+      return new Response(
+        JSON.stringify({
+          error: 'Dados incompletos do romaneio',
+          detalhes: {
+            cotacao_encontrada: !!cotacao,
+            endereco_encontrado: !!endereco,
+            cotacao_error: cotacaoError?.message,
+            endereco_error: enderecoError?.message
+          }
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     console.log('✅ Romaneio encontrado:', romaneio.numero)
-    console.log('📋 Cotação:', romaneio.cotacao.transportadora, romaneio.cotacao.servico)
+    console.log('📋 Cotação:', cotacao.transportadora, cotacao.servico)
 
     // Busca token do Melhor Envio
     const { data: config } = await supabase
@@ -83,7 +118,7 @@ serve(async (req) => {
     const token = config.token_melhor_envio
 
     // Dados do pedido para o Melhor Envio
-    const serviceData = romaneio.cotacao.melhor_envio_data
+    const serviceData = cotacao.melhor_envio_data
 
     const orderPayload = {
       service: serviceData.id,
@@ -91,7 +126,7 @@ serve(async (req) => {
         name: 'VM Kids Second Hand',
         phone: '16999999999',
         email: 'contato@vmkids.com.br',
-        document: '57751824000110',
+        document: '00546699952',
         address: 'Rua Antonio Bueno de Camargo',
         number: '295',
         complement: '',
@@ -102,18 +137,18 @@ serve(async (req) => {
         postal_code: '13560340',
       },
       to: {
-        name: romaneio.endereco.destinatario,
-        phone: romaneio.endereco.telefone,
+        name: endereco.destinatario,
+        phone: endereco.telefone,
         email: 'cliente@email.com',
-        document: '00000000000',
-        address: romaneio.endereco.rua,
-        number: romaneio.endereco.numero,
-        complement: romaneio.endereco.complemento || '',
-        district: romaneio.endereco.bairro,
-        city: romaneio.endereco.cidade,
-        state_abbr: romaneio.endereco.estado,
+        document: endereco.cpf || '31893944824',
+        address: endereco.rua,
+        number: endereco.numero,
+        complement: endereco.complemento || '',
+        district: endereco.bairro,
+        city: endereco.cidade,
+        state_abbr: endereco.estado,
         country_id: 'BR',
-        postal_code: romaneio.endereco.cep.replace(/\D/g, ''),
+        postal_code: endereco.cep.replace(/\D/g, ''),
       },
       products: [{
         name: `Romaneio ${romaneio.numero}`,
