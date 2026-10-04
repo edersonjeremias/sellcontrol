@@ -339,9 +339,9 @@ export default function PedidosPage() {
 
   const handleGerarPedido = useCallback(() => {
     if (!tenantId) return
-    const semPedido = itens.filter(i => !i.numero_pedido)
-    if (!semPedido.length) {
-      setErr('Todos os itens já possuem romaneio.')
+    const separados = itens.filter(i => i.status === 'Separado' && !i.numero_pedido)
+    if (!separados.length) {
+      setErr('Nenhum item com status "Separado" para gerar romaneio.')
       return
     }
     setDimensoes({ peso: '', altura: '', largura: '', comprimento: '' })
@@ -365,20 +365,19 @@ export default function PedidosPage() {
         showMsg(`Romaneio #${romAddVal} atualizado!`)
         setModoEdicao(false)
       } else {
-        const semPedido = itens.filter(i => !i.numero_pedido)
-        if (!semPedido.length) {
-          setErr('Todos os itens já possuem romaneio.')
+        const separados = itens.filter(i => i.status === 'Separado' && !i.numero_pedido)
+        if (!separados.length) {
+          setErr('Nenhum item com status "Separado" para gerar romaneio.')
           return
         }
 
-        const numPedido = await criarRomaneioComDimensoes(tenantId, semPedido, dimensoes)
+        const numPedido = await criarRomaneioComDimensoes(tenantId, separados, dimensoes)
         showMsg(`Romaneio #${numPedido} gerado com sucesso!`)
 
-        const semIds = new Set(semPedido.map(i => i.id))
-        const sepIds = new Set(semPedido.filter(i => i.status === 'Separado').map(i => i.id))
+        const separadosIds = new Set(separados.map(i => i.id))
         setItens(prev => prev.map(i => {
-          if (!semIds.has(i.id)) return i
-          return { ...i, numero_pedido: numPedido, ...(sepIds.has(i.id) ? { status: 'Enviado' } : {}) }
+          if (!separadosIds.has(i.id)) return i
+          return { ...i, numero_pedido: numPedido, status: 'Enviado' }
         }))
         setDirty(new Map())
       }
