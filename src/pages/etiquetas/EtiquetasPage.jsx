@@ -54,7 +54,14 @@ export default function EtiquetasPage() {
 
         // Chama Edge Function para criar pedido
         const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-        const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+        // Pega o token de sessão do usuário autenticado
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
+
+        if (!token) {
+          throw new Error('Usuário não autenticado')
+        }
 
         console.log('🔍 DEBUG - SUPABASE_URL:', SUPABASE_URL)
         console.log('🔍 DEBUG - URL completa:', `${SUPABASE_URL}/functions/v1/criar-pedido-melhor-envio`)
@@ -63,7 +70,7 @@ export default function EtiquetasPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             romaneio_id: romaneio.id,
