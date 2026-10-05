@@ -266,10 +266,10 @@ export default function EtiquetasPage() {
     setCotacaoSelecionada(null)
 
     try {
-      // Buscar configurações da empresa
+      // Buscar configurações da empresa (incluindo margem de frete)
       const { data: config } = await supabase
         .from('configuracoes')
-        .select('endereco_cep, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado')
+        .select('endereco_cep, margem_frete, altura_padrao, largura_padrao, comprimento_padrao, peso_padrao')
         .eq('tenant_id', tenantId)
         .single()
 
@@ -278,6 +278,8 @@ export default function EtiquetasPage() {
         setCotando(false)
         return
       }
+
+      const margemFrete = config.margem_frete || 0
 
       // Preparar dados para cotação
       const enderecoOrigem = {
@@ -288,14 +290,15 @@ export default function EtiquetasPage() {
         postal_code: romaneio.enderecos_clientes.cep.replace(/\D/g, ''),
       }
 
+      // Usar dimensões do romaneio ou padrões da configuração
       const pacote = {
-        height: romaneio.altura || 10,
-        width: romaneio.largura || 20,
-        length: romaneio.comprimento || 30,
-        weight: romaneio.peso || 0.3,
+        height: romaneio.altura || config.altura_padrao || 10,
+        width: romaneio.largura || config.largura_padrao || 20,
+        length: romaneio.comprimento || config.comprimento_padrao || 30,
+        weight: romaneio.peso || config.peso_padrao || 0.3,
       }
 
-      console.log('📦 Cotando frete...', { enderecoOrigem, enderecoDestino, pacote })
+      console.log('📦 Cotando frete...', { enderecoOrigem, enderecoDestino, pacote, margemFrete })
 
       const resultado = await calcularFrete(tenantId, {
         from: enderecoOrigem,
@@ -303,8 +306,21 @@ export default function EtiquetasPage() {
         package: pacote,
       })
 
-      console.log('✅ Cotações recebidas:', resultado)
-      setCotacoes(resultado)
+      // Aplicar margem de frete nas cotações
+      const cotacoesComMargem = resultado.map(cot => {
+        const valorBase = Number(cot.price || cot.custom_price || cot.valor_original || 0)
+        const valorComMargem = valorBase * (1 + margemFrete / 100)
+
+        return {
+          ...cot,
+          valor_original: valorBase,
+          price: valorComMargem,
+          margem_aplicada: margemFrete,
+        }
+      })
+
+      console.log('✅ Cotações recebidas com margem:', cotacoesComMargem)
+      setCotacoes(cotacoesComMargem)
     } catch (err) {
       console.error('❌ Erro ao cotar:', err)
       alert(`Erro ao cotar frete: ${err.message}`)
@@ -321,7 +337,8 @@ export default function EtiquetasPage() {
 
     try {
       const cotacao = cotacoes.find(c => c.id === cotacaoSelecionada)
-      const valorBase = Number(cotacao.price || cotacao.custom_price || cotacao.valor_original || 0)
+      // Salvar valor SEM margem (valor base/original)
+      const valorBase = Number(cotacao.valor_original || 0)
 
       // Atualizar romaneio com os dados da cotação
       await supabase
@@ -889,7 +906,8 @@ export default function EtiquetasPage() {
 
                         <div style={{ marginBottom: 12, maxHeight: 300, overflow: 'auto' }}>
                           {cotacoes.map((cot) => {
-                            const valorBase = Number(cot.price || cot.custom_price || cot.valor_original || 0)
+                            // price já vem com margem aplicada
+                            const valorComMargem = Number(cot.price || 0)
                             const prazo = cot.delivery_time || cot.delivery_range?.max || 0
                             const nomeTransp = cot.company?.name || cot.name || 'Transportadora'
                             const nomeServico = cot.name || 'Serviço'
@@ -925,7 +943,7 @@ export default function EtiquetasPage() {
                                   </div>
                                 </div>
                                 <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 16 }}>
-                                  R$ {valorBase.toFixed(2)}
+                                  R$ {valorComMargem.toFixed(2)}
                                 </div>
                               </label>
                             )
