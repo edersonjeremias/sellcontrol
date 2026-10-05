@@ -28,8 +28,8 @@ export default function EtiquetasPage() {
         .from('romaneios')
         .select('*, enderecos_clientes(*)')
         .eq('tenant_id', tenantId)
-        .in('status', ['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'])
-        .order('frete_pago_em', { ascending: false })
+        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'])
+        .order('created_at', { ascending: false })
 
       if (error) throw error
       setRomaneios(data || [])
