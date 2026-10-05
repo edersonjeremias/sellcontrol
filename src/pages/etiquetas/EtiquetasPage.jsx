@@ -60,20 +60,24 @@ export default function EtiquetasPage() {
       )
     }
 
-    // Filtro de data início
-    if (dataInicio) {
-      filtrados = filtrados.filter(rom => {
-        const dataRom = new Date(rom.frete_pago_em || rom.created_at)
-        return dataRom >= new Date(dataInicio)
-      })
-    }
+    // Filtro de data - EXCETO quando status = 'etiqueta_gerada'
+    // Etiquetas geradas SEMPRE aparecem todas (para não esquecer de despachar)
+    if (statusFiltro !== 'etiqueta_gerada') {
+      // Filtro de data início
+      if (dataInicio) {
+        filtrados = filtrados.filter(rom => {
+          const dataRom = new Date(rom.frete_pago_em || rom.created_at)
+          return dataRom >= new Date(dataInicio)
+        })
+      }
 
-    // Filtro de data fim
-    if (dataFim) {
-      filtrados = filtrados.filter(rom => {
-        const dataRom = new Date(rom.frete_pago_em || rom.created_at)
-        return dataRom <= new Date(dataFim + 'T23:59:59')
-      })
+      // Filtro de data fim
+      if (dataFim) {
+        filtrados = filtrados.filter(rom => {
+          const dataRom = new Date(rom.frete_pago_em || rom.created_at)
+          return dataRom <= new Date(dataFim + 'T23:59:59')
+        })
+      }
     }
 
     setRomaneiosFiltrados(filtrados)
