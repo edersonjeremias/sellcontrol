@@ -775,7 +775,8 @@ export default function MeuFrete() {
                 }
 
                 const valorComMargem = valorBase * (1 + margemFrete / 100)
-                console.log(`💰 ${cot.transportadora}: R$ ${valorBase.toFixed(2)} + ${margemFrete}% = R$ ${valorComMargem.toFixed(2)}`)
+                console.log(`💰 ${cot.transportadora || cot.company?.name}: R$ ${valorBase.toFixed(2)} + ${margemFrete}% = R$ ${valorComMargem.toFixed(2)}`)
+                console.log('📦 Estrutura da cotação:', cot)
                 return (
                   <button
                     key={idx}
