@@ -29,7 +29,7 @@ export default function MeuFrete() {
         .select('*, romaneio_sacolinhas(*)')
         .eq('tenant_id', tenantId)
         .eq('cliente_instagram', cliente.instagram.replace('@', ''))
-        .in('status', ['pronto', 'frete_cotado', 'frete_pago'])
+        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado'])
         .order('created_at', { ascending: false })
 
       if (romsError) throw romsError
@@ -629,6 +629,99 @@ export default function MeuFrete() {
                     >
                       🧾 Ver Recibo
                     </button>
+                  </div>
+                )}
+
+                {rom.status === 'etiqueta_gerada' && (
+                  <div style={{
+                    background: 'rgba(33,150,243,0.1)',
+                    border: '1px solid rgba(33,150,243,0.3)',
+                    borderRadius: 8,
+                    padding: 12,
+                  }}>
+                    <div style={{ color: '#2196f3', fontWeight: 700, marginBottom: 4 }}>
+                      🏷️ Etiqueta Gerada - Aguardando Postagem
+                    </div>
+                    <div style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 10 }}>
+                      Seu pedido está pronto para ser postado!
+                    </div>
+                    {rom.transportadora && (
+                      <div style={{ color: '#e8eaed', fontSize: 13, marginBottom: 10 }}>
+                        📦 {rom.transportadora} - {rom.servico}<br />
+                        ⏱️ Prazo: {rom.prazo_entrega || 0} dia(s) útil(is)
+                      </div>
+                    )}
+                    {rom.codigo_rastreio && (
+                      <div style={{
+                        background: 'rgba(33,150,243,0.2)',
+                        borderRadius: 6,
+                        padding: 10,
+                        marginBottom: 10,
+                      }}>
+                        <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>
+                          🔍 Código de Rastreio
+                        </div>
+                        <div style={{ color: '#2196f3', fontWeight: 700, fontSize: 14, fontFamily: 'monospace' }}>
+                          {rom.codigo_rastreio}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {rom.status === 'despachado' && (
+                  <div style={{
+                    background: 'rgba(76,175,80,0.1)',
+                    border: '1px solid rgba(76,175,80,0.3)',
+                    borderRadius: 8,
+                    padding: 12,
+                  }}>
+                    <div style={{ color: 'var(--p-green)', fontWeight: 700, marginBottom: 4 }}>
+                      ✓ Pedido Despachado - Em Transporte
+                    </div>
+                    <div style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 10 }}>
+                      Seu pedido foi postado e está a caminho!
+                    </div>
+                    {rom.transportadora && (
+                      <div style={{ color: '#e8eaed', fontSize: 13, marginBottom: 10 }}>
+                        📦 {rom.transportadora} - {rom.servico}<br />
+                        ⏱️ Prazo: {rom.prazo_entrega || 0} dia(s) útil(is)
+                      </div>
+                    )}
+                    {rom.codigo_rastreio && (
+                      <div style={{
+                        background: 'rgba(76,175,80,0.2)',
+                        borderRadius: 6,
+                        padding: 10,
+                        marginBottom: 10,
+                      }}>
+                        <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>
+                          🔍 Código de Rastreio
+                        </div>
+                        <div style={{ color: 'var(--p-green)', fontWeight: 700, fontSize: 14, fontFamily: 'monospace', marginBottom: 8 }}>
+                          {rom.codigo_rastreio}
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(rom.codigo_rastreio)
+                            showToast('Código copiado!', 'success')
+                          }}
+                          style={{
+                            width: '100%',
+                            background: 'rgba(76,175,80,0.2)',
+                            color: 'var(--p-green)',
+                            border: '1px solid rgba(76,175,80,0.5)',
+                            borderRadius: 6,
+                            padding: '10px',
+                            fontWeight: 700,
+                            fontSize: 13,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📋 Copiar Código
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
