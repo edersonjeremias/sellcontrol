@@ -130,17 +130,9 @@ export default function MeuFrete() {
     setRomaneioSelecionado(romaneio.id)
 
     try {
-      console.log('🔍 Buscando cotações existentes...')
-      const cotacoesExistentes = await buscarCotacoes(romaneio.id)
+      console.log('📦 Preparando cotação via API do Melhor Envio...')
 
-      if (cotacoesExistentes.length > 0) {
-        console.log('✅ Cotações encontradas:', cotacoesExistentes.length)
-        setCotacoes(cotacoesExistentes)
-        showToast('Cotações carregadas', 'success')
-      } else {
-        console.log('📦 Preparando cotação via API...')
-
-        const enderecoOrigem = {
+      const enderecoOrigem = {
           postal_code: '13560340',
           address: 'Rua Antonio Bueno de Camargo',
           number: '295',
@@ -181,13 +173,9 @@ export default function MeuFrete() {
         console.log('💾 Salvando cotações no banco...')
         await salvarCotacoes(romaneio.id, cotacoesAPI)
 
-        console.log('🔍 Buscando cotações salvas...')
-        const cotacoesSalvas = await buscarCotacoes(romaneio.id)
-        console.log('✅ Cotações salvas:', cotacoesSalvas)
-
-        setCotacoes(cotacoesSalvas)
+        console.log('✅ Cotações recebidas e salvas!')
+        setCotacoes(cotacoesAPI)
         showToast('Frete cotado com sucesso!', 'success')
-      }
     } catch (err) {
       console.error('❌ ERRO ao cotar frete:', err)
       console.error('❌ Stack:', err.stack)
