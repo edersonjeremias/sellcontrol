@@ -173,7 +173,13 @@ export default function MeuFrete() {
         console.log('💾 Salvando cotações no banco...')
         await salvarCotacoes(romaneio.id, cotacoesAPI)
 
-        console.log('✅ Cotações recebidas e salvas!')
+        console.log('✅ Cotações recebidas da API:', cotacoesAPI)
+
+        // Verificar estrutura das cotações
+        if (cotacoesAPI.length > 0) {
+          console.log('📊 Estrutura da primeira cotação:', cotacoesAPI[0])
+        }
+
         setCotacoes(cotacoesAPI)
         showToast('Frete cotado com sucesso!', 'success')
     } catch (err) {
@@ -758,6 +764,12 @@ export default function MeuFrete() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {cotacoes.map((cot, idx) => {
+                // Proteção contra undefined
+                if (!cot || !cot.valor) {
+                  console.error('❌ Cotação inválida:', cot)
+                  return null
+                }
+
                 const valorComMargem = cot.valor * (1 + margemFrete / 100)
                 console.log(`💰 ${cot.transportadora}: R$ ${cot.valor.toFixed(2)} + ${margemFrete}% = R$ ${valorComMargem.toFixed(2)}`)
                 return (
