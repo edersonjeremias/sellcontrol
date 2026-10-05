@@ -141,6 +141,7 @@ export default function EtiquetasPage() {
 
         if (!response.ok) {
           const error = await response.json()
+          console.error('❌ Erro completo da API:', error)
           throw new Error(error.error || 'Erro ao criar pedido')
         }
 
