@@ -19,6 +19,18 @@ export default function EtiquetasPage() {
   const [cotacoes, setCotacoes] = useState([])
   const [cotacaoSelecionada, setCotacaoSelecionada] = useState(null)
 
+  // Estados para edição
+  const [editando, setEditando] = useState(null)
+  const [formEdicao, setFormEdicao] = useState({
+    altura: '',
+    largura: '',
+    comprimento: '',
+    peso: '',
+    produto_declaracao: '',
+    produto_quantidade: '',
+    produto_valor_declarado: '',
+  })
+
   // Filtros
   const [busca, setBusca] = useState('')
   const [statusFiltro, setStatusFiltro] = useState('etiqueta_gerada')
@@ -376,6 +388,79 @@ export default function EtiquetasPage() {
     }
   }
 
+  const handleAbrirEdicao = (romaneio) => {
+    setEditando(romaneio)
+    setFormEdicao({
+      altura: romaneio.altura || '',
+      largura: romaneio.largura || '',
+      comprimento: romaneio.comprimento || '',
+      peso: romaneio.peso || '',
+      produto_declaracao: romaneio.produto_declaracao || '',
+      produto_quantidade: romaneio.produto_quantidade || '',
+      produto_valor_declarado: romaneio.produto_valor_declarado || '',
+    })
+  }
+
+  const handleSalvarEdicao = async () => {
+    if (!editando) return
+
+    if (!window.confirm(
+      `Editar romaneio ${editando.numero}?\n\n` +
+      'Isso irá:\n' +
+      '- Atualizar as dimensões e dados do produto\n' +
+      '- Voltar o status para PRONTO\n' +
+      '- Limpar cotações e pagamentos anteriores\n\n' +
+      'Deseja continuar?'
+    )) {
+      return
+    }
+
+    try {
+      // 1. Deletar cotações antigas
+      await supabase
+        .from('cotacoes_frete')
+        .delete()
+        .eq('romaneio_id', editando.id)
+
+      // 2. Deletar pagamentos antigos
+      await supabase
+        .from('pagamentos_frete')
+        .delete()
+        .eq('romaneio_id', editando.id)
+
+      // 3. Atualizar romaneio e voltar para PRONTO
+      await supabase
+        .from('romaneios')
+        .update({
+          altura: parseFloat(formEdicao.altura) || null,
+          largura: parseFloat(formEdicao.largura) || null,
+          comprimento: parseFloat(formEdicao.comprimento) || null,
+          peso: parseFloat(formEdicao.peso) || null,
+          produto_declaracao: formEdicao.produto_declaracao || null,
+          produto_quantidade: parseInt(formEdicao.produto_quantidade) || null,
+          produto_valor_declarado: parseFloat(formEdicao.produto_valor_declarado) || null,
+          status: 'pronto',
+          transportadora: null,
+          servico: null,
+          valor_frete: null,
+          prazo_entrega: null,
+          melhor_envio_cotacao_id: null,
+          melhor_envio_order_id: null,
+          codigo_rastreio: null,
+          frete_pago_em: null,
+          etiqueta_gerada_em: null,
+          despachado_em: null,
+        })
+        .eq('id', editando.id)
+
+      alert('Romaneio editado com sucesso! Status voltou para PRONTO.')
+      setEditando(null)
+      carregar()
+    } catch (err) {
+      alert(`Erro ao editar romaneio: ${err.message}`)
+    }
+  }
+
   if (loading) {
     return (
       <AppShell page="Etiquetas">
@@ -692,6 +777,24 @@ export default function EtiquetasPage() {
                       )}
                     </>
                   )}
+
+                  {/* Botão Editar - sempre visível */}
+                  <button
+                    onClick={() => handleAbrirEdicao(rom)}
+                    title="Editar Romaneio"
+                    style={{
+                      background: 'rgba(255,152,0,0.2)',
+                      color: '#ff9800',
+                      border: '1px solid rgba(255,152,0,0.5)',
+                      borderRadius: 6,
+                      padding: '7px 12px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ✏️
+                  </button>
                 </div>
               </div>
               )
@@ -1096,6 +1199,249 @@ export default function EtiquetasPage() {
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Edição */}
+        {editando && (
+          <div
+            onClick={() => setEditando(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: 20,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#1e1e1e',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 12,
+                maxWidth: 600,
+                width: '100%',
+                maxHeight: '90vh',
+                overflow: 'auto',
+              }}
+            >
+              {/* Header */}
+              <div style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+              }}>
+                <h2 style={{ margin: 0, color: '#e8eaed', fontSize: 20, fontWeight: 700 }}>
+                  ✏️ Editar Romaneio {editando.numero}
+                </h2>
+                <p style={{ margin: '8px 0 0 0', color: '#9aa0a6', fontSize: 13 }}>
+                  Ao salvar, o status voltará para PRONTO e cotações serão limpas
+                </p>
+              </div>
+
+              {/* Formulário */}
+              <div style={{ padding: 24 }}>
+                <div style={{ marginBottom: 24 }}>
+                  <h3 style={{ margin: '0 0 12px 0', color: '#e8eaed', fontSize: 16 }}>
+                    📦 Dimensões da Embalagem
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', color: '#9aa0a6', fontSize: 13, marginBottom: 6 }}>
+                        Altura (cm)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formEdicao.altura}
+                        onChange={(e) => setFormEdicao(p => ({ ...p, altura: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 6,
+                          padding: '10px 12px',
+                          color: '#e8eaed',
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: '#9aa0a6', fontSize: 13, marginBottom: 6 }}>
+                        Largura (cm)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formEdicao.largura}
+                        onChange={(e) => setFormEdicao(p => ({ ...p, largura: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 6,
+                          padding: '10px 12px',
+                          color: '#e8eaed',
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: '#9aa0a6', fontSize: 13, marginBottom: 6 }}>
+                        Comprimento (cm)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formEdicao.comprimento}
+                        onChange={(e) => setFormEdicao(p => ({ ...p, comprimento: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 6,
+                          padding: '10px 12px',
+                          color: '#e8eaed',
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', color: '#9aa0a6', fontSize: 13, marginBottom: 6 }}>
+                        Peso (kg)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={formEdicao.peso}
+                        onChange={(e) => setFormEdicao(p => ({ ...p, peso: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 6,
+                          padding: '10px 12px',
+                          color: '#e8eaed',
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 style={{ margin: '0 0 12px 0', color: '#e8eaed', fontSize: 16 }}>
+                    📋 Dados do Produto
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', color: '#9aa0a6', fontSize: 13, marginBottom: 6 }}>
+                        Declaração (Nota Fiscal)
+                      </label>
+                      <input
+                        type="text"
+                        value={formEdicao.produto_declaracao}
+                        onChange={(e) => setFormEdicao(p => ({ ...p, produto_declaracao: e.target.value }))}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          borderRadius: 6,
+                          padding: '10px 12px',
+                          color: '#e8eaed',
+                          fontSize: 14,
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label style={{ display: 'block', color: '#9aa0a6', fontSize: 13, marginBottom: 6 }}>
+                          Quantidade
+                        </label>
+                        <input
+                          type="number"
+                          value={formEdicao.produto_quantidade}
+                          onChange={(e) => setFormEdicao(p => ({ ...p, produto_quantidade: e.target.value }))}
+                          style={{
+                            width: '100%',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 6,
+                            padding: '10px 12px',
+                            color: '#e8eaed',
+                            fontSize: 14,
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', color: '#9aa0a6', fontSize: 13, marginBottom: 6 }}>
+                          Valor Declarado (R$)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={formEdicao.produto_valor_declarado}
+                          onChange={(e) => setFormEdicao(p => ({ ...p, produto_valor_declarado: e.target.value }))}
+                          style={{
+                            width: '100%',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 6,
+                            padding: '10px 12px',
+                            color: '#e8eaed',
+                            fontSize: 14,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{
+                padding: '16px 24px',
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                gap: 12,
+                justifyContent: 'flex-end',
+              }}>
+                <button
+                  onClick={() => setEditando(null)}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    color: '#9aa0a6',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 8,
+                    padding: '12px 24px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSalvarEdicao}
+                  style={{
+                    background: '#ff9800',
+                    color: '#0f0f0f',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '12px 24px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✓ Salvar e Voltar para PRONTO
+                </button>
               </div>
             </div>
           </div>

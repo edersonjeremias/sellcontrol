@@ -23,7 +23,11 @@
       "Bash(psql \"postgresql://postgres.gtssdpkalojzjmmtvdw:Ederson31893944824*@aws-0-sa-east-1.pooler.supabase.com:6543/postgres\" -c \"SELECT melhor_envio_api_url, transportadoras_habilitadas FROM configuracoes WHERE tenant_id = 'vmkids';\")",
       "Bash(node C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\verificar-api.js)",
       "PowerShell(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\verificar-api.js\")",
-      "PowerShell(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\check-api.js\")"
+      "PowerShell(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\check-api.js\")",
+      "Bash(cat > *)"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }
