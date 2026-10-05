@@ -326,7 +326,7 @@ export default function EtiquetasPage() {
             {/* Header da Tabela */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '140px 1fr 180px 280px',
+              gridTemplateColumns: '130px 1fr 140px 140px 160px 280px',
               gap: 16,
               padding: '14px 20px',
               background: 'rgba(255,255,255,0.05)',
@@ -339,43 +339,60 @@ export default function EtiquetasPage() {
             }}>
               <div>Romaneio</div>
               <div>Cliente</div>
+              <div>Data Pago</div>
+              <div>Data Despacho</div>
               <div>Status</div>
               <div>Ações</div>
             </div>
 
             {/* Linhas da Tabela */}
-            {romaneiosFiltrados.map(rom => (
-              <div
-                key={rom.id}
-                onClick={() => setModalAberto(rom)}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '140px 1fr 180px 280px',
-                  gap: 16,
-                  padding: '16px 20px',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <div>
-                  <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 15 }}>
-                    {rom.numero}
-                  </div>
-                  {rom.codigo_rastreio && (
-                    <div style={{ color: '#2196f3', fontSize: 10, marginTop: 2 }}>
-                      {rom.codigo_rastreio}
+            {romaneiosFiltrados.map(rom => {
+              const formatarData = (data) => {
+                if (!data) return '-'
+                const d = new Date(data)
+                return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+              }
+
+              return (
+                <div
+                  key={rom.id}
+                  onClick={() => setModalAberto(rom)}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '130px 1fr 140px 140px 160px 280px',
+                    gap: 16,
+                    padding: '16px 20px',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div>
+                    <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 15 }}>
+                      {rom.numero}
                     </div>
-                  )}
-                </div>
+                    {rom.codigo_rastreio && (
+                      <div style={{ color: '#2196f3', fontSize: 10, marginTop: 2 }}>
+                        {rom.codigo_rastreio}
+                      </div>
+                    )}
+                  </div>
 
-                <div style={{ color: '#e8eaed', fontSize: 14 }}>
-                  @{rom.cliente_instagram}
-                </div>
+                  <div style={{ color: '#e8eaed', fontSize: 14 }}>
+                    @{rom.cliente_instagram}
+                  </div>
 
-                <div>
+                  <div style={{ color: '#9aa0a6', fontSize: 13 }}>
+                    {formatarData(rom.frete_pago_em)}
+                  </div>
+
+                  <div style={{ color: '#9aa0a6', fontSize: 13 }}>
+                    {formatarData(rom.despachado_em)}
+                  </div>
+
+                  <div>
                   <div style={{
                     display: 'inline-block',
                     background: rom.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
@@ -463,7 +480,8 @@ export default function EtiquetasPage() {
                   )}
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
