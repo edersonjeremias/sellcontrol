@@ -201,6 +201,47 @@ export default function EtiquetasPage() {
     }
   }
 
+  const handleMarcarComoPago = async (romaneio) => {
+    const motivo = prompt(
+      `Marcar frete do romaneio ${romaneio.numero} como PAGO?\n\n` +
+      'Informe o motivo (opcional):\n' +
+      '- Crédito do cliente\n' +
+      '- Cortesia\n' +
+      '- Pagamento externo\n' +
+      '- Outro motivo'
+    )
+
+    if (motivo === null) return // Cancelou
+
+    try {
+      await supabase
+        .from('romaneios')
+        .update({
+          status: 'frete_pago',
+          frete_pago_em: new Date().toISOString(),
+        })
+        .eq('id', romaneio.id)
+
+      // Opcional: registrar em pagamentos_frete como "manual"
+      await supabase
+        .from('pagamentos_frete')
+        .insert({
+          romaneio_id: romaneio.id,
+          valor: romaneio.valor_frete || 0,
+          metodo: 'manual',
+          status: 'aprovado',
+          pago_em: new Date().toISOString(),
+          observacao: motivo || 'Marcado manualmente como pago',
+          tenant_id: tenantId,
+        })
+
+      alert('Frete marcado como pago com sucesso!')
+      carregar()
+    } catch (err) {
+      alert(`Erro: ${err.message}`)
+    }
+  }
+
   if (loading) {
     return (
       <AppShell page="Etiquetas">
@@ -750,6 +791,29 @@ export default function EtiquetasPage() {
                         </button>
                       )}
                     </>
+                  )}
+
+                  {/* Botão Marcar como Pago - aparece apenas quando NÃO está pago */}
+                  {!['frete_pago', 'etiqueta_gerada', 'despachado'].includes(modalAberto.status) && (
+                    <button
+                      onClick={() => {
+                        handleMarcarComoPago(modalAberto)
+                        setModalAberto(null)
+                      }}
+                      style={{
+                        flex: 1,
+                        minWidth: 150,
+                        background: 'rgba(255,193,7,0.2)',
+                        color: '#ffc107',
+                        border: '1px solid rgba(255,193,7,0.5)',
+                        borderRadius: 8,
+                        padding: '14px 20px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      💰 Marcar como Pago
+                    </button>
                   )}
                 </div>
               </div>
