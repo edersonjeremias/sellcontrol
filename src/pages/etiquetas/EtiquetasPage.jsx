@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import AppShell from '../../components/ui/AppShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { gerarEtiqueta, imprimirEtiqueta } from '../../services/melhorEnvioService'
+import { gerarEtiqueta, imprimirEtiqueta, calcularFrete } from '../../services/melhorEnvioService'
 
 export default function EtiquetasPage() {
   const { profile } = useAuth()
@@ -13,6 +13,11 @@ export default function EtiquetasPage() {
   const [loading, setLoading] = useState(true)
   const [gerando, setGerando] = useState(null)
   const [modalAberto, setModalAberto] = useState(null)
+
+  // Estados para cotação
+  const [cotando, setCotando] = useState(false)
+  const [cotacoes, setCotacoes] = useState([])
+  const [cotacaoSelecionada, setCotacaoSelecionada] = useState(null)
 
   // Filtros
   const [busca, setBusca] = useState('')
@@ -247,6 +252,99 @@ export default function EtiquetasPage() {
       carregar()
     } catch (err) {
       alert(`Erro: ${err.message}`)
+    }
+  }
+
+  const handleCotarFrete = async (romaneio) => {
+    if (!romaneio.enderecos_clientes) {
+      alert('Este romaneio não possui endereço de entrega')
+      return
+    }
+
+    setCotando(true)
+    setCotacoes([])
+    setCotacaoSelecionada(null)
+
+    try {
+      // Buscar configurações da empresa
+      const { data: config } = await supabase
+        .from('configuracoes')
+        .select('endereco_cep, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado')
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (!config?.endereco_cep) {
+        alert('Configure o endereço da empresa primeiro em Configurações')
+        setCotando(false)
+        return
+      }
+
+      // Preparar dados para cotação
+      const enderecoOrigem = {
+        postal_code: config.endereco_cep.replace(/\D/g, ''),
+      }
+
+      const enderecoDestino = {
+        postal_code: romaneio.enderecos_clientes.cep.replace(/\D/g, ''),
+      }
+
+      const pacote = {
+        height: romaneio.altura || 10,
+        width: romaneio.largura || 20,
+        length: romaneio.comprimento || 30,
+        weight: romaneio.peso || 0.3,
+      }
+
+      console.log('📦 Cotando frete...', { enderecoOrigem, enderecoDestino, pacote })
+
+      const resultado = await calcularFrete(tenantId, {
+        from: enderecoOrigem,
+        to: enderecoDestino,
+        package: pacote,
+      })
+
+      console.log('✅ Cotações recebidas:', resultado)
+      setCotacoes(resultado)
+    } catch (err) {
+      console.error('❌ Erro ao cotar:', err)
+      alert(`Erro ao cotar frete: ${err.message}`)
+    } finally {
+      setCotando(false)
+    }
+  }
+
+  const handleConfirmarCotacao = async (romaneio) => {
+    if (!cotacaoSelecionada) {
+      alert('Selecione uma transportadora')
+      return
+    }
+
+    try {
+      const cotacao = cotacoes.find(c => c.id === cotacaoSelecionada)
+      const valorBase = Number(cotacao.price || cotacao.custom_price || cotacao.valor_original || 0)
+
+      // Atualizar romaneio com os dados da cotação
+      await supabase
+        .from('romaneios')
+        .update({
+          transportadora: cotacao.company?.name || cotacao.name,
+          servico: cotacao.name,
+          valor_frete: valorBase,
+          prazo_entrega: cotacao.delivery_time || cotacao.delivery_range?.max || 0,
+          status: 'frete_cotado',
+          melhor_envio_cotacao_id: cotacao.id,
+        })
+        .eq('id', romaneio.id)
+
+      // Limpar estados de cotação
+      setCotacoes([])
+      setCotacaoSelecionada(null)
+
+      alert('Cotação confirmada com sucesso!')
+      carregar()
+      setModalAberto(null)
+    } catch (err) {
+      alert(`Erro ao confirmar cotação: ${err.message}`)
     }
   }
 
@@ -733,7 +831,7 @@ export default function EtiquetasPage() {
                   </div>
                 )}
 
-                {/* Aviso: Frete não cotado */}
+                {/* Cotação de Frete */}
                 {['pronto', 'frete_cotado'].includes(modalAberto.status) && !modalAberto.transportadora && (
                   <div style={{
                     padding: 16,
@@ -745,26 +843,121 @@ export default function EtiquetasPage() {
                     <div style={{ color: '#ffc107', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
                       ⚠️ Frete ainda não cotado
                     </div>
-                    <div style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 12 }}>
-                      Para marcar como pago, primeiro é necessário cotar o frete e escolher a transportadora.
-                    </div>
-                    <button
-                      onClick={() => {
-                        window.open('/expedicao', '_blank')
-                      }}
-                      style={{
-                        background: 'rgba(255,193,7,0.2)',
-                        color: '#ffc107',
-                        border: '1px solid rgba(255,193,7,0.5)',
-                        borderRadius: 8,
-                        padding: '10px 16px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        fontSize: 14,
-                      }}
-                    >
-                      📦 Ir para Expedição
-                    </button>
+
+                    {cotacoes.length === 0 ? (
+                      <>
+                        <div style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 12 }}>
+                          Clique no botão abaixo para cotar as opções de frete disponíveis.
+                        </div>
+                        <button
+                          onClick={() => handleCotarFrete(modalAberto)}
+                          disabled={cotando}
+                          style={{
+                            background: 'var(--p-blue)',
+                            color: '#0f0f0f',
+                            border: 'none',
+                            borderRadius: 8,
+                            padding: '10px 16px',
+                            fontWeight: 700,
+                            cursor: cotando ? 'wait' : 'pointer',
+                            fontSize: 14,
+                            opacity: cotando ? 0.6 : 1,
+                          }}
+                        >
+                          {cotando ? '⏳ Cotando...' : '📦 Cotar Frete'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 12 }}>
+                          Selecione a transportadora desejada:
+                        </div>
+
+                        <div style={{ marginBottom: 12, maxHeight: 300, overflow: 'auto' }}>
+                          {cotacoes.map((cot) => {
+                            const valorBase = Number(cot.price || cot.custom_price || cot.valor_original || 0)
+                            const prazo = cot.delivery_time || cot.delivery_range?.max || 0
+                            const nomeTransp = cot.company?.name || cot.name || 'Transportadora'
+                            const nomeServico = cot.name || 'Serviço'
+
+                            return (
+                              <label
+                                key={cot.id}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  padding: 12,
+                                  marginBottom: 8,
+                                  background: cotacaoSelecionada === cot.id ? 'rgba(var(--p-blue-rgb), 0.2)' : 'rgba(255,255,255,0.03)',
+                                  border: `1px solid ${cotacaoSelecionada === cot.id ? 'var(--p-blue)' : 'rgba(255,255,255,0.1)'}`,
+                                  borderRadius: 8,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <input
+                                  type="radio"
+                                  name="cotacao"
+                                  value={cot.id}
+                                  checked={cotacaoSelecionada === cot.id}
+                                  onChange={() => setCotacaoSelecionada(cot.id)}
+                                  style={{ marginRight: 12 }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
+                                    {nomeTransp} - {nomeServico}
+                                  </div>
+                                  <div style={{ color: '#9aa0a6', fontSize: 12, marginTop: 2 }}>
+                                    {prazo} dia(s) úteis
+                                  </div>
+                                </div>
+                                <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 16 }}>
+                                  R$ {valorBase.toFixed(2)}
+                                </div>
+                              </label>
+                            )
+                          })}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => {
+                              setCotacoes([])
+                              setCotacaoSelecionada(null)
+                            }}
+                            style={{
+                              flex: 1,
+                              background: 'rgba(255,255,255,0.1)',
+                              color: '#e8eaed',
+                              border: '1px solid rgba(255,255,255,0.2)',
+                              borderRadius: 8,
+                              padding: '10px 16px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              fontSize: 14,
+                            }}
+                          >
+                            Voltar
+                          </button>
+                          <button
+                            onClick={() => handleConfirmarCotacao(modalAberto)}
+                            disabled={!cotacaoSelecionada}
+                            style={{
+                              flex: 2,
+                              background: cotacaoSelecionada ? 'var(--p-blue)' : 'rgba(255,255,255,0.1)',
+                              color: cotacaoSelecionada ? '#0f0f0f' : '#666',
+                              border: 'none',
+                              borderRadius: 8,
+                              padding: '10px 16px',
+                              fontWeight: 700,
+                              cursor: cotacaoSelecionada ? 'pointer' : 'not-allowed',
+                              fontSize: 14,
+                            }}
+                          >
+                            ✓ Confirmar Cotação
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
