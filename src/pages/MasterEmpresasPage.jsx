@@ -44,6 +44,9 @@ function TabBtn({ label, active, onClick }) {
 // ── Form inicial vazio ──────────────────────────────────────────
 const EMPTY = {
   nome_loja: '', cnpj: '', whatsapp: '', email_contato: '', link_frete: '',
+  cpf_cnpj: '', telefone: '',
+  endereco_rua: '', endereco_numero: '', endereco_complemento: '',
+  endereco_bairro: '', endereco_cidade: '', endereco_estado: '', endereco_cep: '',
   adminNome: '', adminEmail: '', adminCpf: '', adminCelular: '', adminSenha: '',
 }
 
@@ -60,6 +63,7 @@ function AbaEmpresa({ showToast }) {
   const [saving, setSaving]         = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const [deleting, setDeleting]     = useState(false)
+  const [buscandoCep, setBuscandoCep] = useState(false)
   const wrapRef = useRef(null)
 
   useEffect(() => { carregarTenants() }, [])
@@ -97,6 +101,15 @@ function AbaEmpresa({ showToast }) {
         whatsapp:      cfg?.whatsapp      || '',
         email_contato: cfg?.email_contato || '',
         link_frete:    cfg?.link_frete    || '',
+        cpf_cnpj:      cfg?.cpf_cnpj      || '',
+        telefone:      cfg?.telefone      || '',
+        endereco_rua:        cfg?.endereco_rua        || '',
+        endereco_numero:     cfg?.endereco_numero     || '',
+        endereco_complemento: cfg?.endereco_complemento || '',
+        endereco_bairro:     cfg?.endereco_bairro     || '',
+        endereco_cidade:     cfg?.endereco_cidade     || '',
+        endereco_estado:     cfg?.endereco_estado     || '',
+        endereco_cep:        cfg?.endereco_cep        || '',
         adminNome:     admin?.nome        || '',
         adminEmail:    admin?.email       || '',
         adminCpf:      '',
@@ -120,6 +133,35 @@ function AbaEmpresa({ showToast }) {
   }
 
   const ch = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
+
+  // ── Buscar endereço por CEP ──
+  async function buscarCep(cep) {
+    const cepLimpo = cep.replace(/\D/g, '')
+    if (cepLimpo.length !== 8) return
+
+    setBuscandoCep(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+      const data = await res.json()
+
+      if (data.erro) {
+        showToast('CEP não encontrado', 'error')
+        return
+      }
+
+      setForm(p => ({
+        ...p,
+        endereco_rua: data.logradouro || p.endereco_rua,
+        endereco_bairro: data.bairro || p.endereco_bairro,
+        endereco_cidade: data.localidade || p.endereco_cidade,
+        endereco_estado: data.uf || p.endereco_estado,
+      }))
+    } catch (err) {
+      console.error('Erro ao buscar CEP:', err)
+    } finally {
+      setBuscandoCep(false)
+    }
+  }
 
   const filtrados = tenants.filter(t =>
     !busca || (t.nome_loja || '').toLowerCase().includes(busca.toLowerCase())
@@ -153,6 +195,15 @@ function AbaEmpresa({ showToast }) {
           whatsapp:      form.whatsapp.trim(),
           email_contato: form.email_contato.trim(),
           link_frete:    form.link_frete.trim(),
+          cpf_cnpj:      form.cpf_cnpj.trim(),
+          telefone:      form.telefone.trim(),
+          endereco_rua:        form.endereco_rua.trim(),
+          endereco_numero:     form.endereco_numero.trim(),
+          endereco_complemento: form.endereco_complemento.trim(),
+          endereco_bairro:     form.endereco_bairro.trim(),
+          endereco_cidade:     form.endereco_cidade.trim(),
+          endereco_estado:     form.endereco_estado.trim(),
+          endereco_cep:        form.endereco_cep.trim(),
         })
         if (adminId) {
           await updateTenantAdmin(adminId, {
@@ -276,6 +327,17 @@ function AbaEmpresa({ showToast }) {
 
             {modo === 'editar' && (
               <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div>
+                    <label style={LBL}>CPF/CNPJ</label>
+                    <input name="cpf_cnpj" value={form.cpf_cnpj} onChange={ch} placeholder="000.000.000-00 ou 00.000.000/0001-00" autoComplete="off" style={SI} />
+                  </div>
+                  <div>
+                    <label style={LBL}>Telefone</label>
+                    <input name="telefone" value={form.telefone} onChange={ch} placeholder="(00) 0000-0000" autoComplete="off" style={SI} />
+                  </div>
+                </div>
+
                 <label style={LBL}>WhatsApp</label>
                 <input name="whatsapp" value={form.whatsapp} onChange={ch} placeholder="(00) 90000-0000" autoComplete="off" style={SI} />
 
@@ -284,6 +346,58 @@ function AbaEmpresa({ showToast }) {
 
                 <label style={LBL}>Link do frete</label>
                 <input name="link_frete" value={form.link_frete} onChange={ch} placeholder="https://…" autoComplete="off" style={SI} />
+
+                <div style={SECTION_TITLE}>Endereço da Empresa (Para Etiquetas de Envio)</div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0 16px' }}>
+                  <div>
+                    <label style={LBL}>CEP *</label>
+                    <input
+                      name="endereco_cep"
+                      value={form.endereco_cep}
+                      onChange={e => {
+                        ch(e)
+                        const cep = e.target.value.replace(/\D/g, '')
+                        if (cep.length === 8) buscarCep(cep)
+                      }}
+                      placeholder="00000-000"
+                      autoComplete="off"
+                      style={SI}
+                      disabled={buscandoCep}
+                    />
+                    {buscandoCep && <div style={{ fontSize: 11, color: 'var(--blue)', marginTop: 4 }}>Buscando...</div>}
+                  </div>
+                  <div>
+                    <label style={LBL}>Rua</label>
+                    <input name="endereco_rua" value={form.endereco_rua} onChange={ch} placeholder="Rua Exemplo" autoComplete="off" style={SI} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0 16px' }}>
+                  <div>
+                    <label style={LBL}>Número</label>
+                    <input name="endereco_numero" value={form.endereco_numero} onChange={ch} placeholder="123" autoComplete="off" style={SI} />
+                  </div>
+                  <div>
+                    <label style={LBL}>Complemento</label>
+                    <input name="endereco_complemento" value={form.endereco_complemento} onChange={ch} placeholder="Sala 1, Andar 2, etc" autoComplete="off" style={SI} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: '0 16px' }}>
+                  <div>
+                    <label style={LBL}>Bairro</label>
+                    <input name="endereco_bairro" value={form.endereco_bairro} onChange={ch} placeholder="Centro" autoComplete="off" style={SI} />
+                  </div>
+                  <div>
+                    <label style={LBL}>Cidade</label>
+                    <input name="endereco_cidade" value={form.endereco_cidade} onChange={ch} placeholder="São Paulo" autoComplete="off" style={SI} />
+                  </div>
+                  <div>
+                    <label style={LBL}>Estado</label>
+                    <input name="endereco_estado" value={form.endereco_estado} onChange={ch} placeholder="SP" autoComplete="off" maxLength={2} style={SI} />
+                  </div>
+                </div>
               </>
             )}
 

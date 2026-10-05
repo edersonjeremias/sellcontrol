@@ -200,7 +200,12 @@ export default function PedidosPage() {
 
   // Modal dimensões para gerar romaneio
   const [showDimensoesModal, setShowDimensoesModal] = useState(false)
-  const [dimensoes, setDimensoes] = useState({ peso: '', altura: '', largura: '', comprimento: '' })
+  const [dimensoes, setDimensoes] = useState({
+    peso: '', altura: '', largura: '', comprimento: '',
+    produto_declaracao: localStorage.getItem('ultima_declaracao') || 'LOTE DE ROUPAS USADAS',
+    produto_quantidade: '1',
+    produto_valor_declarado: ''
+  })
   const [modoEdicao, setModoEdicao] = useState(false)
 
   // Detecta mudança de tamanho de tela
@@ -351,10 +356,21 @@ export default function PedidosPage() {
   const handleConfirmarGerar = useCallback(async () => {
     if (!tenantId) return
 
+    // Validação do valor declarado
+    if (!dimensoes.produto_valor_declarado || dimensoes.produto_valor_declarado.trim() === '') {
+      setErr('Preencha o valor declarado do produto')
+      return
+    }
+
     setShowDimensoesModal(false)
     setLoading(true)
 
     try {
+      // Salva a última declaração no localStorage
+      if (dimensoes.produto_declaracao) {
+        localStorage.setItem('ultima_declaracao', dimensoes.produto_declaracao)
+      }
+
       if (modoEdicao) {
         if (!romAddVal) {
           setErr('Digite o número do romaneio para editar')
@@ -893,6 +909,53 @@ export default function PedidosPage() {
                       placeholder="10"
                       style={{ ...SI, width: '100%' }}
                     />
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 12, marginTop: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)', marginBottom: 8 }}>
+                    📋 Declaração para Envio
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                      Descrição do produto
+                    </label>
+                    <input
+                      type="text"
+                      value={dimensoes.produto_declaracao}
+                      onChange={e => setDimensoes(p => ({ ...p, produto_declaracao: e.target.value }))}
+                      placeholder="Ex: LOTE DE ROUPAS USADAS"
+                      style={{ ...SI, width: '100%' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 8, marginTop: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                        Quantidade
+                      </label>
+                      <input
+                        type="number"
+                        value={dimensoes.produto_quantidade}
+                        onChange={e => setDimensoes(p => ({ ...p, produto_quantidade: e.target.value }))}
+                        placeholder="1"
+                        style={{ ...SI, width: '100%' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                        Valor declarado (R$) *
+                      </label>
+                      <input
+                        type="text"
+                        value={dimensoes.produto_valor_declarado}
+                        onChange={e => setDimensoes(p => ({ ...p, produto_valor_declarado: e.target.value }))}
+                        placeholder="Ex: 50.00"
+                        style={{ ...SI, width: '100%' }}
+                      />
+                    </div>
                   </div>
                 </div>
 

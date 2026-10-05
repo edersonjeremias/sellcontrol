@@ -684,7 +684,11 @@ export default function MeuFrete() {
             </div>
 
             <button
-              onClick={() => { setRomaneioSelecionado(null); setCotacoes([]) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                setRomaneioSelecionado(null)
+                setCotacoes([])
+              }}
               style={{
                 width: '100%',
                 background: 'rgba(255,255,255,0.05)',

@@ -23,6 +23,7 @@ export default function MeusEnderecos() {
     apelido: '',
     destinatario: '',
     telefone: '',
+    cpf: '',
     cep: '',
     rua: '',
     numero: '',
@@ -113,6 +114,7 @@ export default function MeusEnderecos() {
       apelido: '',
       destinatario: cliente?.nome || '',
       telefone: cliente?.whatsapp || '',
+      cpf: '',
       cep: '',
       rua: '',
       numero: '',
@@ -139,6 +141,7 @@ export default function MeusEnderecos() {
     const novosErros = {}
     if (!form.destinatario?.trim()) novosErros.destinatario = true
     if (!form.telefone?.trim()) novosErros.telefone = true
+    if (!form.cpf?.trim()) novosErros.cpf = true
     if (!form.cep?.trim()) novosErros.cep = true
     if (!form.rua?.trim()) novosErros.rua = true
     if (!form.numero?.trim()) novosErros.numero = true
@@ -514,6 +517,35 @@ export default function MeusEnderecos() {
                     width: '100%',
                     background: 'rgba(255,255,255,0.05)',
                     border: erros.telefone ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 8,
+                    padding: '10px',
+                    color: '#e8eaed',
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
+                  CPF * {erros.cpf && <span style={{ color: 'var(--p-red)' }}>(obrigatório)</span>}
+                </label>
+                <input
+                  type="text"
+                  value={form.cpf}
+                  onChange={e => {
+                    const cleaned = e.target.value.replace(/\D/g, '')
+                    const masked = cleaned.length <= 11
+                      ? cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+                      : cleaned.substring(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+                    setForm(p => ({ ...p, cpf: masked }))
+                    if (erros.cpf) setErros(e => ({ ...e, cpf: false }))
+                  }}
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  style={{
+                    width: '100%',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: erros.cpf ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '10px',
                     color: '#e8eaed',

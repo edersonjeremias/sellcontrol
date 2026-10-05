@@ -100,10 +100,24 @@ serve(async (req) => {
     console.log('✅ Romaneio encontrado:', romaneio.numero)
     console.log('📋 Cotação:', cotacao.transportadora, cotacao.servico)
 
-    // Busca token do Melhor Envio
+    // Busca token do Melhor Envio e dados da empresa
     const { data: config } = await supabase
       .from('configuracoes')
-      .select('token_melhor_envio, melhor_envio_api_url')
+      .select(`
+        token_melhor_envio,
+        melhor_envio_api_url,
+        nome_loja,
+        cpf_cnpj,
+        telefone,
+        email_contato,
+        endereco_rua,
+        endereco_numero,
+        endereco_complemento,
+        endereco_bairro,
+        endereco_cidade,
+        endereco_estado,
+        endereco_cep
+      `)
       .eq('tenant_id', romaneio.tenant_id)
       .single()
 
@@ -111,6 +125,13 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Token do Melhor Envio não configurado' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!config?.endereco_cep || !config?.endereco_rua) {
+      return new Response(
+        JSON.stringify({ error: 'Endereço da empresa não está cadastrado. Configure em Master → Empresas.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -123,18 +144,18 @@ serve(async (req) => {
     const orderPayload = {
       service: serviceData.id,
       from: {
-        name: 'VM Kids Second Hand',
-        phone: '16999999999',
-        email: 'contato@vmkids.com.br',
-        document: '00546699952',
-        address: 'Rua Antonio Bueno de Camargo',
-        number: '295',
-        complement: '',
-        district: 'Centro',
-        city: 'São Carlos',
-        state_abbr: 'SP',
+        name: config.nome_loja || 'Loja',
+        phone: (config.telefone || config.whatsapp || '0000000000').replace(/\D/g, ''),
+        email: config.email_contato || 'contato@empresa.com',
+        document: (config.cpf_cnpj || '00000000000').replace(/\D/g, ''),
+        address: config.endereco_rua,
+        number: config.endereco_numero || 's/n',
+        complement: config.endereco_complemento || '',
+        district: config.endereco_bairro,
+        city: config.endereco_cidade,
+        state_abbr: config.endereco_estado,
         country_id: 'BR',
-        postal_code: '13560340',
+        postal_code: config.endereco_cep.replace(/\D/g, ''),
       },
       to: {
         name: endereco.destinatario,
@@ -151,9 +172,9 @@ serve(async (req) => {
         postal_code: endereco.cep.replace(/\D/g, ''),
       },
       products: [{
-        name: `Romaneio ${romaneio.numero}`,
-        quantity: 1,
-        unitary_value: 50.00,
+        name: romaneio.produto_declaracao || `Romaneio ${romaneio.numero}`,
+        quantity: romaneio.produto_quantidade || 1,
+        unitary_value: romaneio.produto_valor_declarado || 50.00,
       }],
       volumes: [{
         height: romaneio.altura || 10,
@@ -162,7 +183,7 @@ serve(async (req) => {
         weight: romaneio.peso || 1,
       }],
       options: {
-        insurance_value: 0,
+        insurance_value: romaneio.produto_valor_declarado || 1.00,
         receipt: false,
         own_hand: false,
         collect: false,

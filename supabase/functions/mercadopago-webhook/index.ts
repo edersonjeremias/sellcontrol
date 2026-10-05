@@ -73,50 +73,91 @@ serve(async (req) => {
       return new Response(JSON.stringify({ received: true }), { status: 200, headers: CORS })
     }
 
-    if (paymentData.status === 'approved' && paymentData.external_reference) {
-      const extRef = paymentData.external_reference
-      const valorLiquido = paymentData.transaction_details?.net_received_amount ?? 0
+    if (paymentData.status === 'approved') {
       const dataPagamento = paymentData.date_approved
         ? new Date(paymentData.date_approved).toISOString()
         : new Date().toISOString()
 
-      // Detecta pagamento dividido: external_reference termina em -P1 ou -P2
-      const splitMatch = String(extRef).match(/^(.+)-(P[12])$/)
+      // 1️⃣ PROCESSAR COBRANÇA (se tiver external_reference)
+      if (paymentData.external_reference) {
+        const extRef = paymentData.external_reference
+        const valorLiquido = paymentData.transaction_details?.net_received_amount ?? 0
 
-      if (splitMatch) {
-        const cobrancaId = splitMatch[1]
-        const parte = splitMatch[2]
+        // Detecta pagamento dividido: external_reference termina em -P1 ou -P2
+        const splitMatch = String(extRef).match(/^(.+)-(P[12])$/)
 
-        console.log(`Split payment detectado: ${parte} da cobrança ${cobrancaId}`)
+        if (splitMatch) {
+          const cobrancaId = splitMatch[1]
+          const parte = splitMatch[2]
 
-        const { error: rpcErr } = await supabase.rpc('process_split_payment', {
-          p_cobranca_id:    cobrancaId,
-          p_parte:          parte,
-          p_payment_id:     String(paymentId),
-          p_valor_liquido:  valorLiquido,
-          p_data_pagamento: dataPagamento,
-        })
+          console.log(`Split payment detectado: ${parte} da cobrança ${cobrancaId}`)
 
-        if (rpcErr) console.error('Erro RPC split payment:', rpcErr)
-        else console.log(`Split ${parte} da cobrança ${cobrancaId} processado`)
-
-      } else {
-        // Pagamento normal
-        const cobrancaId = extRef
-
-        const { error } = await supabase
-          .from('cobrancas')
-          .update({
-            status: 'PAGO',
-            data_pagamento: dataPagamento,
-            id_mp: String(paymentId),
-            valor_liquido: valorLiquido,
+          const { error: rpcErr } = await supabase.rpc('process_split_payment', {
+            p_cobranca_id:    cobrancaId,
+            p_parte:          parte,
+            p_payment_id:     String(paymentId),
+            p_valor_liquido:  valorLiquido,
+            p_data_pagamento: dataPagamento,
           })
-          .eq('id', cobrancaId)
-          .neq('status', 'PAGO')
 
-        if (error) console.error('Erro ao atualizar banco:', error)
-        else console.log(`Pagamento ${paymentId} aprovado — cobrança ${cobrancaId} marcada como PAGA`)
+          if (rpcErr) console.error('Erro RPC split payment:', rpcErr)
+          else console.log(`Split ${parte} da cobrança ${cobrancaId} processado`)
+
+        } else {
+          // Pagamento normal de cobrança
+          const cobrancaId = extRef
+
+          const { error } = await supabase
+            .from('cobrancas')
+            .update({
+              status: 'PAGO',
+              data_pagamento: dataPagamento,
+              id_mp: String(paymentId),
+              valor_liquido: valorLiquido,
+            })
+            .eq('id', cobrancaId)
+            .neq('status', 'PAGO')
+
+          if (error) console.error('Erro ao atualizar banco:', error)
+          else console.log(`Pagamento ${paymentId} aprovado — cobrança ${cobrancaId} marcada como PAGA`)
+        }
+      }
+      // 2️⃣ PROCESSAR FRETE (se não tiver external_reference, busca em pagamentos_frete)
+      else {
+        console.log('🚚 Tentando processar como pagamento de frete...')
+
+        const { data: pagamentoFrete, error: freteError } = await supabase
+          .from('pagamentos_frete')
+          .select('id, romaneio_id')
+          .eq('gateway_transaction_id', String(paymentId))
+          .maybeSingle()
+
+        if (pagamentoFrete) {
+          console.log('✅ Pagamento de frete encontrado:', pagamentoFrete.id)
+
+          // Atualiza status do pagamento
+          await supabase
+            .from('pagamentos_frete')
+            .update({
+              status: 'aprovado',
+              pago_em: dataPagamento,
+              gateway_response: paymentData,
+            })
+            .eq('id', pagamentoFrete.id)
+
+          // Atualiza status do romaneio
+          await supabase
+            .from('romaneios')
+            .update({
+              status: 'frete_pago',
+              frete_pago_em: dataPagamento,
+            })
+            .eq('id', pagamentoFrete.romaneio_id)
+
+          console.log('✅ Frete pago! Romaneio:', pagamentoFrete.romaneio_id)
+        } else {
+          console.log('⚠️ Pagamento não encontrado em cobrancas nem em pagamentos_frete')
+        }
       }
     }
 

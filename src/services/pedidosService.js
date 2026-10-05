@@ -215,6 +215,11 @@ export async function criarRomaneioComDimensoes(tenantId, itensSemPedido, dimens
     ? Number(String(dimensoes.peso).replace(',', '.'))
     : null
 
+  // Converte valor declarado aceitando vírgula ou ponto
+  const valorDeclaradoConvertido = dimensoes.produto_valor_declarado
+    ? Number(String(dimensoes.produto_valor_declarado).replace(',', '.'))
+    : null
+
   const { data: romaneio, error: romError } = await supabase
     .from('romaneios')
     .insert([{
@@ -225,6 +230,9 @@ export async function criarRomaneioComDimensoes(tenantId, itensSemPedido, dimens
       altura: dimensoes.altura ? Number(dimensoes.altura) : null,
       largura: dimensoes.largura ? Number(dimensoes.largura) : null,
       comprimento: dimensoes.comprimento ? Number(dimensoes.comprimento) : null,
+      produto_declaracao: dimensoes.produto_declaracao || 'LOTE DE ROUPAS USADAS',
+      produto_quantidade: dimensoes.produto_quantidade ? Number(dimensoes.produto_quantidade) : 1,
+      produto_valor_declarado: valorDeclaradoConvertido,
       status: 'pronto',
       pronto_em: new Date().toISOString(),
     }])
@@ -319,6 +327,11 @@ export async function atualizarDimensoesRomaneio(tenantId, numeroRomaneio, dimen
 
   const romaneioId = romaneios[0].id
 
+  // Converte valor declarado aceitando vírgula ou ponto
+  const valorDeclaradoConvertido = dimensoes.produto_valor_declarado
+    ? Number(String(dimensoes.produto_valor_declarado).replace(',', '.'))
+    : null
+
   // Atualiza dimensões
   const { error: updateError } = await supabase
     .from('romaneios')
@@ -327,6 +340,9 @@ export async function atualizarDimensoesRomaneio(tenantId, numeroRomaneio, dimen
       altura: dimensoes.altura ? Number(dimensoes.altura) : null,
       largura: dimensoes.largura ? Number(dimensoes.largura) : null,
       comprimento: dimensoes.comprimento ? Number(dimensoes.comprimento) : null,
+      produto_declaracao: dimensoes.produto_declaracao || 'LOTE DE ROUPAS USADAS',
+      produto_quantidade: dimensoes.produto_quantidade ? Number(dimensoes.produto_quantidade) : 1,
+      produto_valor_declarado: valorDeclaradoConvertido,
       updated_at: new Date().toISOString(),
     })
     .eq('id', romaneioId)

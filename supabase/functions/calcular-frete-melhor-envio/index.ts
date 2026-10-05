@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const { data: config, error: configError } = await supabaseClient
       .from('configuracoes')
-      .select('token_melhor_envio, melhor_envio_api_url')
+      .select('token_melhor_envio, melhor_envio_api_url, transportadoras_habilitadas')
       .eq('tenant_id', tenant_id)
       .single()
 
@@ -41,6 +41,7 @@ serve(async (req) => {
 
     const apiUrl = config.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br'
     const token = config.token_melhor_envio
+    const transportadorasHabilitadas = config.transportadoras_habilitadas || ['Correios']
 
     const melhorEnvioResponse = await fetch(`${apiUrl}/api/v2/me/shipment/calculate`, {
       method: 'POST',
@@ -62,8 +63,39 @@ serve(async (req) => {
 
     const cotacoes = await melhorEnvioResponse.json()
 
+    console.log('🔧 Transportadoras habilitadas no banco:', transportadorasHabilitadas)
+    console.log('📦 Total de cotações da API:', cotacoes.length)
+
+    // Log dos nomes das transportadoras que vieram da API
+    cotacoes.forEach((cot: any, idx: number) => {
+      console.log(`Cotação ${idx + 1}:`, {
+        company_name: cot.company?.name,
+        name: cot.name,
+        service_name: cot.service_name
+      })
+    })
+
+    // Filtra apenas as transportadoras habilitadas
+    const cotacoesFiltradas = cotacoes.filter((cotacao: any) => {
+      const nomeTransportadora = cotacao.company?.name || cotacao.name || ''
+
+      console.log(`🔍 Verificando: "${nomeTransportadora}"`)
+
+      // Verifica se a transportadora está na lista de habilitadas
+      const matched = transportadorasHabilitadas.some((habilitada: string) => {
+        const match = nomeTransportadora.toLowerCase().includes(habilitada.toLowerCase())
+        console.log(`  - "${nomeTransportadora}" includes "${habilitada}"? ${match}`)
+        return match
+      })
+
+      console.log(`  ✅ Resultado: ${matched ? 'INCLUIR' : 'FILTRAR'}`)
+      return matched
+    })
+
+    console.log('✅ Cotações filtradas:', cotacoesFiltradas.length)
+
     return new Response(
-      JSON.stringify(cotacoes),
+      JSON.stringify(cotacoesFiltradas),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {

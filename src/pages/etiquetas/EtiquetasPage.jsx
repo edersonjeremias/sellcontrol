@@ -11,6 +11,7 @@ export default function EtiquetasPage() {
   const [romaneios, setRomaneios] = useState([])
   const [loading, setLoading] = useState(true)
   const [gerando, setGerando] = useState(null)
+  const [modalAberto, setModalAberto] = useState(null)
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -204,35 +205,75 @@ export default function EtiquetasPage() {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 12,
+            overflow: 'hidden',
+          }}>
+            {/* Header da Tabela */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '140px 1fr 180px 280px',
+              gap: 16,
+              padding: '14px 20px',
+              background: 'rgba(255,255,255,0.05)',
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#9aa0a6',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}>
+              <div>Romaneio</div>
+              <div>Cliente</div>
+              <div>Status</div>
+              <div>Ações</div>
+            </div>
+
+            {/* Linhas da Tabela */}
             {romaneios.map(rom => (
               <div
                 key={rom.id}
+                onClick={() => setModalAberto(rom)}
                 style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 12,
-                  padding: 20,
+                  display: 'grid',
+                  gridTemplateColumns: '140px 1fr 180px 280px',
+                  gap: 16,
+                  padding: '16px 20px',
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 16 }}>
-                  <div>
-                    <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 18 }}>
-                      {rom.numero}
-                    </div>
-                    <div style={{ color: '#9aa0a6', fontSize: 14, marginTop: 4 }}>
-                      @{rom.cliente_instagram}
-                    </div>
+                <div>
+                  <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 15 }}>
+                    {rom.numero}
                   </div>
+                  {rom.codigo_rastreio && (
+                    <div style={{ color: '#2196f3', fontSize: 10, marginTop: 2 }}>
+                      {rom.codigo_rastreio}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ color: '#e8eaed', fontSize: 14 }}>
+                  @{rom.cliente_instagram}
+                </div>
+
+                <div>
                   <div style={{
+                    display: 'inline-block',
                     background: rom.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
                                rom.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
                                'rgba(255,193,7,0.2)',
                     color: rom.status === 'despachado' ? '#4caf50' :
                            rom.status === 'etiqueta_gerada' ? '#2196f3' : '#ffc107',
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: 700,
-                    padding: '6px 12px',
+                    padding: '5px 10px',
                     borderRadius: 6,
                     textTransform: 'uppercase',
                   }}>
@@ -241,93 +282,28 @@ export default function EtiquetasPage() {
                   </div>
                 </div>
 
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: 16,
-                  marginBottom: 16,
-                  padding: 16,
-                  background: 'rgba(255,255,255,0.02)',
-                  borderRadius: 8,
-                }}>
-                  <div>
-                    <div style={{ color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>Transportadora</div>
-                    <div style={{ color: '#e8eaed', fontWeight: 600 }}>
-                      {rom.transportadora || '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>Serviço</div>
-                    <div style={{ color: '#e8eaed', fontWeight: 600 }}>
-                      {rom.servico || '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>Valor Frete</div>
-                    <div style={{ color: '#e8eaed', fontWeight: 600 }}>
-                      {rom.valor_frete ? `R$ ${Number(rom.valor_frete).toFixed(2)}` : '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>Prazo</div>
-                    <div style={{ color: '#e8eaed', fontWeight: 600 }}>
-                      {rom.prazo_entrega ? `${rom.prazo_entrega} dia(s)` : '-'}
-                    </div>
-                  </div>
-                </div>
-
-                {rom.enderecos_clientes && (
-                  <div style={{
-                    padding: 12,
-                    background: 'rgba(255,255,255,0.02)',
-                    borderRadius: 8,
-                    marginBottom: 16,
-                  }}>
-                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>📍 Endereço de Entrega</div>
-                    <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.5 }}>
-                      {rom.enderecos_clientes.destinatario}<br />
-                      {rom.enderecos_clientes.rua}, {rom.enderecos_clientes.numero}
-                      {rom.enderecos_clientes.complemento && ` - ${rom.enderecos_clientes.complemento}`}<br />
-                      {rom.enderecos_clientes.bairro} - {rom.enderecos_clientes.cidade}/{rom.enderecos_clientes.estado}<br />
-                      CEP: {rom.enderecos_clientes.cep}
-                    </div>
-                  </div>
-                )}
-
-                {rom.codigo_rastreio && (
-                  <div style={{
-                    padding: 12,
-                    background: 'rgba(33,150,243,0.1)',
-                    border: '1px solid rgba(33,150,243,0.3)',
-                    borderRadius: 8,
-                    marginBottom: 16,
-                  }}>
-                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>🔍 Código de Rastreio</div>
-                    <div style={{ color: '#2196f3', fontSize: 14, fontWeight: 700 }}>
-                      {rom.codigo_rastreio}
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ display: 'flex', gap: 6 }}
+                >
                   {rom.status === 'frete_pago' && (
                     <button
                       onClick={() => handleGerarEtiqueta(rom)}
                       disabled={gerando === rom.id}
+                      title="Gerar Etiqueta"
                       style={{
-                        flex: 1,
-                        minWidth: 150,
                         background: 'var(--p-blue)',
                         color: '#0f0f0f',
                         border: 'none',
-                        borderRadius: 8,
-                        padding: '12px 16px',
+                        borderRadius: 6,
+                        padding: '7px 12px',
+                        fontSize: 12,
                         fontWeight: 700,
                         cursor: gerando === rom.id ? 'wait' : 'pointer',
                         opacity: gerando === rom.id ? 0.6 : 1,
                       }}
                     >
-                      {gerando === rom.id ? 'Gerando...' : '🏷️ Gerar Etiqueta'}
+                      {gerando === rom.id ? '...' : '🏷️ Gerar'}
                     </button>
                   )}
 
@@ -335,6 +311,258 @@ export default function EtiquetasPage() {
                     <>
                       <button
                         onClick={() => handleImprimirEtiqueta(rom)}
+                        title="Imprimir Etiqueta"
+                        style={{
+                          background: 'rgba(33,150,243,0.2)',
+                          color: '#2196f3',
+                          border: '1px solid rgba(33,150,243,0.5)',
+                          borderRadius: 6,
+                          padding: '7px 12px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🖨️
+                      </button>
+
+                      {rom.status === 'etiqueta_gerada' && (
+                        <button
+                          onClick={() => handleMarcarDespachado(rom)}
+                          title="Marcar como Despachado"
+                          style={{
+                            background: 'rgba(76,175,80,0.2)',
+                            color: '#4caf50',
+                            border: '1px solid rgba(76,175,80,0.5)',
+                            borderRadius: 6,
+                            padding: '7px 12px',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          ✓
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  <button
+                    onClick={() => setModalAberto(rom)}
+                    title="Ver Detalhes"
+                    style={{
+                      background: 'rgba(255,255,255,0.1)',
+                      color: '#e8eaed',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: 6,
+                      padding: '7px 12px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    👁️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Modal de Detalhes */}
+        {modalAberto && (
+          <div
+            onClick={() => setModalAberto(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: 20,
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#1e1e1e',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 16,
+                maxWidth: 600,
+                width: '100%',
+                maxHeight: '90vh',
+                overflow: 'auto',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              }}
+            >
+              {/* Header Modal */}
+              <div style={{
+                padding: 20,
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 20 }}>
+                    {modalAberto.numero}
+                  </div>
+                  <div style={{ color: '#9aa0a6', fontSize: 14, marginTop: 4 }}>
+                    @{modalAberto.cliente_instagram}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setModalAberto(null)}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#e8eaed',
+                    border: 'none',
+                    borderRadius: 8,
+                    width: 32,
+                    height: 32,
+                    cursor: 'pointer',
+                    fontSize: 18,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Conteúdo Modal */}
+              <div style={{ padding: 20 }}>
+                {/* Status */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
+                    Status
+                  </div>
+                  <div style={{
+                    display: 'inline-block',
+                    background: modalAberto.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
+                               modalAberto.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
+                               'rgba(255,193,7,0.2)',
+                    color: modalAberto.status === 'despachado' ? '#4caf50' :
+                           modalAberto.status === 'etiqueta_gerada' ? '#2196f3' : '#ffc107',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    textTransform: 'uppercase',
+                  }}>
+                    {modalAberto.status === 'despachado' ? '✓ Despachado' :
+                     modalAberto.status === 'etiqueta_gerada' ? '🏷️ Etiqueta Gerada' : '💳 Frete Pago'}
+                  </div>
+                </div>
+
+                {/* Informações de Frete */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: 16,
+                  marginBottom: 20,
+                  padding: 16,
+                  background: 'rgba(255,255,255,0.03)',
+                  borderRadius: 8,
+                }}>
+                  <div>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>Transportadora</div>
+                    <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
+                      {modalAberto.transportadora || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>Serviço</div>
+                    <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
+                      {modalAberto.servico || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>Valor Frete</div>
+                    <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
+                      {modalAberto.valor_frete ? `R$ ${Number(modalAberto.valor_frete).toFixed(2)}` : '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>Prazo</div>
+                    <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
+                      {modalAberto.prazo_entrega ? `${modalAberto.prazo_entrega} dia(s)` : '-'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Endereço */}
+                {modalAberto.enderecos_clientes && (
+                  <div style={{
+                    padding: 16,
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: 8,
+                    marginBottom: 20,
+                  }}>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
+                      📍 Endereço de Entrega
+                    </div>
+                    <div style={{ color: '#e8eaed', fontSize: 14, lineHeight: 1.6 }}>
+                      <strong>{modalAberto.enderecos_clientes.destinatario}</strong><br />
+                      {modalAberto.enderecos_clientes.rua}, {modalAberto.enderecos_clientes.numero}
+                      {modalAberto.enderecos_clientes.complemento && ` - ${modalAberto.enderecos_clientes.complemento}`}<br />
+                      {modalAberto.enderecos_clientes.bairro} - {modalAberto.enderecos_clientes.cidade}/{modalAberto.enderecos_clientes.estado}<br />
+                      CEP: {modalAberto.enderecos_clientes.cep}
+                    </div>
+                  </div>
+                )}
+
+                {/* Código de Rastreio */}
+                {modalAberto.codigo_rastreio && (
+                  <div style={{
+                    padding: 16,
+                    background: 'rgba(33,150,243,0.1)',
+                    border: '1px solid rgba(33,150,243,0.3)',
+                    borderRadius: 8,
+                    marginBottom: 20,
+                  }}>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
+                      🔍 Código de Rastreio
+                    </div>
+                    <div style={{ color: '#2196f3', fontSize: 16, fontWeight: 700, fontFamily: 'monospace' }}>
+                      {modalAberto.codigo_rastreio}
+                    </div>
+                  </div>
+                )}
+
+                {/* Botões do Modal */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {modalAberto.status === 'frete_pago' && (
+                    <button
+                      onClick={() => {
+                        handleGerarEtiqueta(modalAberto)
+                        setModalAberto(null)
+                      }}
+                      disabled={gerando === modalAberto.id}
+                      style={{
+                        flex: 1,
+                        minWidth: 150,
+                        background: 'var(--p-blue)',
+                        color: '#0f0f0f',
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '14px 20px',
+                        fontWeight: 700,
+                        cursor: gerando === modalAberto.id ? 'wait' : 'pointer',
+                        opacity: gerando === modalAberto.id ? 0.6 : 1,
+                      }}
+                    >
+                      {gerando === modalAberto.id ? 'Gerando...' : '🏷️ Gerar Etiqueta'}
+                    </button>
+                  )}
+
+                  {(modalAberto.status === 'etiqueta_gerada' || modalAberto.status === 'despachado') && (
+                    <>
+                      <button
+                        onClick={() => handleImprimirEtiqueta(modalAberto)}
                         style={{
                           flex: 1,
                           minWidth: 150,
@@ -342,7 +570,7 @@ export default function EtiquetasPage() {
                           color: '#2196f3',
                           border: '1px solid rgba(33,150,243,0.5)',
                           borderRadius: 8,
-                          padding: '12px 16px',
+                          padding: '14px 20px',
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
@@ -350,9 +578,12 @@ export default function EtiquetasPage() {
                         🖨️ Imprimir Etiqueta
                       </button>
 
-                      {rom.status === 'etiqueta_gerada' && (
+                      {modalAberto.status === 'etiqueta_gerada' && (
                         <button
-                          onClick={() => handleMarcarDespachado(rom)}
+                          onClick={() => {
+                            handleMarcarDespachado(modalAberto)
+                            setModalAberto(null)
+                          }}
                           style={{
                             flex: 1,
                             minWidth: 150,
@@ -360,7 +591,7 @@ export default function EtiquetasPage() {
                             color: '#4caf50',
                             border: '1px solid rgba(76,175,80,0.5)',
                             borderRadius: 8,
-                            padding: '12px 16px',
+                            padding: '14px 20px',
                             fontWeight: 700,
                             cursor: 'pointer',
                           }}
@@ -372,7 +603,7 @@ export default function EtiquetasPage() {
                   )}
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         )}
       </div>
