@@ -18,6 +18,7 @@ export default function MeuFrete() {
   const [enderecoSelecionado, setEnderecoSelecionado] = useState(null)
   const [pagamentoPIX, setPagamentoPIX] = useState(null)
   const [showPIX, setShowPIX] = useState(false)
+  const [margemFrete, setMargemFrete] = useState(15)
 
   const carregar = useCallback(async () => {
     if (!tenantId || !cliente?.instagram) return
@@ -74,7 +75,27 @@ export default function MeuFrete() {
     }
   }, [tenantId, cliente, showToast])
 
-  useEffect(() => { carregar() }, [carregar])
+  const carregarMargem = useCallback(async () => {
+    if (!tenantId) return
+    try {
+      const { data, error } = await supabase
+        .from('configuracoes')
+        .select('margem_frete')
+        .eq('tenant_id', tenantId)
+        .single()
+
+      if (!error && data) {
+        setMargemFrete(data.margem_frete || 15)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar margem:', err)
+    }
+  }, [tenantId])
+
+  useEffect(() => {
+    carregar()
+    carregarMargem()
+  }, [carregar, carregarMargem])
 
   const handleCotarFrete = async (romaneio) => {
     console.log('🚚 Iniciando cotação de frete', { romaneio, enderecoSelecionado })
@@ -187,7 +208,8 @@ export default function MeuFrete() {
   }
 
   const handleEscolherFrete = async (cotacao) => {
-    if (!window.confirm(`Confirmar frete de R$ ${cotacao.valor.toFixed(2)} via ${cotacao.transportadora}?`)) {
+    const valorComMargem = cotacao.valor * (1 + margemFrete / 100)
+    if (!window.confirm(`Confirmar frete de R$ ${valorComMargem.toFixed(2)} via ${cotacao.transportadora}?`)) {
       return
     }
 
@@ -647,40 +669,50 @@ export default function MeuFrete() {
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {cotacoes.map((cot, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleEscolherFrete(cot)}
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 10,
-                    padding: 16,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div>
-                      <div style={{ color: '#e8eaed', fontWeight: 700, fontSize: 15 }}>
-                        {cot.transportadora}
+              {cotacoes.map((cot, idx) => {
+                const valorComMargem = cot.valor * (1 + margemFrete / 100)
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleEscolherFrete(cot)}
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 10,
+                      padding: 16,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div>
+                        <div style={{ color: '#e8eaed', fontWeight: 700, fontSize: 15 }}>
+                          {cot.transportadora}
+                        </div>
+                        <div style={{ color: '#9aa0a6', fontSize: 13, marginTop: 2 }}>
+                          {cot.servico}
+                        </div>
+                        <div style={{ color: '#9aa0a6', fontSize: 12, marginTop: 6 }}>
+                          ⏱️ {cot.prazo} dia(s) útil(is)
+                        </div>
                       </div>
-                      <div style={{ color: '#9aa0a6', fontSize: 13, marginTop: 2 }}>
-                        {cot.servico}
-                      </div>
-                      <div style={{ color: '#9aa0a6', fontSize: 12, marginTop: 6 }}>
-                        ⏱️ {cot.prazo} dia(s) útil(is)
+                      <div>
+                        <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 18 }}>
+                          R$ {valorComMargem.toFixed(2)}
+                        </div>
+                        {margemFrete > 0 && (
+                          <div style={{ color: '#9aa0a6', fontSize: 10, textAlign: 'right', marginTop: 2 }}>
+                            + {margemFrete}% margem
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 18 }}>
-                      R$ {cot.valor.toFixed(2)}
-                    </div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                )
+              })}
             </div>
 
             <button

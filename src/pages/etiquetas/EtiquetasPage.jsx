@@ -346,23 +346,6 @@ export default function EtiquetasPage() {
                       )}
                     </>
                   )}
-
-                  <button
-                    onClick={() => setModalAberto(rom)}
-                    title="Ver Detalhes"
-                    style={{
-                      background: 'rgba(255,255,255,0.1)',
-                      color: '#e8eaed',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: 6,
-                      padding: '7px 12px',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    👁️
-                  </button>
                 </div>
               </div>
             ))}
