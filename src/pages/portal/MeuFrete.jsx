@@ -699,15 +699,8 @@ export default function MeuFrete() {
                           ⏱️ {cot.prazo} dia(s) útil(is)
                         </div>
                       </div>
-                      <div>
-                        <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 18 }}>
-                          R$ {valorComMargem.toFixed(2)}
-                        </div>
-                        {margemFrete > 0 && (
-                          <div style={{ color: '#9aa0a6', fontSize: 10, textAlign: 'right', marginTop: 2 }}>
-                            + {margemFrete}% margem
-                          </div>
-                        )}
+                      <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 18 }}>
+                        R$ {valorComMargem.toFixed(2)}
                       </div>
                     </div>
                   </button>
