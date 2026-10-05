@@ -109,6 +109,7 @@ serve(async (req) => {
         nome_loja,
         cpf_cnpj,
         telefone,
+        whatsapp,
         email_contato,
         endereco_rua,
         endereco_numero,
