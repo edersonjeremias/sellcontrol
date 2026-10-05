@@ -48,7 +48,14 @@ export default function EtiquetasPage() {
 
     // Filtro de status
     if (statusFiltro && statusFiltro !== 'todos') {
-      filtrados = filtrados.filter(rom => rom.status === statusFiltro)
+      if (statusFiltro === 'aguardando_pagamento') {
+        // Aguardando Pagamento = romaneios que ainda não foram pagos
+        filtrados = filtrados.filter(rom =>
+          ['pronto', 'frete_cotado'].includes(rom.status)
+        )
+      } else {
+        filtrados = filtrados.filter(rom => rom.status === statusFiltro)
+      }
     }
 
     // Filtro de busca (cliente ou romaneio)
@@ -60,9 +67,10 @@ export default function EtiquetasPage() {
       )
     }
 
-    // Filtro de data - EXCETO quando status = 'etiqueta_gerada'
+    // Filtro de data - EXCETO quando status = 'etiqueta_gerada' ou 'aguardando_pagamento'
     // Etiquetas geradas SEMPRE aparecem todas (para não esquecer de despachar)
-    if (statusFiltro !== 'etiqueta_gerada') {
+    // Aguardando pagamento SEMPRE aparecem todos (para não esquecer de cobrar/dar baixa)
+    if (!['etiqueta_gerada', 'aguardando_pagamento'].includes(statusFiltro)) {
       // Filtro de data início
       if (dataInicio) {
         filtrados = filtrados.filter(rom => {
@@ -297,6 +305,7 @@ export default function EtiquetasPage() {
             }}
           >
             <option value="etiqueta_gerada">🏷️ Etiqueta Gerada</option>
+            <option value="aguardando_pagamento">⏳ Aguardando Pagamento</option>
             <option value="despachado">✓ Despachado</option>
             <option value="frete_pago">💳 Frete Pago</option>
             <option value="cancelado">✗ Cancelado</option>
