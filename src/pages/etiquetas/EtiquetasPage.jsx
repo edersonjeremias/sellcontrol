@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import AppShell from '../../components/ui/AppShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { gerarEtiqueta, imprimirEtiqueta, calcularFrete } from '../../services/melhorEnvioService'
+import { gerarEtiqueta, imprimirEtiqueta, calcularFrete, salvarCotacoes } from '../../services/melhorEnvioService'
 
 export default function EtiquetasPage() {
   const { profile } = useAuth()
@@ -347,7 +347,11 @@ export default function EtiquetasPage() {
       // Salvar valor SEM margem (valor base/original)
       const valorBase = Number(cotacao.valor_original || 0)
 
-      // Atualizar romaneio com os dados da cotação
+      // 1. SALVAR COTAÇÕES NO BANCO (necessário para gerar etiqueta depois!)
+      console.log('💾 Salvando cotações no banco...')
+      await salvarCotacoes(romaneio.id, cotacoes)
+
+      // 2. Atualizar romaneio com os dados da cotação
       await supabase
         .from('romaneios')
         .update({
