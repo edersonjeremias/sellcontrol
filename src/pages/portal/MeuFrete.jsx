@@ -85,6 +85,7 @@ export default function MeuFrete() {
         .single()
 
       if (!error && data) {
+        console.log('🔧 Margem de frete carregada:', data.margem_frete)
         setMargemFrete(data.margem_frete || 15)
       }
     } catch (err) {
@@ -770,6 +771,7 @@ export default function MeuFrete() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {cotacoes.map((cot, idx) => {
                 const valorComMargem = cot.valor * (1 + margemFrete / 100)
+                console.log(`💰 ${cot.transportadora}: R$ ${cot.valor.toFixed(2)} + ${margemFrete}% = R$ ${valorComMargem.toFixed(2)}`)
                 return (
                   <button
                     key={idx}
