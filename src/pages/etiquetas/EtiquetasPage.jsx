@@ -14,22 +14,11 @@ export default function EtiquetasPage() {
   const [gerando, setGerando] = useState(null)
   const [modalAberto, setModalAberto] = useState(null)
 
-  // Calcula datas padrão: 1º dia e último dia do mês atual
-  const getPrimeiroDiaMes = () => {
-    const hoje = new Date()
-    return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0]
-  }
-
-  const getUltimoDiaMes = () => {
-    const hoje = new Date()
-    return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0]
-  }
-
   // Filtros
   const [busca, setBusca] = useState('')
   const [statusFiltro, setStatusFiltro] = useState('etiqueta_gerada')
-  const [dataInicio, setDataInicio] = useState(getPrimeiroDiaMes())
-  const [dataFim, setDataFim] = useState(getUltimoDiaMes())
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -301,13 +290,13 @@ export default function EtiquetasPage() {
             }}
           />
 
-          {(busca || statusFiltro !== 'etiqueta_gerada' || dataInicio !== getPrimeiroDiaMes() || dataFim !== getUltimoDiaMes()) && (
+          {(busca || statusFiltro !== 'etiqueta_gerada' || dataInicio || dataFim) && (
             <button
               onClick={() => {
                 setBusca('')
                 setStatusFiltro('etiqueta_gerada')
-                setDataInicio(getPrimeiroDiaMes())
-                setDataFim(getUltimoDiaMes())
+                setDataInicio('')
+                setDataFim('')
               }}
               style={{
                 background: 'rgba(244,67,54,0.1)',
