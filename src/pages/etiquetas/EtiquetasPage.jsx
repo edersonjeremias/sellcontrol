@@ -269,7 +269,7 @@ export default function EtiquetasPage() {
       // Buscar configurações da empresa (incluindo margem de frete)
       const { data: config } = await supabase
         .from('configuracoes')
-        .select('endereco_cep, margem_frete, altura_padrao, largura_padrao, comprimento_padrao, peso_padrao')
+        .select('endereco_cep, margem_frete')
         .eq('tenant_id', tenantId)
         .single()
 
@@ -290,12 +290,12 @@ export default function EtiquetasPage() {
         postal_code: romaneio.enderecos_clientes.cep.replace(/\D/g, ''),
       }
 
-      // Usar dimensões do romaneio ou padrões da configuração
+      // Usar dimensões do romaneio (já vem preenchido do portal)
       const pacote = {
-        height: romaneio.altura || config.altura_padrao || 10,
-        width: romaneio.largura || config.largura_padrao || 20,
-        length: romaneio.comprimento || config.comprimento_padrao || 30,
-        weight: romaneio.peso || config.peso_padrao || 0.3,
+        height: romaneio.altura || 10,
+        width: romaneio.largura || 20,
+        length: romaneio.comprimento || 30,
+        weight: romaneio.peso || 0.3,
       }
 
       console.log('📦 Cotando frete...', { enderecoOrigem, enderecoDestino, pacote, margemFrete })
