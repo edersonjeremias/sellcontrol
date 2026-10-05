@@ -120,16 +120,18 @@ export async function salvarCotacoes(romaneioId, cotacoes) {
     }
   })
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('cotacoes_frete')
     .insert(registros)
+    .select()
 
   if (error) {
     console.error('❌ Erro ao salvar cotações:', error)
     throw error
   }
 
-  console.log('✅ Cotações salvas com sucesso!')
+  console.log('✅ Cotações salvas com sucesso!', data)
+  return data // Retorna as cotações com UUIDs gerados
 }
 
 /**

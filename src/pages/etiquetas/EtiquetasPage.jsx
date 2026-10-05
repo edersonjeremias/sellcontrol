@@ -359,11 +359,23 @@ export default function EtiquetasPage() {
       // Salvar valor SEM margem (valor base/original)
       const valorBase = Number(cotacao.valor_original || 0)
 
-      // 1. SALVAR COTAÇÕES NO BANCO (necessário para gerar etiqueta depois!)
+      // 1. SALVAR COTAÇÕES NO BANCO (retorna com UUIDs gerados!)
       console.log('💾 Salvando cotações no banco...')
-      await salvarCotacoes(romaneio.id, cotacoes)
+      const cotacoesSalvas = await salvarCotacoes(romaneio.id, cotacoes)
 
-      // 2. Atualizar romaneio com os dados da cotação
+      // 2. Encontrar a cotação salva correspondente à selecionada
+      const cotacaoSalva = cotacoesSalvas.find(cs =>
+        cs.transportadora === (cotacao.company?.name || cotacao.name) &&
+        cs.servico === cotacao.name
+      )
+
+      if (!cotacaoSalva) {
+        throw new Error('Erro ao encontrar cotação salva')
+      }
+
+      console.log('✅ UUID da cotação salva:', cotacaoSalva.id)
+
+      // 3. Atualizar romaneio com o UUID correto da cotação salva
       await supabase
         .from('romaneios')
         .update({
@@ -372,7 +384,7 @@ export default function EtiquetasPage() {
           valor_frete: valorBase,
           prazo_entrega: cotacao.delivery_time || cotacao.delivery_range?.max || 0,
           status: 'frete_cotado',
-          melhor_envio_cotacao_id: cotacao.id,
+          melhor_envio_cotacao_id: cotacaoSalva.id, // UUID da nossa tabela!
         })
         .eq('id', romaneio.id)
 
