@@ -470,26 +470,19 @@ export default function MeuFrete() {
                         <div
                           key={item.id}
                           style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'start',
                             padding: '6px 8px',
                             background: 'rgba(255,255,255,0.03)',
                             borderRadius: 6,
                             fontSize: 13,
+                            color: '#e8eaed',
                           }}
                         >
-                          <div style={{ color: '#e8eaed', flex: 1 }}>
-                            <span style={{ color: 'var(--p-blue)', fontWeight: 600 }}>#{item.codigo}</span>
-                            {' '}
-                            {item.produto || '-'}
-                            {item.modelo && ` ${item.modelo}`}
-                            {item.cor && ` ${item.cor}`}
-                            {item.tamanho && ` • ${item.tamanho}`}
-                          </div>
-                          <div style={{ color: 'var(--p-green)', fontWeight: 600, marginLeft: 8 }}>
-                            R$ {Number(item.preco || 0).toFixed(2)}
-                          </div>
+                          <span style={{ color: 'var(--p-blue)', fontWeight: 600 }}>#{item.codigo}</span>
+                          {' '}
+                          {item.produto || '-'}
+                          {item.modelo && ` ${item.modelo}`}
+                          {item.cor && ` ${item.cor}`}
+                          {item.tamanho && ` • ${item.tamanho}`}
                         </div>
                       ))}
                     </div>
@@ -497,13 +490,10 @@ export default function MeuFrete() {
                       marginTop: 8,
                       paddingTop: 8,
                       borderTop: '1px solid rgba(255,255,255,0.1)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      color: 'var(--p-green)',
-                      fontWeight: 700,
+                      color: '#9aa0a6',
+                      fontSize: 13,
                     }}>
-                      <span>TOTAL DOS PRODUTOS:</span>
-                      <span>R$ {rom.itens.reduce((sum, i) => sum + (Number(i.preco) || 0), 0).toFixed(2)}</span>
+                      {rom.itens.length} produto(s)
                     </div>
                   </div>
                 )}
