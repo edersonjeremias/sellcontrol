@@ -203,7 +203,8 @@ export default function MeuFrete() {
   }
 
   const handleEscolherFrete = async (cotacao) => {
-    const valorComMargem = cotacao.valor * (1 + margemFrete / 100)
+    const valorBase = Number(cotacao.valor || cotacao.valor_original || cotacao.custom_price || 0)
+    const valorComMargem = valorBase * (1 + margemFrete / 100)
     if (!window.confirm(`Confirmar frete de R$ ${valorComMargem.toFixed(2)} via ${cotacao.transportadora}?`)) {
       return
     }
@@ -217,7 +218,7 @@ export default function MeuFrete() {
         .update({
           transportadora: cotacao.transportadora,
           servico: cotacao.servico,
-          valor_frete: cotacao.valor,
+          valor_frete: valorBase,
           prazo_entrega: cotacao.prazo,
           status: 'frete_cotado',
           endereco_id: enderecoSelecionado,
@@ -228,7 +229,7 @@ export default function MeuFrete() {
       // Cria pagamento PIX
       console.log('💳 Criando pagamento PIX...')
 
-      const pix = await criarPagamentoPIX(tenantId, romaneioSelecionado, cotacao.valor, {
+      const pix = await criarPagamentoPIX(tenantId, romaneioSelecionado, valorBase, {
         numeroRomaneio: romaneio?.numero,
         email: cliente?.email || 'cliente@email.com',
         nome: cliente?.nome || 'Cliente',
@@ -764,14 +765,17 @@ export default function MeuFrete() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {cotacoes.map((cot, idx) => {
+                // Pega valor correto (API usa valor_original, banco usa valor)
+                const valorBase = Number(cot.valor || cot.valor_original || cot.custom_price || 0)
+
                 // Proteção contra undefined
-                if (!cot || !cot.valor) {
+                if (!cot || !valorBase) {
                   console.error('❌ Cotação inválida:', cot)
                   return null
                 }
 
-                const valorComMargem = cot.valor * (1 + margemFrete / 100)
-                console.log(`💰 ${cot.transportadora}: R$ ${cot.valor.toFixed(2)} + ${margemFrete}% = R$ ${valorComMargem.toFixed(2)}`)
+                const valorComMargem = valorBase * (1 + margemFrete / 100)
+                console.log(`💰 ${cot.transportadora}: R$ ${valorBase.toFixed(2)} + ${margemFrete}% = R$ ${valorComMargem.toFixed(2)}`)
                 return (
                   <button
                     key={idx}
