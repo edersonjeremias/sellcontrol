@@ -6,7 +6,8 @@
       "Bash(git push *)",
       "Bash(git commit *)",
       "PowerShell(git commit -m \"fix: corrige campo de valor das cota��es`n`nProblema: API retorna valor_original, c�digo buscava valor`nSolu��o: usa valor_original ou custom_price da API`n`n- Atualiza leitura do valor para usar valor_original`n- Mant�m compatibilidade com valor \\(banco de dados\\)`n- Corrige salvamento do valor_frete no romaneio`n- Corrige cria��o do pagamento PIX`n`nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
-      "PowerShell(git commit -m \"debug: adiciona log da estrutura completa da cota��o`n`nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")"
+      "PowerShell(git commit -m \"debug: adiciona log da estrutura completa da cota��o`n`nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git commit -m \"fix: mapeia campos da API para exibi��o e salvamento`n`nProblema: API retorna campos diferentes do banco`nSolu��o: mapeia company.name, delivery_time, etc`n`n- transportadora = company?.name || name`n- servico = name`n- prazo = delivery_time || delivery_range?.max`n- Mant�m compatibilidade com campos do banco`n`nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")"
     ]
   }
 }

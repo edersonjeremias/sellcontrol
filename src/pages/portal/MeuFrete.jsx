@@ -216,10 +216,10 @@ export default function MeuFrete() {
       await supabase
         .from('romaneios')
         .update({
-          transportadora: cotacao.transportadora,
-          servico: cotacao.servico,
+          transportadora: cotacao.transportadora || cotacao.company?.name || cotacao.name,
+          servico: cotacao.servico || cotacao.name,
           valor_frete: valorBase,
-          prazo_entrega: cotacao.prazo,
+          prazo_entrega: cotacao.prazo || cotacao.delivery_time || cotacao.delivery_range?.max || 0,
           status: 'frete_cotado',
           endereco_id: enderecoSelecionado,
           melhor_envio_cotacao_id: cotacao.id, // Salva ID da cotação
@@ -796,13 +796,13 @@ export default function MeuFrete() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                       <div>
                         <div style={{ color: '#e8eaed', fontWeight: 700, fontSize: 15 }}>
-                          {cot.transportadora}
+                          {cot.transportadora || cot.company?.name || 'Transportadora'}
                         </div>
                         <div style={{ color: '#9aa0a6', fontSize: 13, marginTop: 2 }}>
-                          {cot.servico}
+                          {cot.servico || cot.name || 'Serviço'}
                         </div>
                         <div style={{ color: '#9aa0a6', fontSize: 12, marginTop: 6 }}>
-                          ⏱️ {cot.prazo} dia(s) útil(is)
+                          ⏱️ {cot.prazo || cot.delivery_time || cot.delivery_range?.max || 0} dia(s) útil(is)
                         </div>
                       </div>
                       <div style={{ color: 'var(--p-blue)', fontWeight: 700, fontSize: 18 }}>
