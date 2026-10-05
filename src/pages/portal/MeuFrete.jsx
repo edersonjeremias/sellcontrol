@@ -132,6 +132,20 @@ export default function MeuFrete() {
     try {
       console.log('📦 Preparando cotação via API do Melhor Envio...')
 
+      // Buscar URL da API configurada
+      const { data: config } = await supabase
+        .from('configuracoes')
+        .select('melhor_envio_api_url')
+        .eq('tenant_id', tenantId)
+        .single()
+
+      const apiUrl = config?.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br'
+
+      console.log('🌐 API configurada:', apiUrl)
+      if (apiUrl.includes('sandbox')) {
+        console.warn('⚠️  ATENÇÃO: Você está usando SANDBOX! Valores são SIMULADOS!')
+      }
+
       const enderecoOrigem = {
           postal_code: '13560340',
           address: 'Rua Antonio Bueno de Camargo',

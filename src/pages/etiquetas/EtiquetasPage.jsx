@@ -269,7 +269,7 @@ export default function EtiquetasPage() {
       // Buscar configurações da empresa (incluindo margem de frete)
       const { data: config } = await supabase
         .from('configuracoes')
-        .select('endereco_cep, margem_frete')
+        .select('endereco_cep, margem_frete, melhor_envio_api_url')
         .eq('tenant_id', tenantId)
         .single()
 
@@ -280,6 +280,12 @@ export default function EtiquetasPage() {
       }
 
       const margemFrete = config.margem_frete || 0
+      const apiUrl = config.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br'
+
+      console.log('🌐 API configurada:', apiUrl)
+      if (apiUrl.includes('sandbox')) {
+        console.warn('⚠️  ATENÇÃO: Você está usando SANDBOX! Valores são SIMULADOS!')
+      }
 
       // Preparar dados para cotação
       const enderecoOrigem = {
