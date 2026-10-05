@@ -14,10 +14,22 @@ export default function EtiquetasPage() {
   const [gerando, setGerando] = useState(null)
   const [modalAberto, setModalAberto] = useState(null)
 
+  // Calcula datas padrão: 1º dia e último dia do mês atual
+  const getPrimeiroDiaMes = () => {
+    const hoje = new Date()
+    return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().split('T')[0]
+  }
+
+  const getUltimoDiaMes = () => {
+    const hoje = new Date()
+    return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().split('T')[0]
+  }
+
   // Filtros
   const [busca, setBusca] = useState('')
-  const [dataInicio, setDataInicio] = useState('')
-  const [dataFim, setDataFim] = useState('')
+  const [statusFiltro, setStatusFiltro] = useState('etiqueta_gerada')
+  const [dataInicio, setDataInicio] = useState(getPrimeiroDiaMes())
+  const [dataFim, setDataFim] = useState(getUltimoDiaMes())
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -45,6 +57,11 @@ export default function EtiquetasPage() {
   useEffect(() => {
     let filtrados = [...romaneios]
 
+    // Filtro de status
+    if (statusFiltro && statusFiltro !== 'todos') {
+      filtrados = filtrados.filter(rom => rom.status === statusFiltro)
+    }
+
     // Filtro de busca (cliente ou romaneio)
     if (busca) {
       const termo = busca.toLowerCase()
@@ -71,7 +88,7 @@ export default function EtiquetasPage() {
     }
 
     setRomaneiosFiltrados(filtrados)
-  }, [romaneios, busca, dataInicio, dataFim])
+  }, [romaneios, busca, statusFiltro, dataInicio, dataFim])
 
   const handleGerarEtiqueta = async (romaneio) => {
     setGerando(romaneio.id)
@@ -222,7 +239,7 @@ export default function EtiquetasPage() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             style={{
-              flex: '1 1 300px',
+              flex: '1 1 250px',
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 8,
@@ -231,6 +248,26 @@ export default function EtiquetasPage() {
               fontSize: 14,
             }}
           />
+
+          <select
+            value={statusFiltro}
+            onChange={(e) => setStatusFiltro(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              color: '#e8eaed',
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
+          >
+            <option value="etiqueta_gerada">🏷️ Etiqueta Gerada</option>
+            <option value="despachado">✓ Despachado</option>
+            <option value="frete_pago">💳 Frete Pago</option>
+            <option value="cancelado">✗ Cancelado</option>
+            <option value="todos">📦 Todos</option>
+          </select>
 
           <input
             type="date"
@@ -264,12 +301,13 @@ export default function EtiquetasPage() {
             }}
           />
 
-          {(busca || dataInicio || dataFim) && (
+          {(busca || statusFiltro !== 'etiqueta_gerada' || dataInicio !== getPrimeiroDiaMes() || dataFim !== getUltimoDiaMes()) && (
             <button
               onClick={() => {
                 setBusca('')
-                setDataInicio('')
-                setDataFim('')
+                setStatusFiltro('etiqueta_gerada')
+                setDataInicio(getPrimeiroDiaMes())
+                setDataFim(getUltimoDiaMes())
               }}
               style={{
                 background: 'rgba(244,67,54,0.1)',
