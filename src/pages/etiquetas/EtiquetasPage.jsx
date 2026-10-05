@@ -21,7 +21,7 @@ export default function EtiquetasPage() {
         .from('romaneios')
         .select('*, enderecos_clientes(*)')
         .eq('tenant_id', tenantId)
-        .in('status', ['frete_pago', 'etiqueta_gerada', 'despachado'])
+        .in('status', ['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'])
         .order('frete_pago_em', { ascending: false })
 
       if (error) throw error
@@ -268,9 +268,11 @@ export default function EtiquetasPage() {
                     display: 'inline-block',
                     background: rom.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
                                rom.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
+                               rom.status === 'cancelado' ? 'rgba(244,67,54,0.2)' :
                                'rgba(255,193,7,0.2)',
                     color: rom.status === 'despachado' ? '#4caf50' :
-                           rom.status === 'etiqueta_gerada' ? '#2196f3' : '#ffc107',
+                           rom.status === 'etiqueta_gerada' ? '#2196f3' :
+                           rom.status === 'cancelado' ? '#f44336' : '#ffc107',
                     fontSize: 10,
                     fontWeight: 700,
                     padding: '5px 10px',
@@ -278,7 +280,8 @@ export default function EtiquetasPage() {
                     textTransform: 'uppercase',
                   }}>
                     {rom.status === 'despachado' ? '✓ Despachado' :
-                     rom.status === 'etiqueta_gerada' ? '🏷️ Etiqueta Gerada' : '💳 Frete Pago'}
+                     rom.status === 'etiqueta_gerada' ? '🏷️ Etiqueta Gerada' :
+                     rom.status === 'cancelado' ? '✗ Cancelado' : '💳 Frete Pago'}
                   </div>
                 </div>
 
@@ -427,9 +430,11 @@ export default function EtiquetasPage() {
                     display: 'inline-block',
                     background: modalAberto.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
                                modalAberto.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
+                               modalAberto.status === 'cancelado' ? 'rgba(244,67,54,0.2)' :
                                'rgba(255,193,7,0.2)',
                     color: modalAberto.status === 'despachado' ? '#4caf50' :
-                           modalAberto.status === 'etiqueta_gerada' ? '#2196f3' : '#ffc107',
+                           modalAberto.status === 'etiqueta_gerada' ? '#2196f3' :
+                           modalAberto.status === 'cancelado' ? '#f44336' : '#ffc107',
                     fontSize: 11,
                     fontWeight: 700,
                     padding: '8px 14px',
@@ -437,7 +442,8 @@ export default function EtiquetasPage() {
                     textTransform: 'uppercase',
                   }}>
                     {modalAberto.status === 'despachado' ? '✓ Despachado' :
-                     modalAberto.status === 'etiqueta_gerada' ? '🏷️ Etiqueta Gerada' : '💳 Frete Pago'}
+                     modalAberto.status === 'etiqueta_gerada' ? '🏷️ Etiqueta Gerada' :
+                     modalAberto.status === 'cancelado' ? '✗ Cancelado' : '💳 Frete Pago'}
                   </div>
                 </div>
 

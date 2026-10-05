@@ -29,7 +29,7 @@ export default function MeuFrete() {
         .select('*, romaneio_sacolinhas(*)')
         .eq('tenant_id', tenantId)
         .eq('cliente_instagram', cliente.instagram.replace('@', ''))
-        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado'])
+        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'])
         .order('created_at', { ascending: false })
 
       if (romsError) throw romsError
@@ -722,6 +722,22 @@ export default function MeuFrete() {
                         </button>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {rom.status === 'cancelado' && (
+                  <div style={{
+                    background: 'rgba(244,67,54,0.1)',
+                    border: '1px solid rgba(244,67,54,0.3)',
+                    borderRadius: 8,
+                    padding: 12,
+                  }}>
+                    <div style={{ color: '#f44336', fontWeight: 700, marginBottom: 4 }}>
+                      ✗ Romaneio Cancelado
+                    </div>
+                    <div style={{ color: '#9aa0a6', fontSize: 13 }}>
+                      Este romaneio foi cancelado.
+                    </div>
                   </div>
                 )}
               </div>
