@@ -678,9 +678,28 @@ export default function EtiquetasPage() {
                       {rom.numero}
                     </div>
                     {rom.codigo_rastreio && (
-                      <div style={{ color: '#2196f3', fontSize: 10, marginTop: 2 }}>
-                        {rom.codigo_rastreio}
-                      </div>
+                      <a
+                        href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        title="Clique para rastrear"
+                        style={{
+                          display: 'inline-block',
+                          color: '#2196f3',
+                          fontSize: 11,
+                          marginTop: 4,
+                          fontFamily: 'monospace',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                          padding: '2px 6px',
+                          background: 'rgba(33,150,243,0.1)',
+                          borderRadius: 4,
+                          border: '1px solid rgba(33,150,243,0.3)',
+                        }}
+                      >
+                        📍 {rom.codigo_rastreio}
+                      </a>
                     )}
                   </div>
 

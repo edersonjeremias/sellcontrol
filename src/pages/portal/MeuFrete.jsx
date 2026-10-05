@@ -603,6 +603,42 @@ export default function MeuFrete() {
                         💰 Frete: R$ {(rom.valor_frete || 0).toFixed(2)} • ⏱️ {rom.prazo_entrega || 0} dia(s)
                       </div>
                     )}
+                    {rom.codigo_rastreio && (
+                      <div style={{
+                        background: 'rgba(33,150,243,0.1)',
+                        border: '1px solid rgba(33,150,243,0.3)',
+                        borderRadius: 6,
+                        padding: 10,
+                        marginBottom: 10,
+                      }}>
+                        <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>
+                          📍 Código de Rastreio:
+                        </div>
+                        <div style={{
+                          color: 'var(--p-blue)',
+                          fontWeight: 700,
+                          fontSize: 14,
+                          fontFamily: 'monospace',
+                          marginBottom: 6,
+                        }}>
+                          {rom.codigo_rastreio}
+                        </div>
+                        <a
+                          href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-block',
+                            color: 'var(--p-blue)',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                          }}
+                        >
+                          🔗 Rastrear Pedido →
+                        </a>
+                      </div>
+                    )}
                     <button
                       onClick={async () => {
                         try {
@@ -665,11 +701,25 @@ export default function MeuFrete() {
                         marginBottom: 10,
                       }}>
                         <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>
-                          🔍 Código de Rastreio
+                          📍 Código de Rastreio:
                         </div>
-                        <div style={{ color: '#2196f3', fontWeight: 700, fontSize: 14, fontFamily: 'monospace' }}>
+                        <div style={{ color: '#2196f3', fontWeight: 700, fontSize: 14, fontFamily: 'monospace', marginBottom: 6 }}>
                           {rom.codigo_rastreio}
                         </div>
+                        <a
+                          href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-block',
+                            color: '#2196f3',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            textDecoration: 'none',
+                          }}
+                        >
+                          🔗 Rastrear Pedido →
+                        </a>
                       </div>
                     )}
                   </div>
@@ -707,25 +757,47 @@ export default function MeuFrete() {
                         <div style={{ color: 'var(--p-green)', fontWeight: 700, fontSize: 14, fontFamily: 'monospace', marginBottom: 8 }}>
                           {rom.codigo_rastreio}
                         </div>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(rom.codigo_rastreio)
-                            showToast('Código copiado!', 'success')
-                          }}
-                          style={{
-                            width: '100%',
-                            background: 'rgba(76,175,80,0.2)',
-                            color: 'var(--p-green)',
-                            border: '1px solid rgba(76,175,80,0.5)',
-                            borderRadius: 6,
-                            padding: '10px',
-                            fontWeight: 700,
-                            fontSize: 13,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          📋 Copiar Código
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <a
+                            href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              flex: 1,
+                              textAlign: 'center',
+                              background: 'var(--p-green)',
+                              color: '#0f0f0f',
+                              border: 'none',
+                              borderRadius: 6,
+                              padding: '10px',
+                              fontWeight: 700,
+                              fontSize: 13,
+                              textDecoration: 'none',
+                              display: 'block',
+                            }}
+                          >
+                            🔗 Rastrear
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(rom.codigo_rastreio)
+                              showToast('Código copiado!', 'success')
+                            }}
+                            style={{
+                              flex: 1,
+                              background: 'rgba(76,175,80,0.2)',
+                              color: 'var(--p-green)',
+                              border: '1px solid rgba(76,175,80,0.5)',
+                              borderRadius: 6,
+                              padding: '10px',
+                              fontWeight: 700,
+                              fontSize: 13,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            📋 Copiar
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
