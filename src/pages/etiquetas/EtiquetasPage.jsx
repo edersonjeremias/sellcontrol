@@ -733,6 +733,41 @@ export default function EtiquetasPage() {
                   </div>
                 )}
 
+                {/* Aviso: Frete não cotado */}
+                {['pronto', 'frete_cotado'].includes(modalAberto.status) && !modalAberto.transportadora && (
+                  <div style={{
+                    padding: 16,
+                    background: 'rgba(255,193,7,0.1)',
+                    border: '1px solid rgba(255,193,7,0.3)',
+                    borderRadius: 8,
+                    marginBottom: 20,
+                  }}>
+                    <div style={{ color: '#ffc107', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+                      ⚠️ Frete ainda não cotado
+                    </div>
+                    <div style={{ color: '#9aa0a6', fontSize: 13, marginBottom: 12 }}>
+                      Para marcar como pago, primeiro é necessário cotar o frete e escolher a transportadora.
+                    </div>
+                    <button
+                      onClick={() => {
+                        window.open('/expedicao', '_blank')
+                      }}
+                      style={{
+                        background: 'rgba(255,193,7,0.2)',
+                        color: '#ffc107',
+                        border: '1px solid rgba(255,193,7,0.5)',
+                        borderRadius: 8,
+                        padding: '10px 16px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: 14,
+                      }}
+                    >
+                      📦 Ir para Expedição
+                    </button>
+                  </div>
+                )}
+
                 {/* Botões do Modal */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {modalAberto.status === 'frete_pago' && (
