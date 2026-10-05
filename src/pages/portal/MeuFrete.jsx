@@ -132,14 +132,20 @@ export default function MeuFrete() {
     try {
       console.log('📦 Preparando cotação via API do Melhor Envio...')
 
-      // Buscar URL da API configurada
+      // Buscar configurações da empresa (endereço de origem e API)
       const { data: config } = await supabase
         .from('configuracoes')
-        .select('melhor_envio_api_url')
+        .select('melhor_envio_api_url, endereco_cep, endereco_rua, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_estado')
         .eq('tenant_id', tenantId)
         .single()
 
-      const apiUrl = config?.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br'
+      if (!config?.endereco_cep) {
+        showToast('Configure o endereço da empresa em Configurações', 'error')
+        setCotando(false)
+        return
+      }
+
+      const apiUrl = config.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br'
 
       console.log('🌐 API configurada:', apiUrl)
       if (apiUrl.includes('sandbox')) {
@@ -147,12 +153,12 @@ export default function MeuFrete() {
       }
 
       const enderecoOrigem = {
-          postal_code: '13560340',
-          address: 'Rua Antonio Bueno de Camargo',
-          number: '295',
-          district: 'Centro',
-          city: 'São Carlos',
-          state_abbr: 'SP',
+          postal_code: config.endereco_cep.replace(/\D/g, ''),
+          address: config.endereco_rua,
+          number: config.endereco_numero || 's/n',
+          district: config.endereco_bairro,
+          city: config.endereco_cidade,
+          state_abbr: config.endereco_estado,
         }
 
         const enderecoDestino = {
