@@ -86,7 +86,7 @@ export default function MeuFrete() {
 
       if (!error && data) {
         console.log('🔧 Margem de frete carregada:', data.margem_frete)
-        setMargemFrete(data.margem_frete || 15)
+        setMargemFrete(data.margem_frete ?? 15)  // ?? só usa 15 se for null/undefined, aceita 0
       }
     } catch (err) {
       console.error('Erro ao carregar margem:', err)
