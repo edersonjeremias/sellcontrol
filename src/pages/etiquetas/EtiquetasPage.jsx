@@ -9,9 +9,15 @@ export default function EtiquetasPage() {
   const tenantId = profile?.tenant_id
 
   const [romaneios, setRomaneios] = useState([])
+  const [romaneiosFiltrados, setRomaneiosFiltrados] = useState([])
   const [loading, setLoading] = useState(true)
   const [gerando, setGerando] = useState(null)
   const [modalAberto, setModalAberto] = useState(null)
+
+  // Filtros
+  const [busca, setBusca] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -34,6 +40,38 @@ export default function EtiquetasPage() {
   }, [tenantId])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // Aplicar filtros
+  useEffect(() => {
+    let filtrados = [...romaneios]
+
+    // Filtro de busca (cliente ou romaneio)
+    if (busca) {
+      const termo = busca.toLowerCase()
+      filtrados = filtrados.filter(rom =>
+        rom.numero?.toLowerCase().includes(termo) ||
+        rom.cliente_instagram?.toLowerCase().includes(termo)
+      )
+    }
+
+    // Filtro de data início
+    if (dataInicio) {
+      filtrados = filtrados.filter(rom => {
+        const dataRom = new Date(rom.frete_pago_em || rom.created_at)
+        return dataRom >= new Date(dataInicio)
+      })
+    }
+
+    // Filtro de data fim
+    if (dataFim) {
+      filtrados = filtrados.filter(rom => {
+        const dataRom = new Date(rom.frete_pago_em || rom.created_at)
+        return dataRom <= new Date(dataFim + 'T23:59:59')
+      })
+    }
+
+    setRomaneiosFiltrados(filtrados)
+  }, [romaneios, busca, dataInicio, dataFim])
 
   const handleGerarEtiqueta = async (romaneio) => {
     setGerando(romaneio.id)
@@ -166,15 +204,88 @@ export default function EtiquetasPage() {
   return (
     <AppShell page="Etiquetas">
       <div style={{ padding: 24 }}>
+        <h1 style={{ margin: '0 0 20px 0', color: '#e8eaed', fontSize: 24, fontWeight: 700 }}>
+          📦 Gestão de Etiquetas
+        </h1>
+
+        {/* Barra de Filtros */}
         <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          gap: 12,
           marginBottom: 24,
+          flexWrap: 'wrap',
+          alignItems: 'center',
         }}>
-          <h1 style={{ margin: 0, color: '#e8eaed', fontSize: 24, fontWeight: 700 }}>
-            📦 Gestão de Etiquetas
-          </h1>
+          <input
+            type="text"
+            placeholder="🔍 Buscar cliente ou romaneio..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            style={{
+              flex: '1 1 300px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              color: '#e8eaed',
+              fontSize: 14,
+            }}
+          />
+
+          <input
+            type="date"
+            value={dataInicio}
+            onChange={(e) => setDataInicio(e.target.value)}
+            placeholder="Data Início"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              color: '#e8eaed',
+              fontSize: 14,
+              colorScheme: 'dark',
+            }}
+          />
+
+          <input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
+            placeholder="Data Fim"
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              color: '#e8eaed',
+              fontSize: 14,
+              colorScheme: 'dark',
+            }}
+          />
+
+          {(busca || dataInicio || dataFim) && (
+            <button
+              onClick={() => {
+                setBusca('')
+                setDataInicio('')
+                setDataFim('')
+              }}
+              style={{
+                background: 'rgba(244,67,54,0.1)',
+                color: '#f44336',
+                border: '1px solid rgba(244,67,54,0.3)',
+                borderRadius: 8,
+                padding: '10px 16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontSize: 14,
+              }}
+            >
+              🧹 Limpar
+            </button>
+          )}
+
           <button
             onClick={carregar}
             style={{
@@ -185,13 +296,14 @@ export default function EtiquetasPage() {
               padding: '10px 16px',
               fontWeight: 600,
               cursor: 'pointer',
+              fontSize: 14,
             }}
           >
             🔄 Atualizar
           </button>
         </div>
 
-        {romaneios.length === 0 ? (
+        {romaneiosFiltrados.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: 60,
@@ -232,7 +344,7 @@ export default function EtiquetasPage() {
             </div>
 
             {/* Linhas da Tabela */}
-            {romaneios.map(rom => (
+            {romaneiosFiltrados.map(rom => (
               <div
                 key={rom.id}
                 onClick={() => setModalAberto(rom)}
