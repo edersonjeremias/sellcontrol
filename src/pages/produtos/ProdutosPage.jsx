@@ -375,10 +375,7 @@ export default function ProdutosPage() {
 
       return { ...p, [field]: value }
     }))
-
-    // Salva automaticamente após cada mudança
-    salvarAgora()
-  }, [salvarAgora])
+  }, [])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
   // REMOVIDO: não cria mais linha automaticamente ao sair do campo produto
