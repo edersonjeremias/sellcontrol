@@ -1384,9 +1384,9 @@ function copyToClipboard(text) {
 }
 
 function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onExcluir, onReativar }) {
+  const [txtCopiado, setTxtCopiado] = useState(false)
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
-  const [txtCopiado, setTxtCopiado] = useState(false)
 
   // Navegação entre campos com Tab/Enter
   const navegarProximo = (e) => {
