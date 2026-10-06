@@ -56,16 +56,15 @@ export async function getProdutos(tenantId, filtros = {}) {
 
     // Filtro por data de cadastro
     if (filtros.dataInicio) {
-      query = query.gte('created_at', filtros.dataInicio)
-      countQuery = countQuery.gte('created_at', filtros.dataInicio)
+      const dataInicioObj = new Date(filtros.dataInicio + 'T00:00:00')
+      query = query.gte('created_at', dataInicioObj.toISOString())
+      countQuery = countQuery.gte('created_at', dataInicioObj.toISOString())
     }
 
     if (filtros.dataFim) {
-      // Adiciona 23:59:59 na data fim para incluir o dia completo
-      const dataFimCompleta = new Date(filtros.dataFim)
-      dataFimCompleta.setHours(23, 59, 59, 999)
-      query = query.lte('created_at', dataFimCompleta.toISOString())
-      countQuery = countQuery.lte('created_at', dataFimCompleta.toISOString())
+      const dataFimObj = new Date(filtros.dataFim + 'T23:59:59')
+      query = query.lte('created_at', dataFimObj.toISOString())
+      countQuery = countQuery.lte('created_at', dataFimObj.toISOString())
     }
 
     // Paginação
