@@ -1114,9 +1114,9 @@ export default function VendasPage() {
       marca: produto.marca || '',
       tamanho: produto.tamanho || '',
       condicao: produto.condicao || '',
-      custo: String(produto.custo || 0), // Converte para string
-      preco: String(produto.preco || 0), // Converte para string
-      preco_promocional: String(produto.preco_promocional || 0), // Converte para string
+      custo: formatMoney(produto.custo) || '0,00', // Formata com vírgula
+      preco: formatMoney(produto.preco) || '0,00', // Formata com vírgula
+      preco_promocional: formatMoney(produto.preco_promocional) || '0,00', // Formata com vírgula
       codigo: produto.codigo || '',
       cliente_nome: '',
       sacolinha: null,
