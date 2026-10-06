@@ -1367,9 +1367,26 @@ export default function ProdutosPage() {
 }
 
 // ─── LINHA DA TABELA ──
+// Função auxiliar para copiar texto para área de transferência
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+  }
+  return new Promise((res, rej) => {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.cssText = 'position:fixed;left:-999999px;top:-999999px'
+    document.body.appendChild(ta)
+    ta.focus(); ta.select()
+    document.execCommand('copy') ? res() : rej()
+    ta.remove()
+  })
+}
+
 function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onExcluir, onReativar }) {
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
+  const [txtCopiado, setTxtCopiado] = useState(false)
 
   // Navegação entre campos com Tab/Enter
   const navegarProximo = (e) => {
@@ -1416,6 +1433,23 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
         }, 100)
       }
     }
+  }
+
+  // Copia texto da linha para área de transferência
+  function copiarTextoLinha(e) {
+    e.stopPropagation()
+    const partes = []
+    if (p.codigo?.trim())      partes.push(`Código: ${p.codigo.trim()}`)
+    if (p.produto?.trim())     partes.push(p.produto.trim())
+    if (p.modelo?.trim())      partes.push(p.modelo.trim())
+    if (p.cor?.trim())         partes.push(p.cor.trim())
+    if (p.marca?.trim())       partes.push(p.marca.trim())
+    if (p.tamanho?.trim())     partes.push(`(${p.tamanho.trim()})`)
+    if (p.preco?.trim())       partes.push(`R$ ${p.preco.trim()}`)
+    const texto = partes.join(' ').replace(/\s+/g, ' ')
+    copyToClipboard(texto)
+      .then(() => { setTxtCopiado(true); setTimeout(() => setTxtCopiado(false), 1000) })
+      .catch(() => {})
   }
 
   return (
@@ -1603,7 +1637,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             </svg>
           </button>
 
-          {/* Copiar */}
+          {/* Copiar produto (duplicar) */}
           <button
             type="button"
             className="btn-action-sm copy"
@@ -1614,6 +1648,21 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+
+          {/* Copiar texto da linha */}
+          <button
+            type="button"
+            className="btn-action-sm copy-txt"
+            title="Copiar texto da linha"
+            onClick={copiarTextoLinha}
+            disabled={desabilitado}
+            style={txtCopiado ? { color: 'var(--green)' } : undefined}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
             </svg>
           </button>
 
