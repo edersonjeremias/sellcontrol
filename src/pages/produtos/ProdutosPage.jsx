@@ -347,11 +347,11 @@ export default function ProdutosPage() {
 
     setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
 
-    // Foca no campo CÓDIGO da primeira linha (nova linha criada)
+    // Foca no campo PRODUTO da primeira linha (nova linha criada)
     setTimeout(() => {
       const firstRow = document.querySelector('#tabela-produtos tbody tr:first-child')
-      const codigoInput = firstRow?.querySelector('.col-codigo .cell-input')
-      codigoInput?.focus()
+      const produtoInput = firstRow?.querySelector('.col-produto .cell-input')
+      produtoInput?.focus()
       // Scroll para o topo
       document.querySelector('.tabela-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
     }, 50)
