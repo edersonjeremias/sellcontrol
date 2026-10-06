@@ -13,6 +13,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import TabelaRow      from '../../components/vendas/TabelaRow'
+import { formatarAoDigitar } from '../../utils/moeda'
 import ModalEdicao    from '../../components/vendas/ModalEdicao'
 import ModalFila      from '../../components/vendas/ModalFila'
 import ModalCadastro  from '../../components/vendas/ModalCadastro'
@@ -1180,11 +1181,15 @@ export default function VendasPage() {
         linhaAtualizada.isSent = ['ENVIADO', 'VENDIDO'].includes((value || '').toUpperCase()) && linhaAtualizada.cliente_nome?.trim()
       }
 
-      if (field === 'preco') linhaAtualizada.preco = value.replace(/[^\d,]/g, '')
+      // Formata preços automaticamente ao digitar (0,07 → 0,79 → 7,99 → 79,90)
+      if (field === 'preco') {
+        linhaAtualizada.preco = formatarAoDigitar(value)
+      }
       if (field === 'preco_promocional') {
-        const cleaned = value.replace(/[^\d,]/g, '')
-        console.log('💰 Atualizando preco_promocional:', { antes: prev[idx].preco_promocional, depois: cleaned })
-        linhaAtualizada.preco_promocional = cleaned
+        linhaAtualizada.preco_promocional = formatarAoDigitar(value)
+      }
+      if (field === 'custo') {
+        linhaAtualizada.custo = formatarAoDigitar(value)
       }
 
       // IMPORTANTE: Criar NOVO array para React detectar mudança
