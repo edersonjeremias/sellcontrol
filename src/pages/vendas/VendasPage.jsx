@@ -1124,6 +1124,7 @@ export default function VendasPage() {
       isSent: false,
       liberado: false,
       _produtoId: produto.id, // Guarda ID do produto para deduzir estoque depois
+      _estoqueDeduzido: false, // Controle de dedução de estoque
     }
 
     // Adiciona no topo da tabela
@@ -1161,32 +1162,8 @@ export default function VendasPage() {
 
       if (field === 'cliente_nome') {
         const linhaAnterior = prev[idx]
-        const tinhaCliente = linhaAnterior.cliente_nome?.trim()
-        const teraCliente = value?.trim()
 
-        // DEBUG: Log para verificar valores
-        console.log('🔍 DEBUG Cliente:', {
-          tinhaCliente,
-          teraCliente,
-          _produtoId: linhaAnterior._produtoId,
-          produto: linhaAnterior.produto
-        })
-
-        // ✅ DEDUZ ESTOQUE se estava vazio e agora tem cliente
-        if (!tinhaCliente && teraCliente && linhaAnterior._produtoId) {
-          console.log('💾 Tentando deduzir estoque do produto ID:', linhaAnterior._produtoId)
-          deduzirQuantidade(linhaAnterior._produtoId, 1)
-            .then(() => console.log('✅ Estoque deduzido ao colocar cliente:', linhaAnterior.codigo || linhaAnterior.produto))
-            .catch(err => console.error('❌ Erro ao deduzir estoque:', err))
-        }
-
-        // ✅ DEVOLVE ESTOQUE se tinha cliente e agora ficou vazio
-        if (tinhaCliente && !teraCliente && linhaAnterior._produtoId) {
-          console.log('💾 Tentando devolver estoque do produto ID:', linhaAnterior._produtoId)
-          devolverQuantidade(linhaAnterior._produtoId, 1)
-            .then(() => console.log('✅ Estoque devolvido ao remover cliente:', linhaAnterior.codigo || linhaAnterior.produto))
-            .catch(err => console.error('❌ Erro ao devolver estoque:', err))
-        }
+        // ❌ NÃO deduz/devolve estoque aqui (será feito no onBlur quando terminar de digitar)
 
         linhaAtualizada.liberado = false
         linhaAtualizada.sacolinha = null  // ✅ Limpa sacolinha (será recalculada no onBlur)
@@ -1265,6 +1242,39 @@ export default function VendasPage() {
 
     // Salva o que foi digitado (já que não salvou durante a digitação)
     salvarAgora()
+
+    // ═══════════════════════════════════════════════════════════════
+    // DEDUZIR/DEVOLVER ESTOQUE (só quando usuário TERMINA de digitar)
+    // ═══════════════════════════════════════════════════════════════
+    if (l._produtoId) {
+      // Se tem cliente E ainda não deduziu → DEDUZ
+      if (nome && !l._estoqueDeduzido) {
+        console.log('💾 Deduzindo estoque do produto ID:', l._produtoId)
+        deduzirQuantidade(l._produtoId, 1)
+          .then(() => {
+            console.log('✅ Estoque deduzido:', l.codigo || l.produto)
+            // Marca que foi deduzido
+            setLinhas(prev => prev.map(linha =>
+              linha._key === key ? { ...linha, _estoqueDeduzido: true } : linha
+            ))
+          })
+          .catch(err => console.error('❌ Erro ao deduzir estoque:', err))
+      }
+
+      // Se NÃO tem cliente E já tinha deduzido → DEVOLVE
+      if (!nome && l._estoqueDeduzido) {
+        console.log('💾 Devolvendo estoque do produto ID:', l._produtoId)
+        devolverQuantidade(l._produtoId, 1)
+          .then(() => {
+            console.log('✅ Estoque devolvido:', l.codigo || l.produto)
+            // Marca que foi devolvido
+            setLinhas(prev => prev.map(linha =>
+              linha._key === key ? { ...linha, _estoqueDeduzido: false } : linha
+            ))
+          })
+          .catch(err => console.error('❌ Erro ao devolver estoque:', err))
+      }
+    }
 
     if (!nome) {
       console.log('⚠️ Nome vazio, recalculando sacolinhas')
