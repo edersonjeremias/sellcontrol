@@ -54,7 +54,7 @@ function mapProduto(p) {
     custo: p.custo ? formatarAoDigitar(String(Math.round(p.custo * 100))) : '',
     preco: p.preco ? formatarAoDigitar(String(Math.round(p.preco * 100))) : '',
     preco_promocional: p.preco_promocional ? formatarAoDigitar(String(Math.round(p.preco_promocional * 100))) : '',
-    quantidade: String(p.quantidade || 0),
+    quantidade: p.quantidade ? String(p.quantidade) : '',
     ativo: p.ativo !== false,
     isNew: false,
     deleted: false,
