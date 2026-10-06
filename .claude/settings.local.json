@@ -24,7 +24,9 @@
       "Bash(node C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\verificar-api.js)",
       "PowerShell(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\verificar-api.js\")",
       "PowerShell(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\check-api.js\")",
-      "Bash(cat > *)"
+      "Bash(cat > *)",
+      "PowerShell(Get-ChildItem -Path src\\\\pages -File -Recurse | Where-Object { $_.Name -match 'pagar' } | Select-Object FullName)",
+      "PowerShell(git add src/pages/relatorio/ContasPagarPage.jsx)"
     ],
     "additionalDirectories": [
       "\\tmp"

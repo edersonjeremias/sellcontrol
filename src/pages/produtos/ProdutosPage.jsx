@@ -92,7 +92,7 @@ export default function ProdutosPage() {
   const itensPorPagina = 100
 
   // Estados de ordenação
-  const [ordenarPor, setOrdenarPor] = useState(null) // 'preco' | 'quantidade' | null
+  const [ordenarPor, setOrdenarPor] = useState(null) // 'preco' | 'quantidade' | 'codigo' | null
   const [ordenarDirecao, setOrdenarDirecao] = useState('asc') // 'asc' | 'desc'
 
   const produtosRef = useRef(produtos)
@@ -165,6 +165,19 @@ export default function ProdutosPage() {
         } else if (ordenarPor === 'quantidade') {
           valorA = parseInt(a.quantidade) || 0
           valorB = parseInt(b.quantidade) || 0
+        } else if (ordenarPor === 'codigo') {
+          // Tenta converter para número, se não conseguir compara como string
+          const numA = parseInt(a.codigo)
+          const numB = parseInt(b.codigo)
+          if (!isNaN(numA) && !isNaN(numB)) {
+            valorA = numA
+            valorB = numB
+          } else {
+            // Comparação alfabética
+            return ordenarDirecao === 'asc'
+              ? (a.codigo || '').localeCompare(b.codigo || '')
+              : (b.codigo || '').localeCompare(a.codigo || '')
+          }
         }
 
         if (ordenarDirecao === 'asc') {
@@ -809,7 +822,13 @@ export default function ProdutosPage() {
                   >
                     Preço {ordenarPor === 'preco' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
                   </th>
-                  <th className="th-codigo">Cód.</th>
+                  <th
+                    className="th-codigo"
+                    onClick={() => toggleOrdenacao('codigo')}
+                    style={{ cursor: 'pointer', userSelect: 'none' }}
+                  >
+                    Cód. {ordenarPor === 'codigo' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
+                  </th>
                   {cols.preco_promocional && <th className="th-preco">Promo</th>}
                   <th
                     className="th-qtd"
