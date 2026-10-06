@@ -1425,7 +1425,6 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
     if (p.marca?.trim())       partes.push(p.marca.trim())
     if (p.tamanho?.trim())     partes.push(`(${p.tamanho.trim()})`)
     if (p.preco?.trim())       partes.push(`R$ ${p.preco}`)
-    if (p.quantidade)          partes.push(`Qtd: ${p.quantidade}`)
     const texto = partes.join(' ').replace(/\s+/g, ' ')
     copyToClipboard(texto)
       .then(() => { setTxtCopiado(true); setTimeout(() => setTxtCopiado(false), 1000) })
