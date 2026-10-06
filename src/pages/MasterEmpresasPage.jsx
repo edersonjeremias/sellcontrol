@@ -585,6 +585,520 @@ function AbaPaginas({ showToast }) {
   )
 }
 
+// ── Aba: Importar Bling ────────────────────────────────────────
+function AbaImportarBling({ showToast }) {
+  const [tenants, setTenants] = useState([])
+  const [tenantId, setTenantId] = useState('')
+  const [preview, setPreview] = useState([])
+  const [importing, setImporting] = useState(false)
+  const [progresso, setProgresso] = useState(null)
+  const [errosDetalhados, setErrosDetalhados] = useState([])
+  const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    getAllTenants().then(({ data }) => setTenants(data))
+  }, [])
+
+  // Processar CSV do Bling
+  function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      delimiter: ';', // Bling usa ponto-e-vírgula
+      complete: (results) => {
+        if (results.data.length === 0) {
+          showToast('Arquivo CSV vazio', 'error')
+          return
+        }
+        setPreview(results.data)
+        showToast(`${results.data.length} clientes carregados para preview`, 'success')
+      },
+      error: (error) => {
+        showToast('Erro ao ler CSV: ' + error.message, 'error')
+      }
+    })
+  }
+
+  // Limpar CPF/CNPJ
+  function limparDocumento(doc) {
+    return (doc || '').replace(/[^\d]/g, '')
+  }
+
+  // Limpar telefone
+  function limparTelefone(tel) {
+    return (tel || '').replace(/[^\d]/g, '')
+  }
+
+  // Executar importação
+  async function executarImportacao() {
+    if (!tenantId) {
+      showToast('Selecione uma empresa de destino', 'error')
+      return
+    }
+
+    if (preview.length === 0) {
+      showToast('Nenhum dado para importar', 'error')
+      return
+    }
+
+    setImporting(true)
+    setProgresso({ total: preview.length, atual: 0, inseridos: 0, atualizados: 0, erros: 0, pulados: 0 })
+    setErrosDetalhados([])
+
+    let inseridos = 0
+    let atualizados = 0
+    let erros = 0
+    let pulados = 0
+    let enderecosInseridos = 0
+    const listaErros = []
+
+    for (let i = 0; i < preview.length; i++) {
+      const row = preview[i]
+
+      // Extrair dados do CSV do Bling
+      const nome = (row.Nome || '').trim()
+      const fantasia = (row.Fantasia || '').trim()
+      const codigo = (row['Código'] || row.Codigo || '').trim().toLowerCase().replace('@', '')
+      const cpfCnpj = limparDocumento(row['CNPJ / CPF'] || row.CPF || row.CNPJ)
+      const tipoPessoa = row['Tipo pessoa'] === 'Pessoa Jurídica' ? 'juridica' : 'fisica'
+      const whatsapp = limparTelefone(row.Celular || '')
+      const telefone = limparTelefone(row.Fone || row.Telefone || '')
+      const email = (row['E-mail'] || row.Email || '').trim().toLowerCase()
+
+      // Endereço
+      const cep = limparDocumento(row.CEP || '')
+      const rua = (row['Endereço'] || row.Endereco || '').trim()
+      const numero = (row['Número'] || row.Numero || '').trim()
+      const complemento = (row.Complemento || '').trim()
+      const bairro = (row.Bairro || '').trim()
+      const cidade = (row.Cidade || '').trim()
+      const estado = (row.UF || '').trim().toUpperCase()
+
+      // Instagram será o código ou nome como fallback
+      const instagram = codigo || nome.toLowerCase().replace(/\s+/g, '')
+
+      if (!instagram || !nome) {
+        pulados++
+        listaErros.push({
+          linha: i + 2,
+          instagram: instagram || '(vazio)',
+          erro: 'Instagram/Nome vazio',
+          tipo: 'pulado'
+        })
+        setProgresso(p => ({ ...p, atual: i + 1, pulados }))
+        continue
+      }
+
+      try {
+        // Verificar se cliente já existe
+        const { data: existente } = await supabase
+          .from('clientes')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .eq('instagram', instagram)
+          .maybeSingle()
+
+        const clienteData = {
+          tenant_id: tenantId,
+          instagram,
+          whatsapp,
+          telefone,
+          email,
+          nome_completo: nome,
+          cpf_cnpj: cpfCnpj,
+          tipo_pessoa: tipoPessoa,
+          data_cadastro: new Date().toISOString().split('T')[0],
+          bloqueado: false,
+          msg_bloqueio: '',
+        }
+
+        let clienteId
+
+        if (existente) {
+          // Atualizar cliente existente
+          const { error } = await supabase
+            .from('clientes')
+            .update(clienteData)
+            .eq('id', existente.id)
+          if (error) throw error
+          clienteId = existente.id
+          atualizados++
+        } else {
+          // Inserir novo cliente
+          const { data: novoCliente, error } = await supabase
+            .from('clientes')
+            .insert(clienteData)
+            .select('id')
+            .single()
+          if (error) throw error
+          clienteId = novoCliente.id
+          inseridos++
+        }
+
+        // Criar endereço se tiver CEP
+        if (cep && rua && numero && cidade && estado) {
+          // Verificar se já existe endereço para este cliente
+          const { data: enderecoExistente } = await supabase
+            .from('enderecos_clientes')
+            .select('id')
+            .eq('tenant_id', tenantId)
+            .eq('cliente_instagram', instagram)
+            .maybeSingle()
+
+          const enderecoData = {
+            tenant_id: tenantId,
+            cliente_instagram: instagram,
+            apelido: fantasia || 'Principal',
+            destinatario: nome,
+            telefone: whatsapp || telefone || '(00) 00000-0000',
+            cep,
+            rua,
+            numero,
+            complemento,
+            bairro,
+            cidade,
+            estado,
+            padrao: true,
+          }
+
+          if (enderecoExistente) {
+            // Atualizar endereço existente
+            await supabase
+              .from('enderecos_clientes')
+              .update(enderecoData)
+              .eq('id', enderecoExistente.id)
+          } else {
+            // Inserir novo endereço
+            const { error: endError } = await supabase
+              .from('enderecos_clientes')
+              .insert(enderecoData)
+            if (endError) throw endError
+            enderecosInseridos++
+          }
+        }
+
+        setProgresso(p => ({ ...p, atual: i + 1, inseridos, atualizados }))
+        await new Promise(resolve => setTimeout(resolve, 100)) // delay para não sobrecarregar
+
+      } catch (err) {
+        console.error(`Erro linha ${i + 2}:`, err)
+        erros++
+        listaErros.push({
+          linha: i + 2,
+          instagram,
+          erro: err.message || 'Erro desconhecido',
+          detalhes: err.details || err.hint || '',
+          tipo: 'erro'
+        })
+        setProgresso(p => ({ ...p, atual: i + 1, erros }))
+      }
+    }
+
+    setErrosDetalhados(listaErros)
+    setImporting(false)
+
+    if (erros > 0) {
+      showToast(
+        `⚠️ Importação concluída com erros!\n${inseridos} clientes novos, ${atualizados} atualizados, ${enderecosInseridos} endereços criados\n${pulados} pulados, ${erros} erros`,
+        'error'
+      )
+    } else {
+      showToast(
+        `✅ Importação concluída!\n${inseridos} clientes novos, ${atualizados} atualizados\n${enderecosInseridos} endereços criados, ${pulados} pulados`,
+        'success'
+      )
+    }
+
+    if (erros === 0 && pulados === 0) {
+      setTimeout(() => {
+        setPreview([])
+        setProgresso(null)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+      }, 3000)
+    }
+  }
+
+  const nomeEmpresa = tenants.find(t => t.tenant_id === tenantId)?.nome_loja || ''
+
+  return (
+    <div style={{ padding: '20px 0', maxWidth: 900 }}>
+      <div style={{
+        background: 'rgba(59,130,246,0.1)',
+        border: '1px solid var(--blue)',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 24
+      }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: 14, fontWeight: 700, color: 'var(--blue)' }}>
+          📦 Importação de Clientes do Bling
+        </h3>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--text-body)', lineHeight: 1.6 }}>
+          Esta importação cria automaticamente:
+          <br/>• <strong>Cliente completo</strong> com nome, CPF/CNPJ, email, telefone
+          <br/>• <strong>Endereço padrão</strong> que aparece no portal e na cotação de frete
+          <br/>• Dados unificados entre portal do cliente e área administrativa
+        </p>
+      </div>
+
+      {/* Selecionar empresa */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+          Empresa de destino *
+        </label>
+        <select value={tenantId} onChange={e => setTenantId(e.target.value)} style={SI}>
+          <option value="">-- Selecione a empresa --</option>
+          {tenants.map(t => (
+            <option key={t.tenant_id} value={t.tenant_id}>
+              {t.nome_loja || t.tenant_id}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Upload CSV */}
+      <div style={{ marginBottom: 24 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+          Arquivo CSV do Bling
+        </label>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileUpload}
+          disabled={importing}
+          style={{
+            ...SI,
+            cursor: 'pointer',
+            padding: '10px',
+          }}
+        />
+        <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+          Formato Bling: separado por ponto-e-vírgula (;), com colunas Nome, Código, CNPJ/CPF, Endereço, CEP, etc.
+        </p>
+      </div>
+
+      {/* Preview */}
+      {preview.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-body)', margin: 0 }}>
+              Preview ({preview.length} clientes)
+            </h3>
+            <button
+              onClick={() => {
+                setPreview([])
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--red)',
+                cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
+              }}>
+              Limpar
+            </button>
+          </div>
+
+          <div style={{
+            maxHeight: 400, overflowY: 'auto',
+            border: '1px solid var(--border-light)', borderRadius: 8,
+            background: 'var(--input-bg)'
+          }}>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, background: '#1a2230', borderBottom: '1px solid var(--border-light)' }}>
+                <tr>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Nome</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Instagram</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>CPF/CNPJ</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Cidade</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600 }}>Endereço</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.slice(0, 50).map((row, i) => {
+                  const nome = (row.Nome || '').trim()
+                  const codigo = (row['Código'] || row.Codigo || '').trim()
+                  const cpfCnpj = row['CNPJ / CPF'] || row.CPF || row.CNPJ || ''
+                  const cidade = row.Cidade || ''
+                  const cep = row.CEP || ''
+                  const temEndereco = !!(cep && cidade)
+
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                      <td style={{ padding: '6px 10px', color: 'var(--text-body)', fontWeight: 600 }}>
+                        {nome || <span style={{ color: 'var(--red)' }}>❌ vazio</span>}
+                      </td>
+                      <td style={{ padding: '6px 10px', color: 'var(--blue)' }}>
+                        @{codigo || nome.toLowerCase().replace(/\s+/g, '')}
+                      </td>
+                      <td style={{ padding: '6px 10px', color: 'var(--muted)', fontSize: 11 }}>
+                        {cpfCnpj || '-'}
+                      </td>
+                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
+                        {cidade || '-'}
+                      </td>
+                      <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                        {temEndereco ? (
+                          <span style={{ color: 'var(--green)', fontSize: 16 }}>✓</span>
+                        ) : (
+                          <span style={{ color: 'var(--muted)', fontSize: 11 }}>-</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {preview.length > 50 && (
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+              Mostrando 50 de {preview.length} clientes
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Botão importar */}
+      {preview.length > 0 && (
+        <div>
+          {!progresso && (
+            <button
+              onClick={executarImportacao}
+              disabled={importing || !tenantId}
+              className="btn-acao"
+              style={{
+                width: '100%', minHeight: 48, fontSize: 15, fontWeight: 700,
+                background: 'var(--green)', color: '#fff'
+              }}>
+              {importing
+                ? 'Importando...'
+                : `Importar ${preview.length} clientes para ${nomeEmpresa || 'empresa selecionada'}`}
+            </button>
+          )}
+
+          {/* Barra de progresso */}
+          {progresso && (
+            <div style={{
+              padding: 20, background: 'var(--input-bg)',
+              border: '1px solid var(--border-light)', borderRadius: 8
+            }}>
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-body)' }}>
+                    {importing ? 'Importando...' : 'Concluído!'}
+                  </span>
+                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                    {progresso.atual} / {progresso.total}
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: 8, background: 'var(--border-light)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${(progresso.atual / progresso.total) * 100}%`,
+                    height: '100%', background: 'var(--blue)',
+                    transition: 'width 0.2s'
+                  }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, fontSize: 12 }}>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Novos</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--green)' }}>{progresso.inseridos}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Atualizados</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)' }}>{progresso.atualizados}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Pulados</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--muted)' }}>{progresso.pulados}</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--muted)' }}>Erros</div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--red)' }}>{progresso.erros}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lista de erros detalhados */}
+      {errosDetalhados.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--red)', margin: 0 }}>
+              ⚠️ Erros e Pulados ({errosDetalhados.length})
+            </h3>
+            <button
+              onClick={() => {
+                const csv = [
+                  ['Linha', 'Instagram', 'Erro', 'Detalhes', 'Tipo'].join(','),
+                  ...errosDetalhados.map(e => [
+                    e.linha,
+                    e.instagram,
+                    `"${e.erro.replace(/"/g, '""')}"`,
+                    `"${(e.detalhes || '').replace(/"/g, '""')}"`,
+                    e.tipo
+                  ].join(','))
+                ].join('\n')
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+                const link = document.createElement('a')
+                link.href = URL.createObjectURL(blob)
+                link.download = `erros_importacao_bling_${new Date().toISOString().slice(0,10)}.csv`
+                link.click()
+                showToast('CSV de erros baixado!', 'success')
+              }}
+              className="btn-acao"
+              style={{
+                padding: '6px 12px', fontSize: 12, background: 'var(--blue)', color: '#171717'
+              }}>
+              📥 Baixar CSV dos Erros
+            </button>
+          </div>
+
+          <div style={{
+            maxHeight: 300, overflowY: 'auto',
+            border: '1px solid var(--red)', borderRadius: 8,
+            background: 'rgba(239, 68, 68, 0.05)'
+          }}>
+            <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+              <thead style={{ position: 'sticky', top: 0, background: '#1a2230', borderBottom: '1px solid var(--red)' }}>
+                <tr>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Linha</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Instagram</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Erro</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--red)', fontWeight: 600 }}>Detalhes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {errosDetalhados.map((erro, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '8px 10px', color: 'var(--text-body)', fontWeight: 700 }}>
+                      {erro.linha}
+                    </td>
+                    <td style={{ padding: '8px 10px', color: 'var(--text-body)' }}>
+                      {erro.instagram}
+                    </td>
+                    <td style={{ padding: '8px 10px', color: erro.tipo === 'erro' ? 'var(--red)' : 'var(--muted)' }}>
+                      {erro.erro}
+                    </td>
+                    <td style={{ padding: '8px 10px', color: 'var(--muted)', fontSize: 11 }}>
+                      {erro.detalhes || '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Aba: Importar Dados ────────────────────────────────────────
 function AbaImportarDados({ showToast }) {
   const [tipoImport, setTipoImport] = useState('clientes') // 'clientes' | 'vendas'
@@ -1588,11 +2102,13 @@ export default function MasterEmpresasPage() {
           <TabBtn label="Empresa"             active={aba === 'empresa'}  onClick={() => setAba('empresa')} />
           <TabBtn label="Páginas por Empresa" active={aba === 'paginas'}  onClick={() => setAba('paginas')} />
           <TabBtn label="Usuários da Empresa" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
+          <TabBtn label="Importar Bling"      active={aba === 'bling'}    onClick={() => setAba('bling')} />
           <TabBtn label="Importar Dados"      active={aba === 'importar'} onClick={() => setAba('importar')} />
         </div>
         {aba === 'empresa'  && <AbaEmpresa showToast={showToast} />}
         {aba === 'paginas'  && <AbaPaginas showToast={showToast} />}
         {aba === 'usuarios' && <AbaUsuarios showToast={showToast} />}
+        {aba === 'bling'    && <AbaImportarBling showToast={showToast} />}
         {aba === 'importar' && <AbaImportarDados showToast={showToast} />}
       </section>
     </AppShell>
