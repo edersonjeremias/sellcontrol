@@ -1164,8 +1164,17 @@ export default function VendasPage() {
         const tinhaCliente = linhaAnterior.cliente_nome?.trim()
         const teraCliente = value?.trim()
 
+        // DEBUG: Log para verificar valores
+        console.log('🔍 DEBUG Cliente:', {
+          tinhaCliente,
+          teraCliente,
+          _produtoId: linhaAnterior._produtoId,
+          produto: linhaAnterior.produto
+        })
+
         // ✅ DEDUZ ESTOQUE se estava vazio e agora tem cliente
         if (!tinhaCliente && teraCliente && linhaAnterior._produtoId) {
+          console.log('💾 Tentando deduzir estoque do produto ID:', linhaAnterior._produtoId)
           deduzirQuantidade(linhaAnterior._produtoId, 1)
             .then(() => console.log('✅ Estoque deduzido ao colocar cliente:', linhaAnterior.codigo || linhaAnterior.produto))
             .catch(err => console.error('❌ Erro ao deduzir estoque:', err))
@@ -1173,6 +1182,7 @@ export default function VendasPage() {
 
         // ✅ DEVOLVE ESTOQUE se tinha cliente e agora ficou vazio
         if (tinhaCliente && !teraCliente && linhaAnterior._produtoId) {
+          console.log('💾 Tentando devolver estoque do produto ID:', linhaAnterior._produtoId)
           devolverQuantidade(linhaAnterior._produtoId, 1)
             .then(() => console.log('✅ Estoque devolvido ao remover cliente:', linhaAnterior.codigo || linhaAnterior.produto))
             .catch(err => console.error('❌ Erro ao devolver estoque:', err))
