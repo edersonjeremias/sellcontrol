@@ -797,7 +797,6 @@ export default function ProdutosPage() {
             <table id="tabela-produtos" className="tabela-vendas">
               <thead>
                 <tr>
-                  <th className="th-codigo">Cód.</th>
                   <th>Produto</th>
                   <th>Modelo</th>
                   {cols.genero && <th className="th-genero">Gên.</th>}
@@ -813,6 +812,7 @@ export default function ProdutosPage() {
                   >
                     Preço {ordenarPor === 'preco' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
                   </th>
+                  <th className="th-codigo">Cód.</th>
                   {cols.preco_promocional && <th className="th-preco">Promo</th>}
                   <th
                     className="th-qtd"
@@ -1400,18 +1400,6 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
 
   return (
     <tr className={p.isNew ? 'linha-nova' : ''} style={{ opacity: desabilitado ? 0.5 : 1 }}>
-      {/* CÓDIGO */}
-      <td className="col-codigo">
-        <input
-          className="cell-input"
-          value={p.codigo}
-          onChange={e => onChange(p._key, 'codigo', e.target.value)}
-          onKeyDown={navegarProximo}
-          disabled={desabilitado}
-          placeholder="100"
-        />
-      </td>
-
       {/* PRODUTO */}
       <td className="col-produto">
         <AutocompleteInput
@@ -1531,6 +1519,18 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           placeholder="0,00"
           disabled={desabilitado}
           style={{ textAlign: 'right' }}
+        />
+      </td>
+
+      {/* CÓDIGO */}
+      <td className="col-codigo">
+        <input
+          className="cell-input"
+          value={p.codigo}
+          onChange={e => onChange(p._key, 'codigo', e.target.value)}
+          onKeyDown={navegarProximo}
+          disabled={desabilitado}
+          placeholder="100"
         />
       </td>
 
