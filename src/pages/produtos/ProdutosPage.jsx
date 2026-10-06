@@ -101,6 +101,7 @@ export default function ProdutosPage() {
   // Refs para salvamento automático
   const saveTimerRef = useRef(null)
   const isSavingRef = useRef(false)
+  const focusedElementRef = useRef(null)
 
   // Carrega configuração de colunas do localStorage
   useEffect(() => {
@@ -148,6 +149,15 @@ export default function ProdutosPage() {
     }
     carregar()
   }, [tenantId, mostrarInativos, filtro, dataInicio, dataFim, paginaAtual, showToast])
+
+  // Salvamento automático periódico (a cada 1 minuto)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      salvarAgora()
+    }, 60000) // 60 segundos
+
+    return () => clearInterval(interval)
+  }, [salvarAgora])
 
   // Filtro de busca (apenas remove deletados localmente)
   const produtosFiltrados = useMemo(() => {
@@ -200,6 +210,9 @@ export default function ProdutosPage() {
     // Debounce de 300ms
     saveTimerRef.current = setTimeout(async () => {
       if (isSavingRef.current || busy) return
+
+      // Salva elemento focado antes de salvar
+      focusedElementRef.current = document.activeElement
 
       // Filtra produtos que precisam ser salvos (não vazios e modificados)
       const produtosParaSalvar = produtosRef.current.filter(p =>
@@ -257,6 +270,13 @@ export default function ProdutosPage() {
         console.error('Erro no salvamento automático:', err)
       } finally {
         isSavingRef.current = false
+
+        // Restaura foco após salvar
+        setTimeout(() => {
+          if (focusedElementRef.current && document.body.contains(focusedElementRef.current)) {
+            focusedElementRef.current.focus()
+          }
+        }, 10)
       }
     }, 300)
   }, [busy, tenantId])
