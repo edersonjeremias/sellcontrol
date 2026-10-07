@@ -143,28 +143,28 @@ export default function CuponsPage() {
     }
   }
 
-  // Data e hora atual no horário de Brasília
-  const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-  const [dataStr, horaStr] = agora.split(', ')
-  const hoje = dataStr.split('/').reverse().join('-') // DD/MM/YYYY → YYYY-MM-DD
-  const horaAtual = horaStr.substring(0, 5) // HH:MM (remove segundos)
-
   // Função para verificar se cupom está expirado (considera data + hora)
   const cupomExpirado = (cupom) => {
-    if (hoje > cupom.data_fim) return true
-    if (hoje < cupom.data_fim) return false
-    // Se é o dia de fim, verificar horário
-    if (cupom.hora_fim && horaAtual > cupom.hora_fim) return true
-    return false
+    // Timestamp atual em Brasília
+    const agoraBrasilia = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
+
+    // Criar timestamp de fim do cupom
+    const horaFin = cupom.hora_fim || '23:59'
+    const timestampFim = new Date(`${cupom.data_fim}T${horaFin}:59-03:00`)
+
+    return agoraBrasilia > timestampFim
   }
 
   // Função para verificar se cupom é futuro (considera data + hora)
   const cupomFuturo = (cupom) => {
-    if (hoje < cupom.data_inicio) return true
-    if (hoje > cupom.data_inicio) return false
-    // Se é o dia de início, verificar horário
-    if (cupom.hora_inicio && horaAtual < cupom.hora_inicio) return true
-    return false
+    // Timestamp atual em Brasília
+    const agoraBrasilia = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
+
+    // Criar timestamp de início do cupom
+    const horaIni = cupom.hora_inicio || '00:00'
+    const timestampInicio = new Date(`${cupom.data_inicio}T${horaIni}:00-03:00`)
+
+    return agoraBrasilia < timestampInicio
   }
 
   return (

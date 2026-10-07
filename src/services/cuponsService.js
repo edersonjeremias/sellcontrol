@@ -80,32 +80,23 @@ export async function validarCupom(tenantId, codigo) {
   }
 
   // Verificar período de validade (horário de Brasília)
-  const agora = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-  const [dataStr, horaStr] = agora.split(', ')
-  const hoje = dataStr.split('/').reverse().join('-') // DD/MM/YYYY → YYYY-MM-DD
-  const horaAtual = horaStr.substring(0, 5) // HH:MM (remove segundos)
+  // Criar timestamp atual em Brasília
+  const agoraBrasilia = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
 
-  // Validar data
-  if (hoje < data.data_inicio || hoje > data.data_fim) {
+  // Extrair data e hora atuais (formato YYYY-MM-DD e HH:MM)
+  const dataAtual = agoraBrasilia.toISOString().split('T')[0] // YYYY-MM-DD
+  const horaAtual = agoraBrasilia.toTimeString().substring(0, 5) // HH:MM
+
+  // Criar timestamps de início e fim considerando horários
+  const horaIni = data.hora_inicio || '00:00'
+  const horaFin = data.hora_fim || '23:59'
+
+  const timestampInicio = new Date(`${data.data_inicio}T${horaIni}:00-03:00`) // -03:00 = BRT
+  const timestampFim = new Date(`${data.data_fim}T${horaFin}:59-03:00`) // Fim do minuto
+
+  // Comparar timestamps (considera data + hora)
+  if (agoraBrasilia < timestampInicio || agoraBrasilia > timestampFim) {
     throw new Error('Cupom expirado')
-  }
-
-  // Validar horário (se definido)
-  if (data.hora_inicio || data.hora_fim) {
-    const horaIni = data.hora_inicio || '00:00'
-    const horaFin = data.hora_fim || '23:59'
-
-    // Se é o dia de início, verificar se já passou da hora de início
-    if (hoje === data.data_inicio && horaAtual < horaIni) {
-      throw new Error('Cupom expirado')
-    }
-
-    // Se é o dia de fim, verificar se ainda não passou da hora de fim
-    if (hoje === data.data_fim && horaAtual > horaFin) {
-      throw new Error('Cupom expirado')
-    }
-
-    // Se é um dia entre início e fim, está válido
   }
 
   // Validar limite de usos
