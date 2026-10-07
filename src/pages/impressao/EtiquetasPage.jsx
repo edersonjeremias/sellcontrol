@@ -95,24 +95,8 @@ export default function EtiquetasPage() {
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
 
-  const [layout, setLayout] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
-      if (!saved) return DEFAULT_LAYOUT
-      // Merge: defaults first, then saved values override; garante height/align nos campos
-      const mergedFields = DEFAULT_LAYOUT.fields.map(df => {
-        const sf = (saved.fields || []).find(f => f.id === df.id)
-        if (!sf) return df
-        return {
-          ...df, ...sf,
-          height:   sf.height   > 0 ? sf.height   : df.height,
-          barHeight: sf.barHeight > 0 ? sf.barHeight : df.barHeight ?? 35,
-          barcodeW:  sf.barcodeW  > 0 ? sf.barcodeW  : df.barcodeW  ?? 50,
-        }
-      })
-      return { ...DEFAULT_LAYOUT, ...saved, fields: mergedFields }
-    } catch { return DEFAULT_LAYOUT }
-  })
+  const [layout, setLayout] = useState(DEFAULT_LAYOUT)
+  const [layoutCarregado, setLayoutCarregado] = useState(false)
 
   const [datasRaw,   setDatasRaw]   = useState([])
   const [dataFiltro, setDataFiltro] = useState('')
@@ -124,6 +108,51 @@ export default function EtiquetasPage() {
   const [err,        setErr]        = useState(null)
   const [gerado,     setGerado]     = useState(false)
   const [mostrarEstoque, setMostrarEstoque] = useState('todos') // 'todos' ou 'com_estoque'
+
+  // Carregar configuração de layout do banco de dados
+  useEffect(() => {
+    if (!tenantId || layoutCarregado) return
+
+    async function carregarLayout() {
+      try {
+        const { data, error } = await supabase
+          .from('config_etiquetas')
+          .select('layout')
+          .eq('tenant_id', tenantId)
+          .single()
+
+        if (error) {
+          // Se não encontrar, usa o padrão
+          if (error.code !== 'PGRST116') {
+            console.error('Erro ao carregar layout:', error)
+          }
+          setLayoutCarregado(true)
+          return
+        }
+
+        if (data?.layout) {
+          // Merge com valores padrão para garantir que novos campos existam
+          const mergedFields = DEFAULT_LAYOUT.fields.map(df => {
+            const sf = (data.layout.fields || []).find(f => f.id === df.id)
+            if (!sf) return df
+            return {
+              ...df, ...sf,
+              height:   sf.height   > 0 ? sf.height   : df.height,
+              barHeight: sf.barHeight > 0 ? sf.barHeight : df.barHeight ?? 35,
+              barcodeW:  sf.barcodeW  > 0 ? sf.barcodeW  : df.barcodeW  ?? 50,
+            }
+          })
+          setLayout({ ...DEFAULT_LAYOUT, ...data.layout, fields: mergedFields })
+        }
+      } catch (err) {
+        console.error('Erro ao carregar layout:', err)
+      } finally {
+        setLayoutCarregado(true)
+      }
+    }
+
+    carregarLayout()
+  }, [tenantId, layoutCarregado])
 
   useEffect(() => {
     if (!tenantId) return
@@ -218,9 +247,37 @@ export default function EtiquetasPage() {
     })
   }
 
+  // Salvar configuração de layout no banco de dados
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
-  }, [layout])
+    if (!tenantId || !layoutCarregado) return
+
+    async function salvarLayout() {
+      try {
+        const { error } = await supabase
+          .from('config_etiquetas')
+          .upsert({
+            tenant_id: tenantId,
+            layout: layout,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'tenant_id'
+          })
+
+        if (error) {
+          console.error('Erro ao salvar layout:', error)
+        }
+      } catch (err) {
+        console.error('Erro ao salvar layout:', err)
+      }
+    }
+
+    // Debounce: espera 1 segundo antes de salvar para não fazer muitas requisições
+    const timer = setTimeout(() => {
+      salvarLayout()
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [layout, tenantId, layoutCarregado])
 
   function updatePaper(key, val) {
     setLayout(prev => ({ ...prev, [key]: parseFloat(val) || 0 }))
