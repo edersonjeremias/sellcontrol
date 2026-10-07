@@ -204,15 +204,14 @@ export default function CobrancasPage() {
   useEffect(() => {
     if (!tenantId) return
     getLivesParaCobranca(tenantId).then(setListaLives)
-    getConfig(tenantId).then(setConfig).catch(() => {})
+    getConfig(tenantId).then(cfg => {
+      setConfig(cfg)
+      // Carrega mensagem personalizada do banco
+      if (cfg?.mensagem_cobranca_custom) setMensagemCustom(cfg.mensagem_cobranca_custom)
+      if (cfg?.mensagem_cobranca_ativa !== undefined) setMensagemAtiva(cfg.mensagem_cobranca_ativa)
+    }).catch(() => {})
     getClientesParaCobranca(tenantId).then(setListaClientes)
     getMapaCreditosClientes(tenantId).then(setCreditosMap).catch(() => {})
-
-    // Carrega mensagem personalizada salva
-    const msgSalva = localStorage.getItem('mensagemCobrancaCustom')
-    const msgAtiva = localStorage.getItem('mensagemCobrancaAtiva')
-    if (msgSalva) setMensagemCustom(msgSalva)
-    if (msgAtiva !== null) setMensagemAtiva(msgAtiva === 'true')
 
     carregar()
   }, [tenantId, carregar])
@@ -234,19 +233,39 @@ export default function CobrancasPage() {
     setShowMsgModal(true)
   }
 
-  function salvarMensagem() {
-    setMensagemCustom(msgTemporaria)
-    setMensagemAtiva(ativaTemporaria)
-    localStorage.setItem('mensagemCobrancaCustom', msgTemporaria)
-    localStorage.setItem('mensagemCobrancaAtiva', String(ativaTemporaria))
-    setShowMsgModal(false)
+  async function salvarMensagem() {
+    if (!tenantId) return
 
-    if (!msgTemporaria.trim()) {
-      showToast('Mensagem removida')
-    } else if (ativaTemporaria) {
-      showToast('Mensagem salva e ativada!')
-    } else {
-      showToast('Mensagem salva (inativa)')
+    try {
+      // Importar supabase dinamicamente
+      const { supabase } = await import('../../lib/supabase')
+
+      // Salvar no banco
+      const { error } = await supabase
+        .from('configuracoes')
+        .update({
+          mensagem_cobranca_custom: msgTemporaria.trim() || null,
+          mensagem_cobranca_ativa: ativaTemporaria
+        })
+        .eq('tenant_id', tenantId)
+
+      if (error) throw error
+
+      // Atualizar estado local
+      setMensagemCustom(msgTemporaria)
+      setMensagemAtiva(ativaTemporaria)
+      setShowMsgModal(false)
+
+      if (!msgTemporaria.trim()) {
+        showToast('Mensagem removida')
+      } else if (ativaTemporaria) {
+        showToast('✅ Mensagem salva e ativada!')
+      } else {
+        showToast('💾 Mensagem salva (inativa)')
+      }
+    } catch (err) {
+      console.error('Erro ao salvar mensagem:', err)
+      showToast('Erro ao salvar mensagem', 'error')
     }
   }
 
@@ -1159,15 +1178,27 @@ export default function CobrancasPage() {
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  onClick={() => {
-                    setMsgTemporaria('')
-                    setMensagemCustom('')
-                    setMensagemAtiva(true)
-                    setAtivaTemporaria(true)
-                    localStorage.removeItem('mensagemCobrancaCustom')
-                    localStorage.removeItem('mensagemCobrancaAtiva')
-                    setShowMsgModal(false)
-                    showToast('Mensagem removida')
+                  onClick={async () => {
+                    try {
+                      const { supabase } = await import('../../lib/supabase')
+                      await supabase
+                        .from('configuracoes')
+                        .update({
+                          mensagem_cobranca_custom: null,
+                          mensagem_cobranca_ativa: false
+                        })
+                        .eq('tenant_id', tenantId)
+
+                      setMsgTemporaria('')
+                      setMensagemCustom('')
+                      setMensagemAtiva(false)
+                      setAtivaTemporaria(false)
+                      setShowMsgModal(false)
+                      showToast('Mensagem removida')
+                    } catch (err) {
+                      console.error('Erro ao limpar mensagem:', err)
+                      showToast('Erro ao limpar', 'error')
+                    }
                   }}
                   style={{
                     flex: 1,
