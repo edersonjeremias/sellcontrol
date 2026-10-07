@@ -123,6 +123,7 @@ export default function EtiquetasPage() {
   const [loading,    setLoading]    = useState(false)
   const [err,        setErr]        = useState(null)
   const [gerado,     setGerado]     = useState(false)
+  const [mostrarEstoque, setMostrarEstoque] = useState('todos') // 'todos' ou 'com_estoque'
 
   useEffect(() => {
     if (!tenantId) return
@@ -146,7 +147,7 @@ export default function EtiquetasPage() {
     try {
       let query = supabase
         .from('produtos')
-        .select('id, codigo, produto, modelo, cor, marca, tamanho, preco, preco_promocional, ativo')
+        .select('id, codigo, produto, modelo, cor, marca, tamanho, preco, preco_promocional, quantidade, ativo')
         .eq('tenant_id', tenantId)
         .eq('ativo', true)
 
@@ -163,16 +164,20 @@ export default function EtiquetasPage() {
       if (error) throw error
 
       const allRows = (data || []).map(r => ({
-        uid:      r.id,
-        codigo:   r.codigo || '',
-        desc:     [r.produto, r.modelo, r.cor, r.marca, r.tamanho ? `(${r.tamanho})` : null].filter(Boolean).join(' '),
-        preco:    r.preco_promocional || r.preco,
-        precoFmt: fmtPreco(r.preco_promocional || r.preco),
+        uid:       r.id,
+        codigo:    r.codigo || '',
+        desc:      [r.produto, r.modelo, r.cor, r.marca, r.tamanho ? `(${r.tamanho})` : null].filter(Boolean).join(' '),
+        preco:     r.preco_promocional || r.preco,
+        precoFmt:  fmtPreco(r.preco_promocional || r.preco),
+        quantidade: r.quantidade || 0,
       }))
 
       setRows(allRows)
       const sel = {}; const q = {}
-      allRows.forEach(r => { sel[r.uid] = true; q[r.uid] = 1 })
+      allRows.forEach(r => {
+        sel[r.uid] = true
+        q[r.uid] = r.quantidade || 0
+      })
       setSelected(sel); setQtds(q); setGerado(true)
     } catch (e) {
       setErr(e.message || 'Erro ao carregar.')
@@ -183,15 +188,24 @@ export default function EtiquetasPage() {
 
   // Filtro em tempo real dos produtos já carregados
   const rowsFiltrados = useMemo(() => {
-    if (!filtro.trim()) return rows
+    let filtered = rows
 
-    const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+    // Filtro por estoque
+    if (mostrarEstoque === 'com_estoque') {
+      filtered = filtered.filter(r => r.quantidade > 0)
+    }
 
-    return rows.filter(r => {
-      const txt = [r.desc, r.codigo, r.precoFmt].join(' ').toLowerCase()
-      return termos.every(t => txt.includes(t))
-    })
-  }, [rows, filtro])
+    // Filtro por texto
+    if (filtro.trim()) {
+      const termos = filtro.toLowerCase().split(',').map(t => t.trim()).filter(Boolean)
+      filtered = filtered.filter(r => {
+        const txt = [r.desc, r.codigo, r.precoFmt].join(' ').toLowerCase()
+        return termos.every(t => txt.includes(t))
+      })
+    }
+
+    return filtered
+  }, [rows, filtro, mostrarEstoque])
 
   const allChecked = rowsFiltrados.length > 0 && rowsFiltrados.every(r => selected[r.uid])
 
@@ -391,6 +405,25 @@ export default function EtiquetasPage() {
               <DateSearchInput value={dataFiltro} onChange={setDataFiltro}
                 options={datasRaw} placeholder="DD/MM/AAAA" />
             </div>
+            <div className="sacol-field" style={{ flex: '0 0 auto' }}>
+              <label>ESTOQUE</label>
+              <div style={{ display: 'flex', gap: 4, height: 44 }}>
+                <button
+                  className={`sacol-btn${mostrarEstoque === 'todos' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
+                  onClick={() => setMostrarEstoque('todos')}
+                  style={{ fontSize: 13, padding: '0 12px' }}
+                >
+                  Todos
+                </button>
+                <button
+                  className={`sacol-btn${mostrarEstoque === 'com_estoque' ? ' sacol-btn-green' : ' sacol-btn-ghost'}`}
+                  onClick={() => setMostrarEstoque('com_estoque')}
+                  style={{ fontSize: 13, padding: '0 12px' }}
+                >
+                  Com Estoque
+                </button>
+              </div>
+            </div>
             <div className="sacol-field" style={{ flex: 1, minWidth: 300 }}>
               <label>BUSCA (filtra em tempo real)</label>
               <input
@@ -453,11 +486,8 @@ export default function EtiquetasPage() {
                         <input type="checkbox" checked={!!selected[r.uid]}
                           onChange={e => setSelected(prev => ({ ...prev, [r.uid]: e.target.checked }))} />
                       </td>
-                      <td>
-                        <input className="eti-qty" type="number" min={1} max={99}
-                          value={qtds[r.uid] ?? 1}
-                          onChange={e => setQtds(prev => ({ ...prev, [r.uid]: parseInt(e.target.value) || 1 }))}
-                          disabled={!selected[r.uid]} />
+                      <td style={{ textAlign: 'center', fontWeight: r.quantidade === 0 ? 400 : 700, color: r.quantidade === 0 ? '#888' : '#e8eaed' }}>
+                        {r.quantidade}
                       </td>
                       <td>{r.desc}</td>
                       <td>{r.precoFmt}</td>
