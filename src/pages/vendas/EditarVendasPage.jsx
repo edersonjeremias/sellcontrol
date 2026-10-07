@@ -348,6 +348,11 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
     onSalvar(form)
   }
 
+  // Lista de clientes como array de strings (instagram)
+  const clientesList = (listas.clientes || [])
+    .map(c => typeof c === 'string' ? c : c?.instagram)
+    .filter(c => c && typeof c === 'string')
+
   return (
     <div className="modal-overlay" onClick={onFechar}>
       <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
@@ -413,14 +418,14 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Cliente</label>
-              <input type="text" value={form.cliente_nome}
-                onChange={e => { e.stopPropagation(); handleChange('cliente_nome', e.target.value); }}
-                onClick={e => e.stopPropagation()}
-                onFocus={e => e.stopPropagation()}
-                onKeyDown={e => e.stopPropagation()}
-                list="dlClientes"
-                style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
-              <datalist id="dlClientes">{listas.clientes?.map(c => <option key={typeof c === 'string' ? c : c.instagram} value={typeof c === 'string' ? c : c.instagram} />)}</datalist>
+              <AutocompleteInput
+                value={form.cliente_nome}
+                onChange={value => handleChange('cliente_nome', value)}
+                list={clientesList}
+                placeholder="Selecione o cliente..."
+                showOnFocus
+                style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }}
+              />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Status</label>

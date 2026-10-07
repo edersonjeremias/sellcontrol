@@ -539,10 +539,16 @@ export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   ;(cobs || []).forEach(c => { if (Array.isArray(c.itens)) c.itens.forEach(i => { if (i.descricao && !i.descricao.includes('🎁')) ja.add(`${String(c.cliente).toLowerCase().trim()}|${i.descricao.toLowerCase().trim()}`) }) })
   const nomes = [...new Set(vendas.map(v => v.cliente_nome).filter(Boolean))]
   const { data: clis } = await supabase.from('clientes').select('instagram, whatsapp').eq('tenant_id', tid(tenantId)).in('instagram', nomes)
-  const mapZ = {}; (clis || []).forEach(c => { mapZ[String(c.instagram).toLowerCase()] = c.whatsapp || '' })
+  // Normaliza: remove espaços extras, converte para lowercase
+  const normalizar = str => String(str || '').toLowerCase().trim().replace(/\s+/g, ' ')
+  const mapZ = {}
+  ;(clis || []).forEach(c => {
+    const key = normalizar(c.instagram)
+    mapZ[key] = c.whatsapp || ''
+  })
   const agrup = {}
   vendas.forEach(v => {
-    const n = String(v.cliente_nome || '').trim().toLowerCase()
+    const n = normalizar(v.cliente_nome)
     if (!n || n.includes('cancelado')) {
       console.log('❌ Venda ignorada (sem cliente ou cancelado):', v)
       return
