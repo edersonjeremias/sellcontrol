@@ -220,12 +220,22 @@ export async function criarRomaneioComDimensoes(tenantId, itensSemPedido, dimens
     ? Number(String(dimensoes.produto_valor_declarado).replace(',', '.'))
     : null
 
+  // Buscar endereço padrão do cliente
+  const { data: enderecoCliente } = await supabase
+    .from('enderecos_clientes')
+    .select('id')
+    .eq('tenant_id', tenantId)
+    .eq('cliente_instagram', clienteInstagram)
+    .eq('padrao', true)
+    .maybeSingle()
+
   const { data: romaneio, error: romError } = await supabase
     .from('romaneios')
     .insert([{
       tenant_id: tenantId,
       numero: numeroRomaneio,
       cliente_instagram: clienteInstagram,
+      endereco_id: enderecoCliente?.id || null, // Vincula ao endereço padrão
       peso: pesoConvertido,
       altura: dimensoes.altura ? Number(dimensoes.altura) : null,
       largura: dimensoes.largura ? Number(dimensoes.largura) : null,
