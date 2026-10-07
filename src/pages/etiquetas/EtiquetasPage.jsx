@@ -338,8 +338,19 @@ export default function EtiquetasPage() {
         }
       })
 
-      console.log('✅ Cotações recebidas com margem:', cotacoesComMargem)
-      setCotacoes(cotacoesComMargem)
+      // Filtrar opção indesejada: "Jadlog - .Package Centralizado"
+      const cotacoesFiltradas = cotacoesComMargem.filter(cot => {
+        const nomeServico = cot.name || ''
+        const nomeTransp = cot.company?.name || ''
+        // Remove se for Jadlog E o serviço for ".Package Centralizado"
+        if (nomeTransp.toLowerCase().includes('jadlog') && nomeServico.toLowerCase().includes('package centralizado')) {
+          return false
+        }
+        return true
+      })
+
+      console.log('✅ Cotações recebidas com margem:', cotacoesFiltradas)
+      setCotacoes(cotacoesFiltradas)
     } catch (err) {
       console.error('❌ Erro ao cotar:', err)
       alert(`Erro ao cotar frete: ${err.message}`)
