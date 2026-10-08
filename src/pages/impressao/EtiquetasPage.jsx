@@ -324,8 +324,16 @@ export default function EtiquetasPage() {
   function imprimir() {
     const selecionados = rowsFiltrados.filter(r => selected[r.uid])
     if (!selecionados.length) { setErr('Selecione ao menos um item.'); return }
+
+    // Ordena por código (crescente)
+    const ordenados = selecionados.sort((a, b) => {
+      const codigoA = parseInt(a.codigo) || 0
+      const codigoB = parseInt(b.codigo) || 0
+      return codigoA - codigoB
+    })
+
     const labels = []
-    selecionados.forEach(r => {
+    ordenados.forEach(r => {
       const qty = Math.max(1, parseInt(qtds[r.uid]) || 1)
       for (let i = 0; i < qty; i++) labels.push(r)
     })
