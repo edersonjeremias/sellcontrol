@@ -78,6 +78,7 @@ export default function ProdutosPage() {
   const [showSettings, setShowSettings] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null) // Modal mobile
   const [confirmarExclusao, setConfirmarExclusao] = useState(false) // Modal confirmação exclusão
+  const [codigoDuplicado, setCodigoDuplicado] = useState(null) // Modal código duplicado
   const [cols, setCols] = useState({
     genero: true,
     condicao: true,
@@ -231,8 +232,13 @@ export default function ProdutosPage() {
           if (p.isNew) {
             const existe = await verificarCodigoExiste(tenantId, p.codigo, p.id)
             if (existe) {
-              console.warn(`Código ${p.codigo} já existe, pulando salvamento`)
-              continue
+              // Mostra modal de aviso
+              setCodigoDuplicado({
+                codigo: p.codigo,
+                produto: p.produto
+              })
+              isSavingRef.current = false
+              return
             }
           }
 
@@ -388,7 +394,10 @@ export default function ProdutosPage() {
 
       return { ...p, [field]: value }
     }))
-  }, [])
+
+    // Salva automaticamente após digitar (com debounce de 300ms)
+    salvarAgora()
+  }, [salvarAgora])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
   // REMOVIDO: não cria mais linha automaticamente ao sair do campo produto
@@ -1355,6 +1364,29 @@ export default function ProdutosPage() {
                 Sim, Excluir
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CÓDIGO DUPLICADO */}
+      {codigoDuplicado && (
+        <div className="modal-overlay" onClick={() => setCodigoDuplicado(null)}>
+          <div className="modal-card" style={{ maxWidth: 450, padding: 24 }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>⚠️</div>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 18, color: 'var(--yellow)' }}>Código Duplicado</h3>
+            </div>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--muted)', lineHeight: 1.5, textAlign: 'center' }}>
+              O código <strong style={{ color: 'var(--yellow)', fontSize: 16 }}>{codigoDuplicado.codigo}</strong> já existe em outro produto!
+              <br /><br />
+              Por favor, escolha um código diferente para <strong style={{ color: 'var(--text-header)' }}>{codigoDuplicado.produto}</strong>
+            </p>
+            <button
+              onClick={() => setCodigoDuplicado(null)}
+              style={{ width: '100%', padding: 12, background: 'var(--yellow)', color: '#000', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+            >
+              OK, Entendi
+            </button>
           </div>
         </div>
       )}

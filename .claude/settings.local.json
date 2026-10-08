@@ -26,7 +26,16 @@
       "PowerShell(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\a68e0b43-41af-4878-92e9-b7cee465ee32\\\\scratchpad\\\\check-api.js\")",
       "Bash(cat > *)",
       "PowerShell(Get-ChildItem -Path src\\\\pages -File -Recurse | Where-Object { $_.Name -match 'pagar' } | Select-Object FullName)",
-      "PowerShell(git add src/pages/relatorio/ContasPagarPage.jsx)"
+      "PowerShell(git add src/pages/relatorio/ContasPagarPage.jsx)",
+      "PowerShell(git add src/pages/etiquetas/EtiquetasPage.jsx)",
+      "PowerShell(git commit -m \"feat: remove opcao Jadlog Package Centralizado das cotacoes`n`nFiltra a opcao Jadlog Package Centralizado da lista de cotacoes de frete antes de exibir ao usuario.`n`nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git add src/pages/impressao/EtiquetasPage.jsx)",
+      "PowerShell(git add src/pages/impressao/EtiquetasPage.jsx supabase/migrations/create_config_etiquetas.sql)",
+      "PowerShell(git add INSTRUCOES_MIGRACAO_ETIQUETAS.md)",
+      "PowerShell(git commit -m \"docs: adiciona instrucoes para migracao de configuracoes de etiquetas\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git add supabase/migrations/create_config_etiquetas.sql INSTRUCOES_MIGRACAO_ETIQUETAS.md)",
+      "PowerShell(git commit -m \"fix: corrige referencia para users_perfil nas policies de config_etiquetas\" -m \"A tabela correta e users_perfil \\(nao usuarios\\)\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(git commit -m \"feat: impressao de etiquetas agora segue ordem crescente dos codigos\" -m \"As etiquetas serao impressas ordenadas por codigo \\(do menor para o maior\\)\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")"
     ],
     "additionalDirectories": [
       "\\tmp"
