@@ -262,6 +262,9 @@ export default function ProdutosPage() {
       isSavingRef.current = true
 
       try {
+        // Array para guardar produtos atualizados
+        const produtosAtualizados = []
+
         for (const p of produtosParaSalvar) {
           // Verifica se código já existe (apenas para produtos novos E se não permitir duplicado)
           if (p.isNew && !config.produtos_permitir_duplicado) {
@@ -291,19 +294,23 @@ export default function ProdutosPage() {
           if (p.isNew) {
             // Criar
             const novo = await criarProduto(tenantId, dados)
-            setProdutos(prev => prev.map(pr =>
-              pr._key === p._key ? mapProduto(novo) : pr
-            ))
+            produtosAtualizados.push({ key: p._key, produto: mapProduto(novo) })
           } else {
             // Atualizar
             const atualizado = await atualizarProduto(p.id, dados)
-            setProdutos(prev => prev.map(pr =>
-              pr._key === p._key ? mapProduto(atualizado) : pr
-            ))
+            produtosAtualizados.push({ key: p._key, produto: mapProduto(atualizado) })
           }
         }
 
-        // RESTAURA O FOCO depois de salvar
+        // UM ÚNICO setProdutos() para TODOS os produtos salvos
+        if (produtosAtualizados.length > 0) {
+          setProdutos(prev => prev.map(pr => {
+            const atualizado = produtosAtualizados.find(a => a.key === pr._key)
+            return atualizado ? atualizado.produto : pr
+          }))
+        }
+
+        // RESTAURA O FOCO depois de salvar TODOS
         if (focusKey && focusField) {
           // Usa setTimeout para dar tempo do React re-renderizar
           setTimeout(() => {
