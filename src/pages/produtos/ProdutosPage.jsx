@@ -303,10 +303,19 @@ export default function ProdutosPage() {
         }
 
         // UM ÚNICO setProdutos() para TODOS os produtos salvos
+        // SÓ atualiza ID e isNew, NÃO re-formata valores (igual página de vendas)
         if (produtosAtualizados.length > 0) {
           setProdutos(prev => prev.map(pr => {
             const atualizado = produtosAtualizados.find(a => a.key === pr._key)
-            return atualizado ? atualizado.produto : pr
+            if (atualizado) {
+              // SÓ atualiza ID e isNew, mantém os outros campos como estão
+              return {
+                ...pr,
+                id: atualizado.produto.id,
+                isNew: false
+              }
+            }
+            return pr
           }))
         }
 
