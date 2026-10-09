@@ -47,6 +47,9 @@ function AbaConfiguracoes({ tenantId, showToast }) {
     link_frete: '',
     codigo_automatico: false,
     proximo_codigo: 100,
+    produtos_codigo_automatico: false,
+    produtos_proximo_codigo: 100,
+    produtos_permitir_duplicado: false,
     token_melhor_envio: '',
     melhor_envio_api_url: 'https://sandbox.melhorenvio.com.br',
     margem_frete: 10,
@@ -76,6 +79,9 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           link_frete: cfg.link_frete || '',
           codigo_automatico: cfg.codigo_automatico || false,
           proximo_codigo: cfg.proximo_codigo || 100,
+          produtos_codigo_automatico: cfg.produtos_codigo_automatico || false,
+          produtos_proximo_codigo: cfg.produtos_proximo_codigo || 100,
+          produtos_permitir_duplicado: cfg.produtos_permitir_duplicado || false,
           token_melhor_envio: cfg.token_melhor_envio || '',
           melhor_envio_api_url: cfg.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br',
           margem_frete: cfg.margem_frete || 10,
@@ -319,6 +325,120 @@ function AbaConfiguracoes({ tenantId, showToast }) {
 
           {/* Aviso quando automático */}
           {form.codigo_automatico && (
+            <div style={{
+              marginTop: 10, padding: 10, background: 'rgba(52, 211, 153, 0.1)',
+              border: '1px solid rgba(52, 211, 153, 0.3)', borderRadius: 6
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--green)' }}>
+                ✅ Modo Automático: O campo código será bloqueado e preenchido automaticamente
+              </div>
+            </div>
+          )}
+
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* CÓDIGO DAS PEÇAS - PRODUTOS */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <div style={{ marginBottom: 32, padding: '20px 24px', background: '#222', borderRadius: 8, border: '1px solid var(--border-light)' }}>
+        <h3 style={{ fontSize: 15, color: 'var(--text-header)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          📦 Código das Peças (Produtos)
+        </h3>
+
+        <div>
+          {/* Toggle Código Automático */}
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            padding: '8px 0'
+          }}>
+            <input
+              type="checkbox"
+              checked={form.produtos_codigo_automatico}
+              onChange={e => setForm(p => ({ ...p, produtos_codigo_automatico: e.target.checked }))}
+              style={{
+                width: 20, height: 20, cursor: 'pointer',
+                accentColor: 'var(--blue)'
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: 'var(--text-body)', fontWeight: 600, marginBottom: 2 }}>
+                Gerar código automaticamente
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Quando ativado, o sistema gera códigos sequenciais começando de {form.produtos_proximo_codigo}
+              </div>
+            </div>
+          </label>
+
+          {/* Campo Próximo Código */}
+          {form.produtos_codigo_automatico && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+                Próximo código a ser usado
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={form.produtos_proximo_codigo}
+                onChange={e => setForm(p => ({ ...p, produtos_proximo_codigo: parseInt(e.target.value) || 100 }))}
+                style={{
+                  ...SI,
+                  maxWidth: 120,
+                  fontFamily: 'monospace',
+                  fontSize: 15,
+                  fontWeight: 700,
+                  textAlign: 'center'
+                }}
+              />
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+                ⚠️ Atenção: Este valor incrementa automaticamente após cada cadastro.
+              </div>
+            </div>
+          )}
+
+          {/* Toggle Permitir Duplicado */}
+          {!form.produtos_codigo_automatico && (
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+                padding: '8px 0'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={form.produtos_permitir_duplicado}
+                  onChange={e => setForm(p => ({ ...p, produtos_permitir_duplicado: e.target.checked }))}
+                  style={{
+                    width: 20, height: 20, cursor: 'pointer',
+                    accentColor: 'var(--yellow)'
+                  }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, color: 'var(--text-body)', fontWeight: 600, marginBottom: 2 }}>
+                    Permitir código duplicado
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    Permite cadastrar produtos com o mesmo código
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {/* Aviso quando manual */}
+          {!form.produtos_codigo_automatico && (
+            <div style={{
+              marginTop: 10, padding: 10, background: 'rgba(139, 180, 248, 0.1)',
+              border: '1px solid rgba(139, 180, 248, 0.3)', borderRadius: 6
+            }}>
+              <div style={{ fontSize: 12, color: 'var(--blue)' }}>
+                ℹ️ Modo Manual: Você digita o código manualmente na página de Produtos
+              </div>
+            </div>
+          )}
+
+          {/* Aviso quando automático */}
+          {form.produtos_codigo_automatico && (
             <div style={{
               marginTop: 10, padding: 10, background: 'rgba(52, 211, 153, 0.1)',
               border: '1px solid rgba(52, 211, 153, 0.3)', borderRadius: 6
