@@ -381,20 +381,26 @@ export default function ProdutosPage() {
       return
     }
 
-    // Busca o maior código do banco
-    let proximoCodigo = await getProximoCodigo(tenantId)
+    // Se código automático, busca próximo código
+    let codigoInicial = ''
 
-    // Verifica o maior código em memória (produtos não salvos)
-    const codigosEmMemoria = produtosRef.current
-      .map(pr => parseInt(pr.codigo))
-      .filter(c => !isNaN(c))
-      .sort((a, b) => b - a)
+    if (config.produtos_codigo_automatico) {
+      let proximoCodigo = config.produtos_proximo_codigo || 100
 
-    if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
-      proximoCodigo = codigosEmMemoria[0] + 1
+      // Verifica o maior código em memória (produtos não salvos)
+      const codigosEmMemoria = produtosRef.current
+        .map(pr => parseInt(pr.codigo))
+        .filter(c => !isNaN(c))
+        .sort((a, b) => b - a)
+
+      if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
+        proximoCodigo = codigosEmMemoria[0] + 1
+      }
+
+      codigoInicial = String(proximoCodigo)
     }
 
-    setProdutos(prev => [novoProduto(String(proximoCodigo)), ...prev])
+    setProdutos(prev => [novoProduto(codigoInicial), ...prev])
 
     // Foca no campo PRODUTO da primeira linha (nova linha criada)
     setTimeout(() => {
@@ -404,7 +410,7 @@ export default function ProdutosPage() {
       // Scroll para o topo
       document.querySelector('.tabela-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
     }, 50)
-  }, [busy, tenantId])
+  }, [busy, tenantId, config])
 
   // Atualiza campo
   const handleChange = useCallback((key, field, value) => {
@@ -508,21 +514,27 @@ export default function ProdutosPage() {
     const p = produtos.find(pr => pr._key === key)
     if (!p) return
 
-    // Busca o maior código do banco
-    let proximoCodigo = await getProximoCodigo(tenantId)
+    // Se código automático, busca próximo código
+    let codigoInicial = ''
 
-    // Verifica o maior código em memória (produtos não salvos)
-    const codigosEmMemoria = produtos
-      .map(pr => parseInt(pr.codigo))
-      .filter(c => !isNaN(c))
-      .sort((a, b) => b - a)
+    if (config.produtos_codigo_automatico) {
+      let proximoCodigo = config.produtos_proximo_codigo || 100
 
-    if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
-      proximoCodigo = codigosEmMemoria[0] + 1
+      // Verifica o maior código em memória (produtos não salvos)
+      const codigosEmMemoria = produtos
+        .map(pr => parseInt(pr.codigo))
+        .filter(c => !isNaN(c))
+        .sort((a, b) => b - a)
+
+      if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
+        proximoCodigo = codigosEmMemoria[0] + 1
+      }
+
+      codigoInicial = String(proximoCodigo)
     }
 
     const copia = {
-      ...novoProduto(String(proximoCodigo)),
+      ...novoProduto(codigoInicial),
       produto: p.produto,
       modelo: p.modelo,
       cor: p.cor,
@@ -537,7 +549,7 @@ export default function ProdutosPage() {
 
     setProdutos(prev => [copia, ...prev])
     showToast('Produto copiado!', 'success')
-  }, [produtos, tenantId, showToast])
+  }, [produtos, tenantId, showToast, config])
 
   // Excluir (desativa)
   const excluir = useCallback(async (key) => {
