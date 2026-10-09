@@ -187,60 +187,81 @@ export default function RelatorioPage() {
   }
 
   const exportarExcel = () => {
-    // Prepara dados para Excel - TODAS as colunas
-    const dadosExcel = vendas.map(v => ({
-      'Data': fmtData(v.data_live),
-      'Live': v.live_nome || '',
-      'Cliente': v.cliente_nome || '',
-      'Produto': v.produto || '',
-      'Modelo': v.modelo || '',
-      'Marca': v.marca || '',
-      'Cor': v.cor || '',
-      'Tamanho': v.tamanho || '',
-      'Código': v.codigo || '',
-      'Sacolinha': v.sacolinha || '',
-      'Preço': Number(v.preco) || 0,
-      'Status': v.status || '',
-      'ID': v.id || '',
-      'Created At': v.created_at || '',
-      'Data Live': v.data_live || ''
-    }))
+    try {
+      console.log('Iniciando exportação Excel...')
+      console.log('Vendas:', vendas.length)
 
-    // Cria planilha
-    const ws = XLSX.utils.json_to_sheet(dadosExcel)
+      if (!vendas || vendas.length === 0) {
+        showToast('Nenhuma venda para exportar!', 'error')
+        return
+      }
 
-    // Define largura das colunas
-    ws['!cols'] = [
-      { wch: 12 }, // Data
-      { wch: 15 }, // Live
-      { wch: 25 }, // Cliente
-      { wch: 20 }, // Produto
-      { wch: 20 }, // Modelo
-      { wch: 15 }, // Marca
-      { wch: 15 }, // Cor
-      { wch: 10 }, // Tamanho
-      { wch: 10 }, // Código
-      { wch: 12 }, // Sacolinha
-      { wch: 12 }, // Preço
-      { wch: 15 }, // Status
-      { wch: 38 }, // ID
-      { wch: 22 }, // Created At
-      { wch: 12 }  // Data Live
-    ]
+      // Prepara dados para Excel - TODAS as colunas
+      const dadosExcel = vendas.map(v => ({
+        'Data': fmtData(v.data_live) || '',
+        'Live': v.live_nome || '',
+        'Cliente': v.cliente_nome || '',
+        'Produto': v.produto || '',
+        'Modelo': v.modelo || '',
+        'Marca': v.marca || '',
+        'Cor': v.cor || '',
+        'Tamanho': v.tamanho || '',
+        'Código': v.codigo || '',
+        'Sacolinha': v.sacolinha || '',
+        'Preço': Number(v.preco) || 0,
+        'Status': v.status || '',
+        'ID': v.id || '',
+        'Created At': v.created_at || '',
+        'Data Live': v.data_live || ''
+      }))
 
-    // Cria workbook
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Vendas')
+      // Adiciona linha de total
+      dadosExcel.push({
+        'Data': 'TOTAL',
+        'Live': '',
+        'Cliente': '',
+        'Produto': '',
+        'Modelo': '',
+        'Marca': '',
+        'Cor': '',
+        'Tamanho': '',
+        'Código': '',
+        'Sacolinha': '',
+        'Preço': totalLiquido,
+        'Status': '',
+        'ID': '',
+        'Created At': '',
+        'Data Live': ''
+      })
 
-    // Adiciona linha de totais no final
-    const totalLinha = vendas.length + 2
-    XLSX.utils.sheet_add_aoa(ws, [
-      ['TOTAL', '', '', '', '', '', '', '', '', '', totalLiquido, '', '', '', '']
-    ], { origin: `A${totalLinha}` })
+      console.log('Dados preparados:', dadosExcel.length)
 
-    // Salva arquivo
-    const nomeArquivo = `vendas_${dataIni}_${dataFim}.xlsx`
-    XLSX.writeFile(wb, nomeArquivo)
+      // Cria planilha
+      const ws = XLSX.utils.json_to_sheet(dadosExcel)
+      console.log('Planilha criada')
+
+      // Define largura das colunas
+      ws['!cols'] = [
+        { wch: 12 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 20 },
+        { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 },
+        { wch: 12 }, { wch: 15 }, { wch: 38 }, { wch: 22 }, { wch: 12 }
+      ]
+
+      // Cria workbook
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Vendas')
+      console.log('Workbook criado')
+
+      // Salva arquivo
+      const nomeArquivo = `vendas_${dataIni}_${dataFim}.xlsx`
+      XLSX.writeFile(wb, nomeArquivo)
+      console.log('Arquivo salvo:', nomeArquivo)
+
+      showToast('Excel exportado com sucesso!', 'success')
+    } catch (error) {
+      console.error('Erro ao exportar Excel:', error)
+      showToast(`Erro ao exportar: ${error.message}`, 'error')
+    }
   }
 
   return (
