@@ -305,7 +305,8 @@ export default function ProdutosPage() {
 
         // RESTAURA O FOCO depois de salvar
         if (focusKey && focusField) {
-          requestAnimationFrame(() => {
+          // Usa setTimeout para dar tempo do React re-renderizar
+          setTimeout(() => {
             const input = document.querySelector(`[data-key="${focusKey}"][data-field="${focusField}"]`)
             console.log('🎯 Restaurando foco:', {
               focusKey,
@@ -318,8 +319,11 @@ export default function ProdutosPage() {
               if (cursorPos !== null && input.setSelectionRange) {
                 input.setSelectionRange(cursorPos, cursorPos)
               }
+              console.log('✅ Foco restaurado com sucesso!')
+            } else {
+              console.log('❌ Input não encontrado para restaurar foco')
             }
-          })
+          }, 50)
         }
       } catch (err) {
         console.error('Erro no salvamento automático:', err)
