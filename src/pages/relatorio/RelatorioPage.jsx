@@ -100,10 +100,8 @@ export default function RelatorioPage() {
     return resultado
   }, [vendasBase, busca, filtroStatus, filtroStatusExpedicao])
 
-  const totalLiquido = vendas.reduce((s, v) => {
-    const st = (v.status || '').toUpperCase()
-    return s + (st === 'CANCELADO' || st === 'DEVOLVIDO' ? 0 : Number(v.preco) || 0)
-  }, 0)
+  // Soma TUDO que está na lista filtrada (não filtra mais nada aqui!)
+  const totalLiquido = vendas.reduce((s, v) => s + (Number(v.preco) || 0), 0)
 
   // Agrupa produtos iguais e conta quantidades
   const produtosAgrupados = useMemo(() => {
