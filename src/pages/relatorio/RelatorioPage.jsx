@@ -281,6 +281,9 @@ export default function RelatorioPage() {
           <span style={{ fontSize:13, color:'var(--text-body)', fontWeight:600 }}>
             Total: {vendas.length} registro(s)
           </span>
+          <span style={{ marginLeft:12, fontSize:13, color:'var(--green)', fontWeight:700 }}>
+            • Soma: {fmtR(totalLiquido)}
+          </span>
           {busca.trim() && (
             <span style={{ marginLeft:12, fontSize:12, color:'var(--muted)' }}>
               filtrado por "{busca.trim()}"
