@@ -278,7 +278,7 @@ export default function RelatorioPage() {
         </select>
         <button onClick={carregar} style={S.btn}>Filtrar</button>
         <button onClick={gerarPDF} style={{ ...S.btn, background:'var(--green)' }}>📄 Gerar PDF</button>
-        <button onClick={exportarExcel} style={{ ...S.btn, background:'#217346' }}>📊 Exportar Excel</button>
+        <button onClick={exportarExcel} style={{ ...S.btn, background:'#217346' }}>Exportar</button>
       </div>
 
       {/* Contador de registros filtrados */}
