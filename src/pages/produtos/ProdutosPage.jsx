@@ -320,7 +320,7 @@ export default function ProdutosPage() {
     setProdutos(prev => [produto, ...prev])
 
     setTimeout(() => {
-      const input = document.querySelector('#tabela-produtos tbody tr:first-child .col-codigo .cell-input')
+      const input = document.querySelector('#tabela-produtos tbody tr:first-child .col-produto .cell-input')
       input?.focus()
     }, 100)
   }, [busy, tenantId])
@@ -388,17 +388,15 @@ export default function ProdutosPage() {
 
       return { ...p, [field]: value }
     }))
-
-    // Salva automaticamente após digitar (com debounce de 300ms)
-    salvarAgora()
-  }, [salvarAgora])
+  }, [])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
   // REMOVIDO: não cria mais linha automaticamente ao sair do campo produto
   // Nova linha só é criada ao dar Enter no campo QUANTIDADE
-  const handleProdutoBlur = useCallback(() => {
-    // Função vazia - mantida para não quebrar a interface
-  }, [])
+  const handleProdutoBlur = useCallback((key) => {
+    // Salva automaticamente quando sair do campo (com debounce)
+    salvarAgora()
+  }, [salvarAgora])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
