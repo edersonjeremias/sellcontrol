@@ -5,10 +5,12 @@ import {
 } from '../../services/produtosService'
 import { getListas } from '../../services/vendasService'
 import { getConfig } from '../../services/configService'
+import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import AutocompleteInput from '../../components/ui/AutocompleteInput'
+import ModalImagensProduto from '../../components/produtos/ModalImagensProduto'
 import { formatarAoDigitar, parsearMoedaInput } from '../../utils/moeda'
 import './produtos.css'
 
@@ -33,6 +35,7 @@ function novoProduto(codigo = '') {
     preco: '',
     preco_promocional: '',
     quantidade: '', // Vazio por padrão
+    imagens: [], // Array de URLs das imagens
     ativo: true,
     isNew: true,
     deleted: false,
@@ -56,6 +59,7 @@ function mapProduto(p) {
     preco: p.preco ? formatarAoDigitar(String(Math.round(p.preco * 100))) : '',
     preco_promocional: p.preco_promocional ? formatarAoDigitar(String(Math.round(p.preco_promocional * 100))) : '',
     quantidade: p.quantidade ? String(p.quantidade) : '',
+    imagens: p.imagens || [], // Array de URLs das imagens
     ativo: p.ativo !== false,
     isNew: false,
     deleted: false,
@@ -79,6 +83,7 @@ export default function ProdutosPage() {
   const [showSettings, setShowSettings] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null) // Modal mobile
   const [confirmarExclusao, setConfirmarExclusao] = useState(false) // Modal confirmação exclusão
+  const [produtoComImagens, setProdutoComImagens] = useState(null) // Modal de imagens
   const [config, setConfig] = useState({
     produtos_codigo_automatico: false,
     produtos_proximo_codigo: 100,
@@ -592,6 +597,36 @@ export default function ProdutosPage() {
     showToast('Produto copiado!', 'success')
   }, [produtos, tenantId, showToast, config])
 
+  // Abrir modal de imagens
+  const abrirImagens = useCallback((key) => {
+    const p = produtos.find(pr => pr._key === key)
+    if (!p || !p.id) return // Só produtos salvos podem ter imagens
+    setProdutoComImagens(p)
+  }, [produtos])
+
+  // Atualiza produto após alteração nas imagens
+  const atualizarAposImagens = useCallback(async () => {
+    if (!produtoComImagens?.id) return
+
+    // Busca o produto atualizado do banco
+    try {
+      const { data, error } = await supabase
+        .from('produtos')
+        .select('*')
+        .eq('id', produtoComImagens.id)
+        .single()
+
+      if (error) throw error
+
+      // Atualiza no estado local
+      setProdutos(prev => prev.map(p =>
+        p.id === produtoComImagens.id ? mapProduto(data) : p
+      ))
+    } catch (err) {
+      console.error('Erro ao atualizar produto:', err)
+    }
+  }, [produtoComImagens])
+
   // Excluir (desativa)
   const excluir = useCallback(async (key) => {
     const p = produtos.find(pr => pr._key === key)
@@ -963,6 +998,7 @@ export default function ProdutosPage() {
                   onEnterNoQuantidade={handleEnterNoQuantidade}
                   onSalvar={salvar}
                   onCopiar={copiar}
+                  onAbrirImagens={abrirImagens}
                   onExcluir={excluir}
                   onReativar={reativar}
                 />
@@ -1453,6 +1489,15 @@ export default function ProdutosPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Imagens */}
+      {produtoComImagens && (
+        <ModalImagensProduto
+          produto={produtoComImagens}
+          onClose={() => setProdutoComImagens(null)}
+          onUpdate={atualizarAposImagens}
+        />
+      )}
     </AppShell>
   )
 }
@@ -1769,6 +1814,22 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
               : <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
             }
           </button>
+
+          {/* Imagens do produto */}
+          {!p.isNew && (
+            <button
+              type="button"
+              className="btn-action-sm imagens"
+              title={p.imagens?.length > 0 ? `Ver imagens (${p.imagens.length})` : 'Adicionar imagens'}
+              onClick={() => onAbrirImagens(p._key)}
+              disabled={desabilitado}
+            >
+              📷
+              {p.imagens?.length > 0 && (
+                <span className="badge-imagens">{p.imagens.length}</span>
+              )}
+            </button>
+          )}
 
           {/* Copiar produto (duplicar) */}
           <button

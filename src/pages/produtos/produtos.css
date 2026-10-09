@@ -271,6 +271,27 @@
   gap: 6px;
 }
 
+/* Botão de imagens com badge */
+.btn-action-sm.imagens {
+  position: relative;
+  font-size: 16px;
+}
+
+.badge-imagens {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #0066ff;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+  line-height: 1;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    INPUTS E SELECT
    ═══════════════════════════════════════════════════════════════ */
