@@ -188,79 +188,61 @@ export default function RelatorioPage() {
 
   const exportarExcel = () => {
     try {
-      console.log('Iniciando exportação Excel...')
-      console.log('Vendas:', vendas.length)
-
       if (!vendas || vendas.length === 0) {
         showToast('Nenhuma venda para exportar!', 'error')
         return
       }
 
-      // Prepara dados para Excel - TODAS as colunas
-      const dadosExcel = vendas.map(v => ({
-        'Data': fmtData(v.data_live) || '',
-        'Live': v.live_nome || '',
-        'Cliente': v.cliente_nome || '',
-        'Produto': v.produto || '',
-        'Modelo': v.modelo || '',
-        'Marca': v.marca || '',
-        'Cor': v.cor || '',
-        'Tamanho': v.tamanho || '',
-        'Código': v.codigo || '',
-        'Sacolinha': v.sacolinha || '',
-        'Preço': Number(v.preco) || 0,
-        'Status': v.status || '',
-        'ID': v.id || '',
-        'Created At': v.created_at || '',
-        'Data Live': v.data_live || ''
-      }))
+      // Cabeçalhos
+      const headers = ['Data', 'Live', 'Cliente', 'Produto', 'Modelo', 'Marca', 'Cor', 'Tamanho', 'Código', 'Sacolinha', 'Preço', 'Status', 'ID', 'Created At', 'Data Live']
 
-      // Adiciona linha de total
-      dadosExcel.push({
-        'Data': 'TOTAL',
-        'Live': '',
-        'Cliente': '',
-        'Produto': '',
-        'Modelo': '',
-        'Marca': '',
-        'Cor': '',
-        'Tamanho': '',
-        'Código': '',
-        'Sacolinha': '',
-        'Preço': totalLiquido,
-        'Status': '',
-        'ID': '',
-        'Created At': '',
-        'Data Live': ''
+      // Converte dados para CSV
+      const csvRows = []
+      csvRows.push(headers.join(','))
+
+      vendas.forEach(v => {
+        const row = [
+          `"${fmtData(v.data_live) || ''}"`,
+          `"${v.live_nome || ''}"`,
+          `"${v.cliente_nome || ''}"`,
+          `"${v.produto || ''}"`,
+          `"${v.modelo || ''}"`,
+          `"${v.marca || ''}"`,
+          `"${v.cor || ''}"`,
+          `"${v.tamanho || ''}"`,
+          `"${v.codigo || ''}"`,
+          `"${v.sacolinha || ''}"`,
+          Number(v.preco) || 0,
+          `"${v.status || ''}"`,
+          `"${v.id || ''}"`,
+          `"${v.created_at || ''}"`,
+          `"${v.data_live || ''}"`
+        ]
+        csvRows.push(row.join(','))
       })
 
-      console.log('Dados preparados:', dadosExcel.length)
+      // Linha de total
+      csvRows.push([
+        '"TOTAL"', '""', '""', '""', '""', '""', '""', '""', '""', '""',
+        totalLiquido, '""', '""', '""', '""'
+      ].join(','))
 
-      // Cria planilha
-      const ws = XLSX.utils.json_to_sheet(dadosExcel)
-      console.log('Planilha criada')
+      // Cria o CSV
+      const csvContent = csvRows.join('\n')
 
-      // Define largura das colunas
-      ws['!cols'] = [
-        { wch: 12 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 20 },
-        { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 10 }, { wch: 12 },
-        { wch: 12 }, { wch: 15 }, { wch: 38 }, { wch: 22 }, { wch: 12 }
-      ]
+      // Cria blob e download (funciona sem biblioteca!)
+      const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `vendas_${dataIni}_${dataFim}.csv`
+      link.click()
+      URL.revokeObjectURL(url)
 
-      // Cria workbook
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Vendas')
-      console.log('Workbook criado')
-
-      // Salva arquivo
-      const nomeArquivo = `vendas_${dataIni}_${dataFim}.xlsx`
-      XLSX.writeFile(wb, nomeArquivo)
-      console.log('Arquivo salvo:', nomeArquivo)
-
-      showToast('Excel exportado com sucesso!', 'success')
+      showToast('CSV exportado! Abre no Excel e Google Sheets', 'success')
     } catch (error) {
-      console.error('Erro ao exportar Excel:', error)
-      showToast(`Erro ao exportar: ${error.message}`, 'error')
+      console.error('Erro ao exportar:', error)
+      showToast(`Erro: ${error.message}`, 'error')
     }
   }
 
