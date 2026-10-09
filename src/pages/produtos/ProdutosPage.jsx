@@ -243,12 +243,6 @@ export default function ProdutosPage() {
       const focusField = ehInput ? elementoAtivo?.getAttribute('data-field') : null
       const cursorPos = ehInput ? elementoAtivo?.selectionStart : null
 
-      console.log('💾 Salvamento automático - ANTES:', {
-        tag: elementoAtivo?.tagName,
-        focusKey,
-        focusField,
-        cursorPos
-      })
 
       // Filtra produtos que precisam ser salvos (não vazios e modificados)
       const produtosParaSalvar = produtosRef.current.filter(p =>
@@ -324,20 +318,11 @@ export default function ProdutosPage() {
           // Usa setTimeout para dar tempo do React re-renderizar
           setTimeout(() => {
             const input = document.querySelector(`[data-key="${focusKey}"][data-field="${focusField}"]`)
-            console.log('🎯 Restaurando foco:', {
-              focusKey,
-              focusField,
-              encontrou: !!input,
-              seletor: `[data-key="${focusKey}"][data-field="${focusField}"]`
-            })
             if (input) {
               input.focus()
               if (cursorPos !== null && input.setSelectionRange) {
                 input.setSelectionRange(cursorPos, cursorPos)
               }
-              console.log('✅ Foco restaurado com sucesso!')
-            } else {
-              console.log('❌ Input não encontrado para restaurar foco')
             }
           }, 50)
         }
@@ -484,25 +469,20 @@ export default function ProdutosPage() {
       return { ...p, [field]: value }
     }))
 
-    // NÃO salva automaticamente no campo código (causa cursor jump)
-    // Código só salva no onBlur
-    if (field !== 'codigo') {
-      salvarAgora()
-    }
-  }, [salvarAgora])
+    // REMOVIDO salvamento automático - só salva no Enter/Tab do quantidade ou onBlur
+  }, [])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
   // REMOVIDO: não cria mais linha automaticamente ao sair do campo produto
   // Nova linha só é criada ao dar Enter no campo QUANTIDADE
   const handleProdutoBlur = useCallback((key) => {
-    // Salva automaticamente quando sair do campo (com debounce)
-    salvarAgora()
-  }, [salvarAgora])
+    // REMOVIDO salvamento automático - só salva no Enter/Tab do quantidade
+  }, [])
 
-  // Ao sair do campo CÓDIGO, salva automaticamente
+  // Ao sair do campo CÓDIGO
   const handleCodigoBlur = useCallback((key) => {
-    salvarAgora()
-  }, [salvarAgora])
+    // REMOVIDO salvamento automático - só salva no Enter/Tab do quantidade
+  }, [])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
