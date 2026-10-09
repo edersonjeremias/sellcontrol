@@ -371,31 +371,32 @@ function AbaConfiguracoes({ tenantId, showToast }) {
             </div>
           </label>
 
-          {/* Campo Próximo Código */}
-          {form.produtos_codigo_automatico && (
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
-              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
-                Próximo código a ser usado
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={form.produtos_proximo_codigo}
-                onChange={e => setForm(p => ({ ...p, produtos_proximo_codigo: parseInt(e.target.value) || 100 }))}
-                style={{
-                  ...SI,
-                  maxWidth: 120,
-                  fontFamily: 'monospace',
-                  fontSize: 15,
-                  fontWeight: 700,
-                  textAlign: 'center'
-                }}
-              />
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-                ⚠️ Atenção: Este valor incrementa automaticamente após cada cadastro.
-              </div>
+          {/* Campo Próximo Código - SEMPRE VISÍVEL */}
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
+            <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+              {form.produtos_codigo_automatico ? 'Próximo código a ser usado' : 'Código inicial (quando ativar automático)'}
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={form.produtos_proximo_codigo}
+              onChange={e => setForm(p => ({ ...p, produtos_proximo_codigo: parseInt(e.target.value) || 100 }))}
+              style={{
+                ...SI,
+                maxWidth: 120,
+                fontFamily: 'monospace',
+                fontSize: 15,
+                fontWeight: 700,
+                textAlign: 'center'
+              }}
+            />
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+              {form.produtos_codigo_automatico
+                ? '⚠️ Atenção: Este valor incrementa automaticamente após cada cadastro.'
+                : 'ℹ️ Define qual será o primeiro código quando ativar o modo automático.'
+              }
             </div>
-          )}
+          </div>
 
           {/* Toggle Permitir Duplicado */}
           {!form.produtos_codigo_automatico && (
