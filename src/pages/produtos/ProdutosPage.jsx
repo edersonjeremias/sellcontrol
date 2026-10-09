@@ -4,6 +4,7 @@ import {
   getProximoCodigo, verificarCodigoExiste, formatMoney, parseMoney
 } from '../../services/produtosService'
 import { getListas } from '../../services/vendasService'
+import { getConfig } from '../../services/configService'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
@@ -78,6 +79,11 @@ export default function ProdutosPage() {
   const [showSettings, setShowSettings] = useState(false)
   const [produtoEditando, setProdutoEditando] = useState(null) // Modal mobile
   const [confirmarExclusao, setConfirmarExclusao] = useState(false) // Modal confirmação exclusão
+  const [config, setConfig] = useState({
+    produtos_codigo_automatico: false,
+    produtos_proximo_codigo: 100,
+    produtos_permitir_duplicado: false
+  })
   const [cols, setCols] = useState({
     genero: true,
     condicao: true,
@@ -116,6 +122,20 @@ export default function ProdutosPage() {
     if (!tenantId) return
     localStorage.setItem(`sc_cols_produtos_${tenantId}`, JSON.stringify(cols))
   }, [cols, tenantId])
+
+  // Carrega configurações
+  useEffect(() => {
+    if (!tenantId) return
+    getConfig(tenantId).then(cfg => {
+      if (cfg) {
+        setConfig({
+          produtos_codigo_automatico: cfg.produtos_codigo_automatico || false,
+          produtos_proximo_codigo: cfg.produtos_proximo_codigo || 100,
+          produtos_permitir_duplicado: cfg.produtos_permitir_duplicado || false
+        })
+      }
+    })
+  }, [tenantId])
 
   // Carrega produtos e listas
   useEffect(() => {
@@ -294,20 +314,25 @@ export default function ProdutosPage() {
       return
     }
 
-    // Busca o maior código do banco
-    let proximoCodigo = await getProximoCodigo(tenantId)
+    // Se código automático, busca próximo código
+    let codigoInicial = ''
+    if (config.produtos_codigo_automatico) {
+      let proximoCodigo = config.produtos_proximo_codigo || 100
 
-    // Verifica o maior código em memória (produtos não salvos)
-    const codigosEmMemoria = produtosRef.current
-      .map(pr => parseInt(pr.codigo))
-      .filter(c => !isNaN(c))
-      .sort((a, b) => b - a)
+      // Verifica o maior código em memória (produtos não salvos)
+      const codigosEmMemoria = produtosRef.current
+        .map(pr => parseInt(pr.codigo))
+        .filter(c => !isNaN(c))
+        .sort((a, b) => b - a)
 
-    if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
-      proximoCodigo = codigosEmMemoria[0] + 1
+      if (codigosEmMemoria.length > 0 && codigosEmMemoria[0] >= proximoCodigo) {
+        proximoCodigo = codigosEmMemoria[0] + 1
+      }
+
+      codigoInicial = String(proximoCodigo)
     }
 
-    const produto = novoProduto(String(proximoCodigo))
+    const produto = novoProduto(codigoInicial)
 
     if (isMobile) {
       // Mobile: adiciona no array E abre modal
@@ -323,7 +348,7 @@ export default function ProdutosPage() {
       const input = document.querySelector('#tabela-produtos tbody tr:first-child .col-produto .cell-input')
       input?.focus()
     }, 100)
-  }, [busy, tenantId])
+  }, [busy, tenantId, config])
 
   // Nova linha ao dar Enter no último campo (quantidade)
   const handleEnterNoQuantidade = useCallback(async () => {
@@ -397,6 +422,17 @@ export default function ProdutosPage() {
     // Salva automaticamente quando sair do campo (com debounce)
     salvarAgora()
   }, [salvarAgora])
+
+  // Salvamento automático: salva 2 segundos após última mudança
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (produtos.length > 0) {
+        salvarAgora()
+      }
+    }, 2000) // 2 segundos de inatividade
+
+    return () => clearTimeout(timer)
+  }, [produtos, salvarAgora])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
