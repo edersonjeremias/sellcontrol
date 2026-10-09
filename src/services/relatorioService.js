@@ -12,12 +12,9 @@ function toNum(val) {
 }
 
 // Retorna o preço final (promocao se houver, senão preco)
+// TEMPORÁRIO: Voltando para preco até descobrir nome da coluna correta
 function getPrecoFinal(venda) {
-  // Se tem promoção e é maior que 0, usa promoção
-  const promocao = toNum(venda.promocao)
-  if (promocao > 0) return promocao
-
-  // Senão, usa o preço normal
+  // TODO: Descobrir nome correto da coluna de promoção
   return toNum(venda.preco)
 }
 
@@ -66,7 +63,7 @@ export async function getClientesRelatorio(tenantId) {
 export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {}) {
   let q = supabase
     .from('vendas')
-    .select('id, produto, modelo, cor, marca, tamanho, preco, promocao, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
+    .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
     .eq('tenant_id', tid(tenantId))
     .order('data_live', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
