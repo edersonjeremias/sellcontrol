@@ -243,6 +243,13 @@ export default function ProdutosPage() {
       const focusField = ehInput ? elementoAtivo?.getAttribute('data-field') : null
       const cursorPos = ehInput ? elementoAtivo?.selectionStart : null
 
+      console.log('💾 Salvamento automático - ANTES:', {
+        tag: elementoAtivo?.tagName,
+        focusKey,
+        focusField,
+        cursorPos
+      })
+
       // Filtra produtos que precisam ser salvos (não vazios e modificados)
       const produtosParaSalvar = produtosRef.current.filter(p =>
         !p.deleted &&
@@ -300,6 +307,12 @@ export default function ProdutosPage() {
         if (focusKey && focusField) {
           requestAnimationFrame(() => {
             const input = document.querySelector(`[data-key="${focusKey}"][data-field="${focusField}"]`)
+            console.log('🎯 Restaurando foco:', {
+              focusKey,
+              focusField,
+              encontrou: !!input,
+              seletor: `[data-key="${focusKey}"][data-field="${focusField}"]`
+            })
             if (input) {
               input.focus()
               if (cursorPos !== null && input.setSelectionRange) {

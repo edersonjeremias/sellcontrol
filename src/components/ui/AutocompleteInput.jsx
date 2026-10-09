@@ -33,6 +33,8 @@ export default function AutocompleteInput({
   showOnFocus = false,
   onEnterNewRow,
   style,
+  'data-key': dataKey,     // Para preservar foco durante salvamento
+  'data-field': dataField, // Para preservar foco durante salvamento
 }) {
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -184,6 +186,8 @@ export default function AutocompleteInput({
           onBlur?.()
         }}
         onKeyDown={handleKeyDown}
+        data-key={dataKey}
+        data-field={dataField}
       />
       {visible && (
         <ul className="autocomplete-list" ref={listRef}>
