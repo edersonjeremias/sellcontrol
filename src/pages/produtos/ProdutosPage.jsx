@@ -128,11 +128,13 @@ export default function ProdutosPage() {
     if (!tenantId) return
     getConfig(tenantId).then(cfg => {
       if (cfg) {
-        setConfig({
+        const novaConfig = {
           produtos_codigo_automatico: cfg.produtos_codigo_automatico || false,
           produtos_proximo_codigo: cfg.produtos_proximo_codigo || 100,
           produtos_permitir_duplicado: cfg.produtos_permitir_duplicado || false
-        })
+        }
+        console.log('🔧 Config de produtos carregada:', novaConfig)
+        setConfig(novaConfig)
       }
     })
   }, [tenantId])
@@ -316,6 +318,12 @@ export default function ProdutosPage() {
 
     // Se código automático, busca próximo código
     let codigoInicial = ''
+
+    console.log('➕ Criando novo produto. Config:', {
+      automatico: config.produtos_codigo_automatico,
+      proximo_codigo: config.produtos_proximo_codigo
+    })
+
     if (config.produtos_codigo_automatico) {
       let proximoCodigo = config.produtos_proximo_codigo || 100
 
@@ -330,6 +338,9 @@ export default function ProdutosPage() {
       }
 
       codigoInicial = String(proximoCodigo)
+      console.log('✅ Código automático ativado. Código gerado:', codigoInicial)
+    } else {
+      console.log('❌ Código automático desativado. Campo vazio.')
     }
 
     const produto = novoProduto(codigoInicial)
