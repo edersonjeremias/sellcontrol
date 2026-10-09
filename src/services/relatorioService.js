@@ -11,6 +11,16 @@ function toNum(val) {
   return Number(val) || 0
 }
 
+// Retorna o preço final (promocao se houver, senão preco)
+function getPrecoFinal(venda) {
+  // Se tem promoção e é maior que 0, usa promoção
+  const promocao = toNum(venda.promocao)
+  if (promocao > 0) return promocao
+
+  // Senão, usa o preço normal
+  return toNum(venda.preco)
+}
+
 export function fmtR(val) {
   if (!val && val !== 0) return 'R$ 0,00'
   const n = toNum(val)
@@ -56,7 +66,7 @@ export async function getClientesRelatorio(tenantId) {
 export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {}) {
   let q = supabase
     .from('vendas')
-    .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
+    .select('id, produto, modelo, cor, marca, tamanho, preco, promocao, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
     .eq('tenant_id', tid(tenantId))
     .order('data_live', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
@@ -250,7 +260,7 @@ export async function getVendasPorAno(tenantId) {
     if (!dataVenda) return
 
     const ano = dataVenda.slice(0, 4)
-    map[ano] = (map[ano] || 0) + toNum(v.preco)
+    map[ano] = (map[ano] || 0) + getPrecoFinal(v)
   })
   return Object.entries(map)
     .map(([label, value]) => ({ label, value }))
@@ -299,7 +309,7 @@ export async function getVendasPorMes(tenantId, ano) {
     if (!dataVenda) return
 
     const m = parseInt(dataVenda.slice(5, 7)) - 1
-    map[m] = (map[m] || 0) + toNum(v.preco)
+    map[m] = (map[m] || 0) + getPrecoFinal(v)
   })
   return Array.from({ length: 12 }, (_, i) => ({ label: MESES[i], value: map[i] || 0 }))
 }
@@ -347,7 +357,7 @@ export async function getVendasPorDia(tenantId, ano, mes) {
     if (!dataVenda) return
 
     const dia = dataVenda.slice(8, 10)
-    map[dia] = (map[dia] || 0) + toNum(v.preco)
+    map[dia] = (map[dia] || 0) + getPrecoFinal(v)
   })
   return Array.from({ length: ultimoDia }, (_, i) => {
     const d = String(i + 1).padStart(2, '0')
@@ -391,7 +401,7 @@ export async function getTopClientesMes(tenantId, ano, mes) {
     const status = (v.status || '').toUpperCase()
     if (status === 'CANCELADO' || status === 'DEVOLVIDO') return
 
-    map[cli] = (map[cli] || 0) + toNum(v.preco)
+    map[cli] = (map[cli] || 0) + getPrecoFinal(v)
   })
   return Object.entries(map)
     .map(([label, value]) => ({ label, value }))
@@ -454,7 +464,7 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
     if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
 
     const d = dataVenda.slice(8, 10)
-    vMap[d] = (vMap[d] || 0) + toNum(v.preco)
+    vMap[d] = (vMap[d] || 0) + getPrecoFinal(v)
   })
   ;(contasPagar || []).forEach(c => {
     const cat = (c.categoria || '').toUpperCase()
@@ -558,7 +568,7 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
     // Filtra pelo período
     if (!dataVenda || dataVenda < dataInicio || dataVenda > dataFim) return
 
-    const val = toNum(v.preco)
+    const val = getPrecoFinal(v)
     const st  = (v.status || '').toUpperCase()
     if (st === 'CANCELADO') cancelados += val
     else if (st === 'DEVOLVIDO') devolucoes += val
