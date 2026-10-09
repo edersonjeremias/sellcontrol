@@ -247,11 +247,11 @@ export default function ProdutosPage() {
 
       try {
         for (const p of produtosParaSalvar) {
-          // Verifica se código já existe (apenas para produtos novos)
-          if (p.isNew) {
+          // Verifica se código já existe (apenas para produtos novos E se não permitir duplicado)
+          if (p.isNew && !config.produtos_permitir_duplicado) {
             const existe = await verificarCodigoExiste(tenantId, p.codigo, p.id)
             if (existe) {
-              // Apenas pula o salvamento sem aviso
+              showToast(`Código ${p.codigo} já existe! Ative "Permitir duplicado" ou use outro código.`, 'error')
               continue
             }
           }
@@ -292,7 +292,7 @@ export default function ProdutosPage() {
         isSavingRef.current = false
       }
     }, 300)
-  }, [busy, tenantId])
+  }, [busy, tenantId, config, showToast])
 
   // Novo produto
   const novo = useCallback(async () => {
@@ -413,7 +413,10 @@ export default function ProdutosPage() {
 
       return { ...p, [field]: value }
     }))
-  }, [])
+
+    // Salva com debounce de 300ms (não causa problema de cursor)
+    salvarAgora()
+  }, [salvarAgora])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
   // REMOVIDO: não cria mais linha automaticamente ao sair do campo produto
@@ -422,17 +425,6 @@ export default function ProdutosPage() {
     // Salva automaticamente quando sair do campo (com debounce)
     salvarAgora()
   }, [salvarAgora])
-
-  // Salvamento automático: salva 2 segundos após última mudança
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (produtos.length > 0) {
-        salvarAgora()
-      }
-    }, 2000) // 2 segundos de inatividade
-
-    return () => clearTimeout(timer)
-  }, [produtos, salvarAgora])
 
   // Salvar produto
   const salvar = useCallback(async (key) => {
@@ -450,11 +442,13 @@ export default function ProdutosPage() {
       return
     }
 
-    // Verifica se código já existe
-    const existe = await verificarCodigoExiste(tenantId, p.codigo, p.id)
-    if (existe) {
-      showToast(`Código ${p.codigo} já existe!`, 'error')
-      return
+    // Verifica se código já existe (apenas se não permitir duplicado)
+    if (!config.produtos_permitir_duplicado) {
+      const existe = await verificarCodigoExiste(tenantId, p.codigo, p.id)
+      if (existe) {
+        showToast(`Código ${p.codigo} já existe!`, 'error')
+        return
+      }
     }
 
     setBusy(true)
@@ -496,7 +490,7 @@ export default function ProdutosPage() {
     } finally {
       setBusy(false)
     }
-  }, [produtos, tenantId, showToast])
+  }, [produtos, tenantId, showToast, config])
 
   // Copiar produto
   const copiar = useCallback(async (key) => {
