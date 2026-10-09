@@ -431,8 +431,11 @@ export default function ProdutosPage() {
       return { ...p, [field]: value }
     }))
 
-    // Salva com debounce de 300ms (não causa problema de cursor)
-    salvarAgora()
+    // NÃO salva automaticamente no campo código (causa cursor jump)
+    // Código só salva no onBlur
+    if (field !== 'codigo') {
+      salvarAgora()
+    }
   }, [salvarAgora])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
@@ -440,6 +443,11 @@ export default function ProdutosPage() {
   // Nova linha só é criada ao dar Enter no campo QUANTIDADE
   const handleProdutoBlur = useCallback((key) => {
     // Salva automaticamente quando sair do campo (com debounce)
+    salvarAgora()
+  }, [salvarAgora])
+
+  // Ao sair do campo CÓDIGO, salva automaticamente
+  const handleCodigoBlur = useCallback((key) => {
     salvarAgora()
   }, [salvarAgora])
 
@@ -1634,6 +1642,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           className="cell-input"
           value={p.codigo}
           onChange={e => onChange(p._key, 'codigo', e.target.value)}
+          onBlur={() => handleCodigoBlur(p._key)}
           onKeyDown={navegarProximo}
           disabled={desabilitado}
           placeholder="100"
