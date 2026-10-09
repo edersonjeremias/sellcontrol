@@ -11,10 +11,13 @@ function toNum(val) {
   return Number(val) || 0
 }
 
-// Retorna o preço final (promocao se houver, senão preco)
-// TEMPORÁRIO: Voltando para preco até descobrir nome da coluna correta
+// Retorna o preço final (preco_promocional se houver, senão preco)
 function getPrecoFinal(venda) {
-  // TODO: Descobrir nome correto da coluna de promoção
+  // Se tem preço promocional e é maior que 0, usa ele
+  const precoPromocional = toNum(venda.preco_promocional)
+  if (precoPromocional > 0) return precoPromocional
+
+  // Senão, usa o preço normal
   return toNum(venda.preco)
 }
 
@@ -63,7 +66,7 @@ export async function getClientesRelatorio(tenantId) {
 export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {}) {
   let q = supabase
     .from('vendas')
-    .select('id, produto, modelo, cor, marca, tamanho, preco, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
+    .select('id, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
     .eq('tenant_id', tid(tenantId))
     .order('data_live', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
@@ -228,7 +231,7 @@ export async function getVendasPorAno(tenantId) {
   while (true) {
     const { data, error } = await supabase
       .from('vendas')
-      .select('preco, cliente_nome, data_live, created_at, status')
+      .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
@@ -276,7 +279,7 @@ export async function getVendasPorMes(tenantId, ano) {
   while (true) {
     const { data, error } = await supabase
       .from('vendas')
-      .select('preco, cliente_nome, data_live, created_at, status')
+      .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
@@ -324,7 +327,7 @@ export async function getVendasPorDia(tenantId, ano, mes) {
   while (true) {
     const { data, error } = await supabase
       .from('vendas')
-      .select('preco, cliente_nome, data_live, created_at, status')
+      .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
@@ -375,7 +378,7 @@ export async function getTopClientesMes(tenantId, ano, mes) {
   while (true) {
     const { data, error } = await supabase
       .from('vendas')
-      .select('preco, cliente_nome, data_live, created_at, status')
+      .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
@@ -419,7 +422,7 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
   while (true) {
     const { data, error } = await supabase
       .from('vendas')
-      .select('preco, cliente_nome, data_live, created_at, status')
+      .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
@@ -526,7 +529,7 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
   while (true) {
     const { data, error } = await supabase
       .from('vendas')
-      .select('preco, status, cliente_nome, data_live, created_at')
+      .select('preco, preco_promocional, status, cliente_nome, data_live, created_at')
       .eq('tenant_id', tid(tenantId))
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)

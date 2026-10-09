@@ -100,8 +100,12 @@ export default function RelatorioPage() {
     return resultado
   }, [vendasBase, busca, filtroStatus, filtroStatusExpedicao])
 
-  // Soma TUDO que está na lista filtrada (não filtra mais nada aqui!)
-  const totalLiquido = vendas.reduce((s, v) => s + (Number(v.preco) || 0), 0)
+  // Soma TUDO que está na lista filtrada usando preço final (preco_promocional se houver, senão preco)
+  const totalLiquido = vendas.reduce((s, v) => {
+    const precoPromocional = Number(v.preco_promocional) || 0
+    const preco = Number(v.preco) || 0
+    return s + (precoPromocional > 0 ? precoPromocional : preco)
+  }, 0)
 
   // Agrupa produtos iguais e conta quantidades
   const produtosAgrupados = useMemo(() => {
@@ -199,6 +203,10 @@ export default function RelatorioPage() {
       csvRows.push(headers.join(','))
 
       vendas.forEach(v => {
+        const precoPromocional = Number(v.preco_promocional) || 0
+        const preco = Number(v.preco) || 0
+        const precoFinal = precoPromocional > 0 ? precoPromocional : preco
+
         const row = [
           `"${fmtData(v.data_live) || ''}"`,
           `"${v.live_nome || ''}"`,
@@ -210,7 +218,7 @@ export default function RelatorioPage() {
           `"${v.tamanho || ''}"`,
           `"${v.codigo || ''}"`,
           `"${v.sacolinha || ''}"`,
-          Number(v.preco) || 0,
+          precoFinal,
           `"${v.status || ''}"`,
           `"${v.id || ''}"`,
           `"${v.created_at || ''}"`,
