@@ -236,6 +236,13 @@ export default function ProdutosPage() {
     saveTimerRef.current = setTimeout(async () => {
       if (isSavingRef.current || busy) return
 
+      // PRESERVA O FOCO antes de salvar
+      const elementoAtivo = document.activeElement
+      const ehInput = elementoAtivo?.tagName === 'INPUT' || elementoAtivo?.tagName === 'SELECT'
+      const focusKey = ehInput ? elementoAtivo?.getAttribute('data-key') : null
+      const focusField = ehInput ? elementoAtivo?.getAttribute('data-field') : null
+      const cursorPos = ehInput ? elementoAtivo?.selectionStart : null
+
       // Filtra produtos que precisam ser salvos (não vazios e modificados)
       const produtosParaSalvar = produtosRef.current.filter(p =>
         !p.deleted &&
@@ -287,6 +294,19 @@ export default function ProdutosPage() {
               pr._key === p._key ? mapProduto(atualizado) : pr
             ))
           }
+        }
+
+        // RESTAURA O FOCO depois de salvar
+        if (focusKey && focusField) {
+          requestAnimationFrame(() => {
+            const input = document.querySelector(`[data-key="${focusKey}"][data-field="${focusField}"]`)
+            if (input) {
+              input.focus()
+              if (cursorPos !== null && input.setSelectionRange) {
+                input.setSelectionRange(cursorPos, cursorPos)
+              }
+            }
+          })
         }
       } catch (err) {
         console.error('Erro no salvamento automático:', err)
@@ -1524,6 +1544,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           onBlur={() => onProdutoBlur(p._key)}
           disabled={desabilitado}
           placeholder="Nome do produto"
+          data-key={p._key}
+          data-field="produto"
         />
       </td>
 
@@ -1535,6 +1557,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           list={listas.modelos}
           onChange={v => onChange(p._key, 'modelo', v)}
           disabled={desabilitado}
+          data-key={p._key}
+          data-field="modelo"
         />
       </td>
 
@@ -1547,6 +1571,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             onChange={e => onChange(p._key, 'genero', e.target.value)}
             onKeyDown={navegarProximo}
             disabled={desabilitado}
+            data-key={p._key}
+            data-field="genero"
           >
             <option value=""></option>
             <option value="M">M</option>
@@ -1564,6 +1590,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           list={listas.cores}
           onChange={v => onChange(p._key, 'cor', v)}
           disabled={desabilitado}
+          data-key={p._key}
+          data-field="cor"
         />
       </td>
 
@@ -1575,6 +1603,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           list={listas.marcas}
           onChange={v => onChange(p._key, 'marca', v)}
           disabled={desabilitado}
+          data-key={p._key}
+          data-field="marca"
         />
       </td>
 
@@ -1586,6 +1616,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           onChange={e => onChange(p._key, 'tamanho', e.target.value)}
           onKeyDown={navegarProximo}
           disabled={desabilitado}
+          data-key={p._key}
+          data-field="tamanho"
         />
       </td>
 
@@ -1598,6 +1630,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             onChange={e => onChange(p._key, 'condicao', e.target.value)}
             onKeyDown={navegarProximo}
             disabled={desabilitado}
+            data-key={p._key}
+            data-field="condicao"
           >
             <option value=""></option>
             <option value="N">N</option>
@@ -1618,6 +1652,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             placeholder="0,00"
             disabled={desabilitado}
             style={{ textAlign: 'right' }}
+            data-key={p._key}
+            data-field="custo"
           />
         </td>
       )}
@@ -1633,6 +1669,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           placeholder="0,00"
           disabled={desabilitado}
           style={{ textAlign: 'right' }}
+          data-key={p._key}
+          data-field="preco"
         />
       </td>
 
@@ -1646,6 +1684,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           onKeyDown={navegarProximo}
           disabled={desabilitado}
           placeholder="100"
+          data-key={p._key}
+          data-field="codigo"
         />
       </td>
 
@@ -1661,6 +1701,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             placeholder="0,00"
             disabled={desabilitado}
             style={{ textAlign: 'right' }}
+            data-key={p._key}
+            data-field="preco_promocional"
           />
         </td>
       )}
@@ -1677,6 +1719,8 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           placeholder=""
           maxLength={3}
           style={{ textAlign: 'center' }}
+          data-key={p._key}
+          data-field="quantidade"
         />
       </td>
 
