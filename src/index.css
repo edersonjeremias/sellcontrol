@@ -27,6 +27,14 @@ textarea:focus {
   background: #252525 !important;
 }
 
+/* ✅ DESTAQUE VISUAL PARA CHECKBOX E RADIO QUANDO FOCADOS */
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  outline: 2px solid var(--blue) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.25) !important;
+}
+
 .login-screen {
   display: flex;
   min-height: 100vh;
