@@ -186,6 +186,63 @@ export default function RelatorioPage() {
     doc.save(nomeArquivo)
   }
 
+  const exportarExcel = () => {
+    // Prepara dados para Excel - TODAS as colunas
+    const dadosExcel = vendas.map(v => ({
+      'Data': fmtData(v.data_live),
+      'Live': v.live_nome || '',
+      'Cliente': v.cliente_nome || '',
+      'Produto': v.produto || '',
+      'Modelo': v.modelo || '',
+      'Marca': v.marca || '',
+      'Cor': v.cor || '',
+      'Tamanho': v.tamanho || '',
+      'Código': v.codigo || '',
+      'Sacolinha': v.sacolinha || '',
+      'Preço': Number(v.preco) || 0,
+      'Status': v.status || '',
+      'ID': v.id || '',
+      'Created At': v.created_at || '',
+      'Data Live': v.data_live || ''
+    }))
+
+    // Cria planilha
+    const ws = XLSX.utils.json_to_sheet(dadosExcel)
+
+    // Define largura das colunas
+    ws['!cols'] = [
+      { wch: 12 }, // Data
+      { wch: 15 }, // Live
+      { wch: 25 }, // Cliente
+      { wch: 20 }, // Produto
+      { wch: 20 }, // Modelo
+      { wch: 15 }, // Marca
+      { wch: 15 }, // Cor
+      { wch: 10 }, // Tamanho
+      { wch: 10 }, // Código
+      { wch: 12 }, // Sacolinha
+      { wch: 12 }, // Preço
+      { wch: 15 }, // Status
+      { wch: 38 }, // ID
+      { wch: 22 }, // Created At
+      { wch: 12 }  // Data Live
+    ]
+
+    // Cria workbook
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Vendas')
+
+    // Adiciona linha de totais no final
+    const totalLinha = vendas.length + 2
+    XLSX.utils.sheet_add_aoa(ws, [
+      ['TOTAL', '', '', '', '', '', '', '', '', '', totalLiquido, '', '', '', '']
+    ], { origin: `A${totalLinha}` })
+
+    // Salva arquivo
+    const nomeArquivo = `vendas_${dataIni}_${dataFim}.xlsx`
+    XLSX.writeFile(wb, nomeArquivo)
+  }
+
   return (
     <AppShell title="Relatório" hideTitle>
       {/* Filtros de período */}
@@ -212,6 +269,7 @@ export default function RelatorioPage() {
         </select>
         <button onClick={carregar} style={S.btn}>Filtrar</button>
         <button onClick={gerarPDF} style={{ ...S.btn, background:'var(--green)' }}>📄 Gerar PDF</button>
+        <button onClick={exportarExcel} style={{ ...S.btn, background:'#217346' }}>📊 Exportar Excel</button>
       </div>
 
       {/* Contador de registros filtrados */}
