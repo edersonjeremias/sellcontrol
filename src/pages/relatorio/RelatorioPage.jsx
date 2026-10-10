@@ -74,7 +74,10 @@ export default function RelatorioPage() {
 
     // ✅ Filtro por STATUS (vendidos/cadastrados/ENVIADO/CANCELADO/DEVOLVIDO)
     if (filtroStatus === 'vendidos') {
-      resultado = resultado.filter(v => v.cliente_nome?.trim())
+      resultado = resultado.filter(v => {
+        const st = (v.status || '').toUpperCase()
+        return v.cliente_nome?.trim() && st !== 'CANCELADO' && st !== 'DEVOLVIDO'
+      })
     } else if (filtroStatus === 'cadastrados') {
       resultado = resultado.filter(v => !v.cliente_nome?.trim())
     } else if (['ENVIADO', 'CANCELADO', 'DEVOLVIDO'].includes(filtroStatus)) {
