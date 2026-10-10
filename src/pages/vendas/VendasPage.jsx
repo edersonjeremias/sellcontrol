@@ -1103,9 +1103,14 @@ export default function VendasPage() {
       if (!confirma) return
     }
 
+    // Verifica se já existe linha vazia (não salva e sem produto)
+    const linhaVaziaExistente = linhasRef.current.find(l =>
+      !l.deleted && !l.produto?.trim()
+    )
+
     // Cria nova linha com dados do produto
     const novaLinha = {
-      _key: gerarId(),
+      _key: linhaVaziaExistente?._key || gerarId(),
       isNew: true,
       deleted: false,
       produto: produto.produto || '',
@@ -1128,8 +1133,15 @@ export default function VendasPage() {
       _estoqueDeduzido: false, // Controle de dedução de estoque
     }
 
-    // Adiciona no topo da tabela
-    setLinhas(prev => [novaLinha, ...prev])
+    if (linhaVaziaExistente) {
+      // Aproveita a linha vazia existente
+      setLinhas(prev => prev.map(l =>
+        l._key === linhaVaziaExistente._key ? novaLinha : l
+      ))
+    } else {
+      // Adiciona no topo da tabela
+      setLinhas(prev => [novaLinha, ...prev])
+    }
     setHasUnsaved(true)
 
     // ✅ ESTOQUE SÓ SERÁ DEDUZIDO AO COLOCAR CLIENTE
