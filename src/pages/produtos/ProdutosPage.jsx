@@ -1401,12 +1401,12 @@ export default function ProdutosPage() {
               </div>
 
               {/* Botões */}
-              <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
                 {!produtoEditando.isNew && (
                   <>
                     <button
                       onClick={() => setConfirmarExclusao(true)}
-                      style={{ flex: 1, padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                      style={{ flex: '1 1 calc(50% - 4px)', padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                     >
                       🗑️ Excluir
                     </button>
@@ -1415,9 +1415,17 @@ export default function ProdutosPage() {
                         await copiar(produtoEditando._key)
                         setProdutoEditando(null)
                       }}
-                      style={{ flex: 1, padding: 12, background: '#666', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                      style={{ flex: '1 1 calc(50% - 4px)', padding: 12, background: '#666', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                     >
                       📋 Duplicar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProdutoComImagens(produtoEditando)
+                      }}
+                      style={{ flex: '1 1 100%', padding: 12, background: '#0066ff', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', position: 'relative' }}
+                    >
+                      📷 Imagens {produtoEditando.imagens?.length > 0 && `(${produtoEditando.imagens.length})`}
                     </button>
                   </>
                 )}
