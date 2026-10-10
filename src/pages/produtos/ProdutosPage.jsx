@@ -560,6 +560,9 @@ export default function ProdutosPage() {
     const p = produtos.find(pr => pr._key === key)
     if (!p) return
 
+    // Verifica se já existe linha vazia (não salva e sem nome)
+    const linhaVazia = produtos.find(pr => pr.isNew && !pr.produto?.trim())
+
     // Se código automático, busca próximo código
     let codigoInicial = ''
 
@@ -593,7 +596,16 @@ export default function ProdutosPage() {
       preco_promocional: p.preco_promocional,
     }
 
-    setProdutos(prev => [copia, ...prev])
+    if (linhaVazia) {
+      // Aproveita a linha vazia existente
+      setProdutos(prev => prev.map(pr =>
+        pr._key === linhaVazia._key ? { ...copia, _key: pr._key } : pr
+      ))
+    } else {
+      // Cria nova linha no topo
+      setProdutos(prev => [copia, ...prev])
+    }
+
     showToast('Produto copiado!', 'success')
   }, [produtos, tenantId, showToast, config])
 
