@@ -1521,7 +1521,7 @@ function copyToClipboard(text) {
   })
 }
 
-function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onExcluir, onReativar }) {
+function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onAbrirImagens, onExcluir, onReativar }) {
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
   const [txtCopiado, setTxtCopiado] = useState(false)
