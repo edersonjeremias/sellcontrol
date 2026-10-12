@@ -2412,25 +2412,25 @@ export default function VendasPage() {
 
       {/* MODAL AVISO PREÇO BAIXO */}
       {avisoPreco && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 24, maxWidth: 450, width: '90%', border: '2px solid var(--yellow)' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 20, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              ⚠️ Atenção: Preço Muito Baixo
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--card-bg)', borderRadius: 10, padding: '16px 20px', maxWidth: 400, width: '100%', maxHeight: '90vh', overflow: 'auto', border: '2px solid var(--yellow)' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 18, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              ⚠️ Preço Muito Baixo
             </h3>
-            <div style={{ margin: '0 0 24px', fontSize: 15, color: 'var(--text-body)', lineHeight: 1.6 }}>
-              <p style={{ margin: '0 0 12px' }}>
-                O <strong style={{ color: 'var(--yellow)' }}>{avisoPreco.nomeCampo}</strong> está menor que <strong>R$ 1,00</strong>:
+            <div style={{ margin: '0 0 16px', fontSize: 14, color: 'var(--text-body)', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 13 }}>
+                O <strong style={{ color: 'var(--yellow)' }}>{avisoPreco.nomeCampo}</strong> está menor que <strong>R$ 1,00</strong>
               </p>
-              <div style={{ background: 'rgba(251, 188, 4, 0.1)', padding: 12, borderRadius: 6, marginBottom: 12 }}>
-                <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 4 }}>Produto:</div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-header)' }}>{avisoPreco.produto}</div>
+              <div style={{ background: 'rgba(251, 188, 4, 0.1)', padding: 10, borderRadius: 6, marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 3 }}>Produto:</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-header)' }}>{avisoPreco.produto}</div>
               </div>
-              <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: 12, borderRadius: 6, border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 4 }}>{avisoPreco.nomeCampo}:</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--red)' }}>R$ {avisoPreco.valor}</div>
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: 10, borderRadius: 6, border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 3 }}>{avisoPreco.nomeCampo}:</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--red)' }}>R$ {avisoPreco.valor}</div>
               </div>
-              <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--muted)' }}>
-                Você quis digitar <strong style={{ color: 'var(--text-header)' }}>centavos</strong> ou foi <strong style={{ color: 'var(--yellow)' }}>erro de digitação</strong>?
+              <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--muted)' }}>
+                Foi <strong style={{ color: 'var(--yellow)' }}>erro de digitação</strong>?
               </p>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -2458,13 +2458,13 @@ export default function VendasPage() {
                     }
                   }, 100)
                 }}
-                style={{ flex: 1, padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                style={{ flex: 1, padding: 10, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
-                ❌ Foi Erro - Deixa Corrigir
+                ❌ Foi Erro
               </button>
               <button
                 onClick={() => setAvisoPreco(null)}
-                style={{ flex: 1, padding: 12, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                style={{ flex: 1, padding: 10, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
               >
                 ✅ Está Correto
               </button>
