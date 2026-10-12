@@ -1473,20 +1473,20 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 }
 
 /* Desktop: toolbar em linha única, sem quebra */
-.editar-vendas-toolbar {
-  flex-wrap: nowrap;
+.toolbar.editar-vendas-toolbar {
+  flex-wrap: nowrap !important;
 }
 
-.editar-vendas-toolbar .field-data,
-.editar-vendas-toolbar .field-live,
-.editar-vendas-toolbar .field-cliente-buscar {
-  flex: 0 1 auto;
-  min-width: 140px;
+.toolbar.editar-vendas-toolbar .field-data,
+.toolbar.editar-vendas-toolbar .field-live {
+  flex: 0 0 auto;
+  min-width: 120px;
+  max-width: 150px;
 }
 
-.editar-vendas-toolbar .field-cliente-buscar {
+.toolbar.editar-vendas-toolbar .field-cliente-buscar {
   flex: 1 1 auto;
-  min-width: 200px;
+  min-width: 180px;
 }
 
 /* Mobile: esconde tabela, mostra cards */
