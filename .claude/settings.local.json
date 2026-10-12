@@ -39,7 +39,8 @@
       "PowerShell(git add src/index.css)",
       "Read(//c/sellcontrol/supabase/migrations/**)",
       "PowerShell(git add api/aplicar-cupom.js api/confirmar-pagamento.js api/webhook.js)",
-      "PowerShell(git add supabase/migrations/20261012_verify_cupom_tracking.sql supabase/migrations/20261012_fix_cupom_historico.sql docs/CUPONS_DEBUG.md)"
+      "PowerShell(git add supabase/migrations/20261012_verify_cupom_tracking.sql supabase/migrations/20261012_fix_cupom_historico.sql docs/CUPONS_DEBUG.md)",
+      "PowerShell(git add src/pages/vendas/VendasPage.jsx)"
     ],
     "additionalDirectories": [
       "\\tmp"
