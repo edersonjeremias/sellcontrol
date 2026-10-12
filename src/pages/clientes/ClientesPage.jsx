@@ -140,11 +140,12 @@ export default function ClientesPage() {
   }, [])
 
   const handleSalvar = async () => {
-    if (!nome.trim()) { showToast('Nome/Instagram obrigatório!', 'error'); return }
+    const instagramLimpo = nome.trim().replace(/\s+/g, '')
+    if (!instagramLimpo) { showToast('Nome/Instagram obrigatório!', 'error'); return }
     setSaving(true)
     try {
       const { error } = await saveCliente(tenantId, {
-        instagram: nome.trim(),
+        instagram: instagramLimpo,
         whatsapp: whatsapp.replace(/\D/g, ''),
         msg_bloqueio: obs,
         senha,

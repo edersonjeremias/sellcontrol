@@ -84,7 +84,10 @@ export default function ModalCadastro({ onSalvar, onAtualizar, onExcluir, onFech
   }, [isCliente])
 
   async function salvar() {
-    const valorLimpo = valor.trim()
+    // Remove espaços do Instagram (todos os espaços, inclusive do meio)
+    const valorLimpo = isCliente
+      ? valor.trim().replace(/\s+/g, '')
+      : valor.trim()
     const celularLimpo = celular.trim()
 
     if (!valorLimpo) return
