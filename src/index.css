@@ -1680,7 +1680,7 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
     flex-shrink: 0;
     width: auto;
     height: 44px;
-    padding: 0 16px;
+    padding: 0 12px;
     font-size: 15px;
   }
 
