@@ -1599,38 +1599,49 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
      EDITAR VENDAS - TOOLBAR MOBILE COM BOTÃO AO LADO
      ──────────────────────────────────────────────────────────────── */
   .editar-vendas-toolbar {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 10px !important;
-    align-items: stretch !important;
-  }
-
-  .editar-vendas-toolbar > div:first-child {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 12px !important;
+    grid-template-rows: auto auto !important;
+    gap: 10px 12px !important;
+  }
+
+  .editar-vendas-toolbar .field-data,
+  .editar-vendas-toolbar .field-live {
+    min-width: 0 !important;
+  }
+
+  .editar-vendas-toolbar .field-data {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .editar-vendas-toolbar .field-live {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+  }
+
+  .editar-vendas-toolbar .field-cliente-buscar {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
   }
 
   .editar-vendas-toolbar .field {
-    flex: unset !important;
     min-width: 0 !important;
-    position: relative !important;
+    overflow: visible !important;
   }
 
   .editar-vendas-toolbar .field input,
+  .editar-vendas-toolbar .autocomplete-wrapper,
   .editar-vendas-toolbar .autocomplete-wrapper input {
     width: 100% !important;
     min-width: 0 !important;
+    box-sizing: border-box !important;
   }
 
   .editar-vendas-toolbar input,
   .editar-vendas-toolbar .modal-autocomplete-input {
     height: 44px !important;
     font-size: 16px !important;
-  }
-
-  .field-cliente-buscar {
-    width: 100% !important;
   }
 
   .cliente-buscar-wrapper {
@@ -1648,9 +1659,7 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
     flex-shrink: 0 !important;
     width: auto !important;
     min-width: 85px !important;
-    flex: unset !important;
     height: 44px !important;
-    min-height: 44px !important;
     padding: 0 16px !important;
     font-size: 15px !important;
     white-space: nowrap !important;
