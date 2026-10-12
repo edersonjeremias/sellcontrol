@@ -875,6 +875,7 @@ Qualquer dúvida, estamos à disposição! 😊`
 
 // ── Aba: Busca Avançada ─────────────────────────────────────────
 function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
+  const { showToast } = useApp()
   const [filtros, setFiltros] = useState({
     instagram: '',
     nome: '',
@@ -885,15 +886,110 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
     estado: '',
     email: '',
     bloqueado: 'todos', // 'todos' | 'sim' | 'nao'
+    temWhatsapp: 'todos', // 'todos' | 'sim' | 'nao'
   })
   const [resultados, setResultados] = useState([])
   const [buscando, setBuscando] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
+  const [selecionados, setSelecionados] = useState(new Set())
+  const [ordenacao, setOrdenacao] = useState({ campo: 'instagram', direcao: 'asc' })
+  const [showModalAcao, setShowModalAcao] = useState(null)
+  const [executandoAcao, setExecutandoAcao] = useState(false)
   const tableRef = useRef(null)
 
   const updateFiltro = (campo, valor) => {
     setFiltros(prev => ({ ...prev, [campo]: valor }))
-    setActiveIdx(-1) // Reset índice ao mudar filtro
+    setActiveIdx(-1)
+    setSelecionados(new Set()) // Limpa seleção ao mudar filtro
+  }
+
+  // Funções de seleção
+  const toggleSelecionado = (instagram) => {
+    setSelecionados(prev => {
+      const novo = new Set(prev)
+      if (novo.has(instagram)) {
+        novo.delete(instagram)
+      } else {
+        novo.add(instagram)
+      }
+      return novo
+    })
+  }
+
+  const toggleTodos = () => {
+    if (selecionados.size === resultados.length) {
+      setSelecionados(new Set())
+    } else {
+      setSelecionados(new Set(resultados.map(c => c.instagram)))
+    }
+  }
+
+  // Funções de ordenação
+  const ordenarPor = (campo) => {
+    setOrdenacao(prev => ({
+      campo,
+      direcao: prev.campo === campo && prev.direcao === 'asc' ? 'desc' : 'asc'
+    }))
+  }
+
+  const resultadosOrdenados = [...resultados].sort((a, b) => {
+    const valorA = a[ordenacao.campo] || ''
+    const valorB = b[ordenacao.campo] || ''
+    const comparacao = valorA.toString().localeCompare(valorB.toString(), 'pt-BR')
+    return ordenacao.direcao === 'asc' ? comparacao : -comparacao
+  })
+
+  // Ações em massa
+  const executarAcaoEmMassa = async (acao) => {
+    const clientesSelecionados = Array.from(selecionados)
+    if (clientesSelecionados.length === 0) {
+      showToast('Selecione ao menos um cliente', 'error')
+      return
+    }
+
+    setShowModalAcao(acao)
+  }
+
+  const confirmarAcao = async () => {
+    const acao = showModalAcao
+    const clientesSelecionados = Array.from(selecionados)
+
+    setExecutandoAcao(true)
+    let sucesso = 0
+    let erros = 0
+
+    try {
+      for (const instagram of clientesSelecionados) {
+        try {
+          if (acao === 'excluir') {
+            await deleteCliente(tenantId, instagram)
+          } else if (acao === 'bloquear') {
+            await toggleBloqueio(tenantId, instagram, true)
+          } else if (acao === 'desbloquear') {
+            await toggleBloqueio(tenantId, instagram, false)
+          }
+          sucesso++
+        } catch (err) {
+          console.error(`Erro ao ${acao} ${instagram}:`, err)
+          erros++
+        }
+      }
+
+      showToast(
+        `${sucesso} cliente(s) ${acao === 'excluir' ? 'excluído(s)' : acao === 'bloquear' ? 'bloqueado(s)' : 'desbloqueado(s)'}${erros > 0 ? `, ${erros} erro(s)` : ''}`,
+        erros > 0 ? 'error' : 'success'
+      )
+
+      // Atualizar lista
+      const { data } = await searchClientesAvancada(tenantId, filtros, 200)
+      if (data) setResultados(data)
+      setSelecionados(new Set())
+    } catch (err) {
+      showToast('Erro ao executar ação: ' + err.message, 'error')
+    } finally {
+      setExecutandoAcao(false)
+      setShowModalAcao(null)
+    }
   }
 
   // Busca sob demanda quando filtros mudam
@@ -936,14 +1032,15 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
   const limparFiltros = () => {
     setFiltros({
       instagram: '', nome: '', whatsapp: '', cpf: '',
-      cep: '', cidade: '', estado: '', email: '', bloqueado: 'todos',
+      cep: '', cidade: '', estado: '', email: '', bloqueado: 'todos', temWhatsapp: 'todos',
     })
     setResultados([])
     setActiveIdx(-1)
+    setSelecionados(new Set())
   }
 
   const totalFiltrosAtivos = Object.entries(filtros).filter(([key, val]) =>
-    key !== 'bloqueado' ? val.trim() !== '' : val !== 'todos'
+    !['bloqueado', 'temWhatsapp'].includes(key) ? val.trim() !== '' : val !== 'todos'
   ).length
 
   const handleKeyDown = (e) => {
@@ -1081,8 +1178,53 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
             </select>
           </div>
 
+          <div>
+            <select
+              value={filtros.temWhatsapp}
+              onChange={e => updateFiltro('temWhatsapp', e.target.value)}
+              className="cell-input"
+              style={{ cursor: 'pointer', fontSize: 12, padding: '6px 8px' }}>
+              <option value="todos">Tem WhatsApp?</option>
+              <option value="sim">✅ Sim</option>
+              <option value="nao">❌ Não</option>
+            </select>
+          </div>
+
         </div>
       </div>
+
+      {/* Barra de Ações em Massa */}
+      {selecionados.size > 0 && (
+        <div style={{
+          background: 'rgba(59,130,246,0.1)', border: '1px solid var(--blue)',
+          borderRadius: 8, padding: '10px 14px', marginBottom: 10,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--blue)' }}>
+            {selecionados.size} cliente(s) selecionado(s)
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => executarAcaoEmMassa('bloquear')}
+              className="btn-acao"
+              style={{ padding: '6px 12px', fontSize: 12, background: '#fbbc04', color: '#171717', fontWeight: 600 }}>
+              🔒 Bloquear
+            </button>
+            <button
+              onClick={() => executarAcaoEmMassa('desbloquear')}
+              className="btn-acao btn-green"
+              style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600 }}>
+              ✅ Desbloquear
+            </button>
+            <button
+              onClick={() => executarAcaoEmMassa('excluir')}
+              className="btn-acao"
+              style={{ padding: '6px 12px', fontSize: 12, background: 'rgba(239,68,68,0.15)', border: '1px solid var(--red)', color: 'var(--red)', fontWeight: 600 }}>
+              🗑️ Excluir
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Resultados */}
       <div style={{
@@ -1114,55 +1256,124 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
             <table ref={tableRef} style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-bg)', zIndex: 1 }}>
                 <tr>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '12%' }}>Instagram</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '18%' }}>Nome</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '12%' }}>WhatsApp</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '12%' }}>CPF</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '15%' }}>Cidade/UF</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '10%' }}>CEP</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '15%' }}>E-mail</th>
-                  <th style={{ padding: '6px 8px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '6%' }}>Status</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'center', borderBottom: '1px solid var(--border-light)', width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selecionados.size === resultadosOrdenados.length && resultadosOrdenados.length > 0}
+                      onChange={toggleTodos}
+                      style={{ cursor: 'pointer', width: 16, height: 16, accentColor: 'var(--blue)' }}
+                      title="Selecionar todos"
+                    />
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('instagram')}
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'instagram' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '12%', cursor: 'pointer', userSelect: 'none' }}>
+                    Instagram {ordenacao.campo === 'instagram' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('nome_completo')}
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'nome_completo' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '17%', cursor: 'pointer', userSelect: 'none' }}>
+                    Nome {ordenacao.campo === 'nome_completo' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('whatsapp')}
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'whatsapp' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '11%', cursor: 'pointer', userSelect: 'none' }}>
+                    WhatsApp {ordenacao.campo === 'whatsapp' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('cpf_cnpj')}
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'cpf_cnpj' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '11%', cursor: 'pointer', userSelect: 'none' }}>
+                    CPF {ordenacao.campo === 'cpf_cnpj' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('cidade')}
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'cidade' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '13%', cursor: 'pointer', userSelect: 'none' }}>
+                    Cidade/UF {ordenacao.campo === 'cidade' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('cep')}
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'cep' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '9%', cursor: 'pointer', userSelect: 'none' }}>
+                    CEP {ordenacao.campo === 'cep' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('email')}
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'email' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '13%', cursor: 'pointer', userSelect: 'none' }}>
+                    E-mail {ordenacao.campo === 'email' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('bloqueado')}
+                    style={{ padding: '6px 8px', textAlign: 'center', color: ordenacao.campo === 'bloqueado' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '5%', cursor: 'pointer', userSelect: 'none' }}>
+                    Status {ordenacao.campo === 'bloqueado' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {resultados.map((c, idx) => (
+                {resultadosOrdenados.map((c, idx) => (
                   <tr key={c.instagram}
                     style={{
                       borderBottom: '1px solid var(--border-light)',
                       transition: 'background 0.15s',
-                      background: idx === activeIdx ? 'var(--blue)' : 'transparent',
+                      background: selecionados.has(c.instagram) ? 'rgba(59,130,246,0.1)' : (idx === activeIdx ? 'var(--blue)' : 'transparent'),
                       color: idx === activeIdx ? '#171717' : 'inherit',
                       cursor: 'pointer',
                     }}
-                    onMouseEnter={e => { if (idx !== activeIdx) e.currentTarget.style.background = 'var(--table-row-hover)' }}
-                    onMouseLeave={e => { if (idx !== activeIdx) e.currentTarget.style.background = 'transparent' }}
-                    onClick={() => {
-                      setActiveIdx(idx)
-                      selecionarCliente(c)
-                      setAba('cadastro')
-                    }}>
-                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--blue)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      @{c.instagram}
+                    onMouseEnter={e => { if (idx !== activeIdx && !selecionados.has(c.instagram)) e.currentTarget.style.background = 'var(--table-row-hover)' }}
+                    onMouseLeave={e => { if (idx !== activeIdx && !selecionados.has(c.instagram)) e.currentTarget.style.background = 'transparent' }}>
+                    <td
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleSelecionado(c.instagram)
+                      }}
+                      style={{ padding: '6px 8px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selecionados.has(c.instagram)}
+                        onChange={() => {}}
+                        style={{ cursor: 'pointer', width: 16, height: 16, accentColor: 'var(--blue)' }}
+                      />
                     </td>
-                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td
+                      onClick={() => {
+                        setActiveIdx(idx)
+                        selecionarCliente(c)
+                        setAba('cadastro')
+                      }}
+                      style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--blue)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.instagram}
+                    </td>
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.nome_completo || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 10 }}>—</span>}
                     </td>
-                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
                       {c.whatsapp || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 10 }}>—</span>}
                     </td>
-                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 10 }}>
-                      {c.cpf || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 10 }}>
+                      {c.cpf_cnpj || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.cidade && c.uf ? `${c.cidade}/${c.uf}` : c.cidade || c.uf || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 10 }}>—</span>}
                     </td>
-                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 10 }}>
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 10 }}>
                       {c.cep || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.email || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', textAlign: 'center' }}>
                       {c.bloqueado ? (
                         <span style={{ background: idx === activeIdx ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.15)', color: idx === activeIdx ? '#171717' : 'var(--red)', padding: '2px 6px', borderRadius: 8, fontSize: 9, fontWeight: 600, display: 'inline-block' }}>
                           🔒
@@ -1180,6 +1391,56 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
           )}
         </div>
       </div>
+
+      {/* Modal de Confirmação de Ação em Massa */}
+      {showModalAcao && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+          onClick={(e) => e.target === e.currentTarget && setShowModalAcao(null)}
+        >
+          <div style={{
+            background: 'var(--card-bg)', borderRadius: 12, border: '1px solid var(--border-light)',
+            width: '100%', maxWidth: 400, padding: 24, margin: '0 16px',
+          }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: 18, color: 'var(--text-header)', fontWeight: 700 }}>
+              {showModalAcao === 'excluir' && '🗑️ Confirmar Exclusão'}
+              {showModalAcao === 'bloquear' && '🔒 Confirmar Bloqueio'}
+              {showModalAcao === 'desbloquear' && '✅ Confirmar Desbloqueio'}
+            </h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-body)', lineHeight: 1.6 }}>
+              {showModalAcao === 'excluir' && (
+                <>Tem certeza que deseja <strong style={{ color: 'var(--red)' }}>EXCLUIR {selecionados.size} cliente(s)</strong>?<br/>Esta ação não pode ser desfeita!</>
+              )}
+              {showModalAcao === 'bloquear' && (
+                <>Deseja <strong style={{ color: '#fbbc04' }}>BLOQUEAR {selecionados.size} cliente(s)</strong>?<br/>Clientes bloqueados não poderão fazer pedidos.</>
+              )}
+              {showModalAcao === 'desbloquear' && (
+                <>Deseja <strong style={{ color: 'var(--green)' }}>DESBLOQUEAR {selecionados.size} cliente(s)</strong>?<br/>Clientes poderão voltar a fazer pedidos.</>
+              )}
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => setShowModalAcao(null)}
+                disabled={executandoAcao}
+                className="btn-acao"
+                style={{ flex: 1, background: 'var(--btn-cancel-bg)', color: 'var(--btn-cancel-text)' }}>
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarAcao}
+                disabled={executandoAcao}
+                className="btn-acao"
+                style={{
+                  flex: 1,
+                  background: showModalAcao === 'excluir' ? 'var(--red)' : showModalAcao === 'bloquear' ? '#fbbc04' : 'var(--green)',
+                  color: showModalAcao === 'desbloquear' ? '#171717' : '#fff'
+                }}>
+                {executandoAcao ? 'Processando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

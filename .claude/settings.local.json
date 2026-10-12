@@ -43,7 +43,9 @@
       "PowerShell(git add src/pages/vendas/VendasPage.jsx)",
       "PowerShell(git add -A)",
       "PowerShell(git add src/components/vendas/TabelaRow.jsx)",
-      "PowerShell(git add sql/)"
+      "PowerShell(git add sql/)",
+      "PowerShell(git add src/pages/MasterEmpresasPage.jsx)",
+      "PowerShell(git add src/pages/vendas/VendasPage.jsx src/components/vendas/TabelaRow.jsx)"
     ],
     "additionalDirectories": [
       "\\tmp"

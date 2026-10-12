@@ -151,6 +151,13 @@ export async function searchClientesAvancada(tenantId, filtros, limit = 200) {
     query = query.eq('bloqueado', false)
   }
 
+  // Filtro: Tem WhatsApp?
+  if (filtros.temWhatsapp === 'sim') {
+    query = query.not('whatsapp', 'is', null).neq('whatsapp', '')
+  } else if (filtros.temWhatsapp === 'nao') {
+    query = query.or('whatsapp.is.null,whatsapp.eq.')
+  }
+
   const { data, error } = await query
     .order('instagram')
     .limit(limit)
