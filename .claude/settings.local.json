@@ -41,7 +41,9 @@
       "PowerShell(git add api/aplicar-cupom.js api/confirmar-pagamento.js api/webhook.js)",
       "PowerShell(git add supabase/migrations/20261012_verify_cupom_tracking.sql supabase/migrations/20261012_fix_cupom_historico.sql docs/CUPONS_DEBUG.md)",
       "PowerShell(git add src/pages/vendas/VendasPage.jsx)",
-      "PowerShell(git add -A)"
+      "PowerShell(git add -A)",
+      "PowerShell(git add src/components/vendas/TabelaRow.jsx)",
+      "PowerShell(git add sql/)"
     ],
     "additionalDirectories": [
       "\\tmp"

@@ -94,6 +94,7 @@ function TabelaRow({
   onAbrirModal, onAbrirFila,
   onEnviar, onEstornar, onCopiar, onExcluir,
   onStatusChange,
+  onPrecoBlur,
   cols = {},
   config = {},
   modoHistorico = false,
@@ -130,7 +131,7 @@ function TabelaRow({
   }
 
   return (
-    <tr className={linha.isSent ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
+    <tr data-key={linha._key} className={linha.isSent ? 'linha-enviada' : isCancelado ? 'linha-cancelada' : ''}>
       {/* SACOLA */}
       <td className="col-sacola td-sacola"
         onClick={() => {
@@ -212,6 +213,7 @@ function TabelaRow({
       <td className="col-preco">
         <input className="cell-input price" value={linha.preco}
           onChange={e => upd('preco', e.target.value.replace(/[^\d,]/g, ''))}
+          onBlur={e => onPrecoBlur?.(linha._key, 'preco', e.target.value)}
           onKeyDown={e => onEnterNextPulaCodigo(e, config.codigo_automatico)}
           disabled={camposDesabilitados} />
       </td>
@@ -223,6 +225,7 @@ function TabelaRow({
             className="cell-input price"
             value={linha.preco_promocional}
             onChange={e => upd('preco_promocional', e.target.value.replace(/[^\d,]/g, ''))}
+            onBlur={e => onPrecoBlur?.(linha._key, 'preco_promocional', e.target.value)}
             onKeyDown={onEnterNext}
             disabled={camposDesabilitados}
             placeholder="0,00"

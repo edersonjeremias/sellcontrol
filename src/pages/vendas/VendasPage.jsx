@@ -141,6 +141,7 @@ export default function VendasPage() {
   const [filtro,      setFiltro]      = useState('')
   const [filtroProduto, setFiltroProduto] = useState('')
   const [produtosSugestoes, setProdutosSugestoes] = useState([])
+  const [avisoPreco,  setAvisoPreco]  = useState(null) // { key, campo, valor, produto }
   const [tabelaMsg,   setTabelaMsg]   = useState('Iniciando sistema...')
   const [pronto,      setPronto]      = useState(false)
   const [scrollTop,   setScrollTop]   = useState(false)
@@ -1218,6 +1219,30 @@ export default function VendasPage() {
     }
   }, [salvarAgora])
 
+  // ── VERIFICAR PREÇO BAIXO (chamado no onBlur dos campos de preço) ──
+  const verificarPrecoBaixo = useCallback((key, campo, valor) => {
+    // Converte o valor para número
+    const valorNum = parseFloat(String(valor || '').replace(/\./g, '').replace(',', '.'))
+
+    // Se o valor é menor que 1,00, mostra aviso
+    if (valorNum > 0 && valorNum < 1.00) {
+      const linha = linhasRef.current.find(l => l._key === key)
+      if (linha) {
+        const nomeProduto = [linha.produto, linha.modelo, linha.cor].filter(Boolean).join(' ') || 'Produto'
+        const nomeCampo = campo === 'preco' ? 'Preço' : campo === 'preco_promocional' ? 'Preço Promocional' : 'Custo'
+
+        setAvisoPreco({
+          key,
+          campo,
+          valor: valor,
+          valorNum,
+          produto: nomeProduto,
+          nomeCampo
+        })
+      }
+    }
+  }, [])
+
   // ── CHECK BLOQUEIO (chamado no onBlur do campo cliente) ──
   function showBloqueioModal(key, nomeExibido, inputEl) {
     const nome = nomeExibido.trim().toLowerCase()
@@ -2193,6 +2218,7 @@ export default function VendasPage() {
                         onEstornar={handleEstornar}
                         onCopiar={handleCopiar}
                         onExcluir={handleExcluir}
+                        onPrecoBlur={verificarPrecoBaixo}
                       />
                     )
                   })}
@@ -2383,6 +2409,69 @@ export default function VendasPage() {
 
       {alerta      && <ModalAlerta      titulo={alerta.titulo}      mensagem={alerta.mensagem}      onFechar={() => setAlerta(null)} />}
       {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} onSim={confirmacao.onSim} onNao={confirmacao.onNao} hideConfirm={confirmacao.hideConfirm} />}
+
+      {/* MODAL AVISO PREÇO BAIXO */}
+      {avisoPreco && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--card-bg)', borderRadius: 12, padding: 24, maxWidth: 450, width: '90%', border: '2px solid var(--yellow)' }}>
+            <h3 style={{ margin: '0 0 16px', fontSize: 20, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              ⚠️ Atenção: Preço Muito Baixo
+            </h3>
+            <div style={{ margin: '0 0 24px', fontSize: 15, color: 'var(--text-body)', lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 12px' }}>
+                O <strong style={{ color: 'var(--yellow)' }}>{avisoPreco.nomeCampo}</strong> está menor que <strong>R$ 1,00</strong>:
+              </p>
+              <div style={{ background: 'rgba(251, 188, 4, 0.1)', padding: 12, borderRadius: 6, marginBottom: 12 }}>
+                <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 4 }}>Produto:</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-header)' }}>{avisoPreco.produto}</div>
+              </div>
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: 12, borderRadius: 6, border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 4 }}>{avisoPreco.nomeCampo}:</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--red)' }}>R$ {avisoPreco.valor}</div>
+              </div>
+              <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--muted)' }}>
+                Você quis digitar <strong style={{ color: 'var(--text-header)' }}>centavos</strong> ou foi <strong style={{ color: 'var(--yellow)' }}>erro de digitação</strong>?
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => {
+                  const campo = avisoPreco.campo
+                  const key = avisoPreco.key
+
+                  // Limpa o campo para o usuário corrigir
+                  setLinhas(prev => prev.map(l =>
+                    l._key === key ? { ...l, [campo]: '' } : l
+                  ))
+                  setAvisoPreco(null)
+
+                  // Foca no campo para corrigir
+                  setTimeout(() => {
+                    const tr = document.querySelector(`tr[data-key="${key}"]`)
+                    if (tr) {
+                      // Se for preço promocional, pega todos inputs de preço e seleciona o último (promocional)
+                      // Se for preço normal, pega o primeiro
+                      const inputs = tr.querySelectorAll('.col-preco input')
+                      const input = campo === 'preco_promocional' ? inputs[inputs.length - 1] : inputs[0]
+                      input?.focus()
+                      input?.select()
+                    }
+                  }, 100)
+                }}
+                style={{ flex: 1, padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                ❌ Foi Erro - Deixa Corrigir
+              </button>
+              <button
+                onClick={() => setAvisoPreco(null)}
+                style={{ flex: 1, padding: 12, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+              >
+                ✅ Está Correto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CONFIRMAÇÃO EXCLUIR PRODUTO */}
       {produtoParaExcluir && (

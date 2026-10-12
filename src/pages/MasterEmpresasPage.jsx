@@ -677,11 +677,8 @@ function AbaImportarBling({ showToast }) {
       const cidade = (row.Cidade || '').trim()
       const estado = (row.UF || '').trim().toUpperCase()
 
-      // Instagram será o código ou nome como fallback (sempre com @)
+      // Instagram será o código ou nome como fallback (SEM @, apenas limpo)
       let instagram = codigo || nome.toLowerCase().replace(/\s+/g, '')
-      if (instagram && !instagram.startsWith('@')) {
-        instagram = '@' + instagram
-      }
 
       if (!instagram || !nome) {
         pulados++
