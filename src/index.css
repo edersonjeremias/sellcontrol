@@ -1512,8 +1512,11 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 /* Mobile/tablet: .toolbar é grid 2 colunas (display: grid !important acima).
    Data e Live dividem a 1ª linha; Cliente + Buscar ocupam a 2ª linha inteira. */
 @media (max-width: 960px) {
+  /* minmax(0, ...) e nao 1fr: 1fr equivale a minmax(auto, 1fr) e a coluna
+     nao encolheria abaixo do min-content do input date, que no iOS e largo
+     por renderizar a data formatada ("11 de out. de 2026") */
   .toolbar.editar-vendas-toolbar {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
   }
 
@@ -1521,6 +1524,11 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .toolbar.editar-vendas-toolbar .field-live {
     min-width: 0;
     max-width: none;
+  }
+
+  .toolbar.editar-vendas-toolbar input {
+    min-width: 0;
+    max-width: 100%;
   }
 
   .toolbar.editar-vendas-toolbar .field-cliente-buscar {
