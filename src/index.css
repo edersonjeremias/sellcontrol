@@ -1602,11 +1602,19 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 10px !important;
+    align-items: start !important;
   }
 
   .editar-vendas-toolbar .field {
     flex: unset !important;
     min-width: unset !important;
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  .editar-vendas-toolbar .autocomplete-wrapper {
+    position: relative !important;
+    z-index: auto !important;
   }
 
   .editar-vendas-toolbar input,
