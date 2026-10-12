@@ -130,15 +130,17 @@ export default function EditarVendasPage() {
         {/* TOOLBAR */}
         <div className="no-print">
           <div className="toolbar editar-vendas-toolbar">
-            <div className="field">
-              <label>Data</label>
-              <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)}
-                onClick={e => { try { e.target.showPicker() } catch {} }} />
-            </div>
-            <div className="field">
-              <label>Live</label>
-              <AutocompleteInput value={liveFiltro} onChange={setLiveFiltro}
-                list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
+            <div>
+              <div className="field">
+                <label>Data</label>
+                <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)}
+                  onClick={e => { try { e.target.showPicker() } catch {} }} />
+              </div>
+              <div className="field">
+                <label>Live</label>
+                <AutocompleteInput value={liveFiltro} onChange={setLiveFiltro}
+                  list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
+              </div>
             </div>
             <div className="field field-cliente-buscar">
               <label>Cliente (Opcional)</label>
