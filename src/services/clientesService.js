@@ -43,6 +43,81 @@ export async function searchClientes(tenantId, searchTerm, limit = 20) {
 
 // Busca avançada com múltiplos filtros
 export async function searchClientesAvancada(tenantId, filtros, limit = 200) {
+  // Se houver filtros de endereço (CEP, Cidade, UF), buscar com JOIN
+  const temFiltroEndereco = filtros.cep?.trim() || filtros.cidade?.trim() || filtros.estado?.trim()
+
+  if (temFiltroEndereco) {
+    // Busca com JOIN na tabela de endereços (apenas endereço padrão)
+    let query = supabase
+      .from('clientes')
+      .select(`
+        *,
+        endereco:enderecos_clientes!inner(cep, rua, numero, bairro, cidade, estado)
+      `)
+      .eq('tenant_id', tenantId)
+      .eq('enderecos_clientes.padrao', true)
+
+    // Aplicar filtros de cliente
+    if (filtros.instagram?.trim()) {
+      query = query.ilike('instagram', `%${filtros.instagram.trim()}%`)
+    }
+    if (filtros.nome?.trim()) {
+      query = query.ilike('nome_completo', `%${filtros.nome.trim()}%`)
+    }
+    if (filtros.whatsapp?.trim()) {
+      const digitos = filtros.whatsapp.replace(/\D/g, '')
+      if (digitos) {
+        query = query.ilike('whatsapp', `%${digitos}%`)
+      }
+    }
+    if (filtros.cpf?.trim()) {
+      const digitos = filtros.cpf.replace(/\D/g, '')
+      if (digitos) {
+        query = query.ilike('cpf_cnpj', `%${digitos}%`)
+      }
+    }
+    if (filtros.email?.trim()) {
+      query = query.ilike('email', `%${filtros.email.trim()}%`)
+    }
+
+    // Aplicar filtros de endereço
+    if (filtros.cep?.trim()) {
+      const digitos = filtros.cep.replace(/\D/g, '')
+      if (digitos) {
+        query = query.ilike('enderecos_clientes.cep', `%${digitos}%`)
+      }
+    }
+    if (filtros.cidade?.trim()) {
+      query = query.ilike('enderecos_clientes.cidade', `%${filtros.cidade.trim()}%`)
+    }
+    if (filtros.estado?.trim()) {
+      query = query.ilike('enderecos_clientes.estado', `%${filtros.estado.trim()}%`)
+    }
+
+    // Filtro de bloqueado
+    if (filtros.bloqueado === 'sim') {
+      query = query.eq('bloqueado', true)
+    } else if (filtros.bloqueado === 'nao') {
+      query = query.eq('bloqueado', false)
+    }
+
+    const { data, error } = await query
+      .order('instagram')
+      .limit(limit)
+
+    // Achatar os dados do endereço para o formato esperado
+    const flatData = (data || []).map(c => ({
+      ...c,
+      cep: c.endereco?.[0]?.cep || '',
+      cidade: c.endereco?.[0]?.cidade || '',
+      uf: c.endereco?.[0]?.estado || '',
+      endereco: undefined // Remove o objeto aninhado
+    }))
+
+    return { data: flatData, error }
+  }
+
+  // Busca simples SEM JOIN (quando não há filtro de endereço)
   let query = supabase
     .from('clientes')
     .select('*')
@@ -64,20 +139,8 @@ export async function searchClientesAvancada(tenantId, filtros, limit = 200) {
   if (filtros.cpf?.trim()) {
     const digitos = filtros.cpf.replace(/\D/g, '')
     if (digitos) {
-      query = query.ilike('cpf', `%${digitos}%`)
+      query = query.ilike('cpf_cnpj', `%${digitos}%`)
     }
-  }
-  if (filtros.cep?.trim()) {
-    const digitos = filtros.cep.replace(/\D/g, '')
-    if (digitos) {
-      query = query.ilike('cep', `%${digitos}%`)
-    }
-  }
-  if (filtros.cidade?.trim()) {
-    query = query.ilike('cidade', `%${filtros.cidade.trim()}%`)
-  }
-  if (filtros.estado?.trim()) {
-    query = query.ilike('uf', `%${filtros.estado.trim()}%`)
   }
   if (filtros.email?.trim()) {
     query = query.ilike('email', `%${filtros.email.trim()}%`)
