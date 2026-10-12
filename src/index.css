@@ -1503,7 +1503,8 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 .toolbar.editar-vendas-toolbar .btn-buscar-inline {
   flex-shrink: 0;
   width: auto;
-  padding: 0 20px;
+  min-width: 0 !important;
+  padding: 0 10px !important;
 }
 
 /* Mobile: esconde tabela, mostra cards */
@@ -1679,8 +1680,9 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .btn-buscar-inline {
     flex-shrink: 0;
     width: auto;
+    min-width: 0 !important;
     height: 44px;
-    padding: 0 12px;
+    padding: 0 10px !important;
     font-size: 15px;
   }
 
