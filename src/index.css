@@ -1480,13 +1480,29 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 .toolbar.editar-vendas-toolbar .field-data,
 .toolbar.editar-vendas-toolbar .field-live {
   flex: 0 0 auto;
-  min-width: 120px;
-  max-width: 150px;
+  min-width: 110px;
+  max-width: 140px;
 }
 
 .toolbar.editar-vendas-toolbar .field-cliente-buscar {
-  flex: 1 1 auto;
-  min-width: 180px;
+  flex: 0 1 auto;
+  min-width: 200px;
+  max-width: 320px;
+}
+
+.toolbar.editar-vendas-toolbar .cliente-buscar-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.toolbar.editar-vendas-toolbar .cliente-buscar-wrapper .autocomplete-wrapper {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar.editar-vendas-toolbar .btn-buscar-inline {
+  flex-shrink: 0;
 }
 
 /* Mobile: esconde tabela, mostra cards */
