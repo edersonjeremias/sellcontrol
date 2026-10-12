@@ -41,6 +41,33 @@ export async function searchClientes(tenantId, searchTerm, limit = 20) {
   return { data: data || [], error }
 }
 
+// Buscar última compra de cada cliente
+export async function getUltimasCompras(tenantId, instagrams) {
+  if (!instagrams || instagrams.length === 0) return {}
+
+  const { data, error } = await supabase
+    .from('vendas')
+    .select('cliente_nome, data_live')
+    .eq('tenant_id', tenantId)
+    .in('cliente_nome', instagrams)
+    .not('data_live', 'is', null)
+    .order('data_live', { ascending: false })
+
+  if (error) return {}
+
+  // Agrupar por cliente e pegar apenas a última data
+  const ultimas = {}
+  data?.forEach(v => {
+    const cliente = v.cliente_nome
+    if (!cliente) return
+    if (!ultimas[cliente] || v.data_live > ultimas[cliente]) {
+      ultimas[cliente] = v.data_live
+    }
+  })
+
+  return ultimas
+}
+
 // Contar total de clientes (sem limite)
 export async function countClientesAvancada(tenantId, filtros) {
   // Mesma lógica de filtros, mas apenas COUNT
@@ -152,13 +179,22 @@ export async function searchClientesAvancada(tenantId, filtros, limit = 200) {
       .order('instagram')
       .limit(limit)
 
+    if (error || !data || data.length === 0) {
+      return { data: data || [], error }
+    }
+
+    // Buscar últimas compras dos clientes retornados
+    const instagrams = data.map(c => c.instagram).filter(Boolean)
+    const ultimasCompras = await getUltimasCompras(tenantId, instagrams)
+
     // Achatar os dados do endereço para o formato esperado
     const flatData = (data || []).map(c => ({
       ...c,
       cep: c.endereco?.[0]?.cep || '',
       cidade: c.endereco?.[0]?.cidade || '',
       uf: c.endereco?.[0]?.estado || '',
-      endereco: undefined // Remove o objeto aninhado
+      endereco: undefined, // Remove o objeto aninhado
+      ultima_compra: ultimasCompras[c.instagram] || null
     }))
 
     return { data: flatData, error }
@@ -209,7 +245,21 @@ export async function searchClientesAvancada(tenantId, filtros, limit = 200) {
     .order('instagram')
     .limit(limit)
 
-  return { data: data || [], error }
+  if (error || !data || data.length === 0) {
+    return { data: data || [], error }
+  }
+
+  // Buscar últimas compras dos clientes retornados
+  const instagrams = data.map(c => c.instagram).filter(Boolean)
+  const ultimasCompras = await getUltimasCompras(tenantId, instagrams)
+
+  // Adicionar última_compra em cada cliente
+  const dataComCompras = data.map(c => ({
+    ...c,
+    ultima_compra: ultimasCompras[c.instagram] || null
+  }))
+
+  return { data: dataComCompras, error }
 }
 
 function isSchemaError(error) {

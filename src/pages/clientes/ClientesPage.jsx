@@ -1312,8 +1312,13 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
                   </th>
                   <th
                     onClick={() => ordenarPor('email')}
-                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'email' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '13%', cursor: 'pointer', userSelect: 'none' }}>
+                    style={{ padding: '6px 8px', textAlign: 'left', color: ordenacao.campo === 'email' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '11%', cursor: 'pointer', userSelect: 'none' }}>
                     E-mail {ordenacao.campo === 'email' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
+                  </th>
+                  <th
+                    onClick={() => ordenarPor('ultima_compra')}
+                    style={{ padding: '6px 8px', textAlign: 'center', color: ordenacao.campo === 'ultima_compra' ? 'var(--blue)' : 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '9%', cursor: 'pointer', userSelect: 'none' }}>
+                    Última Compra {ordenacao.campo === 'ultima_compra' ? (ordenacao.direcao === 'asc' ? '↑' : '↓') : '↕'}
                   </th>
                   <th
                     onClick={() => ordenarPor('bloqueado')}
@@ -1385,6 +1390,15 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
                       onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
                       style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.email || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
+                    </td>
+                    <td
+                      onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
+                      style={{ padding: '6px 8px', textAlign: 'center', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 10 }}>
+                      {c.ultima_compra ? (
+                        new Date(c.ultima_compra).toLocaleDateString('pt-BR')
+                      ) : (
+                        <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>Nunca</span>
+                      )}
                     </td>
                     <td
                       onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
