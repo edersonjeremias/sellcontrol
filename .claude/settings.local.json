@@ -38,7 +38,8 @@
       "PowerShell(git commit -m \"feat: impressao de etiquetas agora segue ordem crescente dos codigos\" -m \"As etiquetas serao impressas ordenadas por codigo \\(do menor para o maior\\)\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
       "PowerShell(git add src/index.css)",
       "Read(//c/sellcontrol/supabase/migrations/**)",
-      "PowerShell(git add api/aplicar-cupom.js api/confirmar-pagamento.js api/webhook.js)"
+      "PowerShell(git add api/aplicar-cupom.js api/confirmar-pagamento.js api/webhook.js)",
+      "PowerShell(git add supabase/migrations/20261012_verify_cupom_tracking.sql supabase/migrations/20261012_fix_cupom_historico.sql docs/CUPONS_DEBUG.md)"
     ],
     "additionalDirectories": [
       "\\tmp"

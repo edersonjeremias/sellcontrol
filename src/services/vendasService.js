@@ -393,7 +393,7 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     if (l.deleted || l.isDeleted) { if (l.id) toDelete.push(l.id); return }
     if (l.isSent) return
     
-    // Exige pelo menos um campo de produto para salvar — linha com só cliente não é salva
+    // Exige produto E cliente para salvar (evita duplicatas)
     const temProduto = !!(
       (l.produto || '').trim() ||
       (l.modelo || '').trim() ||
@@ -403,10 +403,10 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
       (l.preco || '').trim() ||
       (l.codigo || '').trim()
     )
-    if (!temProduto) return
-
-    // ✅ Só preenche data_live e live_nome se tiver cliente
     const temCliente = !!(l.cliente_nome || '').trim()
+
+    // ✅ Só salva se tiver produto E cliente
+    if (!temProduto || !temCliente) return
 
     const row = {
       tenant_id: tid,
