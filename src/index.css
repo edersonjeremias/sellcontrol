@@ -1608,16 +1608,26 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .editar-vendas-toolbar .field-data,
   .editar-vendas-toolbar .field-live {
     min-width: 0 !important;
+    isolation: isolate !important;
+    contain: layout !important;
+    overflow: visible !important;
   }
 
   .editar-vendas-toolbar .field-data {
     grid-column: 1 !important;
     grid-row: 1 !important;
+    z-index: 2 !important;
   }
 
   .editar-vendas-toolbar .field-live {
     grid-column: 2 !important;
     grid-row: 1 !important;
+    z-index: 1 !important;
+  }
+
+  .editar-vendas-toolbar .field-data .autocomplete-wrapper,
+  .editar-vendas-toolbar .field-live .autocomplete-wrapper {
+    isolation: isolate !important;
   }
 
   .editar-vendas-toolbar .field-cliente-buscar {
