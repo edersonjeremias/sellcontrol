@@ -1442,7 +1442,7 @@ export default function VendasPage() {
       if (l.cliente_nome?.trim()) {
         res = await enviarVenda(tid, l, dl || null, ln || '')
         // ✅ NÃO recalcula sacolinhas ao enviar - apenas marca como enviada
-        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r))
+        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'Vendido' } : r))
       } else {
         res = await salvarVendas(tid, [l], { data_live: dl || null, live_nome: ln || '' })
         if (!l.id && res.novosIds?.length > 0) {
