@@ -1480,14 +1480,13 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 .toolbar.editar-vendas-toolbar .field-data,
 .toolbar.editar-vendas-toolbar .field-live {
   flex: 0 0 auto;
-  min-width: 110px;
-  max-width: 140px;
+  min-width: 130px;
+  max-width: 160px;
 }
 
 .toolbar.editar-vendas-toolbar .field-cliente-buscar {
-  flex: 0 1 auto;
-  min-width: 200px;
-  max-width: 320px;
+  flex: 1 1 auto;
+  min-width: 250px;
 }
 
 .toolbar.editar-vendas-toolbar .cliente-buscar-wrapper {
@@ -1503,6 +1502,8 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 
 .toolbar.editar-vendas-toolbar .btn-buscar-inline {
   flex-shrink: 0;
+  width: auto;
+  padding: 0 20px;
 }
 
 /* Mobile: esconde tabela, mostra cards */
