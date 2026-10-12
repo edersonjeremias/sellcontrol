@@ -102,9 +102,6 @@ function TabelaRow({
 }) {
   const upd = (field, val) => onFieldChange(linha._key, field, val)
 
-  // Estado LOCAL para preco_promocional (uncontrolled)
-  const [precoPromoLocal, setPrecoPromoLocal] = useState(linha.preco_promocional || '')
-
   // Desabilita edição se for venda enviada E usuário não tiver permissão
   const camposDesabilitados = linha.isSent && !podeEditarEnviadas
   const [txtCopiado, setTxtCopiado] = useState(false)
@@ -219,24 +216,19 @@ function TabelaRow({
           disabled={camposDesabilitados} />
       </td>
 
-      {/* PREÇO PROMOCIONAL (opcional) - USA ESTADO LOCAL */}
+      {/* PREÇO PROMOCIONAL (opcional) */}
       {cols.preco_promocional && (
         <td className="col-preco">
           <input
             className="cell-input price"
-            value={precoPromoLocal}
-            onChange={e => {
-              const valor = e.target.value.replace(/[^\d,]/g, '')
-              console.log('🎁 onChange PROMOÇÃO (estado local):', valor)
-              setPrecoPromoLocal(valor)  // Atualiza estado LOCAL
-              upd('preco_promocional', valor)  // Salva no pai também
-            }}
+            value={linha.preco_promocional}
+            onChange={e => upd('preco_promocional', e.target.value.replace(/[^\d,]/g, ''))}
             onKeyDown={onEnterNext}
             disabled={camposDesabilitados}
             placeholder="0,00"
             style={{
-              backgroundColor: precoPromoLocal?.trim() ? 'rgba(251, 188, 4, 0.1)' : undefined,
-              borderColor: precoPromoLocal?.trim() ? 'var(--yellow)' : undefined,
+              backgroundColor: linha.preco_promocional?.trim() ? 'rgba(251, 188, 4, 0.1)' : undefined,
+              borderColor: linha.preco_promocional?.trim() ? 'var(--yellow)' : undefined,
             }} />
         </td>
       )}
