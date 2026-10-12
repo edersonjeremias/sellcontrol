@@ -664,6 +664,21 @@ input[type="date"] { color-scheme: dark; }
 .autocomplete-list li.active,
 .autocomplete-list li.dropdown-item-active { background: var(--blue); color: #171717; font-weight: 600; }
 
+/* ── Autocomplete no modal ── */
+.modal-autocomplete-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+.modal-autocomplete-input:focus {
+  border-color: var(--blue);
+}
+
 /* ── TOTAL ── */
 .total-container { flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; gap: 4px; justify-content: flex-end; height: 36px; }
 .total-valor { font-size: 20px; font-weight: 800; color: var(--green); line-height: 1; }

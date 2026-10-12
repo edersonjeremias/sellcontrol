@@ -424,19 +424,8 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
                 list={clientesList}
                 placeholder="Selecione o cliente..."
                 showOnFocus
-                style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }}
+                className="modal-autocomplete-input"
               />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Status</label>
-              <select value={form.status} onChange={e => handleChange('status', e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }}>
-                <option value="">Sem status</option>
-                <option value="VENDIDO">Vendido</option>
-                <option value="ENVIADO">Enviado</option>
-                <option value="RESERVADO">Reservado</option>
-                <option value="CANCELADO">Cancelado</option>
-              </select>
             </div>
           </div>
         </div>
