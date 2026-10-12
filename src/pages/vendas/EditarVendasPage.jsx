@@ -129,7 +129,7 @@ export default function EditarVendasPage() {
 
         {/* TOOLBAR */}
         <div className="no-print">
-          <div className="toolbar">
+          <div className="toolbar editar-vendas-toolbar">
             <div className="field">
               <label>Data</label>
               <input type="date" value={dataFiltro} onChange={e => setDataFiltro(e.target.value)}
@@ -140,16 +140,16 @@ export default function EditarVendasPage() {
               <AutocompleteInput value={liveFiltro} onChange={setLiveFiltro}
                 list={globalDB.lives} placeholder="Buscar Live..." showOnFocus />
             </div>
-            <div className="field">
+            <div className="field field-cliente-buscar">
               <label>Cliente (Opcional)</label>
-              <AutocompleteInput value={clienteFiltro} onChange={setClienteFiltro}
-                list={(listas.clientes || [])
-                  .map(c => typeof c === 'string' ? c : c?.instagram)
-                  .filter(c => c && typeof c === 'string')}
-                placeholder="Todos os clientes..." showOnFocus />
-            </div>
-            <div className="actions">
-              <button className="btn-acao btn-green" onClick={buscar} disabled={busy}>Buscar</button>
+              <div className="cliente-buscar-wrapper">
+                <AutocompleteInput value={clienteFiltro} onChange={setClienteFiltro}
+                  list={(listas.clientes || [])
+                    .map(c => typeof c === 'string' ? c : c?.instagram)
+                    .filter(c => c && typeof c === 'string')}
+                  placeholder="Todos os clientes..." showOnFocus />
+                <button className="btn-acao btn-green btn-buscar-inline" onClick={buscar} disabled={busy}>Buscar</button>
+              </div>
             </div>
           </div>
 
@@ -228,11 +228,24 @@ export default function EditarVendasPage() {
                 {/* LAYOUT MOBILE - CARDS */}
                 <div className="vendas-cards-mobile">
                   {vendasFiltradas.map(v => (
-                    <div key={v.id} className="venda-card-mobile" onClick={() => setModalEdicao(v)}>
-                      <div className="venda-card-header">
-                        <div className="venda-card-titulo">
-                          <strong>{v.produto} {v.modelo}</strong>
-                          <span className="venda-card-codigo">#{v.codigo}</span>
+                    <div key={v.id} className="venda-card-mobile-compact" onClick={() => setModalEdicao(v)}>
+                      {/* Linha 1: Código, produto, modelo, cor, marca, tamanho, preço */}
+                      <div className="venda-card-linha1">
+                        #{v.codigo} · {v.produto} {v.modelo} · {v.cor} {v.marca} · {v.tamanho} · <span className="preco-destaque">{formatMoney(v.preco)}</span>
+                      </div>
+
+                      {/* Linha 2: Cliente e data */}
+                      <div className="venda-card-linha2">
+                        <span className="cliente-destaque">{v.cliente_nome || 'Sem cliente'}</span>
+                        <span className="data-destaque">{v.data_live ? new Date(v.data_live + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</span>
+                      </div>
+
+                      {/* Linha 3: Live, sacola, status e botão excluir */}
+                      <div className="venda-card-linha3">
+                        <div className="info-linha3">
+                          <span>Live: {v.live_nome}</span>
+                          {v.sacolinha && <span>· Sacola: {v.sacolinha}</span>}
+                          {v.status && <span className="status-badge">{v.status}</span>}
                         </div>
                         <button
                           type="button"
@@ -245,52 +258,6 @@ export default function EditarVendasPage() {
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                           </svg>
                         </button>
-                      </div>
-
-                      <div className="venda-card-grid">
-                        <div className="venda-card-item">
-                          <span className="venda-card-label">Cor:</span>
-                          <span className="venda-card-value">{v.cor}</span>
-                        </div>
-                        <div className="venda-card-item">
-                          <span className="venda-card-label">Marca:</span>
-                          <span className="venda-card-value">{v.marca}</span>
-                        </div>
-                        <div className="venda-card-item">
-                          <span className="venda-card-label">Tamanho:</span>
-                          <span className="venda-card-value">{v.tamanho}</span>
-                        </div>
-                        <div className="venda-card-item">
-                          <span className="venda-card-label">Preço:</span>
-                          <span className="venda-card-value venda-card-preco">{formatMoney(v.preco)}</span>
-                        </div>
-                      </div>
-
-                      <div className="venda-card-info">
-                        <div className="venda-card-item">
-                          <span className="venda-card-label">Cliente:</span>
-                          <span className="venda-card-value">{v.cliente_nome || '—'}</span>
-                        </div>
-                        <div className="venda-card-item">
-                          <span className="venda-card-label">Live:</span>
-                          <span className="venda-card-value">{v.live_nome}</span>
-                        </div>
-                        <div className="venda-card-item">
-                          <span className="venda-card-label">Data:</span>
-                          <span className="venda-card-value">{v.data_live ? new Date(v.data_live + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</span>
-                        </div>
-                        {v.sacolinha && (
-                          <div className="venda-card-item">
-                            <span className="venda-card-label">Sacola:</span>
-                            <span className="venda-card-value">{v.sacolinha}</span>
-                          </div>
-                        )}
-                        {v.status && (
-                          <div className="venda-card-item">
-                            <span className="venda-card-label">Status:</span>
-                            <span className="venda-card-value venda-card-status">{v.status}</span>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -361,8 +328,8 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
         <div className="modal-header">
           <h3>Editar Venda</h3>
         </div>
-        <div className="modal-body" onClick={e => e.stopPropagation()} style={{ padding: '16px 20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 12 }}>
+        <div className="modal-body modal-editar-venda-body" onClick={e => e.stopPropagation()} style={{ padding: '16px 20px' }}>
+          <div className="modal-editar-venda-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 12 }}>
             {/* Linha 1: Data / Live / Sacolinha (3 colunas) */}
             <div style={{ gridColumn: 'span 4' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Data</label>
