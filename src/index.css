@@ -1599,13 +1599,12 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
      EDITAR VENDAS - TOOLBAR MOBILE COM BOTÃO AO LADO
      ──────────────────────────────────────────────────────────────── */
   .editar-vendas-toolbar {
-    display: flex !important;
-    flex-direction: column !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
     gap: 10px !important;
   }
 
   .editar-vendas-toolbar .field {
-    width: 100% !important;
     flex: unset !important;
     min-width: unset !important;
   }
@@ -1617,7 +1616,7 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   }
 
   .field-cliente-buscar {
-    width: 100% !important;
+    grid-column: 1 / -1 !important;
   }
 
   .cliente-buscar-wrapper {
