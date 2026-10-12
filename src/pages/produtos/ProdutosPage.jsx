@@ -100,7 +100,7 @@ export default function ProdutosPage() {
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [totalPaginas, setTotalPaginas] = useState(1)
   const [totalRegistros, setTotalRegistros] = useState(0)
-  const itensPorPagina = 100
+  const itensPorPagina = 10
 
   // Estados de ordenação
   const [ordenarPor, setOrdenarPor] = useState(null) // 'preco' | 'quantidade' | 'codigo' | null
