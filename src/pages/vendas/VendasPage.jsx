@@ -2412,7 +2412,7 @@ export default function VendasPage() {
 
       {/* MODAL AVISO PREÇO BAIXO */}
       {avisoPreco && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: 'var(--card-bg)', borderRadius: 10, padding: '16px 20px', maxWidth: 400, width: '100%', maxHeight: '90vh', overflow: 'auto', border: '2px solid var(--yellow)' }}>
             <h3 style={{ margin: '0 0 12px', fontSize: 18, color: 'var(--yellow)', display: 'flex', alignItems: 'center', gap: 6 }}>
               ⚠️ Preço Muito Baixo
