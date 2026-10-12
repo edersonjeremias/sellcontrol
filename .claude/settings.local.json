@@ -45,7 +45,9 @@
       "PowerShell(git add src/components/vendas/TabelaRow.jsx)",
       "PowerShell(git add sql/)",
       "PowerShell(git add src/pages/MasterEmpresasPage.jsx)",
-      "PowerShell(git add src/pages/vendas/VendasPage.jsx src/components/vendas/TabelaRow.jsx)"
+      "PowerShell(git add src/pages/vendas/VendasPage.jsx src/components/vendas/TabelaRow.jsx)",
+      "PowerShell(git commit --allow-empty -m \"chore: trigger redeploy - fix build cache\")",
+      "PowerShell(git push origin main --force-with-lease)"
     ],
     "additionalDirectories": [
       "\\tmp"

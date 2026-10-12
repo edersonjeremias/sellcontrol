@@ -6,7 +6,7 @@ import ModalConfirmacao from '../../components/ui/ModalConfirmacao'
 import {
   getClientes, saveCliente, toggleBloqueio,
   deleteCliente, saveDetalhes, searchClientes,
-  searchClientesAvancada,
+  searchClientesAvancada, countClientesAvancada,
 } from '../../services/clientesService'
 import { supabase } from '../../lib/supabase'
 
@@ -889,6 +889,7 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
     temWhatsapp: 'todos', // 'todos' | 'sim' | 'nao'
   })
   const [resultados, setResultados] = useState([])
+  const [totalClientes, setTotalClientes] = useState(0)
   const [buscando, setBuscando] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
   const [selecionados, setSelecionados] = useState(new Set())
@@ -1007,9 +1008,18 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
     const timeoutId = setTimeout(async () => {
       setBuscando(true)
       try {
-        const { data, error } = await searchClientesAvancada(tenantId, filtros, 200)
-        if (!error && data) {
-          setResultados(data)
+        // Buscar resultados e count em paralelo
+        const [resultadosResp, countResp] = await Promise.all([
+          searchClientesAvancada(tenantId, filtros, 200),
+          countClientesAvancada(tenantId, filtros)
+        ])
+
+        if (!resultadosResp.error && resultadosResp.data) {
+          setResultados(resultadosResp.data)
+        }
+
+        if (!countResp.error && countResp.count !== null) {
+          setTotalClientes(countResp.count)
         }
       } catch (err) {
         console.error('Erro ao buscar clientes:', err)
@@ -1239,7 +1249,11 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
             📋 Resultados {buscando && <span style={{ fontSize: 11, color: 'var(--muted)' }}>(Buscando...)</span>}
           </h3>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            {resultados.length} cliente{resultados.length !== 1 ? 's' : ''}
+            {totalClientes > resultados.length ? (
+              <>Mostrando <strong style={{ color: 'var(--blue)' }}>{resultados.length}</strong> de <strong style={{ color: 'var(--blue)' }}>{totalClientes}</strong> clientes</>
+            ) : (
+              <><strong style={{ color: 'var(--blue)' }}>{resultados.length}</strong> cliente{resultados.length !== 1 ? 's' : ''}</>
+            )}
           </span>
         </div>
 

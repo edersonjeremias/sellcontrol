@@ -41,6 +41,53 @@ export async function searchClientes(tenantId, searchTerm, limit = 20) {
   return { data: data || [], error }
 }
 
+// Contar total de clientes (sem limite)
+export async function countClientesAvancada(tenantId, filtros) {
+  // Mesma lógica de filtros, mas apenas COUNT
+  const temFiltroEndereco = filtros.cep?.trim() || filtros.cidade?.trim() || filtros.estado?.trim()
+
+  let query = supabase
+    .from('clientes')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+
+  // Aplicar os mesmos filtros da busca
+  if (filtros.instagram?.trim()) {
+    query = query.ilike('instagram', `%${filtros.instagram.trim()}%`)
+  }
+  if (filtros.nome?.trim()) {
+    query = query.ilike('nome_completo', `%${filtros.nome.trim()}%`)
+  }
+  if (filtros.whatsapp?.trim()) {
+    const digitos = filtros.whatsapp.replace(/\D/g, '')
+    if (digitos) {
+      query = query.ilike('whatsapp', `%${digitos}%`)
+    }
+  }
+  if (filtros.cpf?.trim()) {
+    const digitos = filtros.cpf.replace(/\D/g, '')
+    if (digitos) {
+      query = query.ilike('cpf_cnpj', `%${digitos}%`)
+    }
+  }
+  if (filtros.email?.trim()) {
+    query = query.ilike('email', `%${filtros.email.trim()}%`)
+  }
+  if (filtros.bloqueado === 'sim') {
+    query = query.eq('bloqueado', true)
+  } else if (filtros.bloqueado === 'nao') {
+    query = query.eq('bloqueado', false)
+  }
+  if (filtros.temWhatsapp === 'sim') {
+    query = query.not('whatsapp', 'is', null).neq('whatsapp', '')
+  } else if (filtros.temWhatsapp === 'nao') {
+    query = query.or('whatsapp.is.null,whatsapp.eq.')
+  }
+
+  const { count, error } = await query
+  return { count, error }
+}
+
 // Busca avançada com múltiplos filtros
 export async function searchClientesAvancada(tenantId, filtros, limit = 200) {
   // Se houver filtros de endereço (CEP, Cidade, UF), buscar com JOIN
