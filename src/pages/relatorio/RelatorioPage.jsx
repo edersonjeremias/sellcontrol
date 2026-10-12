@@ -9,8 +9,8 @@ import autoTable from 'jspdf-autotable'
 
 const S = {
   inp: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'7px 10px', fontSize:13, outline:'none' },
-  th:  { background:'var(--table-header-bg)', color:'var(--table-header-text)', fontSize:11, fontWeight:700, textAlign:'left', padding:'6px 8px', textTransform:'uppercase', letterSpacing:'0.3px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
-  td:  { padding:'5px 8px', color:'var(--text-body)', fontSize:12, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' },
+  th:  { background:'var(--table-header-bg)', color:'var(--table-header-text)', fontSize:11, fontWeight:700, textAlign:'left', padding:'6px 8px', textTransform:'uppercase', letterSpacing:'0.3px', whiteSpace:'nowrap' },
+  td:  { padding:'5px 8px', color:'var(--text-body)', fontSize:12, whiteSpace:'normal', wordWrap:'break-word', maxWidth:'150px' },
   btn: { background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer', fontSize:13 },
 }
 
@@ -317,20 +317,20 @@ export default function RelatorioPage() {
         ) : (
           <>
             <div style={{ overflowX:'auto', maxHeight:'calc(100vh - 200px)', overflowY:'auto' }}>
-              <table style={{ width:'100%', borderCollapse:'collapse', fontSize:11 }}>
+              <table style={{ width:'fit-content', minWidth:'100%', borderCollapse:'collapse', fontSize:11 }}>
                 <colgroup>
-                  <col style={{ width:'80px' }} /> {/* Data */}
-                  <col style={{ width:'40px' }} /> {/* Live */}
-                  <col style={{ width:'150px' }} /> {/* Cliente */}
-                  <col style={{ width:'140px' }} /> {/* Produto */}
-                  <col style={{ width:'130px' }} /> {/* Modelo */}
-                  <col style={{ width:'100px' }} /> {/* Marca */}
-                  <col style={{ width:'80px' }} /> {/* Cor */}
-                  <col style={{ width:'50px' }} /> {/* Tam */}
-                  <col style={{ width:'55px' }} /> {/* Cód */}
-                  <col style={{ width:'50px' }} /> {/* Sacolinha */}
-                  <col style={{ width:'80px' }} /> {/* Preço */}
-                  <col style={{ width:'80px' }} /> {/* Status */}
+                  <col style={{ width:'75px' }} /> {/* Data */}
+                  <col style={{ width:'35px' }} /> {/* Live */}
+                  <col style={{ width:'120px' }} /> {/* Cliente */}
+                  <col style={{ width:'110px' }} /> {/* Produto */}
+                  <col style={{ width:'110px' }} /> {/* Modelo */}
+                  <col style={{ width:'85px' }} /> {/* Marca */}
+                  <col style={{ width:'75px' }} /> {/* Cor */}
+                  <col style={{ width:'45px' }} /> {/* Tam */}
+                  <col style={{ width:'50px' }} /> {/* Cód */}
+                  <col style={{ width:'45px' }} /> {/* Sac */}
+                  <col style={{ width:'75px' }} /> {/* Preço */}
+                  <col style={{ width:'75px' }} /> {/* Status */}
                 </colgroup>
                 <thead style={{ position:'sticky', top:0, zIndex:10 }}>
                   <tr>
