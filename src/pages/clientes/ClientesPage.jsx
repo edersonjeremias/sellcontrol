@@ -389,12 +389,33 @@ Qualquer dúvida, estamos à disposição! 😊`
   }
 
   return (
-    <AppShell title="Clientes">
+    <AppShell title="">
 
-      {/* Abas */}
-      <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 16, paddingLeft: 16 }}>
-        <TabBtn label="Cadastro"       active={aba === 'cadastro'} onClick={() => setAba('cadastro')} />
-        <TabBtn label="Busca Avançada" active={aba === 'busca'}    onClick={() => setAba('busca')} />
+      {/* Título com Abas Inline */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: '1px solid var(--border-header)',
+        marginBottom: 16,
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingTop: 8,
+      }}>
+        <h1 style={{
+          margin: 0,
+          fontSize: '1.5rem',
+          fontWeight: 700,
+          color: 'var(--text-header)',
+          marginRight: 24,
+        }}>
+          Clientes
+        </h1>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <TabBtn label="Cadastro"       active={aba === 'cadastro'} onClick={() => setAba('cadastro')} />
+          <TabBtn label="Busca Avançada" active={aba === 'busca'}    onClick={() => setAba('busca')} />
+        </div>
       </div>
 
       {/* Aba Cadastro */}
@@ -939,18 +960,18 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
 
   return (
     <div
-      style={{ padding: '0 16px 16px', maxWidth: 1100, margin: '0 auto' }}
+      style={{ padding: '0 16px 16px', maxWidth: '100%', margin: '0 auto', height: 'calc(100vh - 140px)', display: 'flex', flexDirection: 'column' }}
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
 
-      {/* Filtros */}
+      {/* Filtros - Compacto */}
       <div style={{
         background: 'var(--card-bg)', border: '1px solid var(--border-light)',
-        borderRadius: 8, padding: 14, marginBottom: 14
+        borderRadius: 8, padding: '10px 14px', marginBottom: 10, flexShrink: 0
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-body)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-body)' }}>
             🔍 Filtros {totalFiltrosAtivos > 0 && `(${totalFiltrosAtivos})`}
           </h3>
           {totalFiltrosAtivos > 0 && (
@@ -958,132 +979,105 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
               onClick={limparFiltros}
               style={{
                 background: 'none', border: 'none', color: 'var(--red)',
-                cursor: 'pointer', fontSize: 12, textDecoration: 'underline'
+                cursor: 'pointer', fontSize: 11, textDecoration: 'underline'
               }}>
               Limpar
             </button>
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 8 }}>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              Instagram
-            </label>
             <input
               value={filtros.instagram}
               onChange={e => updateFiltro('instagram', e.target.value)}
-              placeholder="@cliente"
+              placeholder="Instagram"
               className="cell-input"
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              Nome Completo
-            </label>
             <input
               value={filtros.nome}
               onChange={e => updateFiltro('nome', e.target.value)}
-              placeholder="Nome do cliente"
+              placeholder="Nome Completo"
               className="cell-input"
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              WhatsApp
-            </label>
             <input
               value={filtros.whatsapp}
               onChange={e => updateFiltro('whatsapp', e.target.value)}
-              placeholder="(00) 90000-0000"
+              placeholder="WhatsApp"
               className="cell-input"
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              CPF
-            </label>
             <input
               value={filtros.cpf}
               onChange={e => updateFiltro('cpf', e.target.value)}
-              placeholder="000.000.000-00"
+              placeholder="CPF"
               className="cell-input"
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              CEP
-            </label>
             <input
               value={filtros.cep}
               onChange={e => updateFiltro('cep', e.target.value)}
-              placeholder="00000-000"
+              placeholder="CEP"
               className="cell-input"
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              Cidade
-            </label>
             <input
               value={filtros.cidade}
               onChange={e => updateFiltro('cidade', e.target.value)}
-              placeholder="São Paulo"
+              placeholder="Cidade"
               className="cell-input"
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              Estado
-            </label>
             <input
               value={filtros.estado}
               onChange={e => updateFiltro('estado', e.target.value.toUpperCase().slice(0, 2))}
-              placeholder="SP"
+              placeholder="UF"
               className="cell-input"
               maxLength={2}
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              E-mail
-            </label>
             <input
               value={filtros.email}
               onChange={e => updateFiltro('email', e.target.value)}
-              placeholder="email@exemplo.com"
+              placeholder="E-mail"
               className="cell-input"
-              style={{ fontSize: 13, padding: '7px 10px' }}
+              style={{ fontSize: 12, padding: '6px 8px' }}
             />
           </div>
 
           <div>
-            <label style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: 3 }}>
-              Bloqueado
-            </label>
             <select
               value={filtros.bloqueado}
               onChange={e => updateFiltro('bloqueado', e.target.value)}
               className="cell-input"
-              style={{ cursor: 'pointer', fontSize: 13, padding: '7px 10px' }}>
-              <option value="todos">Todos</option>
-              <option value="sim">Sim</option>
-              <option value="nao">Não</option>
+              style={{ cursor: 'pointer', fontSize: 12, padding: '6px 8px' }}>
+              <option value="todos">Status</option>
+              <option value="sim">Bloqueado</option>
+              <option value="nao">Ativo</option>
             </select>
           </div>
 
@@ -1093,11 +1087,11 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
       {/* Resultados */}
       <div style={{
         background: 'var(--card-bg)', border: '1px solid var(--border-light)',
-        borderRadius: 8, overflow: 'hidden'
+        borderRadius: 8, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column'
       }}>
         <div style={{
-          padding: '10px 14px', borderBottom: '1px solid var(--border-light)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          padding: '8px 14px', borderBottom: '1px solid var(--border-light)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0
         }}>
           <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-body)' }}>
             📋 Resultados {buscando && <span style={{ fontSize: 11, color: 'var(--muted)' }}>(Buscando...)</span>}
@@ -1107,27 +1101,27 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
           </span>
         </div>
 
-        <div style={{ maxHeight: 'calc(100vh - 340px)', overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
           {totalFiltrosAtivos === 0 ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
               Preencha ao menos um filtro para buscar
             </div>
           ) : resultados.length === 0 && !buscando ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
-              Nenhum cliente encontrado com os filtros aplicados.
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+              Nenhum cliente encontrado
             </div>
           ) : (
-            <table ref={tableRef} style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <table ref={tableRef} style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse', tableLayout: 'fixed' }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--table-header-bg)', zIndex: 1 }}>
                 <tr>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>Instagram</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>Nome</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>WhatsApp</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>CPF</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>Cidade/UF</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>CEP</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>E-mail</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 11 }}>Status</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '12%' }}>Instagram</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '18%' }}>Nome</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '12%' }}>WhatsApp</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '12%' }}>CPF</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '15%' }}>Cidade/UF</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '10%' }}>CEP</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '15%' }}>E-mail</th>
+                  <th style={{ padding: '6px 8px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border-light)', fontSize: 10, width: '6%' }}>Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -1147,35 +1141,35 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
                       selecionarCliente(c)
                       setAba('cadastro')
                     }}>
-                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--blue)', fontWeight: 600 }}>
+                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--blue)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       @{c.instagram}
                     </td>
-                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
-                      {c.nome_completo || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 11 }}>—</span>}
+                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.nome_completo || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 10 }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
-                      {c.whatsapp || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 11 }}>—</span>}
+                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
+                      {c.whatsapp || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 10 }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 11 }}>
+                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 10 }}>
                       {c.cpf || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)' }}>
-                      {c.cidade && c.uf ? `${c.cidade}/${c.uf}` : c.cidade || c.uf || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 11 }}>—</span>}
+                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.cidade && c.uf ? `${c.cidade}/${c.uf}` : c.cidade || c.uf || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)', fontSize: 10 }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 11 }}>
+                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontFamily: 'monospace', fontSize: 10 }}>
                       {c.cep || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 11 }}>
+                    <td style={{ padding: '6px 8px', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.email || <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>—</span>}
                     </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <td style={{ padding: '6px 8px', textAlign: 'center' }}>
                       {c.bloqueado ? (
-                        <span style={{ background: idx === activeIdx ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.15)', color: idx === activeIdx ? '#171717' : 'var(--red)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
-                          🔒 Bloqueado
+                        <span style={{ background: idx === activeIdx ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.15)', color: idx === activeIdx ? '#171717' : 'var(--red)', padding: '2px 6px', borderRadius: 8, fontSize: 9, fontWeight: 600, display: 'inline-block' }}>
+                          🔒
                         </span>
                       ) : (
-                        <span style={{ background: idx === activeIdx ? 'rgba(52,211,153,0.3)' : 'rgba(52,211,153,0.15)', color: idx === activeIdx ? '#171717' : 'var(--green)', padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>
-                          ✅ Ativo
+                        <span style={{ background: idx === activeIdx ? 'rgba(52,211,153,0.3)' : 'rgba(52,211,153,0.15)', color: idx === activeIdx ? '#171717' : 'var(--green)', padding: '2px 6px', borderRadius: 8, fontSize: 9, fontWeight: 600, display: 'inline-block' }}>
+                          ✅
                         </span>
                       )}
                     </td>
