@@ -355,68 +355,75 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
 
   return (
     <div className="modal-overlay" onClick={onFechar}>
-      <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 600 }}>
+      <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth: 800 }}>
         <div className="modal-header">
           <h3>Editar Venda</h3>
         </div>
-        <div className="modal-body" onClick={e => e.stopPropagation()}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
-            <div>
+        <div className="modal-body" onClick={e => e.stopPropagation()} style={{ padding: '16px 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 12 }}>
+            {/* Linha 1: Data / Live / Sacolinha (3 colunas) */}
+            <div style={{ gridColumn: 'span 4' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Data</label>
               <input type="date" value={form.data_live} onChange={e => handleChange('data_live', e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
             </div>
-            <div>
+            <div style={{ gridColumn: 'span 4' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Live</label>
               <input type="text" value={form.live_nome} onChange={e => handleChange('live_nome', e.target.value)} list="dlLives"
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
               <datalist id="dlLives">{listas.lives?.map(l => <option key={l} value={l} />)}</datalist>
             </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Código</label>
-              <input type="text" value={form.codigo} onChange={e => handleChange('codigo', e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
-            </div>
-            <div>
+            <div style={{ gridColumn: 'span 4' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Sacolinha</label>
               <input type="text" value={form.sacolinha} onChange={e => handleChange('sacolinha', e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
+
+            {/* Linha 2: Código / Produto / Modelo (3 colunas) */}
+            <div style={{ gridColumn: 'span 4' }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Código</label>
+              <input type="text" value={form.codigo} onChange={e => handleChange('codigo', e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
+            </div>
+            <div style={{ gridColumn: 'span 4' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Produto</label>
               <input type="text" value={form.produto} onChange={e => handleChange('produto', e.target.value)} list="dlProdutos"
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
               <datalist id="dlProdutos">{listas.produtos?.map(p => <option key={p} value={p} />)}</datalist>
             </div>
-            <div>
+            <div style={{ gridColumn: 'span 4' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Modelo</label>
               <input type="text" value={form.modelo} onChange={e => handleChange('modelo', e.target.value)} list="dlModelos"
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
               <datalist id="dlModelos">{listas.modelos?.map(m => <option key={m} value={m} />)}</datalist>
             </div>
-            <div>
+
+            {/* Linha 3: Cor / Marca / Tamanho / Preço (4 colunas) */}
+            <div style={{ gridColumn: 'span 3' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Cor</label>
               <input type="text" value={form.cor} onChange={e => handleChange('cor', e.target.value)} list="dlCores"
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
               <datalist id="dlCores">{listas.cores?.map(c => <option key={c} value={c} />)}</datalist>
             </div>
-            <div>
+            <div style={{ gridColumn: 'span 3' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Marca</label>
               <input type="text" value={form.marca} onChange={e => handleChange('marca', e.target.value)} list="dlMarcas"
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
               <datalist id="dlMarcas">{listas.marcas?.map(m => <option key={m} value={m} />)}</datalist>
             </div>
-            <div>
+            <div style={{ gridColumn: 'span 3' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Tamanho</label>
               <input type="text" value={form.tamanho} onChange={e => handleChange('tamanho', e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
             </div>
-            <div>
+            <div style={{ gridColumn: 'span 3' }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Preço</label>
               <input type="text" value={form.preco} onChange={e => handleChange('preco', e.target.value)}
                 style={{ width: '100%', padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', fontSize: 14 }} />
             </div>
-            <div style={{ gridColumn: '1 / -1' }}>
+
+            {/* Linha 4: Cliente (full width) */}
+            <div style={{ gridColumn: '1 / -1', marginTop: 4 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Cliente</label>
               <AutocompleteInput
                 value={form.cliente_nome}
