@@ -33,6 +33,14 @@ export default async function handler(req, res) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
+    console.log('🎟️ Aplicando cupom:', {
+      cobrancaId,
+      cupom_id,
+      cupom_codigo,
+      cupom_desconto_percentual,
+      cupom_desconto_valor
+    })
+
     // Atualiza cobrança com os dados do cupom
     const { data, error } = await supabase
       .from('cobrancas')
@@ -49,11 +57,11 @@ export default async function handler(req, res) {
       .select()
 
     if (error) {
-      console.error('Erro ao aplicar cupom:', error)
+      console.error('❌ Erro ao aplicar cupom:', error)
       throw error
     }
 
-    console.log('✅ Cupom aplicado com sucesso:', data)
+    console.log('✅ Cupom aplicado com sucesso! cupom_id salvo:', data?.[0]?.cupom_id)
 
     return res.status(200).json({ ok: true, data })
 
