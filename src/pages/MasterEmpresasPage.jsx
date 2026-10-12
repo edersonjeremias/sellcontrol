@@ -661,7 +661,7 @@ function AbaImportarBling({ showToast }) {
       // Extrair dados do CSV do Bling
       const nome = (row.Nome || '').trim()
       const fantasia = (row.Fantasia || '').trim()
-      const codigo = (row['Código'] || row.Codigo || '').trim().toLowerCase().replace('@', '')
+      const codigo = (row['Código'] || row.Codigo || '').trim().toLowerCase().replace(/[@\s]/g, '')
       const cpfCnpj = limparDocumento(row['CNPJ / CPF'] || row.CPF || row.CNPJ)
       const tipoPessoa = row['Tipo pessoa'] === 'Pessoa Jurídica' ? 'juridica' : 'fisica'
       const whatsapp = limparTelefone(row.Celular || '')
@@ -677,8 +677,11 @@ function AbaImportarBling({ showToast }) {
       const cidade = (row.Cidade || '').trim()
       const estado = (row.UF || '').trim().toUpperCase()
 
-      // Instagram será o código ou nome como fallback
-      const instagram = codigo || nome.toLowerCase().replace(/\s+/g, '')
+      // Instagram será o código ou nome como fallback (sempre com @)
+      let instagram = codigo || nome.toLowerCase().replace(/\s+/g, '')
+      if (instagram && !instagram.startsWith('@')) {
+        instagram = '@' + instagram
+      }
 
       if (!instagram || !nome) {
         pulados++
@@ -693,13 +696,36 @@ function AbaImportarBling({ showToast }) {
       }
 
       try {
-        // Verificar se cliente já existe
-        const { data: existente } = await supabase
+        // Verificar se cliente já existe (por instagram OU whatsapp)
+        let existente = null
+
+        // Primeiro busca por instagram
+        const { data: porInstagram } = await supabase
           .from('clientes')
-          .select('id')
+          .select('id, instagram')
           .eq('tenant_id', tenantId)
           .eq('instagram', instagram)
           .maybeSingle()
+
+        if (porInstagram) {
+          existente = porInstagram
+        } else if (whatsapp) {
+          // Se não encontrou por instagram, busca por whatsapp (evita duplicata)
+          const { data: porWhatsapp } = await supabase
+            .from('clientes')
+            .select('id, instagram')
+            .eq('tenant_id', tenantId)
+            .eq('whatsapp', whatsapp)
+            .maybeSingle()
+
+          if (porWhatsapp) {
+            existente = porWhatsapp
+            // Se encontrou por whatsapp mas com instagram diferente, atualiza o instagram
+            if (porWhatsapp.instagram !== instagram) {
+              instagram = porWhatsapp.instagram
+            }
+          }
+        }
 
         const clienteData = {
           tenant_id: tenantId,
