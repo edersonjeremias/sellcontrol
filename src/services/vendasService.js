@@ -581,6 +581,10 @@ export async function updateVendaEnviada(tenantId = null, linha) {
       preco_promocional: parseMoney(linha.preco_promocional),
       codigo:            linha.codigo       || '',
       cliente_nome:      linha.cliente_nome || '',
+      data_live:         linha.data_live    || null,
+      live_nome:         linha.live_nome    || '',
+      sacolinha:         linha.sacolinha    || '',
+      status:            linha.status       || '',
     })
     .eq('id', linha.id)
     .eq('tenant_id', tid)
