@@ -1598,29 +1598,48 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   /* ────────────────────────────────────────────────────────────────
      EDITAR VENDAS - TOOLBAR MOBILE COM BOTÃO AO LADO
      ──────────────────────────────────────────────────────────────── */
+  .editar-vendas-toolbar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .editar-vendas-toolbar .field {
+    width: 100% !important;
+    flex: unset !important;
+    min-width: unset !important;
+  }
+
+  .editar-vendas-toolbar input,
+  .editar-vendas-toolbar .modal-autocomplete-input {
+    height: 44px !important;
+    font-size: 16px !important;
+  }
+
   .field-cliente-buscar {
-    grid-column: 1 / -1 !important;
+    width: 100% !important;
   }
 
   .cliente-buscar-wrapper {
-    display: flex;
-    gap: 6px;
-    align-items: flex-end;
+    display: flex !important;
+    gap: 6px !important;
+    align-items: stretch !important;
   }
 
   .cliente-buscar-wrapper .autocomplete-wrapper {
-    flex: 1;
+    flex: 1 !important;
   }
 
   .btn-buscar-inline {
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
     width: auto !important;
     min-width: unset !important;
+    flex: unset !important;
     height: 44px !important;
     min-height: 44px !important;
-    padding: 0 12px !important;
-    font-size: 14px !important;
-    white-space: nowrap;
+    padding: 0 14px !important;
+    font-size: 15px !important;
+    white-space: nowrap !important;
   }
 
   /* ────────────────────────────────────────────────────────────────
