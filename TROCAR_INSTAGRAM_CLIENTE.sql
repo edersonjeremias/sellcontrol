@@ -138,24 +138,40 @@ WHERE c.instagram IN ('rose_ciavarelli_', '_rose_ciavarelli_');
 
 
 -- ────────────────────────────────────────────────────────────────────────────
--- PASSO 4 — PORTAL (só se o PASSO 1 mostrou linha em portal_clientes)
--- ATENÇÃO: isto muda o login da cliente no portal — ela passa a entrar com o
--- @ novo. As tabelas do portal não têm ON UPDATE CASCADE, por isso o ALTER.
+-- PASSO 4 — PORTAL (rode se o PASSO 1 mostrou linha em portal_clientes)
+-- O login dela NÃO muda: o portal autentica pelo e-mail do Supabase Auth
+-- (<@>@portal.vmkids.com.br), não por esta coluna. O que muda é de onde o
+-- portal lê os dados dela — endereços, cobranças e produtos.
+-- As FKs do portal não têm ON UPDATE CASCADE e travariam o rename, então o
+-- bloco recria cada uma com CASCADE antes de atualizar.
 -- ────────────────────────────────────────────────────────────────────────────
--- BEGIN;
---
--- ALTER TABLE portal_produtos  DROP CONSTRAINT portal_produtos_cliente_instagram_fkey,
---   ADD CONSTRAINT portal_produtos_cliente_instagram_fkey
---   FOREIGN KEY (cliente_instagram) REFERENCES portal_clientes(instagram) ON UPDATE CASCADE ON DELETE CASCADE;
---
--- ALTER TABLE portal_cobrancas DROP CONSTRAINT portal_cobrancas_cliente_instagram_fkey,
---   ADD CONSTRAINT portal_cobrancas_cliente_instagram_fkey
---   FOREIGN KEY (cliente_instagram) REFERENCES portal_clientes(instagram) ON UPDATE CASCADE ON DELETE CASCADE;
---
--- ALTER TABLE portal_producao  DROP CONSTRAINT portal_producao_cliente_instagram_fkey,
---   ADD CONSTRAINT portal_producao_cliente_instagram_fkey
---   FOREIGN KEY (cliente_instagram) REFERENCES portal_clientes(instagram) ON UPDATE CASCADE ON DELETE CASCADE;
---
--- UPDATE portal_clientes SET instagram = '_rose_ciavarelli_' WHERE instagram = 'rose_ciavarelli_';
---
--- COMMIT;
+BEGIN;
+
+DO $$
+DECLARE
+  v_antigo TEXT := 'rose_ciavarelli_';
+  v_novo   TEXT := '_rose_ciavarelli_';
+  v_fk     RECORD;
+BEGIN
+  FOR v_fk IN
+    SELECT con.conname AS nome, con.conrelid::regclass AS tabela, att.attname AS coluna
+    FROM pg_constraint con
+    JOIN pg_class ref ON ref.oid = con.confrelid
+    JOIN unnest(con.conkey) AS k(attnum) ON TRUE
+    JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = k.attnum
+    WHERE con.contype = 'f'
+      AND ref.relname = 'portal_clientes'
+      AND con.confupdtype <> 'c'
+  LOOP
+    EXECUTE format('ALTER TABLE %s DROP CONSTRAINT %I', v_fk.tabela, v_fk.nome);
+    EXECUTE format(
+      'ALTER TABLE %s ADD CONSTRAINT %I FOREIGN KEY (%I) '
+      'REFERENCES portal_clientes(instagram) ON UPDATE CASCADE ON DELETE CASCADE',
+      v_fk.tabela, v_fk.nome, v_fk.coluna);
+    RAISE NOTICE 'FK % (%): agora com ON UPDATE CASCADE', v_fk.nome, v_fk.tabela;
+  END LOOP;
+
+  UPDATE portal_clientes SET instagram = v_novo WHERE instagram = v_antigo;
+END $$;
+
+COMMIT;
