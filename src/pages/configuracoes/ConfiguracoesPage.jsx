@@ -45,6 +45,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
     whatsapp: '',
     email_contato: '',
     link_frete: '',
+    mensagem_encerramento_sacolinha: '',
     codigo_automatico: false,
     proximo_codigo: 100,
     produtos_codigo_automatico: false,
@@ -77,6 +78,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           whatsapp: cfg.whatsapp || '',
           email_contato: cfg.email_contato || '',
           link_frete: cfg.link_frete || '',
+          mensagem_encerramento_sacolinha: cfg.mensagem_encerramento_sacolinha || '',
           codigo_automatico: cfg.codigo_automatico || false,
           proximo_codigo: cfg.proximo_codigo || 100,
           produtos_codigo_automatico: cfg.produtos_codigo_automatico || false,
@@ -194,6 +196,23 @@ function AbaConfiguracoes({ tenantId, showToast }) {
         />
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
           Este link é enviado automaticamente na mensagem de cobrança do frete via WhatsApp na página de Produção.
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+          Informativo ao Encerrar Sacolinha (Portal do Cliente)
+        </label>
+        <textarea
+          rows={6}
+          value={form.mensagem_encerramento_sacolinha}
+          onChange={e => setForm(p => ({ ...p, mensagem_encerramento_sacolinha: e.target.value }))}
+          placeholder={'Ex: Seu pedido foi registrado!\n\n• O prazo de separação é de até 2 dias úteis\n• O frete será cotado e enviado para pagamento\n• Após o pagamento, a etiqueta é gerada e postada'}
+          style={{ ...SI, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit' }}
+        />
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+          Exibido em um modal logo após o cliente encerrar a sacolinha no portal. Ele precisa marcar um check de ciência
+          e clicar em "Entendi" para fechar. Deixe em branco para não exibir nenhum aviso.
         </div>
       </div>
 

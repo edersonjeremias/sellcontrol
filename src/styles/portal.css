@@ -447,11 +447,27 @@
   border-color: var(--p-blue);
   background: rgba(138,180,248,.08);
 }
-.portal-radio-option input[type="radio"] {
+.portal-radio-option input[type="radio"],
+.portal-radio-option input[type="checkbox"] {
   accent-color: var(--p-blue);
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+/* ── Informativo de encerramento ── */
+.portal-informativo {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--p-border);
+  border-left: 3px solid var(--p-blue);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 4px 0 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--p-text);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* ── Upload area ── */

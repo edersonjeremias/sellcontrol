@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePortalToast } from './PortalToast'
-import { encerrarSacolinha } from '../../services/portalService'
+import { usePortalAuth } from '../../context/PortalAuthContext'
+import { encerrarSacolinha, getMensagemEncerramento } from '../../services/portalService'
 
 const OPCOES = [
   { value: 'Correio', label: '📮 Enviar por Correio / Transportadora' },
@@ -11,19 +12,61 @@ export default function ModalEncerramento({ instagram, onClose, onConfirm }) {
   const [opcao, setOpcao]   = useState('Correio')
   const [obs, setObs]       = useState('')
   const [saving, setSaving] = useState(false)
+  const [informativo, setInformativo] = useState('')
+  const [etapa, setEtapa]   = useState('form')
+  const [ciente, setCiente] = useState(false)
   const toast = usePortalToast()
+  const { tenantId } = usePortalAuth()
+
+  useEffect(() => {
+    if (!tenantId) return
+    getMensagemEncerramento(tenantId)
+      .then(setInformativo)
+      .catch(() => setInformativo(''))
+  }, [tenantId])
 
   async function confirmar() {
     setSaving(true)
     try {
       await encerrarSacolinha(instagram, opcao, obs)
       toast('Sacolinha encerrada com sucesso! Entraremos em contato em breve.', 'success', 4000)
-      onConfirm?.()
+      if (informativo) setEtapa('informativo')
+      else onConfirm?.()
     } catch {
       toast('Erro ao encerrar. Tente novamente.', 'error')
     } finally {
       setSaving(false)
     }
+  }
+
+  if (etapa === 'informativo') {
+    return (
+      <div className="portal-modal-overlay">
+        <div className="portal-modal">
+          <div className="portal-modal-title">ℹ️ Informações Importantes</div>
+
+          <div className="portal-informativo">{informativo}</div>
+
+          <label className={`portal-radio-option${ciente ? ' selected' : ''}`} style={{ marginBottom: 16 }}>
+            <input
+              type="checkbox"
+              checked={ciente}
+              onChange={e => setCiente(e.target.checked)}
+            />
+            Li e estou ciente das informações acima
+          </label>
+
+          <button
+            className="portal-btn portal-btn-green"
+            style={{ width: '100%' }}
+            onClick={() => onConfirm?.()}
+            disabled={!ciente}
+          >
+            ✓ Entendi
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

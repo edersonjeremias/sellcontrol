@@ -63,6 +63,16 @@ export async function encerrarSacolinha(instagram, tipoEntrega, obs) {
   return data?.[0] || {}
 }
 
+export async function getMensagemEncerramento(tenantId) {
+  const { data, error } = await portalSb
+    .from('configuracoes')
+    .select('mensagem_encerramento_sacolinha')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+  if (error) throw error
+  return data?.mensagem_encerramento_sacolinha?.trim() || ''
+}
+
 export async function uploadComprovante(instagram, file) {
   const ext = file.name.split('.').pop()
   const slug = instagram.replace(/[^a-z0-9]/gi, '')
