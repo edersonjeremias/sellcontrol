@@ -1,4 +1,5 @@
 import { portalSb } from '../lib/portalSupabase'
+import { supabase } from '../lib/supabase'
 
 const STATUS_ENCERRADO = ['Pronto', 'Enviado', 'Entregue', 'Retirou', 'Repetido']
 // Valores de status_entrega que indicam que o pedido já foi despachado
@@ -63,8 +64,11 @@ export async function encerrarSacolinha(instagram, tipoEntrega, obs) {
   return data?.[0] || {}
 }
 
+// Usa o client `supabase` (anon) e não `portalSb`: a sessão do cliente do portal
+// é `authenticated` sem o claim tenant_id, e a policy de RLS de configuracoes
+// filtra por esse claim — o que zera o resultado. Mesmo caminho do PortalApp.
 export async function getMensagemEncerramento(tenantId) {
-  const { data, error } = await portalSb
+  const { data, error } = await supabase
     .from('configuracoes')
     .select('mensagem_encerramento_sacolinha')
     .eq('tenant_id', tenantId)

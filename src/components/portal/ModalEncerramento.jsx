@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { usePortalToast } from './PortalToast'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { encerrarSacolinha, getMensagemEncerramento } from '../../services/portalService'
@@ -18,20 +18,23 @@ export default function ModalEncerramento({ instagram, onClose, onConfirm }) {
   const toast = usePortalToast()
   const { tenantId } = usePortalAuth()
 
-  useEffect(() => {
-    if (!tenantId) return
-    getMensagemEncerramento(tenantId)
-      .then(setInformativo)
-      .catch(() => setInformativo(''))
-  }, [tenantId])
-
   async function confirmar() {
     setSaving(true)
     try {
       await encerrarSacolinha(instagram, opcao, obs)
       toast('Sacolinha encerrada com sucesso! Entraremos em contato em breve.', 'success', 4000)
-      if (informativo) setEtapa('informativo')
-      else onConfirm?.()
+
+      const msg = await getMensagemEncerramento(tenantId).catch(err => {
+        console.error('Erro ao buscar informativo de encerramento:', err)
+        return ''
+      })
+
+      if (msg) {
+        setInformativo(msg)
+        setEtapa('informativo')
+      } else {
+        onConfirm?.()
+      }
     } catch {
       toast('Erro ao encerrar. Tente novamente.', 'error')
     } finally {
