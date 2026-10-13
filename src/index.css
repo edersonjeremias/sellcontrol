@@ -1954,6 +1954,85 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .cp-linha { cursor: pointer; }
 }
 
+/* ══════════════════════════════════════════════════════════
+   CRÉDITOS DE CLIENTES - FILTROS / FORM / LISTA
+   ══════════════════════════════════════════════════════════ */
+
+.cc-filtros {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 12px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+.cc-titulo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-header);
+  align-self: center;
+  margin-right: auto;
+}
+.cc-f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cc-f label { font-size: 11px; color: var(--muted); }
+.cc-f input { width: 100%; min-width: 0; }
+.cc-f-busca { width: 280px; }
+.cc-acoes { display: flex; align-items: flex-end; gap: 8px; }
+.cc-so-mobile { display: none; }
+
+.cc-form {
+  padding: 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+}
+.cc-form-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 2fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.cc-lista { padding: 16px; }
+
+@media (max-width: 768px) {
+  /* Título e busca ocupam a linha toda; De/Até lado a lado */
+  .cc-filtros {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .cc-titulo { grid-column: 1 / -1; margin-right: 0; }
+  .cc-f-busca { grid-column: 1 / -1; width: auto; }
+
+  /* O Safari iOS dá ao input[type=date] largura intrínseca maior que a
+     coluna ("31 de out. de 2026"); fonte/padding menores fazem caber. */
+  .cc-f { overflow: hidden; }
+  .cc-filtros input[type="date"] {
+    font-size: 12px !important;
+    padding: 7px 6px !important;
+    max-width: 100%;
+  }
+
+  .cc-acoes { grid-column: 1 / -1; gap: 6px; }
+  .cc-acoes > button {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 10px 6px !important;
+    font-size: 12px !important;
+  }
+  .cc-so-mobile { display: block; }
+
+  /* Formulário inline escondido: no celular lança-se pelo "+ Novo Crédito" */
+  .cc-form { display: none !important; }
+
+  .cc-lista { padding: 10px 12px; }
+}
+
 @media print {
   /* @page size é injetado dinamicamente pela página ativa */
   .app-header,

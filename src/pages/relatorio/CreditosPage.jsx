@@ -12,6 +12,7 @@ const S = {
   th:  { background:'var(--table-header-bg)', color:'var(--table-header-text)', fontSize:11, fontWeight:700, textAlign:'left', padding:'8px 10px', textTransform:'uppercase', letterSpacing:'0.4px', whiteSpace:'nowrap' },
   td:  { padding:'7px 10px', color:'var(--text-body)', fontSize:12, whiteSpace:'nowrap' },
   btn: { background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer', fontSize:13 },
+  ok:  { background:'var(--green)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer', fontSize:13 },
   sec: { background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:600, cursor:'pointer', fontSize:13 },
   del: { background:'var(--red)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer', fontSize:13 },
   ico: { background:'none', border:'none', cursor:'pointer', padding:'2px 4px', fontSize:14, lineHeight:1 },
@@ -111,6 +112,7 @@ export default function CreditosPage() {
   const { showToast } = useApp()
   const tenantId      = profile?.tenant_id
 
+  const [isMobile, setIsMobile]     = useState(() => window.innerWidth <= 768)
   const [dataIni, setDataIni]       = useState(primeiroDiaMes)
   const [dataFim, setDataFim]       = useState(ultimoDiaMes)
   const [creditos, setCreditos]     = useState([])
@@ -122,6 +124,14 @@ export default function CreditosPage() {
   const [historico, setHistorico]   = useState(null)
   const [loadingHistorico, setLoadingHistorico] = useState(false)
   const [filtro, setFiltro]         = useState('')
+  const [modalForm, setModalForm]   = useState(false) // Lançar/editar no celular
+  const [modalLinha, setModalLinha] = useState(null)  // Ações do card (celular)
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -145,15 +155,25 @@ export default function CreditosPage() {
     try {
       await salvarCredito(tenantId, { ...form, id: editId || undefined })
       showToast(editId ? 'Crédito atualizado!' : 'Crédito lançado!', 'success')
-      setForm(VAZIO); setEditId(null)
+      cancelarEdicao()
       carregar()
     } catch (e) { showToast('Erro ao salvar: ' + (e.message || ''), 'error') }
+  }
+
+  function cancelarEdicao() {
+    setForm(VAZIO); setEditId(null); setModalForm(false)
+  }
+
+  function abrirNovo() {
+    setForm(VAZIO); setEditId(null); setModalForm(true)
   }
 
   function editar(c) {
     setForm({ cliente: c.cliente || '', valor: c.valor || '', observacao: c.observacao || '' })
     setEditId(c.id)
-    window.scrollTo({ top:0, behavior:'smooth' })
+    // No celular o formulário inline fica oculto: edita pelo modal
+    if (isMobile) setModalForm(true)
+    else window.scrollTo({ top:0, behavior:'smooth' })
   }
 
   async function handleExcluir(id) {
@@ -185,60 +205,129 @@ export default function CreditosPage() {
     return termos.some(termo => cliente.includes(termo) || motivo.includes(termo))
   })
 
+  const totalSaldo = creditosFiltrados.reduce((s, c) => s + (Number(c.saldo) || 0), 0)
+
+  // Campos do formulário — reaproveitados no inline (desktop) e no modal (celular)
+  const campos = (
+    <>
+      <Campo label="Cliente">
+        <ClienteAutocomplete value={form.cliente} onChange={v => ch('cliente', v)} clientes={clientes} />
+      </Campo>
+      <Campo label="Valor">
+        <input value={form.valor} onChange={e => ch('valor', e.target.value)} placeholder="0,00" style={S.inp} inputMode="decimal" />
+      </Campo>
+      <Campo label="Motivo / Observação">
+        <input value={form.observacao} onChange={e => ch('observacao', e.target.value)} placeholder="ex. Devolução, Presente..." style={S.inp} />
+      </Campo>
+    </>
+  )
+
   return (
     <AppShell title="Créditos de Clientes" hideTitle>
       {/* Filtro */}
-      <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8, padding:'12px 16px', borderBottom:'1px solid var(--border-light)', background:'var(--header-bg)' }}>
-        <span style={{ fontSize:14, fontWeight:700, color:'var(--text-header)' }}>Créditos de Clientes</span>
-        <div style={{ flex:1 }} />
-        <input
-          type="text"
-          value={filtro}
-          onChange={e => setFiltro(e.target.value)}
-          placeholder="🔍 Buscar cliente... (separe por vírgula)"
-          style={{ ...S.inp, width:280 }}
-        />
-        <label style={{ fontSize:12, color:'var(--muted)' }}>De</label>
-        <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={S.inp} />
-        <label style={{ fontSize:12, color:'var(--muted)' }}>Até</label>
-        <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inp} />
-        <button onClick={carregar} style={S.btn}>Filtrar</button>
+      <div className="cc-filtros">
+        <span className="cc-titulo">Créditos de Clientes</span>
+        <div className="cc-f cc-f-busca">
+          <input
+            type="text"
+            value={filtro}
+            onChange={e => setFiltro(e.target.value)}
+            placeholder="🔍 Buscar cliente... (separe por vírgula)"
+            style={S.inp}
+          />
+        </div>
+        <div className="cc-f">
+          <label>De</label>
+          <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={S.inp} />
+        </div>
+        <div className="cc-f">
+          <label>Até</label>
+          <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inp} />
+        </div>
+        <div className="cc-acoes">
+          <button onClick={carregar} style={S.btn}>Filtrar</button>
+          <button className="cc-so-mobile" onClick={abrirNovo} style={S.ok}>+ Novo Crédito</button>
+        </div>
       </div>
 
-      {/* Formulário */}
-      <div style={{ padding:16, background:'var(--bg)', borderBottom:'1px solid var(--border-light)' }}>
+      {/* Formulário inline (desktop) */}
+      <div className="cc-form">
         {editId && (
           <div style={{ padding:'8px 12px', background:'rgba(251,188,4,0.1)', borderLeft:'3px solid var(--yellow)', marginBottom:12, fontSize:12, color:'var(--yellow)' }}>
             Editando crédito
           </div>
         )}
 
-        <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr 2fr auto', gap:12, alignItems:'end' }}>
-          <Campo label="Cliente">
-            <ClienteAutocomplete value={form.cliente} onChange={v => ch('cliente', v)} clientes={clientes} />
-          </Campo>
-          <Campo label="Valor">
-            <input value={form.valor} onChange={e => ch('valor', e.target.value)} placeholder="0,00" style={S.inp} />
-          </Campo>
-          <Campo label="Motivo / Observação">
-            <input value={form.observacao} onChange={e => ch('observacao', e.target.value)} placeholder="ex. Devolução, Presente..." style={S.inp} />
-          </Campo>
+        <div className="cc-form-grid">
+          {campos}
           <div style={{ display:'flex', gap:8 }}>
-            {editId && <button onClick={() => { setForm(VAZIO); setEditId(null) }} style={S.sec}>Cancelar</button>}
+            {editId && <button onClick={cancelarEdicao} style={S.sec}>Cancelar</button>}
             <button onClick={handleSalvar} style={S.btn}>{editId ? 'Atualizar' : 'Lançar Crédito'}</button>
           </div>
         </div>
       </div>
 
       {/* Lista */}
-      <div style={{ padding:16 }}>
-        {carregando ? <p style={{ color:'var(--muted)' }}>Carregando…</p> : (
+      <div className="cc-lista">
+        {carregando ? <p style={{ color:'var(--muted)' }}>Carregando…</p> : isMobile ? (
+          /* ── Celular: cards (um toque abre as ações) ── */
+          <div style={{ display:'grid', gap:8 }}>
+            {creditosFiltrados.length > 0 && (
+              <div style={{
+                display:'flex', justifyContent:'space-between', alignItems:'center',
+                padding:'8px 12px', background:'var(--filter-bg)', borderRadius:8,
+                fontSize:12, color:'var(--muted)',
+              }}>
+                <span>{creditosFiltrados.length} {creditosFiltrados.length === 1 ? 'crédito' : 'créditos'}</span>
+                <span>Saldo total <strong style={{ color:'var(--green)', fontSize:14 }}>{fmtR(totalSaldo)}</strong></span>
+              </div>
+            )}
+
+            {creditosFiltrados.map(c => (
+              <div
+                key={c.id}
+                onClick={() => setModalLinha(c)}
+                style={{
+                  background:'var(--card-bg)', border:'1px solid var(--border-light)',
+                  borderRadius:10, padding:12, cursor:'pointer', display:'grid', gap:6,
+                }}
+              >
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:10 }}>
+                  <span style={{ fontSize:14, fontWeight:700, color:'var(--text-header)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {c.cliente}
+                  </span>
+                  <span style={{ fontSize:16, fontWeight:800, flexShrink:0, color: Number(c.saldo) > 0 ? 'var(--green)' : 'var(--muted)' }}>
+                    {fmtR(c.saldo)}
+                  </span>
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'2px 10px', fontSize:11, color:'var(--muted)' }}>
+                  <span>{fmtData(c.data)}</span>
+                  <span>Original <strong style={{ color:'var(--blue)' }}>{fmtR(c.valor)}</strong></span>
+                  <span>Usado <strong>{fmtR(c.utilizado)}</strong></span>
+                </div>
+                {c.observacao && (
+                  <div style={{ fontSize:11, color:'var(--muted)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    💬 {c.observacao}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {creditos.length === 0 && (
+              <p style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito no período.</p>
+            )}
+            {creditos.length > 0 && creditosFiltrados.length === 0 && (
+              <p style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum resultado para "{filtro}"</p>
+            )}
+          </div>
+        ) : (
+          /* ── Desktop: tabela ── */
           <div style={{ overflowX:'auto' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead>
                 <tr>
-                  {['Data','Cliente','Valor Original','Saldo','Utilizado','Motivo','',''].map(h => (
-                    <th key={h} style={S.th}>{h}</th>
+                  {['Data','Cliente','Valor Original','Saldo','Utilizado','Motivo','',''].map((h, i) => (
+                    <th key={h || `vazio${i}`} style={S.th}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -278,10 +367,80 @@ export default function CreditosPage() {
         )}
       </div>
 
+      {/* Modal: lançar / editar crédito (celular) */}
+      {modalForm && (
+        <div className="modal-overlay" onClick={cancelarEdicao}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}
+            style={{ maxWidth:420, height:'auto', maxHeight:'90vh', borderRadius:12 }}>
+            <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h3 style={{ margin:0, fontSize:16 }}>{editId ? 'Editar crédito' : 'Novo crédito'}</h3>
+              <button onClick={cancelarEdicao} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:22, cursor:'pointer', lineHeight:1 }}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding:16, paddingBottom:16, display:'grid', gap:14 }}>
+              {campos}
+            </div>
+            <div className="modal-footer">
+              <button onClick={cancelarEdicao} style={S.sec}>Cancelar</button>
+              <button onClick={handleSalvar} style={S.ok}>{editId ? 'Atualizar' : 'Lançar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: ações do card (celular) */}
+      {modalLinha && (
+        <div className="modal-overlay" onClick={() => setModalLinha(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}
+            style={{ maxWidth:420, height:'auto', maxHeight:'90vh', borderRadius:12 }}>
+            <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h3 style={{ margin:0, fontSize:16 }}>Crédito</h3>
+              <button onClick={() => setModalLinha(null)} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:22, cursor:'pointer', lineHeight:1 }}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding:16, paddingBottom:16, display:'grid', gap:12 }}>
+              <div style={{ fontSize:16, fontWeight:700, color:'var(--text-header)', lineHeight:1.3 }}>
+                {modalLinha.cliente}
+              </div>
+              <div style={{ display:'grid', gap:8, fontSize:13 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Data</span>
+                  <strong>{fmtData(modalLinha.data)}</strong>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Valor original</span>
+                  <strong style={{ color:'var(--blue)' }}>{fmtR(modalLinha.valor)}</strong>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Utilizado</span>
+                  <strong>{fmtR(modalLinha.utilizado)}</strong>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Saldo</span>
+                  <strong style={{ fontSize:17, color: Number(modalLinha.saldo) > 0 ? 'var(--green)' : 'var(--muted)' }}>{fmtR(modalLinha.saldo)}</strong>
+                </div>
+                {modalLinha.observacao && (
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                    <span style={{ color:'var(--muted)' }}>Motivo</span>
+                    <strong style={{ textAlign:'right' }}>{modalLinha.observacao}</strong>
+                  </div>
+                )}
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingTop:12, borderTop:'1px solid var(--border-light)' }}>
+                <button onClick={() => { verHistorico(modalLinha.cliente); setModalLinha(null) }}
+                  style={{ ...S.btn, gridColumn:'1 / -1', padding:'11px 14px' }}>📜 Histórico</button>
+                <button onClick={() => { editar(modalLinha); setModalLinha(null) }}
+                  style={{ ...S.btn, padding:'11px 14px' }}>Editar</button>
+                <button onClick={() => { setConfirmDel({ id:modalLinha.id, label:modalLinha.cliente }); setModalLinha(null) }}
+                  style={{ ...S.del, padding:'11px 14px' }}>Excluir</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal exclusão */}
       {confirmDel && (
         <div className="modal-overlay" onClick={() => setConfirmDel(null)}>
-          <div className="modal-card mini" onClick={e => e.stopPropagation()} style={{ maxWidth:360 }}>
+          <div className="modal-card mini" onClick={e => e.stopPropagation()} style={{ maxWidth:360, height:'auto', maxHeight:'90vh', borderRadius:12 }}>
             <div className="modal-header"><h3>Confirmar exclusão</h3></div>
             <div className="modal-body" style={{ paddingBottom:20 }}>
               <p style={{ margin:0 }}>Excluir crédito de <strong>{confirmDel.label}</strong>?</p>
@@ -300,7 +459,7 @@ export default function CreditosPage() {
         <div className="modal-overlay" onClick={() => setHistorico(null)}>
           <div className="modal-card" onClick={e => e.stopPropagation()} style={{ maxWidth:700, maxHeight:'80vh', overflow:'auto' }}>
             <div className="modal-header">
-              <h3>📜 Histórico de Créditos - {historico.cliente}</h3>
+              <h3 style={{ fontSize: isMobile ? 15 : 18 }}>📜 Histórico de Créditos - {historico.cliente}</h3>
             </div>
             <div className="modal-body" style={{ padding:0 }}>
               {loadingHistorico ? (
@@ -308,27 +467,27 @@ export default function CreditosPage() {
               ) : historico.movimentos.length === 0 ? (
                 <p style={{ padding:20, color:'var(--muted)', textAlign:'center' }}>Nenhuma movimentação registrada.</p>
               ) : (
-                <div style={{ padding:16 }}>
-                  {historico.movimentos.map((mov, idx) => (
+                <div style={{ padding: isMobile ? 12 : 16 }}>
+                  {historico.movimentos.map(mov => (
                     <div key={mov.id} style={{
-                      padding:16,
+                      padding: isMobile ? 12 : 16,
                       marginBottom:12,
                       background: mov.tipo === 'CREDITO' ? 'rgba(129,201,149,0.08)' : 'rgba(251,188,4,0.08)',
                       border: `1px solid ${mov.tipo === 'CREDITO' ? 'rgba(129,201,149,0.3)' : 'rgba(251,188,4,0.3)'}`,
                       borderRadius:8,
                     }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 }}>
-                        <div>
-                          <div style={{ fontSize:13, color:'var(--muted)', marginBottom:4 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10, marginBottom:8 }}>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontSize: isMobile ? 11 : 13, color:'var(--muted)', marginBottom:4 }}>
                             {fmtDataHora(mov.created_at)}
                           </div>
-                          <div style={{ fontSize:16, fontWeight:700, color: mov.tipo === 'CREDITO' ? 'var(--green)' : 'var(--yellow)' }}>
+                          <div style={{ fontSize: isMobile ? 14 : 16, fontWeight:700, color: mov.tipo === 'CREDITO' ? 'var(--green)' : 'var(--yellow)' }}>
                             {mov.tipo === 'CREDITO' ? '➕ Crédito' : '➖ Usado'} {fmtR(mov.valor)}
                           </div>
                         </div>
-                        <div style={{ textAlign:'right' }}>
+                        <div style={{ textAlign:'right', flexShrink:0 }}>
                           <div style={{ fontSize:11, color:'var(--muted)' }}>Saldo</div>
-                          <div style={{ fontSize:14, fontWeight:600, color:'var(--text-body)' }}>
+                          <div style={{ fontSize: isMobile ? 12 : 14, fontWeight:600, color:'var(--text-body)' }}>
                             {fmtR(mov.saldo_anterior)} → {fmtR(mov.saldo_posterior)}
                           </div>
                         </div>
