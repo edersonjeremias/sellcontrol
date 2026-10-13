@@ -7,6 +7,11 @@ import {
 } from '../../services/relatorioService'
 import { getHistoricoCreditos } from '../../services/cobrancasService'
 
+// Ícones dos botões de ação — mesmo traçado das linhas de Vendas
+const IconHist = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><polyline points="12 7 12 12 15.5 14"/></svg>
+const IconEdit = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+const IconDel  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+
 const S = {
   inp: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'7px 10px', fontSize:13, outline:'none' },
   th:  { background:'var(--table-header-bg)', color:'var(--table-header-text)', fontSize:11, fontWeight:700, textAlign:'left', padding:'8px 10px', textTransform:'uppercase', letterSpacing:'0.4px', whiteSpace:'nowrap' },
@@ -15,7 +20,6 @@ const S = {
   ok:  { background:'var(--green)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer', fontSize:13 },
   sec: { background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:600, cursor:'pointer', fontSize:13 },
   del: { background:'var(--red)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer', fontSize:13 },
-  ico: { background:'none', border:'none', cursor:'pointer', padding:'2px 4px', fontSize:14, lineHeight:1 },
 }
 
 function fmtData(iso) {
@@ -326,8 +330,8 @@ export default function CreditosPage() {
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
               <thead>
                 <tr>
-                  {['Data','Cliente','Valor Original','Saldo','Utilizado','Motivo','',''].map((h, i) => (
-                    <th key={h || `vazio${i}`} style={S.th}>{h}</th>
+                  {['Data','Cliente','Valor Original','Saldo','Utilizado','Motivo','Ações'].map(h => (
+                    <th key={h} style={{ ...S.th, textAlign: h === 'Ações' ? 'center' : 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -343,23 +347,22 @@ export default function CreditosPage() {
                     <td style={{ ...S.td, color:'var(--muted)' }}>{fmtR(c.utilizado)}</td>
                     <td style={{ ...S.td, color:'var(--muted)' }}>{c.observacao}</td>
                     <td style={S.td}>
-                      <button onClick={() => verHistorico(c.cliente)} style={{ ...S.btn, padding:'6px 12px', fontSize:11 }}>
-                        📜 Histórico
-                      </button>
-                    </td>
-                    <td style={S.td}>
-                      <div style={{ display:'flex', gap:4 }}>
-                        <button onClick={() => editar(c)} style={S.ico} title="Editar">✏️</button>
-                        <button onClick={() => setConfirmDel({ id:c.id, label:c.cliente })} style={S.ico} title="Excluir">🗑️</button>
+                      <div className="acoes-wrapper">
+                        <button className="btn-action-sm copy-txt" title="Histórico"
+                          onClick={() => verHistorico(c.cliente)}><IconHist /></button>
+                        <button className="btn-action-sm copy" title="Editar"
+                          onClick={() => editar(c)}><IconEdit /></button>
+                        <button className="btn-action-sm del" title="Excluir"
+                          onClick={() => setConfirmDel({ id:c.id, label:c.cliente })}><IconDel /></button>
                       </div>
                     </td>
                   </tr>
                 ))}
                 {creditos.length === 0 && (
-                  <tr><td colSpan={8} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito no período.</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum crédito no período.</td></tr>
                 )}
                 {creditos.length > 0 && creditosFiltrados.length === 0 && (
-                  <tr><td colSpan={8} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum resultado para "{filtro}"</td></tr>
+                  <tr><td colSpan={7} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>Nenhum resultado para "{filtro}"</td></tr>
                 )}
               </tbody>
             </table>
