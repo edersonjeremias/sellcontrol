@@ -118,9 +118,16 @@ export default function MinhaSacolinha() {
           <div style={{ fontSize:11, color:'var(--p-muted)', fontWeight:600, marginBottom:6 }}>
             STATUS DA SACOLINHA
           </div>
-          <span className={`portal-status-badge ${ativa ? 'preparacao' : 'aberta'}`}>
-            {ativa ? '⚙ Em preparação' : '✓ Aberta'}
-          </span>
+          <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+            <span className={`portal-status-badge ${ativa ? 'preparacao' : 'aberta'}`}>
+              {ativa ? '⚙ Em preparação' : '✓ Aberta'}
+            </span>
+            {ativa && producao?.data_solicitacao && (
+              <span style={{ fontSize:12, color:'var(--p-muted)' }}>
+                Encerrada em {new Date(producao.data_solicitacao).toLocaleDateString('pt-BR')}
+              </span>
+            )}
+          </div>
         </div>
         <button
           className={`portal-btn ${!ativa && !temDivida ? 'portal-btn-green' : 'portal-btn-gray'}`}
