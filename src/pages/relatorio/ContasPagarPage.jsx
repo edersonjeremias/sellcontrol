@@ -509,7 +509,7 @@ export default function ContasPagarPage() {
                           }}
                         >
                           <span style={{ color:'var(--blue)', fontWeight:700, fontSize:13 }}>
-                            📅 {fmtData(d)}
+                            {fmtData(d)}
                             <small style={{ color:'var(--muted)', fontWeight:400, marginLeft:8 }}>
                               ({grupo.length} {grupo.length===1?'lançamento':'lançamentos'})
                             </small>
