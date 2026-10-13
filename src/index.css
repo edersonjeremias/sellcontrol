@@ -1690,6 +1690,21 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
     box-sizing: border-box;
   }
 
+  /* A regra base `.toolbar { padding: 0 16px }` aparece DEPOIS do bloco mobile
+     de 768px neste arquivo, então o `padding: 0` de lá nunca chegou a valer:
+     a toolbar ficava 32px mais estreita que o filtro rápido logo abaixo dela
+     (daí as margens diferentes), e as colunas apertadas faziam o input de data
+     do iOS invadir o campo Live. Zerar o padding aqui resolve os dois. */
+  .toolbar.editar-vendas-toolbar {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Folga extra para a data por extenso em pt-BR ("13 de out. de 2026"),
+     sem reduzir a fonte abaixo de 16px para não disparar zoom no iOS. */
+  .toolbar.editar-vendas-toolbar input[type="date"] { padding: 0 6px; }
+  .toolbar.editar-vendas-toolbar .field-data { overflow: hidden; }
+
   .toolbar.editar-vendas-toolbar .btn-buscar-inline {
     height: 44px;
     font-size: 15px;
