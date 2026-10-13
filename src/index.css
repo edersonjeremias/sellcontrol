@@ -1705,8 +1705,11 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .toolbar.editar-vendas-toolbar input[type="date"] { padding: 0 6px; }
   .toolbar.editar-vendas-toolbar .field-data { overflow: hidden; }
 
+  /* min-height porque `.btn-acao` recebe 48px numa media query posterior,
+     que venceria o height e deixaria o botão mais alto que o campo ao lado. */
   .toolbar.editar-vendas-toolbar .btn-buscar-inline {
     height: 44px;
+    min-height: 44px;
     font-size: 15px;
   }
 
