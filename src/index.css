@@ -1830,7 +1830,7 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   max-width: 1100px;
   max-height: 85vh;
   display: flex;
-  flexDirection: column;
+  flex-direction: column;
 }
 
 /* Mobile: esconde tabela, mostra lista mobile */
@@ -1853,6 +1853,97 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
     max-height: 100%;
     border-radius: 0;
   }
+}
+
+/* ══════════════════════════════════════════════════════════
+   CONTAS A PAGAR - FILTROS / RESUMO / QUICK ADD
+   ══════════════════════════════════════════════════════════ */
+
+.cp-filtros {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+.cp-f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cp-f-busca { flex: 2; min-width: 160px; }
+.cp-f-status { min-width: 120px; }
+.cp-filtros input, .cp-filtros select { width: 100%; min-width: 0; }
+
+.cp-barra-acoes { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.cp-abas { display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 8px; }
+
+.cp-resumo {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 10px 16px;
+  display: flex;
+  gap: 10px;
+}
+.cp-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 8px 16px;
+}
+
+@media (max-width: 768px) {
+  /* Busca / status / datas lado a lado / 4 botões na mesma linha */
+  .cp-filtros {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .cp-f-busca, .cp-f-status, .cp-barra-acoes { grid-column: 1 / -1; }
+  .cp-barra-acoes { margin-left: 0; gap: 6px; }
+  /* min-width:0 + ellipsis: nunca estoura a largura da tela */
+  .cp-barra-acoes > button,
+  .cp-abas,
+  .cp-abas button {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cp-barra-acoes > button { padding: 9px 4px !important; font-size: 11px !important; }
+  .cp-abas { flex: 2; gap: 3px; padding: 3px; overflow: visible; }
+  .cp-abas button { padding: 8px 4px !important; font-size: 11px !important; }
+
+  /* Cards de valores centralizados ocupando a largura toda */
+  .cp-resumo { padding: 10px 12px; }
+  .cp-card { flex: 1; min-width: 0; text-align: center; padding: 10px 8px; }
+
+  /* Quick Add: descrição+categoria / tipo+valor / data+pago / repetição+inserir */
+  .cp-qa {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+  }
+  .cp-qa > input,
+  .cp-qa > select {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 38px;
+  }
+  .cp-qa > label {
+    height: 38px;
+    justify-content: center;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    background: var(--input-bg);
+  }
+  .cp-qa > button { height: 38px; }
+  .cp-qa-freq { height: 38px; justify-content: center; }
+
+  /* Lançamentos: toque na linha abre o modal de ações */
+  .cp-row-acoes { display: none !important; }
+  .cp-linha { cursor: pointer; }
 }
 
 @media print {

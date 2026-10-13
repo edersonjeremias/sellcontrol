@@ -88,7 +88,7 @@ function Campo({ label, children }) {
   )
 }
 
-function FreqRadios({ value, onChange, name }) {
+function FreqRadios({ value, onChange, name, className }) {
   const opts = [
     { v:'unica', l:'1x', title:'Uma parcela' },
     { v:'sem',   l:'7d', title:'Semanal — 4 parcelas' },
@@ -96,7 +96,7 @@ function FreqRadios({ value, onChange, name }) {
     { v:'mensal',l:'30d', title:'Mensal — 12 parcelas' },
   ]
   return (
-    <div style={{ display:'flex', gap:6, alignItems:'center', background:'rgba(0,0,0,0.15)', padding:'4px 8px', borderRadius:6, border:'1px solid var(--border-light)' }}>
+    <div className={className} style={{ display:'flex', gap:6, alignItems:'center', background:'rgba(0,0,0,0.15)', padding:'4px 8px', borderRadius:6, border:'1px solid var(--border-light)' }}>
       {opts.map(o => (
         <label key={o.v} title={o.title} style={{ display:'flex', alignItems:'center', gap:3, fontSize:12, fontWeight:700, color:'var(--text-body)', cursor:'pointer', whiteSpace:'nowrap' }}>
           <input type="radio" name={name} value={o.v} checked={value===o.v} onChange={() => onChange(o.v)} style={{ margin:0, width:12, height:12, cursor:'pointer' }} />
@@ -143,6 +143,7 @@ export default function ContasPagarPage() {
   const [modalDetalheCat, setModalDetalheCat] = useState(null) // { categoria, contas }
   const [subcatsAbertas, setSubcatsAbertas] = useState(new Set()) // Subcategorias expandidas
   const [buscaModal,  setBuscaModal]  = useState('') // Busca inteligente no modal
+  const [modalLinha,  setModalLinha]  = useState(null) // Ações da linha (mobile)
 
   // ── Formulário modal novo / editar ─────────────────────────
   const [form,    setForm]    = useState(FORM_VAZIO)
@@ -397,12 +398,12 @@ export default function ContasPagarPage() {
     <AppShell title="Contas a Pagar" hideTitle>
 
       {/* ── Filtros ── */}
-      <div style={{ background:'var(--header-bg)', borderBottom:'1px solid var(--border-light)', padding:'10px 16px', display:'flex', flexWrap:'wrap', gap:8, alignItems:'flex-end' }}>
-        <div style={{ flex:2, minWidth:160, display:'flex', flexDirection:'column', gap:3 }}>
+      <div className="cp-filtros">
+        <div className="cp-f cp-f-busca">
           <label style={{ fontSize:11, color:'var(--muted)' }}>Buscar descrição ou categoria</label>
           <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="Busca inteligente (termo1 termo2)" style={S.inpS} />
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:3, minWidth:120 }}>
+        <div className="cp-f cp-f-status">
           <label style={{ fontSize:11, color:'var(--muted)' }}>Status</label>
           <select value={filtroSt} onChange={e => setFiltroSt(e.target.value)} style={S.inpS}>
             <option value="A PAGAR">Pendentes</option>
@@ -410,45 +411,45 @@ export default function ContasPagarPage() {
             <option value="Todos">Todos</option>
           </select>
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+        <div className="cp-f">
           <label style={{ fontSize:11, color:'var(--muted)' }}>Início</label>
           <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={S.inpS} />
         </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
+        <div className="cp-f">
           <label style={{ fontSize:11, color:'var(--muted)' }}>Fim</label>
           <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inpS} />
         </div>
-        <button onClick={carregar} style={{ ...S.btn, padding:'5px 14px' }}>Filtrar</button>
-        <button onClick={() => { setForm(FORM_VAZIO); setFreqNova('unica'); setModalNova(true) }}
-          style={{ ...S.ok, padding:'5px 14px', marginLeft:'auto' }}>+ Avançado</button>
-      </div>
-
-      {/* ── Resumo + Abas ── */}
-      <div style={{ background:'var(--header-bg)', borderBottom:'1px solid var(--border-light)', padding:'10px 16px', display:'flex', flexWrap:'wrap', alignItems:'center', gap:12 }}>
-        <div style={{ display:'flex', gap:10 }}>
-          <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'8px 16px' }}>
-            <div style={{ fontSize:11, color:'var(--muted)' }}>A Pagar (período)</div>
-            <div style={{ fontSize:18, fontWeight:800, color:'var(--red)' }}>{fmtR(totalAPagar)}</div>
+        <div className="cp-barra-acoes">
+          <button onClick={carregar} style={{ ...S.btn, padding:'5px 14px' }}>Filtrar</button>
+          <button onClick={() => { setForm(FORM_VAZIO); setFreqNova('unica'); setModalNova(true) }}
+            style={{ ...S.ok, padding:'5px 14px' }}>+ Avançado</button>
+          <div className="cp-abas">
+            {[['lancamentos','Lançamentos'],['relatorios','Relatórios']].map(([id, label]) => (
+              <button key={id} onClick={() => setAba(id)} style={{
+                background: aba===id ? 'var(--card-bg)' : 'transparent',
+                color: aba===id ? 'var(--blue)' : 'var(--muted)',
+                border:'none', borderRadius:6, padding:'7px 16px', fontWeight:600,
+                fontSize:13, cursor:'pointer', boxShadow: aba===id ? 'var(--shadow)' : 'none',
+              }}>{label}</button>
+            ))}
           </div>
-          <div style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'8px 16px' }}>
-            <div style={{ fontSize:11, color:'var(--muted)' }}>Total Pago (período)</div>
-            <div style={{ fontSize:18, fontWeight:800, color:'var(--green)' }}>{fmtR(totalPago)}</div>
-          </div>
-        </div>
-        <div style={{ marginLeft:'auto', display:'flex', gap:4, background:'rgba(0,0,0,0.2)', padding:5, borderRadius:8 }}>
-          {[['lancamentos','Lançamentos'],['relatorios','Relatórios']].map(([id, label]) => (
-            <button key={id} onClick={() => setAba(id)} style={{
-              background: aba===id ? 'var(--card-bg)' : 'transparent',
-              color: aba===id ? 'var(--blue)' : 'var(--muted)',
-              border:'none', borderRadius:6, padding:'7px 16px', fontWeight:600,
-              fontSize:13, cursor:'pointer', boxShadow: aba===id ? 'var(--shadow)' : 'none',
-            }}>{label}</button>
-          ))}
         </div>
       </div>
 
-      {/* ── Quick Add Bar (desktop) ── */}
-      <div style={{ background:'var(--card-bg)', borderBottom:'1px solid var(--border-light)', padding:'6px 16px', display:'flex', flexWrap:'wrap', gap:6, alignItems:'center' }}>
+      {/* ── Resumo ── */}
+      <div className="cp-resumo">
+        <div className="cp-card">
+          <div style={{ fontSize:11, color:'var(--muted)' }}>A Pagar (período)</div>
+          <div style={{ fontSize:18, fontWeight:800, color:'var(--red)' }}>{fmtR(totalAPagar)}</div>
+        </div>
+        <div className="cp-card">
+          <div style={{ fontSize:11, color:'var(--muted)' }}>Total Pago (período)</div>
+          <div style={{ fontSize:18, fontWeight:800, color:'var(--green)' }}>{fmtR(totalPago)}</div>
+        </div>
+      </div>
+
+      {/* ── Quick Add Bar ── */}
+      <div className="cp-qa" style={{ background:'var(--card-bg)', borderBottom:'1px solid var(--border-light)', padding:'6px 16px', display:'flex', flexWrap:'wrap', gap:6, alignItems:'center' }}>
         <input ref={qaDescRef} value={qa.observacao} onChange={e => setQa(p=>({...p,observacao:e.target.value}))}
           placeholder="Descrição" style={{ ...S.inpS, flex:2, minWidth:100 }}
           onKeyDown={e => e.key==='Enter' && salvarQA()} />
@@ -476,7 +477,7 @@ export default function ContasPagarPage() {
           <input type="checkbox" checked={qa.pago} onChange={e => setQa(p=>({...p,pago:e.target.checked}))}
             style={{ width:13, height:13 }} /> Pago
         </label>
-        <FreqRadios value={qaFreq} onChange={setQaFreq} name="qa_freq" />
+        <FreqRadios value={qaFreq} onChange={setQaFreq} name="qa_freq" className="cp-qa-freq" />
         <button onClick={salvarQA} disabled={salvando} style={{ ...S.ok, padding:'5px 12px', whiteSpace:'nowrap' }}>
           {salvando ? '…' : 'Inserir'}
         </button>
@@ -523,11 +524,13 @@ export default function ContasPagarPage() {
                         {open && grupo.map(c => (
                           <div
                             key={c.id}
+                            className="cp-linha"
                             style={{
                               display:'flex', alignItems:'center', gap:8,
                               padding:'9px 14px', background:'var(--body-bg)',
                               borderBottom:'1px solid var(--border-light)',
                             }}
+                            onClick={() => { if (window.matchMedia('(max-width: 768px)').matches) setModalLinha(c) }}
                             onMouseEnter={e=>e.currentTarget.style.background='var(--table-row-hover)'}
                             onMouseLeave={e=>e.currentTarget.style.background='var(--body-bg)'}
                           >
@@ -549,7 +552,7 @@ export default function ContasPagarPage() {
                             }}>
                               {c.status==='PAGO' ? 'Pago' : 'Pendente'}
                             </span>
-                            <div style={{ display:'flex', gap:4, flexShrink:0 }}>
+                            <div className="cp-row-acoes" style={{ display:'flex', gap:4, flexShrink:0 }}>
                               {c.status !== 'PAGO' && (
                                 <button onClick={() => { setModalPagar({id:c.id}); setDataPag(HOJE) }}
                                   className="btn-action-sm send" title="Marcar como pago">
@@ -790,6 +793,62 @@ export default function ContasPagarPage() {
             <div className="modal-footer">
               <button onClick={() => setConfirmDel(null)} style={{ ...S.sec, flex:1 }}>Cancelar</button>
               <button onClick={confirmarExclusao} style={{ ...S.del, flex:1 }}>Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: AÇÕES DA LINHA (MOBILE) ═══ */}
+      {modalLinha && (
+        <div className="modal-overlay" onClick={() => setModalLinha(null)}>
+          <div className="modal-card" onClick={e => e.stopPropagation()}
+            style={{ maxWidth:420, height:'auto', maxHeight:'90vh', borderRadius:12 }}>
+            <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <h3 style={{ margin:0, fontSize:16 }}>Lançamento</h3>
+              <button onClick={() => setModalLinha(null)} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:22, cursor:'pointer', lineHeight:1 }}>×</button>
+            </div>
+            <div className="modal-body" style={{ padding:16, paddingBottom:16, display:'grid', gap:12 }}>
+              <div style={{ fontSize:16, fontWeight:700, color:'var(--text-header)', lineHeight:1.3 }}>
+                {modalLinha.observacao || modalLinha.categoria}
+              </div>
+              <div style={{ display:'grid', gap:8, fontSize:13 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Categoria</span>
+                  <strong style={{ textAlign:'right' }}>{modalLinha.categoria || '—'}</strong>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Tipo</span>
+                  <strong style={{ textAlign:'right' }}>{modalLinha.tipo_despesa || '—'}</strong>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Vencimento</span>
+                  <strong>{fmtData(modalLinha.data_vencimento)}</strong>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Valor</span>
+                  <strong style={{ fontSize:17, color: modalLinha.status==='PAGO'?'var(--green)':'var(--red)' }}>{fmtR(modalLinha.valor)}</strong>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:10 }}>
+                  <span style={{ color:'var(--muted)' }}>Status</span>
+                  <strong style={{ color: modalLinha.status==='PAGO'?'var(--green)':'var(--yellow)' }}>
+                    {modalLinha.status==='PAGO'
+                      ? `Pago${modalLinha.data_pagamento ? ' em ' + fmtData(modalLinha.data_pagamento) : ''}`
+                      : 'Pendente'}
+                  </strong>
+                </div>
+              </div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingTop:12, borderTop:'1px solid var(--border-light)' }}>
+                {modalLinha.status !== 'PAGO' && (
+                  <button onClick={() => { setModalPagar({id:modalLinha.id}); setDataPag(HOJE); setModalLinha(null) }}
+                    style={{ ...S.ok, gridColumn:'1 / -1', padding:'11px 14px' }}>✓ Dar Baixa</button>
+                )}
+                <button onClick={() => { abrirEditar(modalLinha); setModalLinha(null) }}
+                  style={{ ...S.btn, padding:'11px 14px' }}>Editar</button>
+                <button onClick={() => { abrirDuplicar(modalLinha); setModalLinha(null) }}
+                  style={{ ...S.btn, padding:'11px 14px' }}>Duplicar</button>
+                <button onClick={() => { setConfirmDel(modalLinha); setModalLinha(null) }}
+                  style={{ ...S.del, gridColumn:'1 / -1', padding:'11px 14px' }}>Excluir</button>
+              </div>
             </div>
           </div>
         </div>
