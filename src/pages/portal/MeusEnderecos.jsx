@@ -9,6 +9,13 @@ function maskCep(v) {
     .replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+function maskCpf(v) {
+  return String(v || '').replace(/\D/g, '').slice(0, 11)
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+
 export default function MeusEnderecos() {
   const { cliente, tenantId } = usePortalAuth()
   const showToast = usePortalToast()
@@ -131,7 +138,7 @@ export default function MeusEnderecos() {
   const handleEditar = (end) => {
     setEditando(end.id)
     setErros({})
-    setForm({ ...end })
+    setForm({ ...end, cpf: maskCpf(end.cpf) })
     setShowModal(true)
   }
 
@@ -164,6 +171,7 @@ export default function MeusEnderecos() {
         apelido: form.apelido?.trim() || null,
         destinatario: form.destinatario.trim(),
         telefone: form.telefone.trim(),
+        cpf: form.cpf.replace(/\D/g, ''),
         cep: form.cep.trim(),
         rua: form.rua.trim(),
         numero: form.numero.trim(),
@@ -533,12 +541,8 @@ export default function MeusEnderecos() {
                   type="text"
                   value={form.cpf}
                   onChange={e => {
-                    const cleaned = e.target.value.replace(/\D/g, '')
-                    const masked = cleaned.length <= 11
-                      ? cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-                      : cleaned.substring(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-                    setForm(p => ({ ...p, cpf: masked }))
-                    if (erros.cpf) setErros(e => ({ ...e, cpf: false }))
+                    setForm(p => ({ ...p, cpf: maskCpf(e.target.value) }))
+                    if (erros.cpf) setErros(x => ({ ...x, cpf: false }))
                   }}
                   placeholder="000.000.000-00"
                   inputMode="numeric"
