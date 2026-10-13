@@ -88,7 +88,7 @@ function Campo({ label, children }) {
   )
 }
 
-function FreqRadios({ value, onChange, name, className }) {
+function FreqRadios({ value, onChange, name }) {
   const opts = [
     { v:'unica', l:'1x', title:'Uma parcela' },
     { v:'sem',   l:'7d', title:'Semanal — 4 parcelas' },
@@ -96,7 +96,7 @@ function FreqRadios({ value, onChange, name, className }) {
     { v:'mensal',l:'30d', title:'Mensal — 12 parcelas' },
   ]
   return (
-    <div className={className} style={{ display:'flex', gap:6, alignItems:'center', background:'rgba(0,0,0,0.15)', padding:'4px 8px', borderRadius:6, border:'1px solid var(--border-light)' }}>
+    <div style={{ display:'flex', gap:6, alignItems:'center', background:'rgba(0,0,0,0.15)', padding:'4px 8px', borderRadius:6, border:'1px solid var(--border-light)' }}>
       {opts.map(o => (
         <label key={o.v} title={o.title} style={{ display:'flex', alignItems:'center', gap:3, fontSize:12, fontWeight:700, color:'var(--text-body)', cursor:'pointer', whiteSpace:'nowrap' }}>
           <input type="radio" name={name} value={o.v} checked={value===o.v} onChange={() => onChange(o.v)} style={{ margin:0, width:12, height:12, cursor:'pointer' }} />
@@ -422,7 +422,7 @@ export default function ContasPagarPage() {
         <div className="cp-barra-acoes">
           <button onClick={carregar} style={{ ...S.btn, padding:'5px 14px' }}>Filtrar</button>
           <button onClick={() => { setForm(FORM_VAZIO); setFreqNova('unica'); setModalNova(true) }}
-            style={{ ...S.ok, padding:'5px 14px' }}>+ Avançado</button>
+            style={{ ...S.ok, padding:'5px 14px' }}>+ Novo</button>
           <div className="cp-abas">
             {[['lancamentos','Lançamentos'],['relatorios','Relatórios']].map(([id, label]) => (
               <button key={id} onClick={() => setAba(id)} style={{
@@ -477,7 +477,7 @@ export default function ContasPagarPage() {
           <input type="checkbox" checked={qa.pago} onChange={e => setQa(p=>({...p,pago:e.target.checked}))}
             style={{ width:13, height:13 }} /> Pago
         </label>
-        <FreqRadios value={qaFreq} onChange={setQaFreq} name="qa_freq" className="cp-qa-freq" />
+        <FreqRadios value={qaFreq} onChange={setQaFreq} name="qa_freq" />
         <button onClick={salvarQA} disabled={salvando} style={{ ...S.ok, padding:'5px 12px', whiteSpace:'nowrap' }}>
           {salvando ? '…' : 'Inserir'}
         </button>

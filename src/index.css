@@ -1914,32 +1914,22 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .cp-abas { flex: 2; gap: 3px; padding: 3px; overflow: visible; }
   .cp-abas button { padding: 8px 4px !important; font-size: 11px !important; }
 
+  /* Datas: o Safari iOS dá ao input[type=date] uma largura intrínseca maior
+     que a coluna ("31 de out. de 2026"), então os campos se sobrepunham.
+     Fonte/padding menores fazem caber; overflow corta em vez de invadir. */
+  .cp-f { overflow: hidden; }
+  .cp-filtros input[type="date"] {
+    font-size: 12px !important;
+    padding: 7px 6px !important;
+    max-width: 100%;
+  }
+
   /* Cards de valores centralizados ocupando a largura toda */
   .cp-resumo { padding: 10px 12px; }
   .cp-card { flex: 1; min-width: 0; text-align: center; padding: 10px 8px; }
 
-  /* Quick Add: descrição+categoria / tipo+valor / data+pago / repetição+inserir */
-  .cp-qa {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px !important;
-    padding: 10px 12px !important;
-  }
-  .cp-qa > input,
-  .cp-qa > select {
-    width: 100% !important;
-    min-width: 0 !important;
-    height: 38px;
-  }
-  .cp-qa > label {
-    height: 38px;
-    justify-content: center;
-    border: 1px solid var(--input-border);
-    border-radius: 6px;
-    background: var(--input-bg);
-  }
-  .cp-qa > button { height: 38px; }
-  .cp-qa-freq { height: 38px; justify-content: center; }
+  /* Quick Add escondido: no celular o lançamento é feito pelo botão "+ Novo" */
+  .cp-qa { display: none !important; }
 
   /* Lançamentos: toque na linha abre o modal de ações */
   .cp-row-acoes { display: none !important; }
