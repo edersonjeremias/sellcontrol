@@ -13,6 +13,8 @@ export default function CuponsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [detalhe, setDetalhe] = useState(null)
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
 
   // Form
   const [codigo, setCodigo] = useState('')
@@ -28,6 +30,12 @@ export default function CuponsPage() {
   useEffect(() => {
     carregar()
   }, [tenantId])
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   async function carregar() {
     if (!tenantId) return
@@ -56,6 +64,7 @@ export default function CuponsPage() {
   }
 
   function editarCupom(cupom) {
+    setDetalhe(null)
     setEditando(cupom)
     setCodigo(cupom.codigo)
     setPercentual(cupom.percentual)
@@ -127,6 +136,7 @@ export default function CuponsPage() {
     try {
       await excluirCupom(cupom.id)
       showToast('Cupom excluído!', 'success')
+      setDetalhe(null)
       carregar()
     } catch (err) {
       showToast('Erro ao excluir: ' + err.message, 'error')
@@ -143,21 +153,30 @@ export default function CuponsPage() {
     }
   }
 
+  function periodo(cupom) {
+    const hora = h => (h ? ` ${String(h).slice(0, 5)}` : '')
+    const ini = cupom.data_inicio.split('-').reverse().join('/') + hora(cupom.hora_inicio)
+    const fim = cupom.data_fim.split('-').reverse().join('/') + hora(cupom.hora_fim)
+    return `${ini} até ${fim}`
+  }
+
+  const cupomDetalhe = detalhe ? cupons.find(c => c.id === detalhe) : null
+
   return (
     <AppShell title="Cupons de Desconto">
       <div style={{ padding: 16, maxWidth: 1200, margin: '0 auto' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 20, color: 'var(--text-header)' }}>
+          <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 20, color: 'var(--text-header)' }}>
             🎟️ Cupons de Desconto
           </h2>
           <button
             onClick={novoCupom}
             className="btn-acao btn-blue"
             style={{
-              padding: '8px 16px',
-              fontSize: 14,
+              padding: isMobile ? '8px 12px' : '8px 16px',
+              fontSize: isMobile ? 13 : 14,
               width: 'auto',
               flex: 'none',
               minWidth: 'auto',
@@ -187,34 +206,34 @@ export default function CuponsPage() {
               const status = statusCupom(cupom)
 
               return (
-                <div key={cupom.id} style={{
-                  background: 'var(--card-bg)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: 8,
-                  padding: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  opacity: cupom.ativo ? 1 : 0.5,
-                }}>
+                <div
+                  key={cupom.id}
+                  onClick={() => { if (isMobile) setDetalhe(cupom.id) }}
+                  style={{
+                    background: 'var(--card-bg)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 8,
+                    padding: isMobile ? 12 : 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: isMobile ? 10 : 16,
+                    opacity: cupom.ativo ? 1 : 0.5,
+                    cursor: isMobile ? 'pointer' : 'default',
+                  }}>
 
                   {/* Código */}
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: 20,
+                      fontSize: isMobile ? 16 : 20,
                       fontWeight: 700,
                       color: 'var(--blue)',
                       fontFamily: 'monospace',
-                      letterSpacing: 2,
+                      letterSpacing: isMobile ? 1 : 2,
                     }}>
                       {cupom.codigo}
                     </div>
-                    <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
-                      {cupom.data_inicio.split('-').reverse().join('/')}
-                      {cupom.hora_inicio && ` ${String(cupom.hora_inicio).slice(0, 5)}`}
-                      {' até '}
-                      {cupom.data_fim.split('-').reverse().join('/')}
-                      {cupom.hora_fim && ` ${String(cupom.hora_fim).slice(0, 5)}`}
+                    <div style={{ fontSize: isMobile ? 11 : 13, color: 'var(--muted)', marginTop: 4 }}>
+                      {periodo(cupom)}
                     </div>
                     {cupom.limite_usos && (
                       <div style={{
@@ -231,7 +250,7 @@ export default function CuponsPage() {
 
                   {/* Desconto */}
                   <div style={{
-                    fontSize: 24,
+                    fontSize: isMobile ? 18 : 24,
                     fontWeight: 800,
                     color: 'var(--green)',
                   }}>
@@ -302,45 +321,143 @@ export default function CuponsPage() {
                     )}
                   </div>
 
-                  {/* Ações */}
-                  <div style={{ display: 'flex', gap: 6 }}>
-                    <button
-                      onClick={() => toggleAtivo(cupom)}
-                      className="btn-acao"
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: 12,
-                        background: cupom.ativo ? 'rgba(242,139,130,0.1)' : 'rgba(129,201,149,0.1)',
-                        color: cupom.ativo ? 'var(--red)' : 'var(--green)',
-                        border: `1px solid ${cupom.ativo ? 'var(--red)' : 'var(--green)'}`,
-                      }}
-                    >
-                      {cupom.ativo ? 'Desativar' : 'Ativar'}
-                    </button>
-                    <button
-                      onClick={() => editarCupom(cupom)}
-                      className="btn-acao"
-                      style={{ padding: '6px 12px', fontSize: 12 }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleExcluir(cupom)}
-                      className="btn-acao"
-                      style={{
-                        padding: '6px 12px',
-                        fontSize: 12,
-                        background: 'rgba(242,139,130,0.1)',
-                        color: 'var(--red)',
-                        border: '1px solid var(--red)',
-                      }}
-                    >
-                      Excluir
-                    </button>
-                  </div>
+                  {/* Ações — no mobile ficam no modal de detalhes */}
+                  {!isMobile && (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={() => toggleAtivo(cupom)}
+                        className="btn-acao"
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          background: cupom.ativo ? 'rgba(242,139,130,0.1)' : 'rgba(129,201,149,0.1)',
+                          color: cupom.ativo ? 'var(--red)' : 'var(--green)',
+                          border: `1px solid ${cupom.ativo ? 'var(--red)' : 'var(--green)'}`,
+                        }}
+                      >
+                        {cupom.ativo ? 'Desativar' : 'Ativar'}
+                      </button>
+                      <button
+                        onClick={() => editarCupom(cupom)}
+                        className="btn-acao"
+                        style={{ padding: '6px 12px', fontSize: 12 }}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleExcluir(cupom)}
+                        className="btn-acao"
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          background: 'rgba(242,139,130,0.1)',
+                          color: 'var(--red)',
+                          border: '1px solid var(--red)',
+                        }}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Modal Detalhes (mobile) */}
+        {cupomDetalhe && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }} onClick={e => e.target === e.currentTarget && setDetalhe(null)}>
+            <div style={{
+              background: 'var(--card-bg)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 12,
+              padding: 20,
+              width: '100%',
+              maxWidth: 400,
+            }}>
+              <div style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: 'var(--blue)',
+                fontFamily: 'monospace',
+                letterSpacing: 2,
+                textAlign: 'center',
+              }}>
+                {cupomDetalhe.codigo}
+              </div>
+
+              <div style={{
+                fontSize: 32,
+                fontWeight: 800,
+                color: 'var(--green)',
+                textAlign: 'center',
+                margin: '8px 0 16px',
+              }}>
+                {cupomDetalhe.percentual}%
+              </div>
+
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
+                📅 {periodo(cupomDetalhe)}
+              </div>
+
+              {cupomDetalhe.limite_usos && (
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginBottom: 6,
+                  color: (cupomDetalhe.usos_realizados >= cupomDetalhe.limite_usos) ? 'var(--red)' : 'var(--blue)',
+                }}>
+                  🔢 Usado {cupomDetalhe.usos_realizados || 0}/{cupomDetalhe.limite_usos} vezes
+                </div>
+              )}
+
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>
+                Status: <b style={{ color: 'var(--text-body)' }}>
+                  {!cupomDetalhe.ativo ? 'INATIVO' : statusCupom(cupomDetalhe)}
+                </b>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  onClick={() => toggleAtivo(cupomDetalhe)}
+                  className="btn-acao"
+                  style={{
+                    background: cupomDetalhe.ativo ? 'rgba(242,139,130,0.1)' : 'rgba(129,201,149,0.1)',
+                    color: cupomDetalhe.ativo ? 'var(--red)' : 'var(--green)',
+                    border: `1px solid ${cupomDetalhe.ativo ? 'var(--red)' : 'var(--green)'}`,
+                  }}
+                >
+                  {cupomDetalhe.ativo ? 'Desativar' : 'Ativar'}
+                </button>
+                <button onClick={() => editarCupom(cupomDetalhe)} className="btn-acao">
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleExcluir(cupomDetalhe)}
+                  className="btn-acao"
+                  style={{
+                    background: 'rgba(242,139,130,0.1)',
+                    color: 'var(--red)',
+                    border: '1px solid var(--red)',
+                  }}
+                >
+                  Excluir
+                </button>
+                <button onClick={() => setDetalhe(null)} className="btn-acao" style={{ marginTop: 4 }}>
+                  Fechar
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
