@@ -590,6 +590,8 @@ function AbaImportarBling({ showToast }) {
   const [tenants, setTenants] = useState([])
   const [tenantId, setTenantId] = useState('')
   const [preview, setPreview] = useState([])
+  const [analise, setAnalise] = useState(null)
+  const [analisando, setAnalisando] = useState(false)
   const [importing, setImporting] = useState(false)
   const [progresso, setProgresso] = useState(null)
   const [errosDetalhados, setErrosDetalhados] = useState([])
@@ -622,195 +624,251 @@ function AbaImportarBling({ showToast }) {
     })
   }
 
-  // Limpar CPF/CNPJ
-  function limparDocumento(doc) {
-    return (doc || '').replace(/[^\d]/g, '')
+  const limparDocumento = doc => (doc || '').replace(/[^\d]/g, '')
+  const limparTelefone  = tel => (tel || '').replace(/[^\d]/g, '')
+
+  // Handle de Instagram: sem espaços, só letras/números/ponto/underscore
+  function pareceHandle(txt) {
+    const bruto = (txt || '').trim()
+    if (!bruto || /\s/.test(bruto)) return false
+    const h = bruto.toLowerCase().replace(/^@+/, '')
+    return h.length >= 3 && /^[a-z0-9._]+$/.test(h)
   }
 
-  // Limpar telefone
-  function limparTelefone(tel) {
-    return (tel || '').replace(/[^\d]/g, '')
+  const normalizarHandle = txt =>
+    (txt || '').trim().toLowerCase().replace(/^@+/, '').replace(/\s+/g, '')
+
+  // O Bling corta a coluna "Código" em 15 caracteres, então ela é a última opção:
+  // o handle inteiro costuma estar entre parênteses no Nome, em Contatos ou em Fantasia.
+  function extrairInstagram(row) {
+    const nome = (row.Nome || '').trim()
+
+    const entreParenteses = [...nome.matchAll(/\(([^)]+)\)/g)].map(m => m[1]).reverse()
+    const doNome = entreParenteses.find(pareceHandle)
+    if (doNome) return normalizarHandle(doNome)
+
+    if (pareceHandle(row.Contatos)) return normalizarHandle(row.Contatos)
+    if (pareceHandle(row.Fantasia)) return normalizarHandle(row.Fantasia)
+
+    const codigo = row['Código'] || row.Codigo
+    if (pareceHandle(codigo)) return normalizarHandle(codigo)
+
+    return normalizarHandle(nome)
   }
+
+  // Linhas de controle interno do Bling que não são clientes
+  const NAO_CLIENTES = ['consumidor final', 'bling', 'das - documento', 'dctf web', 'contabil']
+
+  function ehCliente(row) {
+    const nome = (row.Nome || '').trim().toLowerCase()
+    if (!nome) return false
+    if (NAO_CLIENTES.some(termo => nome.includes(termo))) return false
+
+    // "Tipo contato" vazio entra; preenchido só entra se incluir "Cliente"
+    const tipo = (row['Tipo contato'] || '').trim().toLowerCase()
+    return !tipo || tipo.includes('cliente')
+  }
+
+  function dataBrParaISO(str) {
+    const m = (str || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : null
+  }
+
+  function extrairDados(row) {
+    return {
+      nome:         (row.Nome || '').trim(),
+      instagram:    extrairInstagram(row),
+      cpfCnpj:      limparDocumento(row['CNPJ / CPF'] || row.CPF || row.CNPJ),
+      tipoPessoa:   row['Tipo pessoa'] === 'Pessoa Jurídica' ? 'juridica' : 'fisica',
+      whatsapp:     limparTelefone(row.Celular),
+      telefone:     limparTelefone(row.Fone || row.Telefone),
+      email:        (row['E-mail'] || row.Email || '').trim().toLowerCase(),
+      clienteDesde: dataBrParaISO(row['Cliente desde']),
+      cep:          limparDocumento(row.CEP),
+      rua:          (row['Endereço'] || row.Endereco || '').trim(),
+      numero:       (row['Número'] || row.Numero || '').trim(),
+      complemento:  (row.Complemento || '').trim(),
+      bairro:       (row.Bairro || '').trim(),
+      cidade:       (row.Cidade || '').trim(),
+      estado:       (row.UF || '').trim().toUpperCase(),
+    }
+  }
+
+  const temEnderecoValido = d =>
+    d.cep.length === 8 && !!d.rua && !!d.cidade && d.estado.length === 2
+
+  const pontuar = d =>
+    (temEnderecoValido(d) ? 10 : 0) + (d.whatsapp ? 4 : 0) +
+    (d.cpfCnpj ? 2 : 0) + (d.email ? 1 : 0) + (d.telefone ? 1 : 0)
+
+  // ── Confere o CSV contra o banco antes de importar ───────────
+  useEffect(() => {
+    if (!tenantId || preview.length === 0) { setAnalise(null); return }
+
+    let cancelado = false
+    setAnalisando(true)
+
+    ;(async () => {
+      const linhas = preview.map((row, i) => ({ linha: i + 2, row, dados: extrairDados(row) }))
+      const valida = l => ehCliente(l.row) && !!l.dados.nome && l.dados.instagram.length >= 3
+
+      const ignoradas = linhas.filter(l => !valida(l))
+
+      // Mesmo @instagram em várias linhas: fica só a mais completa
+      const porInstagram = new Map()
+      const duplicadas = []
+      linhas.filter(valida).forEach(item => {
+        const atual = porInstagram.get(item.dados.instagram)
+        if (!atual) { porInstagram.set(item.dados.instagram, item); return }
+        const vencedora = pontuar(item.dados) > pontuar(atual.dados) ? item : atual
+        porInstagram.set(item.dados.instagram, vencedora)
+        duplicadas.push(vencedora === item ? atual : item)
+      })
+      const unicas = [...porInstagram.values()]
+
+      const { data: existentes, error } = await supabase
+        .from('clientes')
+        .select('id, instagram, whatsapp')
+        .eq('tenant_id', tenantId)
+
+      if (cancelado) return
+      if (error) {
+        showToast('Erro ao conferir clientes existentes: ' + error.message, 'error')
+        setAnalisando(false)
+        return
+      }
+
+      const mapaInstagram = new Map((existentes || []).map(c => [c.instagram, c]))
+      const mapaWhatsapp  = new Map((existentes || []).filter(c => c.whatsapp).map(c => [c.whatsapp, c]))
+
+      unicas.forEach(l => {
+        l.existente = mapaInstagram.get(l.dados.instagram)
+          || (l.dados.whatsapp ? mapaWhatsapp.get(l.dados.whatsapp) : null)
+          || null
+      })
+
+      setAnalise({
+        unicas,
+        ignoradas,
+        duplicadas,
+        novos:       unicas.filter(l => !l.existente).length,
+        atualizados: unicas.filter(l => l.existente).length,
+        comEndereco: unicas.filter(l => temEnderecoValido(l.dados)).length,
+      })
+      setAnalisando(false)
+    })()
+
+    return () => { cancelado = true }
+  }, [tenantId, preview])
 
   // Executar importação
   async function executarImportacao() {
-    if (!tenantId) {
-      showToast('Selecione uma empresa de destino', 'error')
-      return
-    }
-
-    if (preview.length === 0) {
-      showToast('Nenhum dado para importar', 'error')
+    const fila = analise?.unicas || []
+    if (fila.length === 0) {
+      showToast('Nenhuma linha válida para importar', 'error')
       return
     }
 
     setImporting(true)
-    setProgresso({ total: preview.length, atual: 0, inseridos: 0, atualizados: 0, erros: 0, pulados: 0 })
+    setProgresso({ total: fila.length, atual: 0, inseridos: 0, atualizados: 0, erros: 0, pulados: 0 })
     setErrosDetalhados([])
 
     let inseridos = 0
     let atualizados = 0
     let erros = 0
-    let pulados = 0
     let enderecosInseridos = 0
     const listaErros = []
 
-    for (let i = 0; i < preview.length; i++) {
-      const row = preview[i]
-
-      // Extrair dados do CSV do Bling
-      const nome = (row.Nome || '').trim()
-      const fantasia = (row.Fantasia || '').trim()
-      const codigo = (row['Código'] || row.Codigo || '').trim().toLowerCase().replace(/[@\s]/g, '')
-      const cpfCnpj = limparDocumento(row['CNPJ / CPF'] || row.CPF || row.CNPJ)
-      const tipoPessoa = row['Tipo pessoa'] === 'Pessoa Jurídica' ? 'juridica' : 'fisica'
-      const whatsapp = limparTelefone(row.Celular || '')
-      const telefone = limparTelefone(row.Fone || row.Telefone || '')
-      const email = (row['E-mail'] || row.Email || '').trim().toLowerCase()
-
-      // Endereço
-      const cep = limparDocumento(row.CEP || '')
-      const rua = (row['Endereço'] || row.Endereco || '').trim()
-      const numero = (row['Número'] || row.Numero || '').trim()
-      const complemento = (row.Complemento || '').trim()
-      const bairro = (row.Bairro || '').trim()
-      const cidade = (row.Cidade || '').trim()
-      const estado = (row.UF || '').trim().toUpperCase()
-
-      // Instagram será o código ou nome como fallback (SEM @, apenas limpo)
-      let instagram = codigo || nome.toLowerCase().replace(/\s+/g, '')
-
-      if (!instagram || !nome) {
-        pulados++
-        listaErros.push({
-          linha: i + 2,
-          instagram: instagram || '(vazio)',
-          erro: 'Instagram/Nome vazio',
-          tipo: 'pulado'
-        })
-        setProgresso(p => ({ ...p, atual: i + 1, pulados }))
-        continue
-      }
+    for (let i = 0; i < fila.length; i++) {
+      const { linha, dados: d, existente } = fila[i]
+      // Se o cliente já existe, o @ do sistema manda — é o que as vendas usam
+      let instagram = existente?.instagram || d.instagram
 
       try {
-        // Verificar se cliente já existe (por instagram OU whatsapp)
-        let existente = null
-
-        // Primeiro busca por instagram
-        const { data: porInstagram } = await supabase
-          .from('clientes')
-          .select('id, instagram')
-          .eq('tenant_id', tenantId)
-          .eq('instagram', instagram)
-          .maybeSingle()
-
-        if (porInstagram) {
-          existente = porInstagram
-        } else if (whatsapp) {
-          // Se não encontrou por instagram, busca por whatsapp (evita duplicata)
-          const { data: porWhatsapp } = await supabase
-            .from('clientes')
-            .select('id, instagram')
-            .eq('tenant_id', tenantId)
-            .eq('whatsapp', whatsapp)
-            .maybeSingle()
-
-          if (porWhatsapp) {
-            existente = porWhatsapp
-            // Se encontrou por whatsapp mas com instagram diferente, atualiza o instagram
-            if (porWhatsapp.instagram !== instagram) {
-              instagram = porWhatsapp.instagram
-            }
-          }
-        }
-
-        const clienteData = {
-          tenant_id: tenantId,
-          instagram,
-          whatsapp,
-          telefone,
-          email,
-          nome_completo: nome,
-          cpf_cnpj: cpfCnpj,
-          tipo_pessoa: tipoPessoa,
-          data_cadastro: new Date().toISOString().split('T')[0],
-          bloqueado: false,
-          msg_bloqueio: '',
-        }
-
-        let clienteId
+        // Só grava campo que veio preenchido no CSV: nunca apaga o que já existe.
+        // bloqueado, msg_bloqueio e data_cadastro ficam intactos de propósito.
+        const campos = {}
+        Object.entries({
+          whatsapp:      d.whatsapp,
+          telefone:      d.telefone,
+          email:         d.email,
+          nome_completo: d.nome,
+          cpf_cnpj:      d.cpfCnpj,
+          tipo_pessoa:   d.tipoPessoa,
+        }).forEach(([k, v]) => { if (v) campos[k] = v })
 
         if (existente) {
-          // Atualizar cliente existente
-          const { error } = await supabase
-            .from('clientes')
-            .update(clienteData)
-            .eq('id', existente.id)
-          if (error) throw error
-          clienteId = existente.id
+          if (Object.keys(campos).length > 0) {
+            const { error } = await supabase
+              .from('clientes')
+              .update(campos)
+              .eq('id', existente.id)
+            if (error) throw error
+          }
           atualizados++
         } else {
-          // Inserir novo cliente
-          const { data: novoCliente, error } = await supabase
+          const { error } = await supabase
             .from('clientes')
-            .insert(clienteData)
-            .select('id')
-            .single()
+            .insert({
+              ...campos,
+              tenant_id: tenantId,
+              instagram,
+              data_cadastro: d.clienteDesde || new Date().toISOString().split('T')[0],
+            })
           if (error) throw error
-          clienteId = novoCliente.id
           inseridos++
         }
 
-        // Criar endereço se tiver CEP
-        if (cep && rua && numero && cidade && estado) {
-          // Verificar se já existe endereço para este cliente
-          const { data: enderecoExistente } = await supabase
+        if (temEnderecoValido(d)) {
+          const { data: enderecos } = await supabase
             .from('enderecos_clientes')
-            .select('id')
+            .select('id, cep, numero')
             .eq('tenant_id', tenantId)
             .eq('cliente_instagram', instagram)
-            .maybeSingle()
 
           const enderecoData = {
             tenant_id: tenantId,
             cliente_instagram: instagram,
-            apelido: fantasia || 'Principal',
-            destinatario: nome,
-            telefone: whatsapp || telefone || '(00) 00000-0000',
-            cep,
-            rua,
-            numero,
-            complemento,
-            bairro,
-            cidade,
-            estado,
-            padrao: true,
+            apelido: 'Bling',
+            destinatario: d.nome,
+            telefone: d.whatsapp || d.telefone || '',
+            cep: d.cep,
+            rua: d.rua,
+            numero: d.numero || 's/n',
+            complemento: d.complemento,
+            bairro: d.bairro,
+            cidade: d.cidade,
+            estado: d.estado,
           }
 
-          if (enderecoExistente) {
-            // Atualizar endereço existente
-            await supabase
+          const mesmoLocal = (enderecos || []).find(
+            e => limparDocumento(e.cep) === d.cep && (e.numero || '').trim() === enderecoData.numero
+          )
+
+          if (mesmoLocal) {
+            const { error } = await supabase
               .from('enderecos_clientes')
               .update(enderecoData)
-              .eq('id', enderecoExistente.id)
+              .eq('id', mesmoLocal.id)
+            if (error) throw error
           } else {
-            // Inserir novo endereço
-            const { error: endError } = await supabase
+            // Vira padrão só se o cliente ainda não tem endereço nenhum —
+            // nunca sobrescreve o que ele mesmo escolheu no portal
+            const { error } = await supabase
               .from('enderecos_clientes')
-              .insert(enderecoData)
-            if (endError) throw endError
+              .insert({ ...enderecoData, padrao: (enderecos || []).length === 0 })
+            if (error) throw error
             enderecosInseridos++
           }
         }
 
         setProgresso(p => ({ ...p, atual: i + 1, inseridos, atualizados }))
-        await new Promise(resolve => setTimeout(resolve, 100)) // delay para não sobrecarregar
 
       } catch (err) {
-        console.error(`Erro linha ${i + 2}:`, err)
+        console.error(`Erro linha ${linha}:`, err)
         erros++
         listaErros.push({
-          linha: i + 2,
+          linha,
           instagram,
           erro: err.message || 'Erro desconhecido',
           detalhes: err.details || err.hint || '',
@@ -823,25 +881,11 @@ function AbaImportarBling({ showToast }) {
     setErrosDetalhados(listaErros)
     setImporting(false)
 
-    if (erros > 0) {
-      showToast(
-        `⚠️ Importação concluída com erros!\n${inseridos} clientes novos, ${atualizados} atualizados, ${enderecosInseridos} endereços criados\n${pulados} pulados, ${erros} erros`,
-        'error'
-      )
-    } else {
-      showToast(
-        `✅ Importação concluída!\n${inseridos} clientes novos, ${atualizados} atualizados\n${enderecosInseridos} endereços criados, ${pulados} pulados`,
-        'success'
-      )
-    }
-
-    if (erros === 0 && pulados === 0) {
-      setTimeout(() => {
-        setPreview([])
-        setProgresso(null)
-        if (fileInputRef.current) fileInputRef.current.value = ''
-      }, 3000)
-    }
+    const resumo = `${inseridos} clientes novos, ${atualizados} atualizados, ${enderecosInseridos} endereços criados`
+    showToast(
+      erros > 0 ? `Importação concluída com ${erros} erro(s). ${resumo}` : `Importação concluída! ${resumo}`,
+      erros > 0 ? 'error' : 'success'
+    )
   }
 
   const nomeEmpresa = tenants.find(t => t.tenant_id === tenantId)?.nome_loja || ''
@@ -859,10 +903,11 @@ function AbaImportarBling({ showToast }) {
           📦 Importação de Clientes do Bling
         </h3>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-body)', lineHeight: 1.6 }}>
-          Esta importação cria automaticamente:
-          <br/>• <strong>Cliente completo</strong> com nome, CPF/CNPJ, email, telefone
-          <br/>• <strong>Endereço padrão</strong> que aparece no portal e na cotação de frete
-          <br/>• Dados unificados entre portal do cliente e área administrativa
+          A partir do CSV de contatos do Bling:
+          <br/>• Cria ou completa o <strong>cadastro do cliente</strong> (nome, CPF/CNPJ, e-mail, telefone)
+          <br/>• Cria o <strong>endereço</strong> que aparece no portal e na cotação de frete
+          <br/>• <strong>Nunca apaga</strong> dado que já existe: campo vazio no CSV é ignorado
+          <br/>• Linhas repetidas e contatos que não são clientes ficam de fora
         </p>
       </div>
 
@@ -903,16 +948,27 @@ function AbaImportarBling({ showToast }) {
         </p>
       </div>
 
+      {preview.length > 0 && !tenantId && (
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
+          Selecione a empresa acima para conferir o arquivo contra os clientes já cadastrados.
+        </p>
+      )}
+
+      {analisando && (
+        <p style={{ fontSize: 13, color: 'var(--blue)', marginBottom: 24 }}>Conferindo com o banco…</p>
+      )}
+
       {/* Preview */}
-      {preview.length > 0 && (
+      {analise && (
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-body)', margin: 0 }}>
-              Preview ({preview.length} clientes)
+              Conferência do arquivo ({preview.length} linhas)
             </h3>
             <button
               onClick={() => {
                 setPreview([])
+                setAnalise(null)
                 if (fileInputRef.current) fileInputRef.current.value = ''
               }}
               style={{
@@ -924,6 +980,41 @@ function AbaImportarBling({ showToast }) {
           </div>
 
           <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12,
+            padding: 16, marginBottom: 12, fontSize: 12,
+            background: 'var(--input-bg)', border: '1px solid var(--border-light)', borderRadius: 8,
+          }}>
+            <div>
+              <div style={{ color: 'var(--muted)' }}>Clientes novos</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--green)' }}>{analise.novos}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--muted)' }}>Já existem</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--blue)' }}>{analise.atualizados}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--muted)' }}>Com endereço</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-body)' }}>{analise.comEndereco}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--muted)' }}>Repetidas no CSV</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--muted)' }}>{analise.duplicadas.length}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--muted)' }}>Ignoradas</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--muted)' }}>{analise.ignoradas.length}</div>
+            </div>
+          </div>
+
+          <div style={{
+            padding: '10px 14px', marginBottom: 12, borderRadius: 8, fontSize: 12, lineHeight: 1.6,
+            background: 'rgba(34,197,94,.08)', border: '1px solid var(--green)', color: 'var(--text-body)',
+          }}>
+            Campo vazio no CSV não sobrescreve o que já está no sistema — WhatsApp, bloqueios e data
+            de cadastro dos clientes existentes são preservados.
+          </div>
+
+          <div style={{
             maxHeight: 400, overflowY: 'auto',
             border: '1px solid var(--border-light)', borderRadius: 8,
             background: 'var(--input-bg)'
@@ -931,64 +1022,79 @@ function AbaImportarBling({ showToast }) {
             <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
               <thead style={{ position: 'sticky', top: 0, background: '#1a2230', borderBottom: '1px solid var(--border-light)' }}>
                 <tr>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Ação</th>
                   <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Nome</th>
                   <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Instagram</th>
-                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>CPF/CNPJ</th>
+                  <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>WhatsApp</th>
                   <th style={{ padding: '8px 10px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Cidade</th>
                   <th style={{ padding: '8px 10px', textAlign: 'center', color: 'var(--muted)', fontWeight: 600 }}>Endereço</th>
                 </tr>
               </thead>
               <tbody>
-                {preview.slice(0, 50).map((row, i) => {
-                  const nome = (row.Nome || '').trim()
-                  const codigo = (row['Código'] || row.Codigo || '').trim()
-                  const cpfCnpj = row['CNPJ / CPF'] || row.CPF || row.CNPJ || ''
-                  const cidade = row.Cidade || ''
-                  const cep = row.CEP || ''
-                  const temEndereco = !!(cep && cidade)
-
-                  return (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td style={{ padding: '6px 10px', color: 'var(--text-body)', fontWeight: 600 }}>
-                        {nome || <span style={{ color: 'var(--red)' }}>❌ vazio</span>}
-                      </td>
-                      <td style={{ padding: '6px 10px', color: 'var(--blue)' }}>
-                        @{codigo || nome.toLowerCase().replace(/\s+/g, '')}
-                      </td>
-                      <td style={{ padding: '6px 10px', color: 'var(--muted)', fontSize: 11 }}>
-                        {cpfCnpj || '-'}
-                      </td>
-                      <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>
-                        {cidade || '-'}
-                      </td>
-                      <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                        {temEndereco ? (
-                          <span style={{ color: 'var(--green)', fontSize: 16 }}>✓</span>
-                        ) : (
-                          <span style={{ color: 'var(--muted)', fontSize: 11 }}>-</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
+                {analise.unicas.slice(0, 80).map(({ linha, dados, existente }) => (
+                  <tr key={linha} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '6px 10px' }}>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700,
+                        background: existente ? 'rgba(59,130,246,.15)' : 'rgba(34,197,94,.15)',
+                        color: existente ? 'var(--blue)' : 'var(--green)',
+                      }}>
+                        {existente ? 'ATUALIZA' : 'NOVO'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '6px 10px', color: 'var(--text-body)', fontWeight: 600 }}>{dados.nome}</td>
+                    <td style={{ padding: '6px 10px', color: 'var(--blue)' }}>
+                      @{existente?.instagram || dados.instagram}
+                    </td>
+                    <td style={{ padding: '6px 10px', color: 'var(--muted)', fontSize: 11 }}>
+                      {dados.whatsapp || (existente ? 'mantém o atual' : '—')}
+                    </td>
+                    <td style={{ padding: '6px 10px', color: 'var(--text-body)' }}>{dados.cidade || '—'}</td>
+                    <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                      {temEnderecoValido(dados)
+                        ? <span style={{ color: 'var(--green)', fontSize: 16 }}>✓</span>
+                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          {preview.length > 50 && (
+          {analise.unicas.length > 80 && (
             <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-              Mostrando 50 de {preview.length} clientes
+              Mostrando 80 de {analise.unicas.length} linhas
             </p>
+          )}
+
+          {(analise.ignoradas.length > 0 || analise.duplicadas.length > 0) && (
+            <details style={{ marginTop: 12 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)' }}>
+                Ver as {analise.ignoradas.length + analise.duplicadas.length} linhas que não serão importadas
+              </summary>
+              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.8 }}>
+                {analise.ignoradas.map(l => (
+                  <div key={`i${l.linha}`}>
+                    Linha {l.linha}: <strong>{l.dados.nome || '(sem nome)'}</strong> — não é cliente ou está sem identificação
+                  </div>
+                ))}
+                {analise.duplicadas.map(l => (
+                  <div key={`d${l.linha}`}>
+                    Linha {l.linha}: <strong>{l.dados.nome}</strong> — @{l.dados.instagram} repetido, fica a linha mais completa
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
         </div>
       )}
 
       {/* Botão importar */}
-      {preview.length > 0 && (
+      {analise && (
         <div>
           {!progresso && (
             <button
               onClick={executarImportacao}
-              disabled={importing || !tenantId}
+              disabled={importing || analise.unicas.length === 0}
               className="btn-acao"
               style={{
                 width: '100%', minHeight: 48, fontSize: 15, fontWeight: 700,
@@ -996,7 +1102,7 @@ function AbaImportarBling({ showToast }) {
               }}>
               {importing
                 ? 'Importando...'
-                : `Importar ${preview.length} clientes para ${nomeEmpresa || 'empresa selecionada'}`}
+                : `Importar ${analise.unicas.length} clientes para ${nomeEmpresa || 'empresa selecionada'}`}
             </button>
           )}
 

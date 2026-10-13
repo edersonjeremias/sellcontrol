@@ -47,7 +47,15 @@
       "PowerShell(git add src/pages/MasterEmpresasPage.jsx)",
       "PowerShell(git add src/pages/vendas/VendasPage.jsx src/components/vendas/TabelaRow.jsx)",
       "PowerShell(git commit --allow-empty -m \"chore: trigger redeploy - fix build cache\")",
-      "PowerShell(git push origin main --force-with-lease)"
+      "PowerShell(git push origin main --force-with-lease)",
+      "PowerShell(git commit --allow-empty -m \"chore: force redeploy - contador total\")",
+      "PowerShell(git add src/pages/clientes/ClientesPage.jsx src/components/vendas/ModalCadastro.jsx)",
+      "PowerShell(git add src/pages/clientes/ClientesPage.jsx src/services/clientesService.js)",
+      "PowerShell(git commit -m \"feat: adiciona coluna Ultima Compra na busca avancada de clientes\" -m \"Mostra a data da ultima compra de cada cliente para identificar clientes inativos e facilitar acoes de remarketing.\" -m \"- Nova funcao getUltimasCompras\\(\\) busca ultima data de venda por cliente\" -m \"- Coluna ordenavel Ultima Compra adicionada na tabela\" -m \"- Exibe Nunca para clientes sem compras\" -m \"- Data formatada em DD/MM/AAAA\" -m \"Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\")",
+      "PowerShell(npm run build 2>$null)",
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(git add src/index.css src/pages/relatorio/ContasPagarPage.jsx)",
+      "Read(//c/Users/EDERSON/Downloads/**)"
     ],
     "additionalDirectories": [
       "\\tmp"

@@ -9,7 +9,13 @@ import {
 } from '../../services/relatorioService'
 
 // ── Helpers ────────────────────────────────────────────────────
-const HOJE = new Date().toISOString().slice(0, 10)
+// yyyy-mm-dd no fuso local. toISOString() converte para UTC e, como o Brasil
+// fica atrás dele, à noite devolvia o dia seguinte.
+function isoLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+const HOJE = isoLocal(new Date())
 
 function primeiroDiaMes() {
   const d = new Date()
@@ -45,7 +51,7 @@ function gerarDatas(venc, freq, parcelas) {
     if (freq === 'mensal')    d.setMonth(d.getMonth() + i)
     else if (freq === 'quin') d.setDate(d.getDate() + 15 * i)
     else if (freq === 'sem')  d.setDate(d.getDate() + 7 * i)
-    return d.toISOString().slice(0, 10)
+    return isoLocal(d)
   })
 }
 
