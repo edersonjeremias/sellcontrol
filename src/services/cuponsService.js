@@ -62,6 +62,25 @@ export async function excluirCupom(id) {
   if (error) throw error
 }
 
+// ── Status do cupom (VIGENTE | FUTURO | EXPIRADO | ESGOTADO) ──
+// O Postgres devolve TIME como "HH:MM:SS"; o slice garante "HH:MM" ao montar o timestamp.
+function hhmm(hora, padrao) {
+  return hora ? String(hora).slice(0, 5) : padrao
+}
+
+export function statusCupom(cupom) {
+  const agora = new Date()
+  const inicio = new Date(`${cupom.data_inicio}T${hhmm(cupom.hora_inicio, '00:00')}:00-03:00`)
+  const fim = new Date(`${cupom.data_fim}T${hhmm(cupom.hora_fim, '23:59')}:59-03:00`)
+
+  const temLimite = cupom.limite_usos !== null && cupom.limite_usos !== undefined
+  if (temLimite && (cupom.usos_realizados || 0) >= cupom.limite_usos) return 'ESGOTADO'
+
+  if (agora < inicio) return 'FUTURO'
+  if (agora > fim) return 'EXPIRADO'
+  return 'VIGENTE'
+}
+
 // ── Validar cupom (usado no recibo) ──
 export async function validarCupom(tenantId, codigo) {
   const { data, error } = await supabase
@@ -79,33 +98,10 @@ export async function validarCupom(tenantId, codigo) {
     throw error
   }
 
-  // Verificar período de validade (horário de Brasília)
-  // Criar timestamp atual em Brasília
-  const agoraBrasilia = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
-
-  // Extrair data e hora atuais (formato YYYY-MM-DD e HH:MM)
-  const dataAtual = agoraBrasilia.toISOString().split('T')[0] // YYYY-MM-DD
-  const horaAtual = agoraBrasilia.toTimeString().substring(0, 5) // HH:MM
-
-  // Criar timestamps de início e fim considerando horários
-  const horaIni = data.hora_inicio || '00:00'
-  const horaFin = data.hora_fim || '23:59'
-
-  const timestampInicio = new Date(`${data.data_inicio}T${horaIni}:00-03:00`) // -03:00 = BRT
-  const timestampFim = new Date(`${data.data_fim}T${horaFin}:59-03:00`) // Fim do minuto
-
-  // Comparar timestamps (considera data + hora)
-  if (agoraBrasilia < timestampInicio || agoraBrasilia > timestampFim) {
-    throw new Error('Cupom expirado')
-  }
-
-  // Validar limite de usos
-  if (data.limite_usos !== null && data.limite_usos !== undefined) {
-    const usosRealizados = data.usos_realizados || 0
-    if (usosRealizados >= data.limite_usos) {
-      throw new Error('CUPONS ESGOTADO')
-    }
-  }
+  const status = statusCupom(data)
+  if (status === 'ESGOTADO') throw new Error('CUPOM ESGOTADO')
+  if (status === 'FUTURO') throw new Error('Cupom ainda não está válido')
+  if (status === 'EXPIRADO') throw new Error('Cupom expirado')
 
   return data
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
-import { getCupons, criarCupom, atualizarCupom, excluirCupom } from '../../services/cuponsService'
+import { getCupons, criarCupom, atualizarCupom, excluirCupom, statusCupom } from '../../services/cuponsService'
 
 export default function CuponsPage() {
   const { profile } = useAuth()
@@ -61,8 +61,8 @@ export default function CuponsPage() {
     setPercentual(cupom.percentual)
     setDataInicio(cupom.data_inicio)
     setDataFim(cupom.data_fim)
-    setHoraInicio(cupom.hora_inicio || '')
-    setHoraFim(cupom.hora_fim || '')
+    setHoraInicio(cupom.hora_inicio ? String(cupom.hora_inicio).slice(0, 5) : '')
+    setHoraFim(cupom.hora_fim ? String(cupom.hora_fim).slice(0, 5) : '')
     setLimiteUsos(cupom.limite_usos || '')
     setAtivo(cupom.ativo)
     setShowForm(true)
@@ -143,30 +143,6 @@ export default function CuponsPage() {
     }
   }
 
-  // Função para verificar se cupom está expirado (considera data + hora)
-  const cupomExpirado = (cupom) => {
-    // Timestamp atual em Brasília
-    const agoraBrasilia = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
-
-    // Criar timestamp de fim do cupom
-    const horaFin = cupom.hora_fim || '23:59'
-    const timestampFim = new Date(`${cupom.data_fim}T${horaFin}:59-03:00`)
-
-    return agoraBrasilia > timestampFim
-  }
-
-  // Função para verificar se cupom é futuro (considera data + hora)
-  const cupomFuturo = (cupom) => {
-    // Timestamp atual em Brasília
-    const agoraBrasilia = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }))
-
-    // Criar timestamp de início do cupom
-    const horaIni = cupom.hora_inicio || '00:00'
-    const timestampInicio = new Date(`${cupom.data_inicio}T${horaIni}:00-03:00`)
-
-    return agoraBrasilia < timestampInicio
-  }
-
   return (
     <AppShell title="Cupons de Desconto">
       <div style={{ padding: 16, maxWidth: 1200, margin: '0 auto' }}>
@@ -208,9 +184,7 @@ export default function CuponsPage() {
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {cupons.map(cupom => {
-              const expirado = cupomExpirado(cupom)
-              const futuro = cupomFuturo(cupom)
-              const vigente = !expirado && !futuro
+              const status = statusCupom(cupom)
 
               return (
                 <div key={cupom.id} style={{
@@ -237,10 +211,10 @@ export default function CuponsPage() {
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>
                       {cupom.data_inicio.split('-').reverse().join('/')}
-                      {cupom.hora_inicio && ` ${cupom.hora_inicio}`}
+                      {cupom.hora_inicio && ` ${String(cupom.hora_inicio).slice(0, 5)}`}
                       {' até '}
                       {cupom.data_fim.split('-').reverse().join('/')}
-                      {cupom.hora_fim && ` ${cupom.hora_fim}`}
+                      {cupom.hora_fim && ` ${String(cupom.hora_fim).slice(0, 5)}`}
                     </div>
                     {cupom.limite_usos && (
                       <div style={{
@@ -266,7 +240,7 @@ export default function CuponsPage() {
 
                   {/* Status */}
                   <div style={{ display: 'flex', gap: 6 }}>
-                    {vigente && cupom.ativo && (
+                    {status === 'VIGENTE' && cupom.ativo && (
                       <span style={{
                         padding: '4px 10px',
                         borderRadius: 12,
@@ -278,7 +252,19 @@ export default function CuponsPage() {
                         VIGENTE
                       </span>
                     )}
-                    {expirado && (
+                    {status === 'ESGOTADO' && (
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: 'rgba(242,139,130,0.15)',
+                        color: 'var(--red)',
+                      }}>
+                        ESGOTADO
+                      </span>
+                    )}
+                    {status === 'EXPIRADO' && (
                       <span style={{
                         padding: '4px 10px',
                         borderRadius: 12,
@@ -290,7 +276,7 @@ export default function CuponsPage() {
                         EXPIRADO
                       </span>
                     )}
-                    {futuro && (
+                    {status === 'FUTURO' && (
                       <span style={{
                         padding: '4px 10px',
                         borderRadius: 12,
