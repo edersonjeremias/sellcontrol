@@ -592,6 +592,7 @@ function AbaImportarBling({ showToast }) {
   const [preview, setPreview] = useState([])
   const [analise, setAnalise] = useState(null)
   const [analisando, setAnalisando] = useState(false)
+  const [soComWhatsapp, setSoComWhatsapp] = useState(true)
   const [importing, setImporting] = useState(false)
   const [progresso, setProgresso] = useState(null)
   const [errosDetalhados, setErrosDetalhados] = useState([])
@@ -747,19 +748,25 @@ function AbaImportarBling({ showToast }) {
           || null
       })
 
+      // Tem WhatsApp se veio no CSV ou se o cliente já tem um salvo no sistema
+      const temWhatsapp = l => !!l.dados.whatsapp || !!l.existente?.whatsapp
+      const semWhatsapp = soComWhatsapp ? unicas.filter(l => !temWhatsapp(l)) : []
+      const fila = soComWhatsapp ? unicas.filter(temWhatsapp) : unicas
+
       setAnalise({
-        unicas,
+        unicas: fila,
         ignoradas,
         duplicadas,
-        novos:       unicas.filter(l => !l.existente).length,
-        atualizados: unicas.filter(l => l.existente).length,
-        comEndereco: unicas.filter(l => temEnderecoValido(l.dados)).length,
+        semWhatsapp,
+        novos:       fila.filter(l => !l.existente).length,
+        atualizados: fila.filter(l => l.existente).length,
+        comEndereco: fila.filter(l => temEnderecoValido(l.dados)).length,
       })
       setAnalisando(false)
     })()
 
     return () => { cancelado = true }
-  }, [tenantId, preview])
+  }, [tenantId, preview, soComWhatsapp])
 
   // Executar importação
   async function executarImportacao() {
@@ -948,6 +955,28 @@ function AbaImportarBling({ showToast }) {
         </p>
       </div>
 
+      <label style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 24,
+        padding: '12px 14px', borderRadius: 8, cursor: 'pointer',
+        background: 'var(--input-bg)', border: '1px solid var(--border-light)',
+      }}>
+        <input
+          type="checkbox"
+          checked={soComWhatsapp}
+          onChange={e => setSoComWhatsapp(e.target.checked)}
+          disabled={importing}
+          style={{ accentColor: 'var(--blue)', width: 16, height: 16, cursor: 'pointer', marginTop: 1 }}
+        />
+        <span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-body)' }}>
+            Importar somente clientes com WhatsApp
+          </span>
+          <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+            Vale o celular do CSV ou o WhatsApp que o cliente já tem no sistema.
+          </span>
+        </span>
+      </label>
+
       {preview.length > 0 && !tenantId && (
         <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
           Selecione a empresa acima para conferir o arquivo contra os clientes já cadastrados.
@@ -980,7 +1009,7 @@ function AbaImportarBling({ showToast }) {
           </div>
 
           <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12,
+            display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12,
             padding: 16, marginBottom: 12, fontSize: 12,
             background: 'var(--input-bg)', border: '1px solid var(--border-light)', borderRadius: 8,
           }}>
@@ -1003,6 +1032,10 @@ function AbaImportarBling({ showToast }) {
             <div>
               <div style={{ color: 'var(--muted)' }}>Ignoradas</div>
               <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--muted)' }}>{analise.ignoradas.length}</div>
+            </div>
+            <div>
+              <div style={{ color: 'var(--muted)' }}>Sem WhatsApp</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--muted)' }}>{analise.semWhatsapp.length}</div>
             </div>
           </div>
 
@@ -1066,10 +1099,10 @@ function AbaImportarBling({ showToast }) {
             </p>
           )}
 
-          {(analise.ignoradas.length > 0 || analise.duplicadas.length > 0) && (
+          {(analise.ignoradas.length > 0 || analise.duplicadas.length > 0 || analise.semWhatsapp.length > 0) && (
             <details style={{ marginTop: 12 }}>
               <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)' }}>
-                Ver as {analise.ignoradas.length + analise.duplicadas.length} linhas que não serão importadas
+                Ver as {analise.ignoradas.length + analise.duplicadas.length + analise.semWhatsapp.length} linhas que não serão importadas
               </summary>
               <div style={{ marginTop: 8, fontSize: 11, color: 'var(--muted)', lineHeight: 1.8 }}>
                 {analise.ignoradas.map(l => (
@@ -1080,6 +1113,11 @@ function AbaImportarBling({ showToast }) {
                 {analise.duplicadas.map(l => (
                   <div key={`d${l.linha}`}>
                     Linha {l.linha}: <strong>{l.dados.nome}</strong> — @{l.dados.instagram} repetido, fica a linha mais completa
+                  </div>
+                ))}
+                {analise.semWhatsapp.map(l => (
+                  <div key={`w${l.linha}`}>
+                    Linha {l.linha}: <strong>{l.dados.nome}</strong> — sem WhatsApp
                   </div>
                 ))}
               </div>
