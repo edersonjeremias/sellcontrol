@@ -23,11 +23,15 @@ export function parseMoney(str) {
 
 export async function getProdutos(tenantId, filtros = {}) {
   try {
-    // Query para contar total de registros (necessário para paginação)
-    let countQuery = supabase
-      .from('produtos')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
+    // A contagem exata varre a tabela inteira: só vale a pena quando a tela mostra paginação
+    const contar = filtros.contar !== false
+
+    let countQuery = contar
+      ? supabase
+          .from('produtos')
+          .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId)
+      : null
 
     // Query para buscar dados
     let query = supabase
@@ -39,7 +43,7 @@ export async function getProdutos(tenantId, filtros = {}) {
     // Filtro por ativo/inativo
     if (filtros.ativo !== undefined) {
       query = query.eq('ativo', filtros.ativo)
-      countQuery = countQuery.eq('ativo', filtros.ativo)
+      if (countQuery) countQuery = countQuery.eq('ativo', filtros.ativo)
     }
 
     // Filtro por busca de texto (produto, modelo, cor, marca, código)
@@ -50,7 +54,7 @@ export async function getProdutos(tenantId, filtros = {}) {
       termos.forEach(termo => {
         const orCondition = `produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`
         query = query.or(orCondition)
-        countQuery = countQuery.or(orCondition)
+        if (countQuery) countQuery = countQuery.or(orCondition)
       })
     }
 
@@ -58,13 +62,13 @@ export async function getProdutos(tenantId, filtros = {}) {
     if (filtros.dataInicio) {
       const dataInicioObj = new Date(filtros.dataInicio + 'T00:00:00')
       query = query.gte('created_at', dataInicioObj.toISOString())
-      countQuery = countQuery.gte('created_at', dataInicioObj.toISOString())
+      if (countQuery) countQuery = countQuery.gte('created_at', dataInicioObj.toISOString())
     }
 
     if (filtros.dataFim) {
       const dataFimObj = new Date(filtros.dataFim + 'T23:59:59')
       query = query.lte('created_at', dataFimObj.toISOString())
-      countQuery = countQuery.lte('created_at', dataFimObj.toISOString())
+      if (countQuery) countQuery = countQuery.lte('created_at', dataFimObj.toISOString())
     }
 
     // Paginação
@@ -75,21 +79,29 @@ export async function getProdutos(tenantId, filtros = {}) {
 
     query = query.range(from, to)
 
+    // Permite abortar a requisição quando o usuário continua digitando
+    if (filtros.signal) {
+      query = query.abortSignal(filtros.signal)
+      if (countQuery) countQuery = countQuery.abortSignal(filtros.signal)
+    }
+
     // Executa as queries
-    const [{ data, error }, { count, error: countError }] = await Promise.all([
+    const [{ data, error }, countResult] = await Promise.all([
       query,
-      countQuery
+      countQuery || Promise.resolve({ count: null, error: null })
     ])
 
     if (error) throw error
-    if (countError) throw countError
+    if (countResult.error) throw countResult.error
+
+    const total = countResult.count ?? (data?.length || 0)
 
     return {
       data: data || [],
-      total: count || 0,
+      total,
       page,
       limit,
-      totalPages: Math.ceil((count || 0) / limit)
+      totalPages: Math.ceil(total / limit)
     }
   } catch (err) {
     console.error('❌ Erro ao buscar produtos:', err)

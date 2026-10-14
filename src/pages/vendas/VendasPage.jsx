@@ -1065,24 +1065,42 @@ export default function VendasPage() {
   }, [pronto, tenantId])
 
   // ── BUSCA DE PRODUTOS NO CATÁLOGO ──
-  const handleFiltroProdutoChange = useCallback(async (e) => {
-    const valor = e.target.value
-    setFiltroProduto(valor)
+  const handleFiltroProdutoChange = useCallback((e) => {
+    setFiltroProduto(e.target.value)
+  }, [])
 
-    if (!valor.trim()) {
+  // Busca com debounce: uma query depois que o usuário para de digitar
+  useEffect(() => {
+    const termo = filtroProduto.trim()
+    if (!termo) {
       setProdutosSugestoes([])
       return
     }
 
-    try {
-      const resultado = await getProdutos(tenantId, { busca: valor, ativo: true })
-      const produtos = resultado.data || resultado // Suporta ambos os formatos
-      setProdutosSugestoes(produtos.slice(0, 10)) // Máximo 10 sugestões
-    } catch (err) {
-      console.error('❌ Erro ao buscar produtos:', err)
-      setProdutosSugestoes([])
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const resultado = await getProdutos(tenantId, {
+          busca: termo,
+          ativo: true,
+          limit: 10,
+          contar: false, // o autocomplete não mostra paginação
+          signal: controller.signal
+        })
+        if (controller.signal.aborted) return
+        setProdutosSugestoes(resultado.data)
+      } catch (err) {
+        if (controller.signal.aborted) return
+        console.error('❌ Erro ao buscar produtos:', err)
+        setProdutosSugestoes([])
+      }
+    }, 400)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
     }
-  }, [tenantId])
+  }, [filtroProduto, tenantId])
 
   // ── ADICIONAR PRODUTO NA VENDA AO PRESSIONAR ENTER ──
   const handleFiltroProdutoKeyDown = useCallback((e) => {
@@ -1767,21 +1785,6 @@ export default function VendasPage() {
       dataInicio.setDate(dataInicio.getDate() - 60)
       const dataInicioISO = dataInicio.toISOString()
 
-      // 🔍 DEBUG: Query SEM filtro data_live
-      const { data: dataDebug } = await supabase
-        .from('vendas')
-        .select('produto, modelo, cor, marca, tamanho, preco, codigo, data_live, cliente_nome')
-        .eq('tenant_id', tenantId)
-        .gte('created_at', dataInicioISO)
-        .or('cliente_nome.is.null,cliente_nome.eq.')
-        .order('created_at', { ascending: false })
-        .limit(500)
-
-      console.log('🔍 DEBUG - Produtos SEM filtro data_live:', dataDebug?.length || 0)
-      console.log('🔍 Produtos COM data_live preenchida:', dataDebug?.filter(p => p.data_live).length || 0)
-      console.log('🔍 Produtos COM data_live NULL:', dataDebug?.filter(p => !p.data_live).length || 0)
-
-      // ✅ Query REAL (com filtro data_live)
       const { data, error } = await supabase
         .from('vendas')
         .select('produto, modelo, cor, marca, tamanho, preco, codigo')

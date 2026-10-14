@@ -75,6 +75,7 @@ export default function ProdutosPage() {
   const [produtos, setProdutos] = useState([])
   const [listas, setListas] = useState({ produtos: [], modelos: [], cores: [], marcas: [] })
   const [filtro, setFiltro] = useState('')
+  const [filtroBusca, setFiltroBusca] = useState('') // filtro com debounce, usado na query
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [mostrarInativos, setMostrarInativos] = useState(false)
@@ -144,37 +145,50 @@ export default function ProdutosPage() {
     })
   }, [tenantId])
 
+  // Debounce da busca: evita uma query por tecla digitada
+  useEffect(() => {
+    const timer = setTimeout(() => setFiltroBusca(filtro), 400)
+    return () => clearTimeout(timer)
+  }, [filtro])
+
   // Carrega produtos e listas
   useEffect(() => {
+    if (!tenantId) return
+    const controller = new AbortController()
+
     async function carregar() {
-      if (!tenantId) return
       setBusy(true)
       try {
         const [resultado, lst] = await Promise.all([
           getProdutos(tenantId, {
             ativo: !mostrarInativos,
-            busca: filtro.trim() || undefined,
+            busca: filtroBusca.trim() || undefined,
             dataInicio: dataInicio || undefined,
             dataFim: dataFim || undefined,
             page: paginaAtual,
-            limit: itensPorPagina
+            limit: itensPorPagina,
+            signal: controller.signal
           }),
           getListas(tenantId)
         ])
+        if (controller.signal.aborted) return
         setProdutos(resultado.data.map(mapProduto))
         setTotalPaginas(resultado.totalPages)
         setTotalRegistros(resultado.total)
         setListas(lst)
         setPronto(true)
       } catch (err) {
+        if (controller.signal.aborted) return
         console.error('Erro ao carregar:', err)
         showToast('Erro ao carregar produtos', 'error')
       } finally {
-        setBusy(false)
+        if (!controller.signal.aborted) setBusy(false)
       }
     }
     carregar()
-  }, [tenantId, mostrarInativos, filtro, dataInicio, dataFim, paginaAtual, showToast])
+
+    return () => controller.abort()
+  }, [tenantId, mostrarInativos, filtroBusca, dataInicio, dataFim, paginaAtual, showToast])
 
   // Filtro de busca (apenas remove deletados localmente)
   const produtosFiltrados = useMemo(() => {
