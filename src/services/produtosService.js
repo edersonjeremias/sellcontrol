@@ -116,26 +116,6 @@ export async function getProdutos(tenantId, filtros = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BUSCAR PRODUTO POR ID
-// ═══════════════════════════════════════════════════════════════
-
-export async function getProdutoById(id) {
-  try {
-    const { data, error } = await supabase
-      .from('produtos')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) throw error
-    return data
-  } catch (err) {
-    console.error('❌ Erro ao buscar produto:', err)
-    throw err
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
 // CRIAR PRODUTO
 // ═══════════════════════════════════════════════════════════════
 
@@ -257,29 +237,15 @@ export async function reativarProduto(id) {
 
 export async function deduzirQuantidade(id, qtd = 1) {
   try {
-    // Busca produto atual
-    const produto = await getProdutoById(id)
-
-    if (!produto) throw new Error('Produto não encontrado')
-
-    // Calcula nova quantidade
-    const novaQuantidade = Math.max(0, produto.quantidade - qtd)
-
-    // Atualiza quantidade
-    const { data, error } = await supabase
-      .from('produtos')
-      .update({ quantidade: novaQuantidade })
-      .eq('id', id)
-      .select()
-      .single()
+    // A conta roda dentro do UPDATE (ver AJUSTAR_ESTOQUE.sql): duas baixas
+    // simultâneas no mesmo produto não se sobrescrevem
+    const { data, error } = await supabase.rpc('ajustar_estoque', {
+      p_id: id,
+      p_delta: -qtd
+    })
 
     if (error) throw error
-
-    return {
-      ...data,
-      zerou: novaQuantidade === 0,
-      quantidadeAnterior: produto.quantidade,
-    }
+    return { id, quantidade: data }
   } catch (err) {
     console.error('❌ Erro ao deduzir quantidade:', err)
     throw err
@@ -292,24 +258,13 @@ export async function deduzirQuantidade(id, qtd = 1) {
 
 export async function devolverQuantidade(id, qtd = 1) {
   try {
-    // Busca produto atual
-    const produto = await getProdutoById(id)
-
-    if (!produto) throw new Error('Produto não encontrado')
-
-    // Calcula nova quantidade
-    const novaQuantidade = produto.quantidade + qtd
-
-    // Atualiza quantidade
-    const { data, error } = await supabase
-      .from('produtos')
-      .update({ quantidade: novaQuantidade })
-      .eq('id', id)
-      .select()
-      .single()
+    const { data, error } = await supabase.rpc('ajustar_estoque', {
+      p_id: id,
+      p_delta: qtd
+    })
 
     if (error) throw error
-    return data
+    return { id, quantidade: data }
   } catch (err) {
     console.error('❌ Erro ao devolver quantidade:', err)
     throw err
