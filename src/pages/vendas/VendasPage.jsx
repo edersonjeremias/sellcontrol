@@ -141,6 +141,7 @@ export default function VendasPage() {
   const [filtro,      setFiltro]      = useState('')
   const [filtroProduto, setFiltroProduto] = useState('')
   const [produtosSugestoes, setProdutosSugestoes] = useState([])
+  const [incluirSemEstoque, setIncluirSemEstoque] = useState(false)
   const [avisoPreco,  setAvisoPreco]  = useState(null) // { key, campo, valor, produto }
   const [tabelaMsg,   setTabelaMsg]   = useState('Iniciando sistema...')
   const [pronto,      setPronto]      = useState(false)
@@ -1083,7 +1084,7 @@ export default function VendasPage() {
         const resultado = await getProdutos(tenantId, {
           busca: termo,
           ativo: true,
-          comEstoque: true, // zerados não entram em venda
+          comEstoque: !incluirSemEstoque,
           limit: 10,
           contar: false, // o autocomplete não mostra paginação
           signal: controller.signal
@@ -1101,7 +1102,7 @@ export default function VendasPage() {
       clearTimeout(timer)
       controller.abort()
     }
-  }, [filtroProduto, tenantId])
+  }, [filtroProduto, tenantId, incluirSemEstoque])
 
   // ── ADICIONAR PRODUTO NA VENDA AO PRESSIONAR ENTER ──
   const handleFiltroProdutoKeyDown = useCallback((e) => {
@@ -2156,6 +2157,19 @@ export default function VendasPage() {
                 </ul>
               )}
             </div>
+            {/* preventDefault no mousedown evita que o input perca o foco e feche a lista */}
+            <label
+              onMouseDown={e => e.preventDefault()}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}
+            >
+              <input
+                type="checkbox"
+                checked={incluirSemEstoque}
+                onChange={e => setIncluirSemEstoque(e.target.checked)}
+                style={{ width: 'auto', height: 'auto', margin: 0 }}
+              />
+              Sem estoque
+            </label>
           </div>
         </div>
       )}

@@ -58,7 +58,7 @@ function mapProduto(p) {
     custo: p.custo ? formatarAoDigitar(String(Math.round(p.custo * 100))) : '',
     preco: p.preco ? formatarAoDigitar(String(Math.round(p.preco * 100))) : '',
     preco_promocional: p.preco_promocional ? formatarAoDigitar(String(Math.round(p.preco_promocional * 100))) : '',
-    quantidade: p.quantidade ? String(p.quantidade) : '',
+    quantidade: p.quantidade === null || p.quantidade === undefined ? '' : String(p.quantidade),
     imagens: p.imagens || [], // Array de URLs das imagens
     ativo: p.ativo !== false,
     isNew: false,
@@ -164,7 +164,7 @@ export default function ProdutosPage() {
           getProdutos(tenantId, {
             ativo: !mostrarInativos,
             busca: filtroBusca.trim() || undefined,
-            semEstoque: mostrarSemEstoque,
+            comEstoque: !mostrarSemEstoque,
             dataInicio: dataInicio || undefined,
             dataFim: dataFim || undefined,
             page: paginaAtual,
@@ -481,10 +481,11 @@ export default function ProdutosPage() {
         value = formatarAoDigitar(value)
       }
 
-      // Limita quantidade a 3 dígitos
+      // Quantidade: até 3 dígitos, aceita negativo para registrar uso além do estoque
       if (field === 'quantidade') {
-        value = value.replace(/\D/g, '') // Remove tudo que não é número
-        if (value.length > 3) value = value.slice(0, 3) // Max 999
+        const negativo = value.startsWith('-')
+        const digitos = value.replace(/\D/g, '').slice(0, 3)
+        value = negativo ? `-${digitos}` : digitos
       }
 
       return { ...p, [field]: value }
@@ -1835,7 +1836,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           onKeyDown={handleQuantidadeKeyDown}
           disabled={desabilitado}
           placeholder=""
-          maxLength={3}
+          maxLength={4}
           style={{ textAlign: 'center' }}
           data-key={p._key}
           data-field="quantidade"
