@@ -75,37 +75,8 @@ export default async function handler(req, res) {
           .eq('id', cobrancaId)
           .neq('status', 'PAGO')
 
-        // 🎟️ Incrementa uso do cupom se foi usado
-        console.log('🔍 Verificando cupom após confirmar pagamento:', cob?.cupom_id)
-        if (!updateErr && cob?.cupom_id) {
-          console.log(`🎟️ Cupom encontrado! Incrementando uso do cupom ${cob.cupom_id}...`)
-
-          const { data: cupom, error: cupomSelectErr } = await supabase
-            .from('cupons')
-            .select('usos_realizados')
-            .eq('id', cob.cupom_id)
-            .single()
-
-          if (cupomSelectErr) {
-            console.error('❌ Erro ao buscar cupom:', cupomSelectErr)
-          } else if (cupom) {
-            const novosUsos = (cupom.usos_realizados || 0) + 1
-            console.log(`📊 Incrementando de ${cupom.usos_realizados || 0} para ${novosUsos}`)
-
-            const { error: cupomErr } = await supabase
-              .from('cupons')
-              .update({ usos_realizados: novosUsos })
-              .eq('id', cob.cupom_id)
-
-            if (cupomErr) console.error('❌ Erro ao incrementar cupom:', cupomErr)
-            else console.log(`✅ Cupom ${cob.cupom_id} incrementado: ${novosUsos} usos`)
-          } else {
-            console.log('⚠️ Cupom não encontrado no banco')
-          }
-        } else {
-          if (updateErr) console.log('⚠️ Update teve erro, não incrementa cupom')
-          else console.log('ℹ️ Cobrança sem cupom aplicado')
-        }
+        // O contador do cupom é incrementado pelo trigger cobrancas_cupom_uso
+        if (updateErr) console.error("Erro ao marcar como PAGO:", updateErr)
       }
       return res.status(200).json({ ok: true, status: 'approved' })
     }

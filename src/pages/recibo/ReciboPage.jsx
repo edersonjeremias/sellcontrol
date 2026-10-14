@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getCobrancaById, formatMoeda, dividirPagamento, gerarPreferenciaMp, getSaldoCliente } from '../../services/cobrancasService'
-import { validarCupom, calcularDesconto, incrementarUsoCupom } from '../../services/cuponsService'
+import { validarCupom, calcularDesconto } from '../../services/cuponsService'
 import { supabase } from '../../lib/supabase'
 
 function fmtData(iso) {

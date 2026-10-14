@@ -105,41 +105,11 @@ export default async function handler(req, res) {
           .eq('id', cobrancaId)
           .neq('status', 'PAGO')
 
+        // O contador do cupom é incrementado pelo trigger cobrancas_cupom_uso
         if (error) {
           console.error('❌ Erro Supabase ao marcar como PAGO:', error)
         } else {
           console.log(`✅ Cobrança ${cobrancaId} PAGA! Líquido: ${valorLiquido}`)
-
-          // 🎟️ Incrementa uso do cupom se foi usado
-          console.log('🔍 Verificando cupom_id:', cobranca?.cupom_id)
-          if (cobranca?.cupom_id) {
-            console.log(`🎟️ Cupom encontrado! Incrementando uso do cupom ${cobranca.cupom_id}...`)
-
-            const { data: cupom, error: cupomSelectErr } = await supabase
-              .from('cupons')
-              .select('usos_realizados')
-              .eq('id', cobranca.cupom_id)
-              .single()
-
-            if (cupomSelectErr) {
-              console.error('❌ Erro ao buscar cupom:', cupomSelectErr)
-            } else if (cupom) {
-              const novosUsos = (cupom.usos_realizados || 0) + 1
-              console.log(`📊 Incrementando de ${cupom.usos_realizados || 0} para ${novosUsos}`)
-
-              const { error: cupomErr } = await supabase
-                .from('cupons')
-                .update({ usos_realizados: novosUsos })
-                .eq('id', cobranca.cupom_id)
-
-              if (cupomErr) console.error('❌ Erro ao incrementar cupom:', cupomErr)
-              else console.log(`✅ Cupom ${cobranca.cupom_id} incrementado: ${novosUsos} usos`)
-            } else {
-              console.log('⚠️ Cupom não encontrado no banco')
-            }
-          } else {
-            console.log('ℹ️ Cobrança sem cupom aplicado')
-          }
         }
       }
     }

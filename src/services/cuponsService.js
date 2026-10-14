@@ -106,39 +106,6 @@ export async function validarCupom(tenantId, codigo) {
   return data
 }
 
-// ── Incrementar uso do cupom ──
-export async function incrementarUsoCupom(cupomId) {
-  // Busca o cupom atual
-  const { data: cupom, error: fetchError } = await supabase
-    .from('cupons')
-    .select('usos_realizados')
-    .eq('id', cupomId)
-    .single()
-
-  if (fetchError) {
-    console.error('Erro ao buscar cupom:', fetchError)
-    return null
-  }
-
-  // Incrementa +1
-  const novosUsos = (cupom.usos_realizados || 0) + 1
-
-  const { data, error } = await supabase
-    .from('cupons')
-    .update({ usos_realizados: novosUsos })
-    .eq('id', cupomId)
-    .select('usos_realizados')
-    .single()
-
-  if (error) {
-    console.error('Erro ao incrementar uso do cupom:', error)
-    // Não lança erro para não quebrar o fluxo do recibo
-  }
-
-  console.log(`✅ Cupom ${cupomId} incrementado: ${novosUsos} usos`)
-  return data
-}
-
 // ── Calcular desconto ──
 export function calcularDesconto(total, percentual) {
   const desconto = (Number(total) * Number(percentual)) / 100
