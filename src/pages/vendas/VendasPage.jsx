@@ -1083,6 +1083,7 @@ export default function VendasPage() {
         const resultado = await getProdutos(tenantId, {
           busca: termo,
           ativo: true,
+          comEstoque: true, // zerados não entram em venda
           limit: 10,
           contar: false, // o autocomplete não mostra paginação
           signal: controller.signal
@@ -1116,12 +1117,6 @@ export default function VendasPage() {
 
   // ── ADICIONAR PRODUTO DA BUSCA NA TABELA DE VENDAS ──
   const adicionarProdutoNaVenda = useCallback(async (produto) => {
-    // Verifica estoque
-    if (produto.quantidade === 0) {
-      const confirma = window.confirm(`⚠️ Produto "${produto.produto}" sem estoque!\n\nUsar mesmo assim?`)
-      if (!confirma) return
-    }
-
     // Verifica se já existe linha vazia (não salva e sem produto)
     const linhaVaziaExistente = linhasRef.current.find(l =>
       !l.deleted && !l.produto?.trim()
@@ -2156,7 +2151,6 @@ export default function VendasPage() {
                       onClick={() => adicionarProdutoNaVenda(p)}
                     >
                       {p.codigo} - {p.produto} - {p.modelo} - {p.cor} - {p.marca} {p.tamanho && `(${p.tamanho})`} - R$ {p.preco} - Qtd: {p.quantidade}
-                      {p.quantidade === 0 && ' ⚠️ SEM ESTOQUE'}
                     </li>
                   ))}
                 </ul>

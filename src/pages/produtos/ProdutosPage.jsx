@@ -79,6 +79,7 @@ export default function ProdutosPage() {
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
   const [mostrarInativos, setMostrarInativos] = useState(false)
+  const [mostrarSemEstoque, setMostrarSemEstoque] = useState(false)
   const [busy, setBusy] = useState(false)
   const [pronto, setPronto] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -163,6 +164,7 @@ export default function ProdutosPage() {
           getProdutos(tenantId, {
             ativo: !mostrarInativos,
             busca: filtroBusca.trim() || undefined,
+            semEstoque: mostrarSemEstoque,
             dataInicio: dataInicio || undefined,
             dataFim: dataFim || undefined,
             page: paginaAtual,
@@ -188,7 +190,7 @@ export default function ProdutosPage() {
     carregar()
 
     return () => controller.abort()
-  }, [tenantId, mostrarInativos, filtroBusca, dataInicio, dataFim, paginaAtual, showToast])
+  }, [tenantId, mostrarInativos, mostrarSemEstoque, filtroBusca, dataInicio, dataFim, paginaAtual, showToast])
 
   // Filtro de busca (apenas remove deletados localmente)
   const produtosFiltrados = useMemo(() => {
@@ -727,6 +729,18 @@ export default function ProdutosPage() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
                   <input
                     type="checkbox"
+                    checked={mostrarSemEstoque}
+                    onChange={e => {
+                      setMostrarSemEstoque(e.target.checked)
+                      setPaginaAtual(1)
+                    }}
+                  />
+                  Sem estoque
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
                     checked={mostrarInativos}
                     onChange={e => {
                       setMostrarInativos(e.target.checked)
@@ -851,6 +865,18 @@ export default function ProdutosPage() {
 
             {/* Linha 3: Inativos + Filtros de Data */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
+                <input
+                  type="checkbox"
+                  checked={mostrarSemEstoque}
+                  onChange={e => {
+                    setMostrarSemEstoque(e.target.checked)
+                    setPaginaAtual(1)
+                  }}
+                />
+                Sem estoque
+              </label>
+
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
                 <input
                   type="checkbox"

@@ -58,6 +58,16 @@ export async function getProdutos(tenantId, filtros = {}) {
       })
     }
 
+    // Filtro por estoque (quantidade vazia no banco conta como sem estoque)
+    if (filtros.semEstoque) {
+      const condicao = 'quantidade.lt.1,quantidade.is.null'
+      query = query.or(condicao)
+      if (countQuery) countQuery = countQuery.or(condicao)
+    } else if (filtros.comEstoque) {
+      query = query.gte('quantidade', 1)
+      if (countQuery) countQuery = countQuery.gte('quantidade', 1)
+    }
+
     // Filtro por data de cadastro
     if (filtros.dataInicio) {
       const dataInicioObj = new Date(filtros.dataInicio + 'T00:00:00')
