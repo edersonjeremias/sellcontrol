@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { formatDateBr } from '../lib/datas'
 
 // ══════════════════════════════════════════════════════════════
 // COLUNAS DO KANBAN
@@ -154,7 +155,7 @@ export async function criarNotificacaoCancelamentoConversa(tenantId, itemData) {
 
   // Formata data da live
   const dataLiveFormatada = data_live
-    ? new Date(data_live).toLocaleDateString('pt-BR')
+    ? formatDateBr(data_live)
     : 'Sem data'
 
   // Descrição completa da peça

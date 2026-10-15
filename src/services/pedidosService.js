@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { hojeISO } from '../lib/datas'
 
 export const STATUS_PEDIDO_OPTS = [
   '', 'Separado', 'Enviado', 'Comprar', 'Comprado',
@@ -127,7 +128,7 @@ export async function getNextNumeroPedido(tenantId) {
 export async function gerarPedido(tenantId, itensSemPedido) {
   if (!itensSemPedido.length) throw new Error('Nenhum item sem pedido para gerar.')
   const numPedido = await getNextNumeroPedido(tenantId)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeISO()
   const agora = new Date().toISOString()
   const ids = itensSemPedido.map(i => i.id)
 
@@ -166,7 +167,7 @@ export async function atribuirRomaneio(tenantId, ids, romaneio) {
 }
 
 export async function adicionarSeparadosAoRomaneio(tenantId, ids, romaneio) {
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeISO()
   const agora = new Date().toISOString()
   const { error } = await supabase.from('vendas')
     .update({ status: 'Enviado', numero_pedido: romaneio, data_envio: hoje, updated_at: agora })
@@ -283,7 +284,7 @@ export async function criarRomaneioComDimensoes(tenantId, itensSemPedido, dimens
   const numeroPedido = parseInt(numeroRomaneio.replace(/\D/g, ''))
 
   // 6. Atualiza vendas com numero_pedido (compatibilidade com sistema atual)
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeISO()
   const agora = new Date().toISOString()
   const ids = itensSemPedido.map(i => i.id)
 

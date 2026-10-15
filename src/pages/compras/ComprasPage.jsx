@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
+import { hojeISO } from '../../lib/datas'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
@@ -51,7 +52,7 @@ export default function ComprasPage() {
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState(null)
 
   // Estados do histórico
-  const hoje = new Date().toISOString().split('T')[0]
+  const hoje = hojeISO()
   const [dataInicial, setDataInicial] = useState(hoje)
   const [dataFinal, setDataFinal] = useState(hoje)
   const [buscaHistorico, setBuscaHistorico] = useState('')
@@ -116,7 +117,7 @@ export default function ComprasPage() {
   }
 
   async function carregarTotalDia() {
-    const hoje = new Date().toISOString().split('T')[0]
+    const hoje = hojeISO()
 
     const { data, error } = await supabase
       .from('compras')

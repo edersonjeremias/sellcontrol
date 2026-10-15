@@ -4,6 +4,7 @@ import AppShell from '../../components/ui/AppShell'
 import DateSearchInput from '../../components/ui/DateSearchInput'
 import SearchableSelect from '../../components/ui/SearchableSelect'
 import { supabase } from '../../lib/supabase'
+import { toDateOnly } from '../../lib/datas'
 
 const STORAGE_KEY = 'sellcontrol_etiquetas_layout_v1'
 
@@ -163,10 +164,10 @@ export default function EtiquetasPage() {
       .not('created_at', 'is', null)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        const unicas = [...new Set((data || []).map(r => {
-          const date = new Date(r.created_at)
-          return date.toISOString().split('T')[0]
-        }))].slice(0, 90)
+        // Agrupa pelo dia local: um produto cadastrado às 21h não pode
+        // aparecer na lista como se fosse do dia seguinte
+        const unicas = [...new Set((data || []).map(r => toDateOnly(r.created_at)))]
+          .filter(Boolean).slice(0, 90)
         setDatasRaw(unicas)
       })
   }, [tenantId])
@@ -182,8 +183,9 @@ export default function EtiquetasPage() {
 
       // Filtra por data de cadastro (se tiver data)
       if (dataFiltro) {
-        const dataInicio = `${dataFiltro}T00:00:00`
-        const dataFim = `${dataFiltro}T23:59:59`
+        // Converte o dia local para UTC, que é como o created_at é comparado
+        const dataInicio = new Date(`${dataFiltro}T00:00:00`).toISOString()
+        const dataFim = new Date(`${dataFiltro}T23:59:59.999`).toISOString()
         query = query.gte('created_at', dataInicio).lte('created_at', dataFim)
       }
 

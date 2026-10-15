@@ -1,4 +1,5 @@
 import { supabase, supabasePublic } from '../lib/supabase'
+import { toDateOnly } from '../lib/datas'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -64,7 +65,7 @@ export async function getCobrancas(tenantId, filtros = {}) {
     qRes = qRes.eq('data', filtroData)
   } else {
     const hoje = new Date()
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
+    const inicioMes = toDateOnly(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
     qRes = qRes.gte('data', inicioMes)
   }
 

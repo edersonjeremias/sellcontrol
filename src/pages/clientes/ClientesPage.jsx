@@ -9,6 +9,7 @@ import {
   searchClientesAvancada, countClientesAvancada,
 } from '../../services/clientesService'
 import { supabase } from '../../lib/supabase'
+import { formatDateBr } from '../../lib/datas'
 
 const LABEL = {
   display: 'block', color: 'var(--muted)', fontSize: '0.78rem',
@@ -1395,7 +1396,7 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
                       onClick={() => { setActiveIdx(idx); selecionarCliente(c); setAba('cadastro') }}
                       style={{ padding: '6px 8px', textAlign: 'center', color: idx === activeIdx ? '#171717' : 'var(--text-body)', fontSize: 10 }}>
                       {c.ultima_compra ? (
-                        new Date(c.ultima_compra).toLocaleDateString('pt-BR')
+                        formatDateBr(c.ultima_compra)
                       ) : (
                         <span style={{ color: idx === activeIdx ? '#171717' : 'var(--muted)' }}>Nunca</span>
                       )}

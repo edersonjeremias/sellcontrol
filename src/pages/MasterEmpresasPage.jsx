@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Papa from 'papaparse'
+import { hojeISO } from '../lib/datas'
 import AppShell from '../components/ui/AppShell'
 import { useApp } from '../context/AppContext'
 import { createTenantAndAdmin } from '../services/masterService'
@@ -820,7 +821,7 @@ function AbaImportarBling({ showToast }) {
               ...campos,
               tenant_id: tenantId,
               instagram,
-              data_cadastro: d.clienteDesde || new Date().toISOString().split('T')[0],
+              data_cadastro: d.clienteDesde || hojeISO(),
             })
           if (error) throw error
           inseridos++
@@ -1214,7 +1215,7 @@ function AbaImportarBling({ showToast }) {
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
                 const link = document.createElement('a')
                 link.href = URL.createObjectURL(blob)
-                link.download = `erros_importacao_bling_${new Date().toISOString().slice(0,10)}.csv`
+                link.download = `erros_importacao_bling_${hojeISO()}.csv`
                 link.click()
                 showToast('CSV de erros baixado!', 'success')
               }}
@@ -1358,7 +1359,7 @@ function AbaImportarDados({ showToast }) {
 
   // Converter data brasileira para ISO
   function converterData(dataStr) {
-    if (!dataStr || dataStr.trim() === '') return new Date().toISOString().split('T')[0]
+    if (!dataStr || dataStr.trim() === '') return hojeISO()
 
     const str = dataStr.trim()
 
@@ -1372,7 +1373,7 @@ function AbaImportarDados({ showToast }) {
     }
 
     // Fallback: data atual
-    return new Date().toISOString().split('T')[0]
+    return hojeISO()
   }
 
   // Importar CLIENTES
@@ -1949,7 +1950,7 @@ function AbaImportarDados({ showToast }) {
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
                 const link = document.createElement('a')
                 link.href = URL.createObjectURL(blob)
-                link.download = `erros_importacao_${new Date().toISOString().slice(0,10)}.csv`
+                link.download = `erros_importacao_${hojeISO()}.csv`
                 link.click()
                 showToast('CSV de erros baixado!', 'success')
               }}

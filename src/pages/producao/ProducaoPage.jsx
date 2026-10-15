@@ -8,6 +8,7 @@ import {
 } from '../../services/producaoService'
 // PACOTE_OPTS é usado como fallback quando a empresa não cadastrou embalagens
 import { getConfig } from '../../services/configService'
+import { hojeISO } from '../../lib/datas'
 import { calcRomaneioTotal } from '../../services/pedidosService'
 import DashboardModal from './DashboardModal'
 import DetalheModal   from './DetalheModal'
@@ -270,7 +271,7 @@ export default function ProducaoPage() {
         const dbPatch = { status_prod: 'Pronto' }
         const localExtra = {}
         if (!row.data_pronto) {
-          const hoje = new Date().toISOString().slice(0, 10)
+          const hoje = hojeISO()
           dbPatch.data_pronto = hoje
           localExtra.data_pronto_fmt = fmtDateBr(hoje)
         }
@@ -291,7 +292,7 @@ export default function ProducaoPage() {
     const dbPatch = { status_entrega: val }
     const localExtra = {}
     if ((val === 'Enviado' || val === 'Retirou') && !row.data_enviado) {
-      const hoje = new Date().toISOString().slice(0, 10)
+      const hoje = hojeISO()
       dbPatch.data_enviado = hoje
       localExtra.data_enviado_fmt = fmtDateBr(hoje)
     }

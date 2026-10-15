@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { hojeISO, toDateOnly } from '../../lib/datas'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import { supabase } from '../../lib/supabase'
@@ -26,8 +27,8 @@ export default function ComissoesPage() {
   const { showToast } = useApp()
   const tenantId = profile?.tenant_id
 
-  const hoje = new Date().toISOString().split('T')[0]
-  const primeiroDia = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+  const hoje = hojeISO()
+  const primeiroDia = toDateOnly(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 
   const [dataInicio, setDataInicio] = useState(primeiroDia)
   const [dataFim, setDataFim] = useState(hoje)

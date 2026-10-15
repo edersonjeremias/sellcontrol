@@ -6,6 +6,7 @@ import {
 } from 'chart.js'
 import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Bar } from 'react-chartjs-2'
+import { parseDateLocal, toDateOnly, hojeISO } from '../../lib/datas'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ChartDataLabels)
 
@@ -13,10 +14,11 @@ function fmtISO(d) { return d ? String(d).slice(0, 10) : '' }
 
 function rangeISO(start, end) {
   const out = []
-  const cur = new Date(start)
-  const stop = new Date(end)
+  const cur = parseDateLocal(start)
+  const stop = parseDateLocal(end)
+  if (!cur || !stop) return out
   while (cur <= stop) {
-    out.push(cur.toISOString().slice(0, 10))
+    out.push(toDateOnly(cur))
     cur.setDate(cur.getDate() + 1)
   }
   return out
@@ -26,8 +28,8 @@ function defaultRange() {
   const end = new Date()
   const start = new Date(); start.setDate(end.getDate() - 13)
   return {
-    inicio: start.toISOString().slice(0, 10),
-    fim: end.toISOString().slice(0, 10),
+    inicio: toDateOnly(start),
+    fim: toDateOnly(end),
   }
 }
 
@@ -37,7 +39,7 @@ export default function DashboardModal({ rows, onClose }) {
   const [fim, setFim] = useState(def.fim)
 
   const stats = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = hojeISO()
     const prontosHoje = rows.filter(
       (r) => fmtISO(r.data_pronto) === today && r.status_prod !== 'Repetido'
     ).length
