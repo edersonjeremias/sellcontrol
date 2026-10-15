@@ -13,15 +13,26 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Status que indicam que o pedido já saiu — não participam da deduplicação.
-// 'Cliente Retira' fica de fora: é intenção de retirada, o pedido segue aberto.
-const ENTREGA_FINAL = ['Enviado', 'Retirou', 'Voltou estoque']
+// Cada solicitação vira uma linha, mesmo que a cliente peça duas vezes no
+// mesmo dia: é preferível a equipe ver uma linha repetida e apagar a mais,
+// do que um pedido se perder por ter sido tratado como repetição.
 
 // Espelha STATUS_ENTREGA_OPTS de src/services/producaoService.js
 const STATUS_ENTREGA_VALIDOS = [
   'Aguard. pagamento', 'Aguard. dados', 'Cliente informado', 'Cliente Retira',
   'Frete pago', 'Enviado', 'Retirou', 'Voltou estoque', 'Conferir pg',
 ]
+
+// A function roda em UTC. Depois das 21h no Brasil já é o dia seguinte lá,
+// e o pedido nasceria com a data de amanhã na página de Produção.
+const FUSO_LOJA = 'America/Sao_Paulo'
+
+function hojeNaLoja() {
+  // en-CA formata como 'YYYY-MM-DD', que é o formato da coluna DATE
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: FUSO_LOJA, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date())
+}
 
 function responder(ok: boolean, mensagem: string, extra: Record<string, unknown> = {}) {
   // Sempre 200: o ManyChat só consegue ler o corpo da resposta em status 200
@@ -108,64 +119,9 @@ serve(async (req) => {
     })
   }
 
-  const hoje = new Date().toISOString().slice(0, 10)
+  const hoje = hojeNaLoja()
 
-  // 3. Deduplicação: se a cliente já pediu envio hoje e o pedido ainda está
-  //    aberto, só complementa a observação em vez de criar linha duplicada.
-  const { data: abertos, error: erroBusca } = await supabase
-    .from('producao_pedidos')
-    .select('id, obs_cliente, status_entrega')
-    .eq('tenant_id', tenantId)
-    .eq('cliente_nome', cliente)
-    .eq('data_solicitado', hoje)
-    .is('data_enviado', null)
-
-  if (erroBusca) {
-    console.error('Erro ao buscar pedidos abertos:', erroBusca)
-    return responder(false, 'Erro interno no sistema da loja.')
-  }
-
-  const pedidoAberto = (abertos || []).find(
-    (p: any) => !ENTREGA_FINAL.includes(String(p.status_entrega || ''))
-  )
-
-  if (pedidoAberto) {
-    // Complementa o pedido que já existe: observação nova e/ou status de entrega
-    const patch: Record<string, string> = {}
-
-    if (observacao && !String(pedidoAberto.obs_cliente || '').includes(observacao)) {
-      patch.obs_cliente = [pedidoAberto.obs_cliente, observacao].filter(Boolean).join(' | ')
-    }
-    if (statusEntrega && statusEntrega !== pedidoAberto.status_entrega) {
-      patch.status_entrega = statusEntrega
-    }
-
-    if (Object.keys(patch).length > 0) {
-      const { error: erroUpdate } = await supabase
-        .from('producao_pedidos')
-        .update(patch)
-        .eq('tenant_id', tenantId)
-        .eq('id', pedidoAberto.id)
-
-      if (erroUpdate) {
-        console.error('Erro ao atualizar pedido existente:', erroUpdate)
-        return responder(false, 'Erro interno no sistema da loja.')
-      }
-    }
-
-    const mensagem = patch.status_entrega === 'Cliente Retira'
-      ? 'Anotamos que você vai retirar o seu pedido. 💛'
-      : 'Sua solicitação já está com o setor responsável. 💛'
-
-    return responder(true, mensagem, {
-      duplicado: true,
-      atualizado: Object.keys(patch),
-      pedido_id: pedidoAberto.id,
-      ...(avisoStatus ? { aviso: avisoStatus } : {}),
-    })
-  }
-
-  // 4. Garante a cliente cadastrada (para o WhatsApp e o controle de bloqueio)
+  // 3. Garante a cliente cadastrada (para o WhatsApp e o controle de bloqueio)
   await supabase
     .from('clientes')
     .upsert(
@@ -173,7 +129,7 @@ serve(async (req) => {
       { onConflict: 'tenant_id,instagram', ignoreDuplicates: true }
     )
 
-  // 5. Cria o pedido na página de Produção
+  // 4. Cria o pedido na página de Produção
   const { data: criado, error: erroInsert } = await supabase
     .from('producao_pedidos')
     .insert({
