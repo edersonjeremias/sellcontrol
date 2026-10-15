@@ -488,10 +488,9 @@ export default function ProdutosPage() {
         value = negativo ? `-${digitos}` : digitos
       }
 
-      return { ...p, [field]: value }
+      // Marca o campo como pendente: a borda amarela some quando o produto é salvo
+      return { ...p, [field]: value, _alterados: { ...p._alterados, [field]: true } }
     }))
-
-    // REMOVIDO salvamento automático - só salva no Enter/Tab do quantidade ou onBlur
   }, [])
 
   // Ao sair do campo PRODUTO, cria linha nova se tiver produto digitado
@@ -1665,6 +1664,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           placeholder="Nome do produto"
           data-key={p._key}
           data-field="produto"
+          data-alterado={p._alterados?.produto ? "true" : undefined}
         />
       </td>
 
@@ -1678,6 +1678,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           disabled={desabilitado}
           data-key={p._key}
           data-field="modelo"
+          data-alterado={p._alterados?.modelo ? "true" : undefined}
         />
       </td>
 
@@ -1692,6 +1693,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             disabled={desabilitado}
             data-key={p._key}
             data-field="genero"
+            data-alterado={p._alterados?.genero ? "true" : undefined}
           >
             <option value=""></option>
             <option value="M">M</option>
@@ -1711,6 +1713,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           disabled={desabilitado}
           data-key={p._key}
           data-field="cor"
+          data-alterado={p._alterados?.cor ? "true" : undefined}
         />
       </td>
 
@@ -1724,6 +1727,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           disabled={desabilitado}
           data-key={p._key}
           data-field="marca"
+          data-alterado={p._alterados?.marca ? "true" : undefined}
         />
       </td>
 
@@ -1737,6 +1741,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           disabled={desabilitado}
           data-key={p._key}
           data-field="tamanho"
+          data-alterado={p._alterados?.tamanho ? "true" : undefined}
         />
       </td>
 
@@ -1751,6 +1756,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             disabled={desabilitado}
             data-key={p._key}
             data-field="condicao"
+            data-alterado={p._alterados?.condicao ? "true" : undefined}
           >
             <option value=""></option>
             <option value="N">N</option>
@@ -1773,6 +1779,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             style={{ textAlign: 'right' }}
             data-key={p._key}
             data-field="custo"
+            data-alterado={p._alterados?.custo ? "true" : undefined}
           />
         </td>
       )}
@@ -1790,6 +1797,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           style={{ textAlign: 'right' }}
           data-key={p._key}
           data-field="preco"
+          data-alterado={p._alterados?.preco ? "true" : undefined}
         />
       </td>
 
@@ -1805,6 +1813,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           placeholder="100"
           data-key={p._key}
           data-field="codigo"
+          data-alterado={p._alterados?.codigo ? "true" : undefined}
         />
       </td>
 
@@ -1822,6 +1831,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             style={{ textAlign: 'right' }}
             data-key={p._key}
             data-field="preco_promocional"
+            data-alterado={p._alterados?.preco_promocional ? "true" : undefined}
           />
         </td>
       )}
@@ -1840,6 +1850,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           style={{ textAlign: 'center' }}
           data-key={p._key}
           data-field="quantidade"
+          data-alterado={p._alterados?.quantidade ? "true" : undefined}
         />
       </td>
 

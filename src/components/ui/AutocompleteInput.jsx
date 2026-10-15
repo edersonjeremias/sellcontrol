@@ -35,6 +35,7 @@ export default function AutocompleteInput({
   style,
   'data-key': dataKey,     // Para preservar foco durante salvamento
   'data-field': dataField, // Para preservar foco durante salvamento
+  'data-alterado': dataAlterado, // Marca campo editado e ainda nao salvo
 }) {
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -188,6 +189,7 @@ export default function AutocompleteInput({
         onKeyDown={handleKeyDown}
         data-key={dataKey}
         data-field={dataField}
+        data-alterado={dataAlterado}
       />
       {visible && (
         <ul className="autocomplete-list" ref={listRef}>

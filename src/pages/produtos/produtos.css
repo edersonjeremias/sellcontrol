@@ -338,6 +338,21 @@
   background: #252525 !important; /* FUNDO ESCURO NO FOCUS */
 }
 
+/* Campo editado que ainda nao foi salvo.
+   Especificidade maior que .cell-select para valer tambem nos selects. */
+.cell-input[data-alterado],
+.cell-select[data-alterado] {
+  border-color: #f5a623 !important;
+  background: rgba(245, 166, 35, 0.07) !important;
+}
+
+/* Com o cursor dentro, a borda azul volta a mandar */
+.cell-input[data-alterado]:focus,
+.cell-select[data-alterado]:focus {
+  border-color: var(--blue) !important;
+  background: #252525 !important;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    MODAL DE CONFIGURAÇÕES
    ═══════════════════════════════════════════════════════════════ */
