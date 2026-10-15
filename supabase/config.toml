@@ -1,2 +1,5 @@
 [functions.mercadopago-webhook]
 verify_jwt = false
+
+[functions.receber-solicitacao-envio]
+verify_jwt = false
