@@ -83,6 +83,16 @@ function mapRow(row) {
   }
 }
 
+// Casa os ids vindos do insert com as linhas pelo _key.
+// Casar por posição desalinha quando salvarVendas descarta linhas, e a linha que ficou
+// sem id é reinserida no save seguinte — origem das vendas duplicadas.
+function aplicarNovosIds(novosIds) {
+  const mapa = new Map((novosIds || []).filter(n => n._key).map(n => [n._key, n.id]))
+  return prev => mapa.size === 0
+    ? prev
+    : prev.map(l => (!l.id && mapa.has(l._key)) ? { ...l, id: mapa.get(l._key), isNew: false } : l)
+}
+
 // ✅ IMPORTANTE: Esta função é chamada DENTRO do componente para ter acesso ao sacolinhasCacheRef
 // Não pode ser movida para fora!
 
@@ -637,15 +647,7 @@ export default function VendasPage() {
         })
 
         if (res.novosIds?.length) {
-          setLinhas(prev => {
-            const queue = [...res.novosIds]
-            return prev.map(l => {
-              if (!l.id && !l.deleted && queue.length) {
-                return { ...l, id: queue.shift().id, isNew: false }
-              }
-              return l
-            })
-          })
+          setLinhas(aplicarNovosIds(res.novosIds))
         }
 
         setHasUnsaved(false)
@@ -681,15 +683,7 @@ export default function VendasPage() {
           live_nome: liveNomeRef.current || '',
         })
         if (res.novosIds?.length) {
-          setLinhas(prev => {
-            const queue = [...res.novosIds]
-            return prev.map(l => {
-              if (!l.id && !l.deleted && queue.length) {
-                return { ...l, id: queue.shift().id, isNew: false }
-              }
-              return l
-            })
-          })
+          setLinhas(aplicarNovosIds(res.novosIds))
         }
         setHasUnsaved(false)
         showToast('Salvo', 'success', 1800)
@@ -1481,7 +1475,8 @@ export default function VendasPage() {
       if (l.cliente_nome?.trim()) {
         res = await enviarVenda(tid, l, dl || null, ln || '')
         // ✅ NÃO recalcula sacolinhas ao enviar - apenas marca como enviada
-        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'Vendido' } : r))
+        // ENVIADO é o que enviarVenda grava no banco; divergir daqui fazia o auto-save sobrescrever
+        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r))
       } else {
         res = await salvarVendas(tid, [l], { data_live: dl || null, live_nome: ln || '' })
         if (!l.id && res.novosIds?.length > 0) {
@@ -1718,21 +1713,28 @@ export default function VendasPage() {
 
     // NOVO: Marca itens com cliente + data da live como "Vendido" automaticamente
     setBusy(true, 'Salvando...')
+
+    // Cancela o auto-save pendente: ele salvaria o estado antigo em paralelo e duplicaria as linhas
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+
     try {
+      const fechaVenda = l => !l.deleted && !!l.cliente_nome?.trim() && !!dataLive
+
       const linhasAtualizadas = linhasRef.current.map(l => {
-        // Se tem cliente_nome E data_live preenchidos, marca como Vendido
-        if (!l.deleted && l.cliente_nome?.trim() && dataLive) {
+        // Só define Vendido quando não há status — preserva ENVIADO, Comprar, Separado e Pendente
+        if (fechaVenda(l) && !(l.status || '').trim()) {
           return { ...l, status: 'Vendido' }
         }
         return l
       })
 
       // Salva as vendas com os status atualizados
-      await salvarVendas(tenantId, linhasAtualizadas, dataLive, liveNome)
+      const res = await salvarVendas(tenantId, linhasAtualizadas, dataLive, liveNome)
 
-      // Remove itens vendidos da visualização
-      const itensVendidos = linhasAtualizadas.filter(l => l.status === 'Vendido').length
-      const linhasRestantes = linhasAtualizadas.filter(l => l.status !== 'Vendido')
+      // Remove da tela tudo que foi fechado, qualquer que seja o status
+      const comIds = aplicarNovosIds(res.novosIds)(linhasAtualizadas)
+      const itensVendidos = comIds.filter(fechaVenda).length
+      const linhasRestantes = comIds.filter(l => !fechaVenda(l))
 
       setLinhas(linhasRestantes)
       setHasUnsaved(false)

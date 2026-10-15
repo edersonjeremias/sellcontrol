@@ -385,6 +385,7 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     ? dataLiveOrOpts.live_nome : liveNomeArg
 
   const toInsert = []
+  const keysInsert = []   // _key de cada linha de toInsert, na mesma ordem
   const toUpdate = []
   const toDelete = []
   const idsVistos = new Set()
@@ -429,6 +430,7 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
       toUpdate.push(row)
     } else {
       toInsert.push(row)
+      keysInsert.push(l._key ?? null)
     }
   })
 
@@ -437,7 +439,8 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     const { data, error } = await supabase.from('vendas')
       .insert(toInsert).select('id')
     if (error) throw error
-    novosIds = data || []   // apenas IDs de novas linhas inseridas
+    // Casa cada id com o _key da linha de origem — o Supabase devolve na mesma ordem do insert
+    novosIds = (data || []).map((row, i) => ({ id: row.id, _key: keysInsert[i] }))
   }
   if (toUpdate.length > 0) {
     const { error } = await supabase.from('vendas')
