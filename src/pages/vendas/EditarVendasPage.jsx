@@ -8,6 +8,21 @@ import AppShell from '../../components/ui/AppShell'
 import AutocompleteInput from '../../components/ui/AutocompleteInput'
 import ModalConfirmacao from '../../components/ui/ModalConfirmacao'
 
+const COLUNAS = [
+  { campo: 'data_live',    label: 'Data',    cls: 'col-data' },
+  { campo: 'live_nome',    label: 'Live',    cls: 'col-live' },
+  { campo: 'codigo',       label: 'Cód.',    cls: 'col-cod' },
+  { campo: 'sacolinha',    label: 'Sacola',  cls: 'col-sacola' },
+  { campo: 'produto',      label: 'Produto', cls: 'col-produto' },
+  { campo: 'modelo',       label: 'Modelo',  cls: 'col-modelo' },
+  { campo: 'cor',          label: 'Cor',     cls: 'col-cor' },
+  { campo: 'marca',        label: 'Marca',   cls: '' },
+  { campo: 'tamanho',      label: 'Tam.',    cls: 'col-tam' },
+  { campo: 'preco',        label: 'Preço',   cls: 'col-preco' },
+  { campo: 'cliente_nome', label: 'Cliente', cls: 'col-cliente' },
+  { campo: 'status',       label: 'Status',  cls: '' },
+]
+
 export default function EditarVendasPage() {
   const { showToast } = useApp()
   const { profile } = useAuth()
@@ -23,6 +38,7 @@ export default function EditarVendasPage() {
   const [filtroRapido, setFiltroRapido] = useState('')
   const [modalEdicao, setModalEdicao] = useState(null)
   const [confirmacao, setConfirmacao] = useState(null)
+  const [ordenacao, setOrdenacao] = useState({ campo: null, direcao: 'asc' })
 
   // ── Carrega dados iniciais ──
   useEffect(() => {
@@ -85,6 +101,41 @@ export default function EditarVendasPage() {
     ].join(' ').toLowerCase()
     return termos.every(t => txt.includes(t))
   })
+
+  // ── Ordenação por coluna: asc → desc → ordem original ──
+  const alternarOrdem = useCallback((campo) => {
+    setOrdenacao(atual => {
+      if (atual.campo !== campo) return { campo, direcao: 'asc' }
+      if (atual.direcao === 'asc') return { campo, direcao: 'desc' }
+      return { campo: null, direcao: 'asc' }
+    })
+  }, [])
+
+  const CAMPOS_NUMERICOS = ['preco', 'sacolinha']
+
+  const vendasOrdenadas = (() => {
+    if (!ordenacao.campo) return vendasFiltradas
+    const { campo, direcao } = ordenacao
+    const sinal = direcao === 'asc' ? 1 : -1
+
+    return [...vendasFiltradas].sort((a, b) => {
+      const va = a[campo], vb = b[campo]
+
+      // Vazios sempre no fim, independente da direção
+      const aVazio = va === null || va === undefined || va === ''
+      const bVazio = vb === null || vb === undefined || vb === ''
+      if (aVazio && bVazio) return 0
+      if (aVazio) return 1
+      if (bVazio) return -1
+
+      if (CAMPOS_NUMERICOS.includes(campo)) {
+        return sinal * (Number(va) - Number(vb))
+      }
+      return sinal * String(va).localeCompare(String(vb), 'pt-BR', { numeric: true })
+    })
+  })()
+
+  const setaDe = campo => ordenacao.campo !== campo ? '↕' : (ordenacao.direcao === 'asc' ? '↑' : '↓')
 
   // ── Excluir venda ──
   const handleExcluir = useCallback((venda) => {
@@ -175,23 +226,25 @@ export default function EditarVendasPage() {
                 <table id="tabela" className="vendas-table-desktop">
                   <thead>
                     <tr>
-                      <th className="col-data">Data</th>
-                      <th className="col-live">Live</th>
-                      <th className="col-cod">Cód.</th>
-                      <th className="col-sacola">Sacola</th>
-                      <th className="col-produto">Produto</th>
-                      <th className="col-modelo">Modelo</th>
-                      <th className="col-cor">Cor</th>
-                      <th>Marca</th>
-                      <th className="col-tam">Tam.</th>
-                      <th className="col-preco">Preço</th>
-                      <th className="col-cliente">Cliente</th>
-                      <th>Status</th>
+                      {COLUNAS.map(c => (
+                        <th
+                          key={c.campo}
+                          className={c.cls}
+                          onClick={() => alternarOrdem(c.campo)}
+                          style={{ cursor:'pointer', userSelect:'none', whiteSpace:'nowrap' }}
+                          title={`Ordenar por ${c.label}`}
+                        >
+                          {c.label}
+                          <span style={{ marginLeft:4, opacity: ordenacao.campo === c.campo ? 1 : 0.3 }}>
+                            {setaDe(c.campo)}
+                          </span>
+                        </th>
+                      ))}
                       <th className="col-acoes">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {vendasFiltradas.map(v => (
+                    {vendasOrdenadas.map(v => (
                       <tr key={v.id} onClick={() => setModalEdicao(v)}>
                         <td className="col-data">{v.data_live ? new Date(v.data_live + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</td>
                         <td className="col-live">{v.live_nome}</td>
@@ -227,7 +280,7 @@ export default function EditarVendasPage() {
 
                 {/* LAYOUT MOBILE - CARDS */}
                 <div className="vendas-cards-mobile">
-                  {vendasFiltradas.map(v => (
+                  {vendasOrdenadas.map(v => (
                     <div key={v.id} className="venda-card-mobile-compact" onClick={() => setModalEdicao(v)}>
                       {/* Linha 1: Código, produto, modelo, cor, marca, tamanho, preço */}
                       <div className="venda-card-linha1">
