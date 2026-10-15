@@ -18,11 +18,28 @@ export const STATUS_ENTREGA_OPTS = [
 
 const FINAL_ENTREGA = new Set(['Enviado', 'Retirou', 'Voltou estoque', 'Cliente Retira'])
 
-function toDateOnly(dateValue) {
+// Datas DATE do Postgres chegam como 'YYYY-MM-DD'. new Date('2026-10-15') é
+// meia-noite UTC — no Brasil (-03) isso ainda é dia 14, e a tela mostrava um
+// dia a menos. Aqui a data pura é montada no fuso local. Sempre clona, porque
+// quem chama reutiliza o mesmo objeto Date entre as linhas.
+function parseDateLocal(dateValue) {
   if (!dateValue) return null
-  const date = new Date(dateValue)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toISOString().slice(0, 10)
+  if (dateValue instanceof Date) {
+    return Number.isNaN(dateValue.getTime()) ? null : new Date(dateValue.getTime())
+  }
+  const str = String(dateValue)
+  const puro = str.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (puro) return new Date(Number(puro[1]), Number(puro[2]) - 1, Number(puro[3]))
+  const date = new Date(str)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function toDateOnly(dateValue) {
+  const date = parseDateLocal(dateValue)
+  if (!date) return null
+  const mes = String(date.getMonth() + 1).padStart(2, '0')
+  const dia = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${mes}-${dia}`
 }
 
 function parseMoney(value) {
@@ -33,16 +50,15 @@ function parseMoney(value) {
 }
 
 function formatDateBr(dateValue) {
-  if (!dateValue) return ''
-  const date = new Date(dateValue)
-  if (Number.isNaN(date.getTime())) return ''
+  const date = parseDateLocal(dateValue)
+  if (!date) return ''
   return date.toLocaleDateString('pt-BR')
 }
 
 function businessDaysBetween(startDateValue, endDateValue) {
-  const start = new Date(startDateValue)
-  const end = new Date(endDateValue)
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0
+  const start = parseDateLocal(startDateValue)
+  const end = parseDateLocal(endDateValue)
+  if (!start || !end) return 0
 
   start.setHours(0, 0, 0, 0)
   end.setHours(0, 0, 0, 0)

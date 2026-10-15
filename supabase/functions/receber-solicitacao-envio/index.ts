@@ -13,8 +13,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Status que indicam que o pedido já saiu — não participam da deduplicação
-const ENTREGA_FINAL = ['Enviado', 'Retirou', 'Voltou estoque', 'Cliente Retira']
+// Status que indicam que o pedido já saiu — não participam da deduplicação.
+// 'Cliente Retira' fica de fora: é intenção de retirada, o pedido segue aberto.
+const ENTREGA_FINAL = ['Enviado', 'Retirou', 'Voltou estoque']
+
+// Espelha STATUS_ENTREGA_OPTS de src/services/producaoService.js
+const STATUS_ENTREGA_VALIDOS = [
+  'Aguard. pagamento', 'Aguard. dados', 'Cliente informado', 'Cliente Retira',
+  'Frete pago', 'Enviado', 'Retirou', 'Voltou estoque', 'Conferir pg',
+]
 
 function responder(ok: boolean, mensagem: string, extra: Record<string, unknown> = {}) {
   // Sempre 200: o ManyChat só consegue ler o corpo da resposta em status 200
@@ -85,6 +92,16 @@ serve(async (req) => {
   // O fluxo manda "Não"/"-" quando a cliente não tem observação
   if (/^(n[ãa]o|nao|-|sem observa[çc][ãa]o)$/i.test(observacao)) observacao = ''
 
+  // Status de entrega opcional: o fluxo "cliente retira" manda 'Cliente Retira'.
+  // Só aceita valores da lista da página de Produção, sem diferenciar maiúsculas.
+  const statusEnviado = String(body?.status_entrega ?? body?.statusEntrega ?? '').trim()
+  const statusEntrega = STATUS_ENTREGA_VALIDOS.find(
+    (s) => s.toLowerCase() === statusEnviado.toLowerCase()
+  ) || ''
+  const avisoStatus = statusEnviado && !statusEntrega
+    ? `status_entrega "${statusEnviado}" não existe na página de Produção e foi ignorado.`
+    : null
+
   if (!cliente) {
     return responder(false, 'Dados inválidos: usuário do Instagram ausente.', {
       payload_keys: Object.keys(body || {}),
@@ -113,17 +130,38 @@ serve(async (req) => {
   )
 
   if (pedidoAberto) {
+    // Complementa o pedido que já existe: observação nova e/ou status de entrega
+    const patch: Record<string, string> = {}
+
     if (observacao && !String(pedidoAberto.obs_cliente || '').includes(observacao)) {
-      const obsFinal = [pedidoAberto.obs_cliente, observacao].filter(Boolean).join(' | ')
-      await supabase
+      patch.obs_cliente = [pedidoAberto.obs_cliente, observacao].filter(Boolean).join(' | ')
+    }
+    if (statusEntrega && statusEntrega !== pedidoAberto.status_entrega) {
+      patch.status_entrega = statusEntrega
+    }
+
+    if (Object.keys(patch).length > 0) {
+      const { error: erroUpdate } = await supabase
         .from('producao_pedidos')
-        .update({ obs_cliente: obsFinal })
+        .update(patch)
         .eq('tenant_id', tenantId)
         .eq('id', pedidoAberto.id)
+
+      if (erroUpdate) {
+        console.error('Erro ao atualizar pedido existente:', erroUpdate)
+        return responder(false, 'Erro interno no sistema da loja.')
+      }
     }
-    return responder(true, 'Sua solicitação já está com o setor responsável. 💛', {
+
+    const mensagem = patch.status_entrega === 'Cliente Retira'
+      ? 'Anotamos que você vai retirar o seu pedido. 💛'
+      : 'Sua solicitação já está com o setor responsável. 💛'
+
+    return responder(true, mensagem, {
       duplicado: true,
+      atualizado: Object.keys(patch),
       pedido_id: pedidoAberto.id,
+      ...(avisoStatus ? { aviso: avisoStatus } : {}),
     })
   }
 
@@ -142,6 +180,7 @@ serve(async (req) => {
       tenant_id: tenantId,
       cliente_nome: cliente,
       obs_cliente: observacao,
+      status_entrega: statusEntrega,
       data_solicitado: hoje,
     })
     .select('id')
@@ -152,7 +191,13 @@ serve(async (req) => {
     return responder(false, 'Erro interno no sistema da loja.')
   }
 
-  return responder(true, 'Sua solicitação foi enviada ao setor responsável. 💛', {
+  const mensagem = statusEntrega === 'Cliente Retira'
+    ? 'Anotamos que você vai retirar o seu pedido. 💛'
+    : 'Sua solicitação foi enviada ao setor responsável. 💛'
+
+  return responder(true, mensagem, {
     pedido_id: criado?.id,
+    ...(statusEntrega ? { status_entrega: statusEntrega } : {}),
+    ...(avisoStatus ? { aviso: avisoStatus } : {}),
   })
 })
