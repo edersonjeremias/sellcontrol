@@ -38,7 +38,7 @@ export default function ImpressaoSacolinhaPage() {
     supabase
       .from('vendas')
       .select('data_live')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenantId).eq('etapa', 'fechada')
       .not('data_live', 'is', null)
       .order('data_live', { ascending: false })
       .then(({ data: rows }) => {
@@ -54,7 +54,7 @@ export default function ImpressaoSacolinhaPage() {
     supabase
       .from('vendas')
       .select('live_nome')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenantId).eq('etapa', 'fechada')
       .eq('data_live', dataFiltro)
       .not('live_nome', 'is', null)
       .then(({ data: rows }) => {
@@ -71,7 +71,7 @@ export default function ImpressaoSacolinhaPage() {
       let q = supabase
         .from('vendas')
         .select('cliente_nome, data_live, live_nome, sacolinha')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', tenantId).eq('etapa', 'fechada')
         .eq('data_live', dataFiltro)
       if (liveNome) q = q.eq('live_nome', liveNome)
 

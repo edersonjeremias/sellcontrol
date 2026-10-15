@@ -49,7 +49,7 @@ export default function ImpressaoPedidosPage() {
     supabase
       .from('vendas')
       .select('data_live')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenantId).eq('etapa', 'fechada')
       .not('data_live', 'is', null)
       .order('data_live', { ascending: false })
       .then(({ data: rows }) => {
@@ -66,7 +66,7 @@ export default function ImpressaoPedidosPage() {
     supabase
       .from('vendas')
       .select('live_nome')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenantId).eq('etapa', 'fechada')
       .eq('data_live', dataFiltro)
       .not('live_nome', 'is', null)
       .then(({ data: rows }) => {
@@ -84,7 +84,7 @@ export default function ImpressaoPedidosPage() {
     supabase
       .from('vendas')
       .select('cliente_nome')
-      .eq('tenant_id', tenantId)
+      .eq('tenant_id', tenantId).eq('etapa', 'fechada')
       .eq('data_live', dataFiltro)
       .eq('live_nome', liveNome)
       .not('cliente_nome', 'is', null)
@@ -101,7 +101,7 @@ export default function ImpressaoPedidosPage() {
       let q = supabase
         .from('vendas')
         .select('cliente_nome, produto, modelo, cor, marca, tamanho, preco, codigo, data_live')
-        .eq('tenant_id', tenantId)
+        .eq('tenant_id', tenantId).eq('etapa', 'fechada')
         .eq('data_live', dataFiltro)
         .eq('live_nome', liveNome)
       if (clienteFiltro) q = q.eq('cliente_nome', clienteFiltro)

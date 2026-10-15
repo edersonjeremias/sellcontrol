@@ -287,6 +287,7 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
     data_live:    row.data_live    || '',
     live_nome:    row.live_nome    || '',
     sacolinha:    row.sacolinha    ?? null,
+    etapa:        row.etapa        || 'fechada',
     status:       row.status       || '',
     fila1:        row.fila1        || '',
     fila2:        row.fila2        || '',
@@ -383,6 +384,8 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
     ? dataLiveOrOpts.data_live : dataLiveOrOpts
   const liveNome = (typeof dataLiveOrOpts === 'object' && dataLiveOrOpts)
     ? dataLiveOrOpts.live_nome : liveNomeArg
+  // 'rascunho' fica invisível fora da página de vendas; 'fechada' entra em todos os módulos
+  const etapa = (typeof dataLiveOrOpts === 'object' && dataLiveOrOpts?.etapa) || 'fechada'
 
   const toInsert = []
   const keysInsert = []   // _key de cada linha de toInsert, na mesma ordem
@@ -421,6 +424,7 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
       live_nome: temCliente ? (liveNome || '') : '',
       sacolinha: l.sacolinha ?? null, status: l.status || '',
       fila1: l.fila1 || '', fila2: l.fila2 || '', fila3: l.fila3 || '',
+      etapa,
     }
 
     if (l.id) {
@@ -465,14 +469,39 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
   return { ok: true, novosIds }
 }
 
+// ── fecharLive ─────────────────────────────────────────────────
+// Promove tudo da live para 'fechada' de uma vez. Pega também as peças que
+// salvarVendas ignora por já estarem enviadas (isSent) pelo aviãozinho.
+export async function fecharLive(tenantId = null, dataLive, liveNome) {
+  if (!dataLive) return { ok: true, fechadas: 0 }
+  const tid = TENANT_ID(tenantId)
+
+  let q = supabase.from('vendas')
+    .update({ etapa: 'fechada' })
+    .eq('tenant_id', tid)
+    .eq('data_live', dataLive)
+    .neq('etapa', 'fechada')
+
+  if (liveNome?.trim()) q = q.eq('live_nome', liveNome.trim())
+
+  const { data, error } = await q.select('id')
+  if (error) throw error
+  return { ok: true, fechadas: (data || []).length }
+}
+
 // ── enviarVenda (alias: enviarVendaIndividual) ─────────────────
 export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
   const tid = TENANT_ID(tenantId)
+  // O aviãozinho libera a peça para cobrança, mas não para expedição/sacolinha —
+  // só o Salvar da live faz isso. Nunca rebaixa uma peça que já está fechada.
+  const etapa = linha.etapa === 'fechada' ? 'fechada' : 'cobranca'
+
   if (linha.id) {
     const { error } = await supabase.from('vendas')
       .update({
         status: 'ENVIADO',
         tipo_envio: 'individual',
+        etapa,
         data_live: dataLive,
         live_nome: liveNome,
         cliente_nome: linha.cliente_nome || '',
@@ -506,7 +535,7 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
     cliente_nome: linha.cliente_nome || '',
     data_live: dataLive || null, live_nome: liveNome || '',
     sacolinha: linha.sacolinha ?? null,
-    status: 'ENVIADO', tipo_envio: 'individual',
+    status: 'ENVIADO', tipo_envio: 'individual', etapa,
     fila1: linha.fila1 || '', fila2: linha.fila2 || '', fila3: linha.fila3 || '',
   }).select('id').single()
   if (error) throw error

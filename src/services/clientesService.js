@@ -49,6 +49,7 @@ export async function getUltimasCompras(tenantId, instagrams) {
     .from('vendas')
     .select('cliente_nome, data_live')
     .eq('tenant_id', tenantId)
+    .eq('etapa', 'fechada')
     .in('cliente_nome', instagrams)
     .not('data_live', 'is', null)
     .order('data_live', { ascending: false })

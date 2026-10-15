@@ -76,6 +76,7 @@ export async function buscarItensPedido(tenantId, { clienteNome, dataLive, statu
     .from('vendas')
     .select('*')
     .eq('tenant_id', tenantId)
+    .eq('etapa', 'fechada')   // live ainda aberta não entra na expedição
     .order('data_live', { ascending: true })
     .order('codigo', { ascending: true })
 

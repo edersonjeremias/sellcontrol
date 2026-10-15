@@ -69,6 +69,7 @@ export default function ComissoesPage() {
         .from('vendas')
         .select('live_nome')
         .eq('tenant_id', tid(tenantId))
+        .eq('etapa', 'fechada')
         .gte('data_live', dataIni)
         .lte('data_live', dataFi)
         .not('live_nome', 'is', null)
@@ -113,6 +114,7 @@ export default function ComissoesPage() {
           .from('vendas')
           .select('data_live, live_nome, preco, preco_promocional, status, created_at, cliente_nome')
           .eq('tenant_id', tid(tenantId))
+          .eq('etapa', 'fechada')
           .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
           .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 

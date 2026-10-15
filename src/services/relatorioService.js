@@ -68,6 +68,7 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {})
     .from('vendas')
     .select('id, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
     .eq('tenant_id', tid(tenantId))
+    .eq('etapa', 'fechada')
     .order('data_live', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
 
@@ -233,6 +234,7 @@ export async function getVendasPorAno(tenantId) {
       .from('vendas')
       .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
+      .eq('etapa', 'fechada')
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
     if (error) throw error
@@ -281,6 +283,7 @@ export async function getVendasPorMes(tenantId, ano) {
       .from('vendas')
       .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
+      .eq('etapa', 'fechada')
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
@@ -329,6 +332,7 @@ export async function getVendasPorDia(tenantId, ano, mes) {
       .from('vendas')
       .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
+      .eq('etapa', 'fechada')
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
@@ -380,6 +384,7 @@ export async function getTopClientesMes(tenantId, ano, mes) {
       .from('vendas')
       .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
+      .eq('etapa', 'fechada')
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
@@ -424,6 +429,7 @@ export async function getVendasVsComprasDia(tenantId, ano, mes) {
       .from('vendas')
       .select('preco, preco_promocional, cliente_nome, data_live, created_at, status')
       .eq('tenant_id', tid(tenantId))
+      .eq('etapa', 'fechada')
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
@@ -531,6 +537,7 @@ export async function getResumoFinanceiro(tenantId, ano, mes) {
       .from('vendas')
       .select('preco, preco_promocional, status, cliente_nome, data_live, created_at')
       .eq('tenant_id', tid(tenantId))
+      .eq('etapa', 'fechada')
       .or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 

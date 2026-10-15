@@ -4,7 +4,7 @@ import {
   salvarVendas, estornarVenda,
   finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
-  enviarVenda,
+  enviarVenda, fecharLive,
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
@@ -644,6 +644,7 @@ export default function VendasPage() {
         const res = await salvarVendas(tenantIdRef.current, linhasRef.current, {
           data_live: dataLiveRef.current || null,
           live_nome: liveNomeRef.current || '',
+          etapa: 'rascunho',
         })
 
         if (res.novosIds?.length) {
@@ -681,6 +682,7 @@ export default function VendasPage() {
         const res = await salvarVendas(tenantIdRef.current, linhasRef.current, {
           data_live: dataLiveRef.current || null,
           live_nome: liveNomeRef.current || '',
+          etapa: 'rascunho',
         })
         if (res.novosIds?.length) {
           setLinhas(aplicarNovosIds(res.novosIds))
@@ -1699,12 +1701,20 @@ export default function VendasPage() {
       setConfirmacao({
         titulo: 'Limpar Mesa?',
         mensagem: `Todos os ${linhasComCliente.length} pedido(s) já foram enviados individualmente.<br><br>Deseja limpar a mesa para a próxima live?`,
-        onSim: () => {
+        onSim: async () => {
           setConfirmacao(null)
+          try {
+            // As peças do aviãozinho estão em 'cobranca'; fechar a live é o que as
+            // libera para expedição e sacolinha
+            await fecharLive(tenantId, dataLive, liveNome)
+          } catch (err) {
+            showToast('Erro ao fechar a live: ' + (err?.message || String(err)), 'error')
+            return
+          }
           setLinhas([])
           setHasUnsaved(false)
           setTabelaMsg('Mesa limpa. Clique em + Novo para adicionar produtos.')
-          showToast('Mesa limpa!', 'success')
+          showToast('Live fechada e mesa limpa!', 'success')
         },
         onNao: () => setConfirmacao(null),
       })
@@ -1729,7 +1739,12 @@ export default function VendasPage() {
       })
 
       // Salva as vendas com os status atualizados
-      const res = await salvarVendas(tenantId, linhasAtualizadas, dataLive, liveNome)
+      const res = await salvarVendas(tenantId, linhasAtualizadas, {
+        data_live: dataLive, live_nome: liveNome, etapa: 'fechada',
+      })
+
+      // Promove o que salvarVendas ignorou (peças já enviadas pelo aviãozinho)
+      await fecharLive(tenantId, dataLive, liveNome)
 
       // Remove da tela tudo que foi fechado, qualquer que seja o status
       const comIds = aplicarNovosIds(res.novosIds)(linhasAtualizadas)
