@@ -8,6 +8,7 @@ import {
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
+import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto } from '../../services/backupService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -187,11 +188,14 @@ export default function VendasPage() {
   const [saveStatus, setSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
   const [lastSaveTime, setLastSaveTime] = useState(null)
   const [showRecoverModal, setShowRecoverModal] = useState(false)
+  const [backupRemoto, setBackupRemoto] = useState(false) // backup veio de outra máquina
 
   // ── Modo Histórico ── (REMOVIDO)
 
   // ── Refs ──
   const sacolinhasCacheRef = useRef({ usados: new Set(), mapa: {} }) // Cache global de sacolinhas (persiste com filtros!)
+  const backupRemotoTimerRef = useRef(null)
+  const backupEncontradoRef  = useRef(null) // payload do backup a recuperar (local ou do banco)
   const scrollRef    = useRef(null)
   const linhasRef    = useRef(linhas)
   const globalDBRef  = useRef(globalDB)
@@ -353,7 +357,35 @@ export default function VendasPage() {
     } catch (err) {
       console.error('❌ Erro ao salvar backup:', err)
     }
+
+    // Espelha o MESMO payload no banco, para recuperar de outra máquina.
+    // Debounce de 5s: sem isso seria uma requisição por tecla digitada.
+    if (backupRemotoTimerRef.current) clearTimeout(backupRemotoTimerRef.current)
+    backupRemotoTimerRef.current = setTimeout(() => {
+      salvarBackupRemoto(tenantId, backupData)
+    }, 5000)
   }, [linhas, dataLive, liveNome, tenantId])
+
+  // Garante que o último backup suba ao fechar/minimizar a aba, sem esperar os 5s
+  useEffect(() => {
+    function enviarAgora() {
+      if (document.hidden && backupRemotoTimerRef.current) {
+        clearTimeout(backupRemotoTimerRef.current)
+        salvarBackupRemoto(tenantId, {
+          linhas: linhasRef.current,
+          dataLive: dataLiveRef.current,
+          liveNome: liveNomeRef.current,
+          sacolinhasCache: {
+            usados: Array.from(sacolinhasCacheRef.current.usados || []),
+            mapa: sacolinhasCacheRef.current.mapa || {}
+          },
+          timestamp: new Date().toISOString()
+        })
+      }
+    }
+    document.addEventListener('visibilitychange', enviarAgora)
+    return () => document.removeEventListener('visibilitychange', enviarAgora)
+  }, [tenantId])
 
   // 2. AVISO ao sair/atualizar página
   useEffect(() => {
@@ -376,51 +408,63 @@ export default function VendasPage() {
     if (!tenantId || backupCheckedRef.current) return
     backupCheckedRef.current = true
 
-    try {
-      const backup = localStorage.getItem(`sc_vendas_backup_${tenantId}`)
-      if (!backup) return
+    ;(async () => {
+      try {
+        // 4. Só mostra se linhas atuais estão vazias (não sobrescrever trabalho atual)
+        if (linhas.length > 0 && linhas.some(l => !l.deleted && l.produto?.trim())) {
+          console.log('⚠️ Já tem dados na tela, não mostra backup')
+          return
+        }
 
-      const backupData = JSON.parse(backup)
+        let backupLocal = null
+        try {
+          const bruto = localStorage.getItem(`sc_vendas_backup_${tenantId}`)
+          if (bruto) backupLocal = JSON.parse(bruto)
+        } catch {}
 
-      // ✅ Validações para evitar modal desnecessário:
-      // 1. Backup deve ter linhas
-      if (!backupData.linhas?.length) return
+        // Se este computador não tem backup, procura o que ficou no banco
+        const backupRemoto = await getBackupRemoto(tenantId)
 
-      // 2. Deve ter pelo menos uma linha com produto
-      const temProdutos = backupData.linhas.some(l => !l.deleted && l.produto?.trim())
-      if (!temProdutos) return
+        // Entre os dois, vale o mais recente
+        const ts = b => (b?.timestamp ? new Date(b.timestamp).getTime() : 0)
+        const backupData = ts(backupRemoto) > ts(backupLocal) ? backupRemoto : backupLocal
+        if (!backupData) return
 
-      // 3. Backup não pode ser muito antigo (max 24h)
-      const timestampBackup = new Date(backupData.timestamp).getTime()
-      const agora = Date.now()
-      const diff24h = 24 * 60 * 60 * 1000
-      if (agora - timestampBackup > diff24h) {
-        console.log('🗑️ Backup muito antigo (>24h), descartando')
-        localStorage.removeItem(`sc_vendas_backup_${tenantId}`)
-        return
+        // ✅ Validações para evitar modal desnecessário:
+        // 1. Backup deve ter linhas
+        if (!backupData.linhas?.length) return
+
+        // 2. Deve ter pelo menos uma linha com produto
+        const temProdutos = backupData.linhas.some(l => !l.deleted && l.produto?.trim())
+        if (!temProdutos) return
+
+        // 3. Backup não pode ser muito antigo (max 24h)
+        const agora = Date.now()
+        const diff24h = 24 * 60 * 60 * 1000
+        if (agora - ts(backupData) > diff24h) {
+          console.log('🗑️ Backup muito antigo (>24h), descartando')
+          localStorage.removeItem(`sc_vendas_backup_${tenantId}`)
+          limparBackupRemoto(tenantId)
+          return
+        }
+
+        // ✅ Tudo OK, mostra modal de recuperação
+        const origem = backupData === backupRemoto ? 'banco (outra máquina)' : 'este computador'
+        console.log(`💾 Backup encontrado em ${origem}:`, backupData.linhas.length, 'linhas')
+        backupEncontradoRef.current = backupData
+        setBackupRemoto(backupData === backupRemoto)
+        setShowRecoverModal(true)
+      } catch (err) {
+        console.error('❌ Erro ao verificar backup:', err)
       }
-
-      // 4. Só mostra se linhas atuais estão vazias (não sobrescrever trabalho atual)
-      if (linhas.length > 0 && linhas.some(l => !l.deleted && l.produto?.trim())) {
-        console.log('⚠️ Já tem dados na tela, não mostra backup')
-        return
-      }
-
-      // ✅ Tudo OK, mostra modal de recuperação
-      console.log('💾 Backup encontrado! Mostrando modal...', backupData.linhas.length, 'linhas')
-      setShowRecoverModal(true)
-    } catch (err) {
-      console.error('❌ Erro ao verificar backup:', err)
-    }
+    })()
   }, [tenantId, linhas])
 
   // Função para recuperar backup
   const recuperarBackup = useCallback(() => {
     try {
-      const backup = localStorage.getItem(`sc_vendas_backup_${tenantId}`)
-      if (!backup) return
-
-      const backupData = JSON.parse(backup)
+      const backupData = backupEncontradoRef.current
+      if (!backupData) return
 
       // ✅ IMPORTANTE: seta flag ANTES de mudar data/live para evitar reset do cache
       isRecoveringBackupRef.current = true
@@ -454,6 +498,8 @@ export default function VendasPage() {
       localStorage.removeItem(`sc_vendas_backup_${tenantId}`)
       // Limpa também o localStorage normal para começar vazio
       localStorage.removeItem(`sc_vendas_${tenantId}`)
+      limparBackupRemoto(tenantId)
+      backupEncontradoRef.current = null
       setShowRecoverModal(false)
       setLinhas([]) // Garante que linhas fica vazio
       setTabelaMsg('Clique em + Novo para adicionar produtos.')
@@ -1756,6 +1802,9 @@ export default function VendasPage() {
 
       // 🧹 LIMPA localStorage - dados foram salvos no banco!
       localStorage.removeItem(`sc_vendas_${tenantId}`)
+      localStorage.removeItem(`sc_vendas_backup_${tenantId}`)
+      limparBackupRemoto(tenantId)
+      backupEncontradoRef.current = null
 
       if (itensVendidos > 0) {
         showToast(`✅ ${itensVendidos} item(ns) marcado(s) como Vendido e removido(s) da tela!`, 'success')
@@ -2578,7 +2627,20 @@ export default function VendasPage() {
             </div>
             <div style={{ fontSize:14, color:'#c9d1d9', marginBottom:20, lineHeight:1.6 }}>
               Encontramos produtos que você digitou anteriormente mas não foram salvos.
-              <br/><br/>
+              {backupEncontradoRef.current && (
+                <div style={{ marginTop:12, padding:12, background:'rgba(245,158,11,.1)', borderRadius:6, fontSize:13 }}>
+                  <div><strong>{backupEncontradoRef.current.linhas?.length || 0}</strong> linha(s) · Live <strong>{backupEncontradoRef.current.liveNome || '—'}</strong></div>
+                  <div style={{ color:'#8b949e', marginTop:4 }}>
+                    Salvo às {new Date(backupEncontradoRef.current.timestamp).toLocaleString('pt-BR')}
+                  </div>
+                  {backupRemoto && (
+                    <div style={{ color:'#f59e0b', marginTop:6, fontWeight:700 }}>
+                      ☁️ Recuperado de outro computador
+                    </div>
+                  )}
+                </div>
+              )}
+              <br/>
               <strong>Deseja recuperar esses dados?</strong>
             </div>
             <div style={{ display:'flex', gap:10 }}>
