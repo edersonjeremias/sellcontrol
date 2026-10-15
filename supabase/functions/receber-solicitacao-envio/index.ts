@@ -3,14 +3,15 @@
 // Substitui a ação "Google Sheets: Insert Row" do fluxo
 // "solicitar envio.v3": grava direto em producao_pedidos.
 //
+// Multi-empresa: a função NÃO tem tenant fixo. Cada empresa gera o
+// próprio token em Configurações → Integrações e o envia no header
+// x-webhook-secret (ou ?token= na URL). O token identifica o tenant.
+//
 // Deploy:
 //   supabase functions deploy receber-solicitacao-envio --no-verify-jwt
 // ============================================================
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const SECRET = Deno.env.get('MANYCHAT_WEBHOOK_SECRET') ?? ''
-const TENANT_PADRAO = Deno.env.get('TENANT_ID') ?? ''
 
 // Status que indicam que o pedido já saiu — não participam da deduplicação
 const ENTREGA_FINAL = ['Enviado', 'Retirou', 'Voltou estoque', 'Cliente Retira']
@@ -24,12 +25,37 @@ function responder(ok: boolean, mensagem: string, extra: Record<string, unknown>
 }
 
 serve(async (req) => {
-  // 1. Senha de segurança (header x-webhook-secret no ManyChat)
-  // O valor vive no secret MANYCHAT_WEBHOOK_SECRET, nunca no codigo.
-  if (!SECRET || req.headers.get('x-webhook-secret') !== SECRET) {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  )
+
+  // 1. Token da empresa: header do ManyChat ou query string
+  const token = (
+    req.headers.get('x-webhook-secret') ||
+    new URL(req.url).searchParams.get('token') ||
+    ''
+  ).trim()
+
+  if (!token) {
     return new Response(JSON.stringify({ erro: 'Acesso negado' }), { status: 401 })
   }
 
+  const { data: config, error: erroConfig } = await supabase
+    .from('configuracoes')
+    .select('tenant_id')
+    .eq('manychat_webhook_token', token)
+    .maybeSingle()
+
+  if (erroConfig) {
+    console.error('Erro ao resolver token:', erroConfig)
+    return responder(false, 'Erro interno no sistema da loja.')
+  }
+  if (!config?.tenant_id) {
+    return new Response(JSON.stringify({ erro: 'Acesso negado' }), { status: 401 })
+  }
+
+  const tenantId = config.tenant_id
   const body = await req.json().catch(() => ({}))
 
   // 2. Extrai os dados aceitando os nomes de campo que o ManyChat pode mandar
@@ -59,21 +85,11 @@ serve(async (req) => {
   // O fluxo manda "Não"/"-" quando a cliente não tem observação
   if (/^(n[ãa]o|nao|-|sem observa[çc][ãa]o)$/i.test(observacao)) observacao = ''
 
-  const tenantId = String(body?.tenant_id || TENANT_PADRAO || '').trim()
-
   if (!cliente) {
     return responder(false, 'Dados inválidos: usuário do Instagram ausente.', {
       payload_keys: Object.keys(body || {}),
     })
   }
-  if (!tenantId) {
-    return responder(false, 'Configuração ausente: defina TENANT_ID na function.')
-  }
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  )
 
   const hoje = new Date().toISOString().slice(0, 10)
 
@@ -81,7 +97,7 @@ serve(async (req) => {
   //    aberto, só complementa a observação em vez de criar linha duplicada.
   const { data: abertos, error: erroBusca } = await supabase
     .from('producao_pedidos')
-    .select('id, obs_cliente, status_entrega, data_enviado')
+    .select('id, obs_cliente, status_entrega')
     .eq('tenant_id', tenantId)
     .eq('cliente_nome', cliente)
     .eq('data_solicitado', hoje)
@@ -114,7 +130,10 @@ serve(async (req) => {
   // 4. Garante a cliente cadastrada (para o WhatsApp e o controle de bloqueio)
   await supabase
     .from('clientes')
-    .upsert({ tenant_id: tenantId, instagram: cliente }, { onConflict: 'tenant_id,instagram', ignoreDuplicates: true })
+    .upsert(
+      { tenant_id: tenantId, instagram: cliente },
+      { onConflict: 'tenant_id,instagram', ignoreDuplicates: true }
+    )
 
   // 5. Cria o pedido na página de Produção
   const { data: criado, error: erroInsert } = await supabase

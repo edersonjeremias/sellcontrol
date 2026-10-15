@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import AppShell from '../../components/ui/AppShell'
 import { useAuth } from '../../context/AuthContext'
 import {
@@ -169,9 +169,10 @@ export default function ProducaoPage() {
   const [linkFrete,   setLinkFrete]   = useState('')
 
   // ── Load ────────────────────────────────────────────────────
-  const loadData = useCallback(async (signal) => {
+  // silencioso: recarrega sem esconder a tabela nem abrir modal de erro
+  const loadData = useCallback(async (signal, { silencioso = false } = {}) => {
     if (!tenantId) return
-    setLoading(true)
+    if (!silencioso) setLoading(true)
     try {
       const [data, cfg] = await Promise.all([getProducaoData(tenantId), getConfig(tenantId)])
       if (signal?.cancelled) return
@@ -179,10 +180,10 @@ export default function ProducaoPage() {
       if (cfg?.link_frete) setLinkFrete(cfg.link_frete)
       if (cfg?.pacotes?.length) setPacoteOpts(cfg.pacotes)
     } catch (e) {
-      if (signal?.cancelled) return
+      if (signal?.cancelled || silencioso) return
       setModalErr({ titulo: '⚠️ Erro', mensagem: e.message || 'Erro ao carregar.' })
     } finally {
-      if (!signal?.cancelled) setLoading(false)
+      if (!signal?.cancelled && !silencioso) setLoading(false)
     }
   }, [tenantId])
 
@@ -191,6 +192,33 @@ export default function ProducaoPage() {
     loadData(signal)
     return () => { signal.cancelled = true }
   }, [loadData])
+
+  // Espelho do estado da tela para o timer consultar sem se reiniciar
+  const uiRef = useRef({})
+  uiRef.current = { modalErr, modalMotivo, showDash, detalhe, saving }
+
+  // ── Atualização automática (10 min) ─────────────────────────
+  // Pula o ciclo se alguém estiver mexendo na tela, para não
+  // sobrescrever o que ainda está sendo digitado ou salvo.
+  useEffect(() => {
+    if (!tenantId) return
+    const signal = { cancelled: false }
+
+    const ocupado = () => {
+      const { modalErr: e, modalMotivo: m, showDash: d, detalhe: det, saving: s } = uiRef.current
+      if (e || m !== null || d || det) return true
+      if (Object.keys(s || {}).length > 0) return true
+      const el = document.activeElement
+      return !!el && ['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)
+    }
+
+    const timer = setInterval(() => {
+      if (document.hidden || ocupado()) return
+      loadData(signal, { silencioso: true })
+    }, 10 * 60 * 1000)
+
+    return () => { signal.cancelled = true; clearInterval(timer) }
+  }, [tenantId, loadData])
 
   // ── Saving helpers ──────────────────────────────────────────
   const markSaving = useCallback((id, field) => {

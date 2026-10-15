@@ -13,6 +13,7 @@ import ConfigAssuntos from './ConfigAssuntos'
 import UserActionsMenu from '../../components/config/UserActionsMenu'
 import AbaStatusExpedicao from './AbaStatusExpedicao'
 import AbaTransportadoras from './AbaTransportadoras'
+import AbaIntegracoes from './AbaIntegracoes'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -983,6 +984,7 @@ export default function ConfiguracoesPage() {
               <TabBtn label="Transportadoras" active={aba === 'transportadoras'} onClick={() => setAba('transportadoras')} />
               <TabBtn label="Status Expedição" active={aba === 'status'} onClick={() => setAba('status')} />
               <TabBtn label="Assuntos" active={aba === 'assuntos'} onClick={() => setAba('assuntos')} />
+              <TabBtn label="Integrações" active={aba === 'integracoes'} onClick={() => setAba('integracoes')} />
             </>
           )}
         </div>
@@ -1001,6 +1003,9 @@ export default function ConfiguracoesPage() {
         )}
         {aba === 'assuntos' && (
           <ConfigAssuntos />
+        )}
+        {aba === 'integracoes' && (
+          <AbaIntegracoes tenantId={tenantId} showToast={showToast} />
         )}
       </div>
     </AppShell>
