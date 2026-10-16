@@ -1077,9 +1077,13 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
 }
 /* Observações: estreitas nas abas Prontos/Enviados, onde a tabela cresce com o
    conteúdo. Em Produção a regra acima (table-layout fixo) vence e o campo ocupa
-   a coluna inteira, mostrando bem mais texto. */
+   a coluna inteira, mostrando bem mais texto.
+   O texto que não couber termina em "…" (o title mostra tudo no hover). As
+   reticências só aparecem com o campo fora de foco; ao clicar para editar, o
+   input volta a rolar normalmente. */
 .prod-obs-cell {
   width: 80px;
+  text-overflow: ellipsis;
 }
 .prod-v2-table thead th {
   position: sticky; top: 0; z-index: 5;
