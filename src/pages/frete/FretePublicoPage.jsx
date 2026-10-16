@@ -39,10 +39,52 @@ const mascaraTelefone = v => {
   return d.replace(/^(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2')
 }
 
+const mascaraCpf = v => v.replace(/\D/g, '').slice(0, 11)
+  .replace(/^(\d{3})(\d)/, '$1.$2')
+  .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+  .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2')
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+// Mesma checagem do servidor: o Melhor Envio recusa CPF inválido na etiqueta
+const cpfValido = (valor) => {
+  const cpf = String(valor || '').replace(/\D/g, '')
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false
+
+  for (const corte of [9, 10]) {
+    let soma = 0
+    for (let i = 0; i < corte; i++) soma += Number(cpf[i]) * (corte + 1 - i)
+    let digito = (soma * 10) % 11
+    if (digito === 10) digito = 0
+    if (digito !== Number(cpf[corte])) return false
+  }
+  return true
+}
+
+const dadosFiscaisOk = (endereco) =>
+  Boolean(endereco && cpfValido(endereco.cpf) && EMAIL_RE.test(String(endereco.email || '')))
+
+const formDoEndereco = (e) => ({
+  apelido: e.apelido || 'Entrega',
+  destinatario: e.destinatario || '',
+  telefone: mascaraTelefone(e.telefone || ''),
+  cpf: mascaraCpf(e.cpf || ''),
+  email: e.email || '',
+  cep: mascaraCep(e.cep || ''),
+  rua: e.rua || '',
+  numero: e.numero || '',
+  complemento: e.complemento || '',
+  bairro: e.bairro || '',
+  cidade: e.cidade || '',
+  estado: e.estado || '',
+})
+
 const FORM_VAZIO = {
   apelido: 'Entrega',
   destinatario: '',
   telefone: '',
+  cpf: '',
+  email: '',
   cep: '',
   rua: '',
   numero: '',
@@ -90,7 +132,15 @@ function FretePublico() {
         : d.enderecos.find(e => e.padrao) || d.enderecos[0]
 
       setEnderecoSel(padrao?.id || null)
-      if (!padrao) setEditandoEndereco(true)
+
+      // Endereço antigo sem CPF/e-mail: já abre o formulário para completar
+      if (!padrao) {
+        setEditandoEndereco(true)
+      } else if (!dadosFiscaisOk(padrao) && !STATUS_PAGOS.includes(d.romaneio.status)) {
+        setForm(formDoEndereco(padrao))
+        setEnderecoEditId(padrao.id)
+        setEditandoEndereco(true)
+      }
     } catch (err) {
       setErroFatal(err.message || 'Não conseguimos abrir este link')
     } finally {
@@ -130,18 +180,7 @@ function FretePublico() {
   const abrirEdicaoEndereco = () => {
     const e = dados.enderecos.find(x => x.id === enderecoSel)
     if (!e) return abrirNovoEndereco()
-    setForm({
-      apelido: e.apelido || 'Entrega',
-      destinatario: e.destinatario || '',
-      telefone: mascaraTelefone(e.telefone || ''),
-      cep: mascaraCep(e.cep || ''),
-      rua: e.rua || '',
-      numero: e.numero || '',
-      complemento: e.complemento || '',
-      bairro: e.bairro || '',
-      cidade: e.cidade || '',
-      estado: e.estado || '',
-    })
+    setForm(formDoEndereco(e))
     setEnderecoEditId(e.id)
     setEditandoEndereco(true)
   }
@@ -166,6 +205,9 @@ function FretePublico() {
   }
 
   const handleSalvarEndereco = async () => {
+    if (!cpfValido(form.cpf)) return showToast('CPF inválido. Confira os números.', 'error')
+    if (!EMAIL_RE.test(form.email.trim())) return showToast('Informe um e-mail válido.', 'error')
+
     setSalvando(true)
     try {
       const r = await salvarEndereco(token, form, enderecoEditId)
@@ -326,6 +368,8 @@ function FretePublico() {
               {endereco.complemento ? ` — ${endereco.complemento}` : ''}<br />
               {endereco.bairro} · {endereco.cidade}/{endereco.estado}<br />
               CEP {mascaraCep(endereco.cep)}
+              {endereco.cpf && <><br />CPF {mascaraCpf(endereco.cpf)}</>}
+              {endereco.email && <><br />{endereco.email}</>}
             </div>
 
             {!pago && (
@@ -363,6 +407,21 @@ function FretePublico() {
               <input className="portal-input" inputMode="numeric" value={form.telefone}
                 onChange={e => setForm(p => ({ ...p, telefone: mascaraTelefone(e.target.value) }))} />
             </Campo>
+
+            <Campo label="CPF de quem recebe *">
+              <input className="portal-input" inputMode="numeric" value={form.cpf}
+                onChange={e => setForm(p => ({ ...p, cpf: mascaraCpf(e.target.value) }))} />
+            </Campo>
+
+            <Campo label="E-mail *">
+              <input className="portal-input" type="email" autoCapitalize="none" spellCheck={false}
+                value={form.email}
+                onChange={e => setForm(p => ({ ...p, email: e.target.value.toLowerCase().replace(/\s/g, '') }))} />
+            </Campo>
+
+            <div style={{ color: 'var(--p-muted)', fontSize: 11, lineHeight: 1.5, marginTop: -2 }}>
+              O CPF e o e-mail são exigidos pela transportadora para emitir a etiqueta de envio.
+            </div>
 
             <Campo label="CEP *">
               <input className="portal-input" inputMode="numeric" value={form.cep}
@@ -421,8 +480,21 @@ function FretePublico() {
         )}
       </div>
 
+      {/* ── Pedido sem peso/medidas: não dá para cotar ─────────────────── */}
+      {!pago && !dados.medidas_ok && (
+        <div style={{ ...card, borderColor: 'rgba(242,139,130,.4)', background: 'rgba(242,139,130,.08)' }}>
+          <div style={{ color: 'var(--p-red)', fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
+            ⚠️ Não conseguimos calcular o frete
+          </div>
+          <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.6 }}>
+            Este pedido ainda está sem o peso e as medidas da caixa, então o cálculo sairia errado.
+            Fale com a equipe da loja: assim que ajustarem, este mesmo link volta a funcionar.
+          </div>
+        </div>
+      )}
+
       {/* ── Frete ──────────────────────────────────────────────────────── */}
-      {!pago && !editandoEndereco && endereco && (
+      {!pago && dados.medidas_ok && !editandoEndereco && endereco && (
         <div style={card}>
           <div style={titulo}>Frete</div>
 

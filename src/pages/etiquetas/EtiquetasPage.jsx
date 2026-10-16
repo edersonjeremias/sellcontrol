@@ -338,7 +338,13 @@ export default function EtiquetasPage() {
 
   const handleCotarFrete = async (romaneio) => {
     if (!romaneio.enderecos_clientes) {
-      alert('Este romaneio não possui endereço de entrega')
+      showGlobalToast('Este romaneio não possui endereço de entrega', 'error')
+      return
+    }
+
+    // Sem peso/medidas a cotação sai errada — preencher em Editar primeiro
+    if (!romaneio.peso || !romaneio.altura || !romaneio.largura || !romaneio.comprimento) {
+      showGlobalToast('Informe o peso e as medidas da caixa (botão Editar) antes de cotar', 'error')
       return
     }
 
@@ -377,12 +383,12 @@ export default function EtiquetasPage() {
         postal_code: romaneio.enderecos_clientes.cep.replace(/\D/g, ''),
       }
 
-      // Usar dimensões do romaneio (já vem preenchido do portal)
+      // Dimensões reais do romaneio (validadas acima)
       const pacote = {
-        height: romaneio.altura || 10,
-        width: romaneio.largura || 20,
-        length: romaneio.comprimento || 30,
-        weight: romaneio.peso || 0.3,
+        height: Number(romaneio.altura),
+        width: Number(romaneio.largura),
+        length: Number(romaneio.comprimento),
+        weight: Number(romaneio.peso),
       }
 
       console.log('📦 Cotando frete...', { enderecoOrigem, enderecoDestino, pacote, margemFrete })

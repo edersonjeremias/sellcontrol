@@ -24,6 +24,36 @@ const json = (body: unknown, status = 200) =>
   })
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+
+const SEM_MEDIDAS =
+  'Este pedido ainda está sem o peso e as medidas da caixa, então não dá para calcular o frete. ' +
+  'Entre em contato com a equipe da loja que a gente resolve rapidinho.'
+
+/** Romaneio só pode ser cotado com peso e as três dimensões preenchidas */
+function temMedidas(romaneio: any) {
+  return Boolean(
+    Number(romaneio.peso) > 0 &&
+    Number(romaneio.altura) > 0 &&
+    Number(romaneio.largura) > 0 &&
+    Number(romaneio.comprimento) > 0
+  )
+}
+
+/** Valida CPF pelos dígitos verificadores (o Melhor Envio recusa CPF inválido) */
+function cpfValido(valor: string) {
+  const cpf = String(valor || '').replace(/\D/g, '')
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false
+
+  for (const corte of [9, 10]) {
+    let soma = 0
+    for (let i = 0; i < corte; i++) soma += Number(cpf[i]) * (corte + 1 - i)
+    let digito = (soma * 10) % 11
+    if (digito === 10) digito = 0
+    if (digito !== Number(cpf[corte])) return false
+  }
+  return true
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -107,6 +137,7 @@ async function acaoDados(supabase: any, romaneio: any, instagram: string) {
   return json({
     loja: config?.nome_loja || 'Loja',
     margem_frete: margem,
+    medidas_ok: temMedidas(romaneio),
     romaneio: {
       numero: romaneio.numero,
       status: romaneio.status,
@@ -131,9 +162,13 @@ async function acaoDados(supabase: any, romaneio: any, instagram: string) {
 // ────────────────────────────────────────────────────────────────────────────
 async function acaoSalvarEndereco(supabase: any, romaneio: any, instagram: string, payload: any) {
   const e = payload.endereco || {}
-  const obrigatorios = ['destinatario', 'telefone', 'cep', 'rua', 'numero', 'bairro', 'cidade', 'estado']
+  const obrigatorios = ['destinatario', 'telefone', 'cpf', 'email', 'cep', 'rua', 'numero', 'bairro', 'cidade', 'estado']
   const faltando = obrigatorios.filter(c => !String(e[c] || '').trim())
   if (faltando.length) return json({ error: `Preencha: ${faltando.join(', ')}` }, 400)
+
+  // CPF e e-mail são exigidos pelo Melhor Envio para emitir a etiqueta
+  if (!cpfValido(e.cpf)) return json({ error: 'CPF inválido. Confira os números.' }, 400)
+  if (!EMAIL_RE.test(String(e.email).trim())) return json({ error: 'E-mail inválido.' }, 400)
 
   const registro = {
     tenant_id: romaneio.tenant_id,
@@ -141,6 +176,8 @@ async function acaoSalvarEndereco(supabase: any, romaneio: any, instagram: strin
     apelido: String(e.apelido || 'Entrega').trim(),
     destinatario: String(e.destinatario).trim(),
     telefone: String(e.telefone).replace(/\D/g, ''),
+    cpf: String(e.cpf).replace(/\D/g, ''),
+    email: String(e.email).trim().toLowerCase(),
     cep: String(e.cep).replace(/\D/g, ''),
     rua: String(e.rua).trim(),
     numero: String(e.numero).trim(),
@@ -189,6 +226,23 @@ async function acaoSalvarEndereco(supabase: any, romaneio: any, instagram: strin
 
   await supabase.from('romaneios').update({ endereco_id: enderecoId }).eq('id', romaneio.id)
 
+  // Aproveita para completar o cadastro do cliente, sem sobrescrever o que a loja já tem
+  const { data: cliente } = await supabase
+    .from('clientes')
+    .select('id, cpf, email')
+    .eq('tenant_id', romaneio.tenant_id)
+    .ilike('instagram', romaneio.cliente_instagram)
+    .maybeSingle()
+
+  if (cliente) {
+    const completar: Record<string, string> = {}
+    if (!String(cliente.cpf || '').trim()) completar.cpf = registro.cpf
+    if (!String(cliente.email || '').trim()) completar.email = registro.email
+    if (Object.keys(completar).length) {
+      await supabase.from('clientes').update(completar).eq('id', cliente.id)
+    }
+  }
+
   const { data: enderecos } = await supabase
     .from('enderecos_clientes')
     .select('*')
@@ -207,6 +261,9 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
     return json({ error: 'O frete deste pedido já foi pago' }, 409)
   }
 
+  // Sem peso/medidas reais a cotação sairia errada — melhor parar aqui
+  if (!temMedidas(romaneio)) return json({ error: SEM_MEDIDAS, sem_medidas: true }, 422)
+
   const enderecoId = payload.endereco_id || romaneio.endereco_id
   if (!enderecoId) return json({ error: 'Informe o endereço de entrega' }, 400)
 
@@ -219,6 +276,11 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
     .maybeSingle()
 
   if (!endereco) return json({ error: 'Endereço não encontrado' }, 404)
+
+  // Endereço antigo, cadastrado antes de o CPF/e-mail virarem obrigatórios
+  if (!cpfValido(endereco.cpf) || !EMAIL_RE.test(String(endereco.email || ''))) {
+    return json({ error: 'Complete o CPF e o e-mail do endereço para calcular o frete.', dados_incompletos: true }, 428)
+  }
 
   const { data: config } = await supabase
     .from('configuracoes')
@@ -255,10 +317,10 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
       state_abbr: endereco.estado,
     },
     package: {
-      height: romaneio.altura || 10,
-      width: romaneio.largura || 20,
-      length: romaneio.comprimento || 30,
-      weight: romaneio.peso || 1,
+      height: Number(romaneio.altura),
+      width: Number(romaneio.largura),
+      length: Number(romaneio.comprimento),
+      weight: Number(romaneio.peso),
     },
   }
 
@@ -323,6 +385,7 @@ async function acaoPagar(supabase: any, romaneio: any, payload: any) {
   if (['frete_pago', 'etiqueta_gerada', 'despachado'].includes(romaneio.status)) {
     return json({ error: 'O frete deste pedido já foi pago' }, 409)
   }
+  if (!temMedidas(romaneio)) return json({ error: SEM_MEDIDAS, sem_medidas: true }, 422)
   if (!payload.cotacao_id) return json({ error: 'Escolha uma opção de frete' }, 400)
 
   const { data: cotacao } = await supabase
@@ -353,11 +416,11 @@ async function acaoPagar(supabase: any, romaneio: any, payload: any) {
     .eq('romaneio_id', romaneio.id)
     .eq('status', 'pendente')
 
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('nome, email, cpf')
-    .eq('tenant_id', romaneio.tenant_id)
-    .ilike('instagram', romaneio.cliente_instagram)
+  // Dados do pagador: o que o próprio cliente informou no endereço
+  const { data: endereco } = await supabase
+    .from('enderecos_clientes')
+    .select('destinatario, email, cpf')
+    .eq('id', romaneio.endereco_id)
     .maybeSingle()
 
   const resp = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/criar-pagamento-pix-frete`, {
@@ -372,9 +435,9 @@ async function acaoPagar(supabase: any, romaneio: any, payload: any) {
       valor: Number(cotacao.valor),
       dados: {
         numeroRomaneio: romaneio.numero,
-        email: cliente?.email || 'cliente@email.com',
-        nome: cliente?.nome || romaneio.cliente_instagram,
-        documento: String(cliente?.cpf || '').replace(/\D/g, '') || undefined,
+        email: endereco?.email || 'cliente@email.com',
+        nome: endereco?.destinatario || romaneio.cliente_instagram,
+        documento: String(endereco?.cpf || '').replace(/\D/g, '') || undefined,
       },
     }),
   })

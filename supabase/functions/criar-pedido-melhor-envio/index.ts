@@ -58,6 +58,16 @@ serve(async (req) => {
       )
     }
 
+    // Sem peso/medidas reais a etiqueta sai errada e a transportadora cobra a diferença
+    const semMedidas = !(Number(romaneio.peso) > 0 && Number(romaneio.altura) > 0 &&
+                         Number(romaneio.largura) > 0 && Number(romaneio.comprimento) > 0)
+    if (semMedidas) {
+      return new Response(
+        JSON.stringify({ error: `Romaneio ${romaneio.numero} está sem peso ou medidas da caixa. Preencha em Editar antes de gerar a etiqueta.` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Busca cotação
     console.log('🔍 Buscando cotação:', romaneio.melhor_envio_cotacao_id)
     const { data: cotacao, error: cotacaoError } = await supabase
@@ -93,6 +103,15 @@ serve(async (req) => {
             endereco_error: enderecoError?.message
           }
         }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // CPF e e-mail do destinatário são obrigatórios no Melhor Envio
+    const cpfDestinatario = String(endereco.cpf || '').replace(/\D/g, '')
+    if (cpfDestinatario.length !== 11 || !endereco.email) {
+      return new Response(
+        JSON.stringify({ error: `Endereço de ${endereco.destinatario} está sem CPF ou e-mail. A transportadora exige os dois para emitir a etiqueta.` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -161,8 +180,8 @@ serve(async (req) => {
       to: {
         name: endereco.destinatario,
         phone: endereco.telefone,
-        email: 'cliente@email.com',
-        document: endereco.cpf || '31893944824',
+        email: endereco.email,
+        document: String(endereco.cpf || '').replace(/\D/g, ''),
         address: endereco.rua,
         number: endereco.numero,
         complement: endereco.complemento || '',
@@ -178,10 +197,10 @@ serve(async (req) => {
         unitary_value: romaneio.produto_valor_declarado || 50.00,
       }],
       volumes: [{
-        height: romaneio.altura || 10,
-        width: romaneio.largura || 20,
-        length: romaneio.comprimento || 30,
-        weight: romaneio.peso || 1,
+        height: Number(romaneio.altura),
+        width: Number(romaneio.largura),
+        length: Number(romaneio.comprimento),
+        weight: Number(romaneio.peso),
       }],
       options: {
         insurance_value: romaneio.produto_valor_declarado || 1.00,

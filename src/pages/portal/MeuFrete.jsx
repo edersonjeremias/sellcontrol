@@ -115,15 +115,18 @@ export default function MeuFrete() {
 
     console.log('✅ Endereço encontrado:', endereco)
 
-    // Validação 2: Dimensões do romaneio
+    // Validação 2: Dimensões do romaneio — sem elas a cotação sai errada
     if (!romaneio.peso || !romaneio.altura || !romaneio.largura || !romaneio.comprimento) {
-      console.warn('⚠️ Romaneio sem dimensões completas:', {
+      console.warn('❌ Romaneio sem dimensões completas:', {
         peso: romaneio.peso,
         altura: romaneio.altura,
         largura: romaneio.largura,
         comprimento: romaneio.comprimento
       })
-      showToast('⚠️ Romaneio sem dimensões. Usando valores padrão para cotação.', 'warning')
+      return showToast(
+        'Este pedido ainda está sem o peso e as medidas da caixa. Fale com a loja para liberar o cálculo do frete.',
+        'error'
+      )
     }
 
     setCotando(true)
@@ -171,10 +174,10 @@ export default function MeuFrete() {
         }
 
         const pacote = {
-          height: romaneio.altura || 10,
-          width: romaneio.largura || 20,
-          length: romaneio.comprimento || 30,
-          weight: romaneio.peso || 1,
+          height: Number(romaneio.altura),
+          width: Number(romaneio.largura),
+          length: Number(romaneio.comprimento),
+          weight: Number(romaneio.peso),
         }
 
         console.log('📍 Origem:', enderecoOrigem)
