@@ -68,13 +68,40 @@ serve(async (req) => {
       )
     }
 
-    // Busca cotação
-    console.log('🔍 Buscando cotação:', romaneio.melhor_envio_cotacao_id)
-    const { data: cotacao, error: cotacaoError } = await supabase
-      .from('cotacoes_frete')
-      .select('*')
-      .eq('id', romaneio.melhor_envio_cotacao_id)
-      .single()
+    // Busca cotação. O romaneio pode guardar o UUID da linha de cotacoes_frete
+    // ou, em registros mais antigos, o id do serviço no Melhor Envio.
+    const cotacaoRef = String(romaneio.melhor_envio_cotacao_id)
+    const ehUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cotacaoRef)
+    console.log('🔍 Buscando cotação:', cotacaoRef, ehUuid ? '(uuid)' : '(id de serviço)')
+
+    let cotacao: any = null
+    let cotacaoError: any = null
+
+    if (ehUuid) {
+      const { data, error } = await supabase
+        .from('cotacoes_frete')
+        .select('*')
+        .eq('id', cotacaoRef)
+        .maybeSingle()
+      cotacao = data
+      cotacaoError = error
+    }
+
+    if (!cotacao) {
+      const { data: salvas, error } = await supabase
+        .from('cotacoes_frete')
+        .select('*')
+        .eq('romaneio_id', romaneio_id)
+        .order('created_at', { ascending: false })
+
+      cotacaoError = cotacaoError || error
+      const lista = salvas || []
+
+      cotacao =
+        lista.find((c: any) => String(c.melhor_envio_data?.id) === cotacaoRef) ||
+        lista.find((c: any) => c.servico === romaneio.servico && c.transportadora === romaneio.transportadora) ||
+        null
+    }
 
     if (cotacaoError) {
       console.error('❌ Erro ao buscar cotação:', cotacaoError)
@@ -93,9 +120,12 @@ serve(async (req) => {
     }
 
     if (!cotacao || !endereco) {
+      const falta = !cotacao
+        ? 'a cotação do frete não foi encontrada — cote o frete novamente'
+        : 'o endereço de entrega não foi encontrado'
       return new Response(
         JSON.stringify({
-          error: 'Dados incompletos do romaneio',
+          error: `Não foi possível gerar a etiqueta: ${falta}.`,
           detalhes: {
             cotacao_encontrada: !!cotacao,
             endereco_encontrado: !!endereco,

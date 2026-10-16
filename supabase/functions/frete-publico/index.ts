@@ -405,7 +405,8 @@ async function acaoPagar(supabase: any, romaneio: any, payload: any) {
       valor_frete: cotacao.valor,
       prazo_entrega: cotacao.prazo,
       status: 'frete_cotado',
-      melhor_envio_cotacao_id: cotacao.melhor_envio_data?.id || null,
+      // UUID da linha de cotacoes_frete: é o que a geração da etiqueta busca
+      melhor_envio_cotacao_id: cotacao.id,
     })
     .eq('id', romaneio.id)
 

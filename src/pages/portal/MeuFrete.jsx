@@ -194,7 +194,8 @@ export default function MeuFrete() {
         console.log('✅ Cotações recebidas da API:', cotacoesAPI)
 
         console.log('💾 Salvando cotações no banco...')
-        await salvarCotacoes(romaneio.id, cotacoesAPI)
+        // Guarda o retorno: as linhas salvas trazem o UUID que a etiqueta usa
+        const cotacoesSalvas = await salvarCotacoes(romaneio.id, cotacoesAPI)
 
         console.log('✅ Cotações recebidas da API:', cotacoesAPI)
 
@@ -203,7 +204,7 @@ export default function MeuFrete() {
           console.log('📊 Estrutura da primeira cotação:', cotacoesAPI[0])
         }
 
-        setCotacoes(cotacoesAPI)
+        setCotacoes(cotacoesSalvas?.length ? cotacoesSalvas : cotacoesAPI)
         showToast('Frete cotado com sucesso!', 'success')
     } catch (err) {
       console.error('❌ ERRO ao cotar frete:', err)
