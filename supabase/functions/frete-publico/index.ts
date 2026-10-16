@@ -208,7 +208,7 @@ async function acaoSalvarEndereco(supabase: any, romaneio: any, instagram: strin
 
     if (error) {
       console.error('Erro ao atualizar endereço:', error)
-      return json({ error: 'Erro ao salvar o endereço' }, 500)
+      return json({ error: `Erro ao salvar o endereço: ${error.message}` }, 500)
     }
   } else {
     const { data: criado, error } = await supabase
@@ -219,7 +219,7 @@ async function acaoSalvarEndereco(supabase: any, romaneio: any, instagram: strin
 
     if (error) {
       console.error('Erro ao criar endereço:', error)
-      return json({ error: 'Erro ao salvar o endereço' }, 500)
+      return json({ error: `Erro ao salvar o endereço: ${error.message}` }, 500)
     }
     enderecoId = criado.id
   }
