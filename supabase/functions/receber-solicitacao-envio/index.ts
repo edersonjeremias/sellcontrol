@@ -34,6 +34,14 @@ function hojeNaLoja() {
   }).format(new Date())
 }
 
+// Quando o campo personalizado está vazio para aquele contato, o ManyChat
+// manda o nome da variável como texto ('{{cuf_12081946}}') em vez de string
+// vazia. Isso chegava a virar observação na tela da equipe.
+function limparPlaceholder(valor: string) {
+  const limpo = valor.replace(/\{\{[^}]*\}\}/g, '').trim()
+  return limpo === '-' ? '' : limpo
+}
+
 function responder(ok: boolean, mensagem: string, extra: Record<string, unknown> = {}) {
   // Sempre 200: o ManyChat só consegue ler o corpo da resposta em status 200
   return new Response(
@@ -98,8 +106,8 @@ serve(async (req) => {
     body?.message ??
     ''
 
-  const cliente = String(usuarioRaw || '').replace(/^@/, '').trim().toLowerCase()
-  let observacao = String(obsRaw || '').trim()
+  const cliente = limparPlaceholder(String(usuarioRaw || '')).replace(/^@/, '').trim().toLowerCase()
+  let observacao = limparPlaceholder(String(obsRaw || ''))
   // O fluxo manda "Não"/"-" quando a cliente não tem observação
   if (/^(n[ãa]o|nao|-|sem observa[çc][ãa]o)$/i.test(observacao)) observacao = ''
 

@@ -500,9 +500,10 @@ export default function ProducaoPage() {
                         </select>
                       </td>
 
-                      {/* Obs Cliente — input INLINE sem componente helper */}
+                      {/* Obs Cliente — ocupa a coluna inteira; o texto todo fica no title */}
                       <td>
-                        <input className="prod-v2-cell" style={{ width: 80, borderColor: bc(row.id,'obs_cliente') }}
+                        <input className="prod-v2-cell prod-obs-cell" style={{ borderColor: bc(row.id,'obs_cliente') }}
+                          title={row.obs_cliente || ''}
                           value={row.obs_cliente || ''}
                           onChange={(e) => updRow(row.id, { obs_cliente: e.target.value })}
                           onBlur={(e) => savePatch(row.id, 'obs_cliente', e.target.value)} />
@@ -510,7 +511,8 @@ export default function ProducaoPage() {
 
                       {/* Obs Prod */}
                       <td>
-                        <input className="prod-v2-cell" style={{ width: 80, borderColor: bc(row.id,'obs_prod') }}
+                        <input className="prod-v2-cell prod-obs-cell" style={{ borderColor: bc(row.id,'obs_prod') }}
+                          title={row.obs_prod || ''}
                           value={row.obs_prod || ''}
                           onChange={(e) => updRow(row.id, { obs_prod: e.target.value })}
                           onBlur={(e) => savePatch(row.id, 'obs_prod', e.target.value)} />

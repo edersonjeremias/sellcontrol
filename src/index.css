@@ -1075,6 +1075,12 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
   max-width: 100%;
   font-size: inherit;
 }
+/* Observações: estreitas nas abas Prontos/Enviados, onde a tabela cresce com o
+   conteúdo. Em Produção a regra acima (table-layout fixo) vence e o campo ocupa
+   a coluna inteira, mostrando bem mais texto. */
+.prod-obs-cell {
+  width: 80px;
+}
 .prod-v2-table thead th {
   position: sticky; top: 0; z-index: 5;
   background: #191b20;
