@@ -571,31 +571,38 @@ export default function EtiquetasPage() {
   return (
     <AppShell page="Etiquetas">
       <div style={{ padding: 24 }}>
-        <h1 style={{ margin: '0 0 20px 0', color: '#e8eaed', fontSize: 24, fontWeight: 700 }}>
-          📦 Gestão de Etiquetas
-        </h1>
-
-        {/* Barra de Filtros */}
+        {/* Título e filtros na mesma linha */}
         <div style={{
           display: 'flex',
-          gap: 12,
-          marginBottom: 24,
-          flexWrap: 'wrap',
+          gap: 8,
+          marginBottom: 16,
+          flexWrap: 'nowrap',
           alignItems: 'center',
         }}>
+          <h1 style={{
+            margin: 0,
+            color: '#e8eaed',
+            fontSize: 17,
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+          }}>
+            Gestão de Etiquetas
+          </h1>
+
           <input
             type="text"
-            placeholder="🔍 Buscar cliente ou romaneio..."
+            placeholder="Buscar cliente ou romaneio..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             style={{
-              flex: '1 1 250px',
+              flex: '1 1 120px',
+              minWidth: 0,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              padding: '10px 14px',
+              borderRadius: 6,
+              padding: '6px 10px',
               color: '#e8eaed',
-              fontSize: 14,
+              fontSize: 13,
             }}
           />
 
@@ -603,35 +610,38 @@ export default function EtiquetasPage() {
             value={statusFiltro}
             onChange={(e) => setStatusFiltro(e.target.value)}
             style={{
+              flex: '0 0 auto',
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              padding: '10px 14px',
+              borderRadius: 6,
+              padding: '6px 8px',
               color: '#e8eaed',
-              fontSize: 14,
+              fontSize: 13,
               cursor: 'pointer',
             }}
           >
-            <option value="etiqueta_gerada">🏷️ Etiqueta Gerada</option>
-            <option value="aguardando_pagamento">⏳ Aguardando Pagamento</option>
-            <option value="despachado">✓ Despachado</option>
-            <option value="frete_pago">💳 Frete Pago</option>
-            <option value="cancelado">✗ Cancelado</option>
-            <option value="todos">📦 Todos</option>
+            <option value="etiqueta_gerada">Etiqueta Gerada</option>
+            <option value="aguardando_pagamento">Aguardando Pagamento</option>
+            <option value="despachado">Despachado</option>
+            <option value="frete_pago">Frete Pago</option>
+            <option value="cancelado">Cancelado</option>
+            <option value="todos">Todos</option>
           </select>
 
           <input
             type="date"
             value={dataInicio}
             onChange={(e) => setDataInicio(e.target.value)}
-            placeholder="Data Início"
+            title="Data início"
             style={{
+              flex: '0 0 auto',
+              width: 128,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              padding: '10px 14px',
+              borderRadius: 6,
+              padding: '6px 8px',
               color: '#e8eaed',
-              fontSize: 14,
+              fontSize: 12,
               colorScheme: 'dark',
             }}
           />
@@ -640,14 +650,16 @@ export default function EtiquetasPage() {
             type="date"
             value={dataFim}
             onChange={(e) => setDataFim(e.target.value)}
-            placeholder="Data Fim"
+            title="Data fim"
             style={{
+              flex: '0 0 auto',
+              width: 128,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              padding: '10px 14px',
+              borderRadius: 6,
+              padding: '6px 8px',
               color: '#e8eaed',
-              fontSize: 14,
+              fontSize: 12,
               colorScheme: 'dark',
             }}
           />
@@ -661,34 +673,38 @@ export default function EtiquetasPage() {
                 setDataFim('')
               }}
               style={{
+                flex: '0 0 auto',
                 background: 'rgba(244,67,54,0.1)',
                 color: '#f44336',
                 border: '1px solid rgba(244,67,54,0.3)',
-                borderRadius: 8,
-                padding: '10px 16px',
+                borderRadius: 6,
+                padding: '6px 12px',
                 fontWeight: 600,
                 cursor: 'pointer',
-                fontSize: 14,
+                fontSize: 13,
+                whiteSpace: 'nowrap',
               }}
             >
-              🧹 Limpar
+              Limpar
             </button>
           )}
 
           <button
             onClick={carregar}
             style={{
+              flex: '0 0 auto',
               background: 'rgba(255,255,255,0.1)',
               color: '#e8eaed',
               border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: 8,
-              padding: '10px 16px',
+              borderRadius: 6,
+              padding: '6px 12px',
               fontWeight: 600,
               cursor: 'pointer',
-              fontSize: 14,
+              fontSize: 13,
+              whiteSpace: 'nowrap',
             }}
           >
-            🔄 Atualizar
+            Atualizar
           </button>
         </div>
 
@@ -700,7 +716,6 @@ export default function EtiquetasPage() {
             borderRadius: 16,
             border: '1px dashed rgba(255,255,255,0.1)',
           }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
             <p style={{ color: '#9aa0a6', margin: 0, fontSize: 16 }}>
               Nenhum romaneio com frete pago no momento
             </p>
@@ -715,7 +730,7 @@ export default function EtiquetasPage() {
             {/* Header da Tabela */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '130px 1fr 140px 140px 160px 280px',
+              gridTemplateColumns: '110px 1fr 100px 100px 120px 250px',
               gap: 16,
               padding: '14px 20px',
               background: 'rgba(255,255,255,0.05)',
@@ -748,7 +763,7 @@ export default function EtiquetasPage() {
                   onClick={() => setModalAberto(rom)}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '130px 1fr 140px 140px 160px 280px',
+                    gridTemplateColumns: '110px 1fr 100px 100px 120px 250px',
                     gap: 16,
                     padding: '16px 20px',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -783,7 +798,7 @@ export default function EtiquetasPage() {
                           border: '1px solid rgba(33,150,243,0.3)',
                         }}
                       >
-                        📍 {rom.codigo_rastreio}
+                        {rom.codigo_rastreio}
                       </a>
                     )}
                   </div>
@@ -820,12 +835,12 @@ export default function EtiquetasPage() {
                     borderRadius: 6,
                     textTransform: 'uppercase',
                   }}>
-                    {rom.status === 'despachado' ? '✓ Despachado' :
-                     rom.status === 'etiqueta_gerada' ? '🏷️ Etiqueta Gerada' :
-                     rom.status === 'frete_pago' ? '💳 Frete Pago' :
-                     rom.status === 'frete_cotado' ? '📋 Cotado' :
-                     rom.status === 'cancelado' ? '✗ Cancelado' :
-                     rom.status === 'pronto' ? '🔄 Pronto' : rom.status}
+                    {rom.status === 'despachado' ? 'Despachado' :
+                     rom.status === 'etiqueta_gerada' ? 'Etiqueta Gerada' :
+                     rom.status === 'frete_pago' ? 'Frete Pago' :
+                     rom.status === 'frete_cotado' ? 'Cotado' :
+                     rom.status === 'cancelado' ? 'Cancelado' :
+                     rom.status === 'pronto' ? 'Pronto' : rom.status}
                   </div>
                 </div>
 
@@ -842,13 +857,14 @@ export default function EtiquetasPage() {
                         color: '#25d366',
                         border: '1px solid rgba(37,211,102,0.5)',
                         borderRadius: 6,
-                        padding: '7px 12px',
-                        fontSize: 12,
+                        padding: '6px 10px',
+                        fontSize: 11,
                         fontWeight: 700,
                         cursor: 'pointer',
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      💬
+                      Enviar Link
                     </button>
                   )}
 
@@ -862,14 +878,15 @@ export default function EtiquetasPage() {
                         color: '#0f0f0f',
                         border: 'none',
                         borderRadius: 6,
-                        padding: '7px 12px',
-                        fontSize: 12,
+                        padding: '6px 10px',
+                        fontSize: 11,
                         fontWeight: 700,
                         cursor: gerando === rom.id ? 'wait' : 'pointer',
                         opacity: gerando === rom.id ? 0.6 : 1,
+                        whiteSpace: 'nowrap',
                       }}
                     >
-                      {gerando === rom.id ? '...' : '🏷️ Gerar'}
+                      {gerando === rom.id ? '...' : 'Gerar'}
                     </button>
                   )}
 
@@ -883,13 +900,14 @@ export default function EtiquetasPage() {
                           color: '#2196f3',
                           border: '1px solid rgba(33,150,243,0.5)',
                           borderRadius: 6,
-                          padding: '7px 12px',
-                          fontSize: 12,
+                          padding: '6px 10px',
+                          fontSize: 11,
                           fontWeight: 700,
                           cursor: 'pointer',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        🖨️
+                        Imprimir
                       </button>
 
                       {rom.status === 'etiqueta_gerada' && (
@@ -901,13 +919,14 @@ export default function EtiquetasPage() {
                             color: '#4caf50',
                             border: '1px solid rgba(76,175,80,0.5)',
                             borderRadius: 6,
-                            padding: '7px 12px',
-                            fontSize: 12,
+                            padding: '6px 10px',
+                            fontSize: 11,
                             fontWeight: 700,
                             cursor: 'pointer',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          ✓
+                          Despachar
                         </button>
                       )}
                     </>
@@ -922,13 +941,14 @@ export default function EtiquetasPage() {
                       color: '#ff9800',
                       border: '1px solid rgba(255,152,0,0.5)',
                       borderRadius: 6,
-                      padding: '7px 12px',
-                      fontSize: 12,
+                      padding: '6px 10px',
+                      fontSize: 11,
                       fontWeight: 700,
                       cursor: 'pointer',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    ✏️
+                    Editar
                   </button>
                 </div>
               </div>
@@ -1027,12 +1047,12 @@ export default function EtiquetasPage() {
                     borderRadius: 8,
                     textTransform: 'uppercase',
                   }}>
-                    {modalAberto.status === 'despachado' ? '✓ Despachado' :
-                     modalAberto.status === 'etiqueta_gerada' ? '🏷️ Etiqueta Gerada' :
-                     modalAberto.status === 'frete_pago' ? '💳 Frete Pago' :
-                     modalAberto.status === 'frete_cotado' ? '📋 Cotado' :
-                     modalAberto.status === 'cancelado' ? '✗ Cancelado' :
-                     modalAberto.status === 'pronto' ? '🔄 Pronto' : modalAberto.status}
+                    {modalAberto.status === 'despachado' ? 'Despachado' :
+                     modalAberto.status === 'etiqueta_gerada' ? 'Etiqueta Gerada' :
+                     modalAberto.status === 'frete_pago' ? 'Frete Pago' :
+                     modalAberto.status === 'frete_cotado' ? 'Cotado' :
+                     modalAberto.status === 'cancelado' ? 'Cancelado' :
+                     modalAberto.status === 'pronto' ? 'Pronto' : modalAberto.status}
                   </div>
                 </div>
 
@@ -1081,7 +1101,7 @@ export default function EtiquetasPage() {
                     marginBottom: 20,
                   }}>
                     <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
-                      📍 Endereço de Entrega
+                      Endereço de Entrega
                     </div>
                     <div style={{ color: '#e8eaed', fontSize: 14, lineHeight: 1.6 }}>
                       <strong>{modalAberto.enderecos_clientes.destinatario}</strong><br />
@@ -1103,7 +1123,7 @@ export default function EtiquetasPage() {
                     marginBottom: 20,
                   }}>
                     <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
-                      🔍 Código de Rastreio
+                      Código de Rastreio
                     </div>
                     <div style={{ color: '#2196f3', fontSize: 16, fontWeight: 700, fontFamily: 'monospace' }}>
                       {modalAberto.codigo_rastreio}
@@ -1121,7 +1141,7 @@ export default function EtiquetasPage() {
                     marginBottom: 20,
                   }}>
                     <div style={{ color: '#ffc107', fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-                      ⚠️ Frete ainda não cotado
+                      Frete ainda não cotado
                     </div>
 
                     {cotacoes.length === 0 ? (
@@ -1144,7 +1164,7 @@ export default function EtiquetasPage() {
                             opacity: cotando ? 0.6 : 1,
                           }}
                         >
-                          {cotando ? '⏳ Cotando...' : '📦 Cotar Frete'}
+                          {cotando ? 'Cotando...' : 'Cotar Frete'}
                         </button>
                       </>
                     ) : (
@@ -1234,7 +1254,7 @@ export default function EtiquetasPage() {
                               fontSize: 14,
                             }}
                           >
-                            ✓ Confirmar Cotação
+                            Confirmar Cotação
                           </button>
                         </div>
                       </>
@@ -1264,7 +1284,7 @@ export default function EtiquetasPage() {
                         opacity: gerando === modalAberto.id ? 0.6 : 1,
                       }}
                     >
-                      {gerando === modalAberto.id ? 'Gerando...' : '🏷️ Gerar Etiqueta'}
+                      {gerando === modalAberto.id ? 'Gerando...' : 'Gerar Etiqueta'}
                     </button>
                   )}
 
@@ -1284,7 +1304,7 @@ export default function EtiquetasPage() {
                           cursor: 'pointer',
                         }}
                       >
-                        🖨️ Imprimir Etiqueta
+                        Imprimir Etiqueta
                       </button>
 
                       {modalAberto.status === 'etiqueta_gerada' && (
@@ -1305,7 +1325,7 @@ export default function EtiquetasPage() {
                             cursor: 'pointer',
                           }}
                         >
-                          ✓ Marcar como Despachado
+                          Marcar como Despachado
                         </button>
                       )}
                     </>
@@ -1327,7 +1347,7 @@ export default function EtiquetasPage() {
                         cursor: 'pointer',
                       }}
                     >
-                      💬 Enviar link no WhatsApp
+                      Enviar link no WhatsApp
                     </button>
                   )}
 
@@ -1350,7 +1370,7 @@ export default function EtiquetasPage() {
                         cursor: 'pointer',
                       }}
                     >
-                      💰 Marcar como Pago
+                      Marcar como Pago
                     </button>
                   )}
                 </div>
@@ -1395,7 +1415,7 @@ export default function EtiquetasPage() {
                 borderBottom: '1px solid rgba(255,255,255,0.1)',
               }}>
                 <h2 style={{ margin: 0, color: '#e8eaed', fontSize: 20, fontWeight: 700 }}>
-                  ✏️ Editar Romaneio {editando.numero}
+                  Editar Romaneio {editando.numero}
                 </h2>
                 <p style={{ margin: '8px 0 0 0', color: '#9aa0a6', fontSize: 13 }}>
                   Ao salvar, o status voltará para PRONTO e cotações serão limpas
@@ -1406,7 +1426,7 @@ export default function EtiquetasPage() {
               <div style={{ padding: 24 }}>
                 <div style={{ marginBottom: 24 }}>
                   <h3 style={{ margin: '0 0 12px 0', color: '#e8eaed', fontSize: 16 }}>
-                    📦 Dimensões da Embalagem
+                    Dimensões da Embalagem
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
@@ -1494,7 +1514,7 @@ export default function EtiquetasPage() {
 
                 <div>
                   <h3 style={{ margin: '0 0 12px 0', color: '#e8eaed', fontSize: 16 }}>
-                    📋 Dados do Produto
+                    Dados do Produto
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <div>
@@ -1595,7 +1615,7 @@ export default function EtiquetasPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  ✓ Salvar e Voltar para PRONTO
+                  Salvar e Voltar para PRONTO
                 </button>
               </div>
             </div>
