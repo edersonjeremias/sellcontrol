@@ -66,6 +66,7 @@ import ImpressaoSacolinhaClientePage from './pages/impressao/ImpressaoSacolinhaC
 import EtiquetasProdutosPage         from './pages/impressao/EtiquetasPage'
 import EtiquetasEnvioPage            from './pages/etiquetas/EtiquetasPage'
 import PortalApp                     from './pages/portal/PortalApp'
+import FretePublicoPage              from './pages/frete/FretePublicoPage'
 import RelatorioPage                  from './pages/relatorio/RelatorioPage'
 import ContatosPage                   from './pages/contatos/ContatosPage'
 import DashboardFinanceiroPage        from './pages/relatorio/DashboardFinanceiroPage'
@@ -120,6 +121,7 @@ export default function App() {
             <Route path="/comissoes"             element={<RequireAuth><ComissoesPage /></RequireAuth>} />
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
             <Route path="/compras"               element={<RequireAuth><ComprasPage /></RequireAuth>} />
+            <Route path="/frete/:token" element={<FretePublicoPage />} />
             <Route path="/portal/:slug" element={<PortalApp />} />
             <Route path="/portal" element={<PortalApp />} />
             <Route path="*" element={<Navigate to="/login" replace />} />

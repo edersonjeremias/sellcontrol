@@ -3,6 +3,8 @@ import AppShell from '../../components/ui/AppShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { gerarEtiqueta, imprimirEtiqueta, calcularFrete, salvarCotacoes } from '../../services/melhorEnvioService'
+import { montarLinkFrete } from '../../services/fretePublicoService'
+import { showGlobalToast } from '../../context/AppContext'
 
 export default function EtiquetasPage() {
   const { profile } = useAuth()
@@ -13,6 +15,8 @@ export default function EtiquetasPage() {
   const [loading, setLoading] = useState(true)
   const [gerando, setGerando] = useState(null)
   const [modalAberto, setModalAberto] = useState(null)
+  // instagram (minúsculo, sem @) -> whatsapp do cliente, para o botão de envio do link
+  const [whatsPorInstagram, setWhatsPorInstagram] = useState({})
 
   // Estados para cotação
   const [cotando, setCotando] = useState(false)
@@ -50,6 +54,26 @@ export default function EtiquetasPage() {
 
       if (error) throw error
       setRomaneios(data || [])
+
+      // WhatsApp dos clientes desses romaneios (para o link de frete)
+      const instas = [...new Set((data || [])
+        .map(r => String(r.cliente_instagram || '').replace('@', '').toLowerCase())
+        .filter(Boolean))]
+
+      if (instas.length) {
+        const { data: clientes } = await supabase
+          .from('clientes')
+          .select('instagram, whatsapp')
+          .eq('tenant_id', tenantId)
+          .in('instagram', [...instas, ...instas.map(i => `@${i}`)])
+
+        const mapa = {}
+        for (const c of clientes || []) {
+          const chave = String(c.instagram || '').replace('@', '').toLowerCase()
+          if (chave && c.whatsapp) mapa[chave] = c.whatsapp
+        }
+        setWhatsPorInstagram(mapa)
+      }
     } catch (err) {
       console.error('Erro ao carregar romaneios:', err)
     } finally {
@@ -107,6 +131,50 @@ export default function EtiquetasPage() {
 
     setRomaneiosFiltrados(filtrados)
   }, [romaneios, busca, statusFiltro, dataInicio, dataFim])
+
+  // Abre o WhatsApp do cliente com o link onde ele mesmo cota e paga o frete
+  const handleEnviarLinkFrete = async (rom) => {
+    try {
+      let token = rom.link_token
+
+      // Romaneio antigo que ficou sem token: gera na hora
+      if (!token) {
+        token = crypto.randomUUID()
+        const { error } = await supabase
+          .from('romaneios')
+          .update({ link_token: token })
+          .eq('id', rom.id)
+
+        if (error) throw error
+
+        setRomaneios(prev => prev.map(r => r.id === rom.id ? { ...r, link_token: token } : r))
+        setModalAberto(m => (m && m.id === rom.id ? { ...m, link_token: token } : m))
+      }
+
+      const link = montarLinkFrete(token)
+      const insta = String(rom.cliente_instagram || '').replace('@', '')
+      const fone = String(whatsPorInstagram[insta.toLowerCase()] || '').replace(/\D/g, '')
+
+      const msg =
+        `Oi @${insta}! 😊\n\n` +
+        `Seu pedido ${rom.numero} já está pronto aqui na loja 📦\n\n` +
+        `É só abrir o link abaixo para escolher o frete e pagar pelo PIX:\n${link}\n\n` +
+        `Assim que o pagamento cair, a gente posta seu pedido!`
+
+      if (!fone) {
+        try { await navigator.clipboard.writeText(link) } catch { /* sem permissão de clipboard */ }
+        showGlobalToast('Cliente sem WhatsApp cadastrado — link copiado, escolha o contato', 'error')
+        window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+        return
+      }
+
+      const comDDI = fone.length <= 11 ? `55${fone}` : fone
+      window.open(`https://wa.me/${comDDI}?text=${encodeURIComponent(msg)}`, '_blank')
+    } catch (err) {
+      console.error('Erro ao gerar link de frete:', err)
+      showGlobalToast('Não foi possível gerar o link do frete', 'error')
+    }
+  }
 
   const handleGerarEtiqueta = async (romaneio) => {
     setGerando(romaneio.id)
@@ -759,6 +827,25 @@ export default function EtiquetasPage() {
                   onClick={(e) => e.stopPropagation()}
                   style={{ display: 'flex', gap: 6 }}
                 >
+                  {!['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'].includes(rom.status) && (
+                    <button
+                      onClick={() => handleEnviarLinkFrete(rom)}
+                      title="Enviar link de frete pelo WhatsApp"
+                      style={{
+                        background: 'rgba(37,211,102,0.15)',
+                        color: '#25d366',
+                        border: '1px solid rgba(37,211,102,0.5)',
+                        borderRadius: 6,
+                        padding: '7px 12px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      💬
+                    </button>
+                  )}
+
                   {rom.status === 'frete_pago' && (
                     <button
                       onClick={() => handleGerarEtiqueta(rom)}
@@ -1216,6 +1303,26 @@ export default function EtiquetasPage() {
                         </button>
                       )}
                     </>
+                  )}
+
+                  {/* Link de frete no WhatsApp - o cliente cota e paga sozinho */}
+                  {!['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'].includes(modalAberto.status) && (
+                    <button
+                      onClick={() => handleEnviarLinkFrete(modalAberto)}
+                      style={{
+                        flex: 1,
+                        minWidth: 150,
+                        background: 'rgba(37,211,102,0.15)',
+                        color: '#25d366',
+                        border: '1px solid rgba(37,211,102,0.5)',
+                        borderRadius: 8,
+                        padding: '14px 20px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      💬 Enviar link no WhatsApp
+                    </button>
                   )}
 
                   {/* Botão Marcar como Pago - aparece apenas quando NÃO está pago */}
