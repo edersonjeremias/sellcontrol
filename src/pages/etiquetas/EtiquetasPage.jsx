@@ -184,7 +184,7 @@ export default function EtiquetasPage() {
       // Se não tem pedido, cria primeiro
       if (!orderId) {
         if (!romaneio.melhor_envio_cotacao_id) {
-          alert('Este romaneio não possui cotação salva')
+          showGlobalToast('Este romaneio não possui cotação salva', 'error')
           return
         }
 
@@ -192,7 +192,7 @@ export default function EtiquetasPage() {
           return
         }
 
-        alert('Criando pedido no Melhor Envio... Aguarde.')
+        showGlobalToast('Criando pedido no Melhor Envio... aguarde')
 
         // Chama Edge Function para criar pedido
         const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
@@ -227,7 +227,10 @@ export default function EtiquetasPage() {
 
         const result = await response.json()
 
-        alert(`Pedido criado com sucesso! Order ID: ${result.order_id}${result.tracking ? '\nRastreio: ' + result.tracking : ''}`)
+        showGlobalToast(`Etiqueta gerada! Pedido ${result.order_id}${result.tracking ? ' · Rastreio ' + result.tracking : ''}`)
+
+        // Mantém o romaneio à vista: ele acabou de sair de "Frete Pago"
+        setStatusFiltro('etiqueta_gerada')
 
         // Recarrega para pegar os dados atualizados
         carregar()
@@ -245,10 +248,11 @@ export default function EtiquetasPage() {
         })
         .eq('id', romaneio.id)
 
-      alert('Etiqueta gerada com sucesso!')
+      showGlobalToast('Etiqueta gerada com sucesso!')
+      setStatusFiltro('etiqueta_gerada')
       carregar()
     } catch (err) {
-      alert(`Erro ao gerar etiqueta: ${err.message}`)
+      showGlobalToast(`Erro ao gerar etiqueta: ${err.message}`, 'error')
     } finally {
       setGerando(null)
     }
@@ -256,7 +260,7 @@ export default function EtiquetasPage() {
 
   const handleImprimirEtiqueta = async (romaneio) => {
     if (!romaneio.melhor_envio_order_id) {
-      alert('Este romaneio não possui pedido no Melhor Envio')
+      showGlobalToast('Este romaneio não possui pedido no Melhor Envio', 'error')
       return
     }
 
@@ -272,7 +276,7 @@ export default function EtiquetasPage() {
 
       window.open(pdfUrl, '_blank')
     } catch (err) {
-      alert(`Erro ao imprimir etiqueta: ${err.message}`)
+      showGlobalToast(`Erro ao imprimir etiqueta: ${err.message}`, 'error')
     }
   }
 
@@ -288,10 +292,10 @@ export default function EtiquetasPage() {
         })
         .eq('id', romaneio.id)
 
-      alert('Romaneio marcado como despachado!')
+      showGlobalToast('Romaneio marcado como despachado!')
       carregar()
     } catch (err) {
-      alert(`Erro: ${err.message}`)
+      showGlobalToast(`Erro: ${err.message}`, 'error')
     }
   }
 
@@ -329,10 +333,10 @@ export default function EtiquetasPage() {
           tenant_id: tenantId,
         })
 
-      alert('Frete marcado como pago com sucesso!')
+      showGlobalToast('Frete marcado como pago com sucesso!')
       carregar()
     } catch (err) {
-      alert(`Erro: ${err.message}`)
+      showGlobalToast(`Erro: ${err.message}`, 'error')
     }
   }
 
@@ -361,7 +365,7 @@ export default function EtiquetasPage() {
         .single()
 
       if (!config?.endereco_cep) {
-        alert('Configure o endereço da empresa primeiro em Configurações')
+        showGlobalToast('Configure o endereço da empresa primeiro em Configurações', 'error')
         setCotando(false)
         return
       }
@@ -427,7 +431,7 @@ export default function EtiquetasPage() {
       setCotacoes(cotacoesFiltradas)
     } catch (err) {
       console.error('❌ Erro ao cotar:', err)
-      alert(`Erro ao cotar frete: ${err.message}`)
+      showGlobalToast(`Erro ao cotar frete: ${err.message}`, 'error')
     } finally {
       setCotando(false)
     }
@@ -435,7 +439,7 @@ export default function EtiquetasPage() {
 
   const handleConfirmarCotacao = async (romaneio) => {
     if (!cotacaoSelecionada) {
-      alert('Selecione uma transportadora')
+      showGlobalToast('Selecione uma transportadora', 'error')
       return
     }
 
@@ -477,11 +481,11 @@ export default function EtiquetasPage() {
       setCotacoes([])
       setCotacaoSelecionada(null)
 
-      alert('Cotação confirmada com sucesso!')
+      showGlobalToast('Cotação confirmada com sucesso!')
       carregar()
       setModalAberto(null)
     } catch (err) {
-      alert(`Erro ao confirmar cotação: ${err.message}`)
+      showGlobalToast(`Erro ao confirmar cotação: ${err.message}`, 'error')
     }
   }
 
@@ -550,11 +554,11 @@ export default function EtiquetasPage() {
         })
         .eq('id', editando.id)
 
-      alert('Romaneio editado com sucesso! Status voltou para PRONTO.')
+      showGlobalToast('Romaneio editado! Status voltou para PRONTO.')
       setEditando(null)
       carregar()
     } catch (err) {
-      alert(`Erro ao editar romaneio: ${err.message}`)
+      showGlobalToast(`Erro ao editar romaneio: ${err.message}`, 'error')
     }
   }
 

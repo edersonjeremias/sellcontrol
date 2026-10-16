@@ -309,10 +309,26 @@ serve(async (req) => {
       }),
     })
 
+    // Se a geração falhar, o pedido existe mas não há etiqueta para imprimir.
+    // Guardamos o order_id e paramos aqui em vez de marcar como gerada.
     if (!labelResponse.ok) {
-      const errorData = await labelResponse.json()
+      const errorData = await labelResponse.json().catch(() => ({}))
       console.error('❌ Erro ao gerar etiqueta:', errorData)
-      // Mesmo que falhe, salvamos o order_id
+
+      await supabase
+        .from('romaneios')
+        .update({ melhor_envio_order_id: orderId })
+        .eq('id', romaneio_id)
+
+      return new Response(
+        JSON.stringify({
+          error: `O pedido ${orderId} foi criado no Melhor Envio, mas a etiqueta não pôde ser gerada. ` +
+                 `Confira no painel deles se o pedido foi pago (o checkout usa o saldo da carteira). ` +
+                 `Detalhe: ${errorData.message || errorData.error || 'erro desconhecido'}`,
+          order_id: orderId,
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     console.log('✅ Etiqueta gerada!')

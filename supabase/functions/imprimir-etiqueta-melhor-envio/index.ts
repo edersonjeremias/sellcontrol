@@ -42,7 +42,7 @@ serve(async (req) => {
     const apiUrl = config.melhor_envio_api_url || 'https://sandbox.melhorenvio.com.br'
     const token = config.token_melhor_envio
 
-    const melhorEnvioResponse = await fetch(`${apiUrl}/api/v2/me/shipment/print`, {
+    const chamar = (rota: string) => fetch(`${apiUrl}/api/v2/me/shipment/${rota}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,15 +52,53 @@ serve(async (req) => {
       body: JSON.stringify({ orders: order_ids }),
     })
 
-    if (!melhorEnvioResponse.ok) {
-      const errorData = await melhorEnvioResponse.json()
+    let resposta = await chamar('print')
+
+    // E-PRT-0002: o pedido está pago mas a etiqueta ainda não foi gerada no
+    // Melhor Envio. Gerar é assíncrono, então geramos e tentamos imprimir de novo.
+    if (!resposta.ok) {
+      const erro = await resposta.json().catch(() => ({}))
+      const mensagem = String(erro.message || erro.error || '')
+
+      if (/E-PRT-0002|não é\(são\) valida|not valid/i.test(mensagem)) {
+        console.log('🏷️ Etiqueta ainda não gerada, gerando antes de imprimir...')
+        const gerar = await chamar('generate')
+
+        if (!gerar.ok) {
+          const erroGerar = await gerar.json().catch(() => ({}))
+          console.error('❌ Erro ao gerar antes de imprimir:', erroGerar)
+          return new Response(
+            JSON.stringify({
+              error: `A etiqueta do pedido ${order_ids.join(', ')} ainda não está disponível no Melhor Envio. ` +
+                     `Confira no painel deles se o pedido foi pago (o checkout usa o saldo da carteira). ` +
+                     `Detalhe: ${erroGerar.message || erroGerar.error || mensagem}`,
+            }),
+            { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        resposta = await chamar('print')
+      } else {
+        return new Response(
+          JSON.stringify({ error: mensagem || 'Erro ao imprimir etiqueta' }),
+          { status: resposta.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    if (!resposta.ok) {
+      const erro = await resposta.json().catch(() => ({}))
       return new Response(
-        JSON.stringify({ error: errorData.message || 'Erro ao imprimir etiqueta' }),
-        { status: melhorEnvioResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: `Não foi possível imprimir a etiqueta do pedido ${order_ids.join(', ')}. ` +
+                 `Verifique no Melhor Envio se ele está pago e gerado — pedidos criados no sandbox não abrem em produção. ` +
+                 `Detalhe: ${erro.message || erro.error || 'erro desconhecido'}`,
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const result = await melhorEnvioResponse.json()
+    const result = await resposta.json()
 
     return new Response(
       JSON.stringify(result),
