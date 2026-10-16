@@ -101,6 +101,7 @@ function FretePublico() {
   const [loading, setLoading] = useState(true)
   const [erroFatal, setErroFatal] = useState('')
   const [dados, setDados] = useState(null)
+  const [itensAbertos, setItensAbertos] = useState(false)
 
   const [enderecoSel, setEnderecoSel] = useState(null)
   const [editandoEndereco, setEditandoEndereco] = useState(false)
@@ -315,13 +316,49 @@ function FretePublico() {
         </div>
       )}
 
-      {/* ── Itens ──────────────────────────────────────────────────────── */}
+      {/* ── Itens (fechado por padrão: a lista pode ser longa) ─────────── */}
       <div style={card}>
-        <div style={titulo}>Seu pedido · {itens.length} {itens.length === 1 ? 'peça' : 'peças'}</div>
-        {itens.map(i => (
+        <button
+          onClick={() => setItensAbertos(v => !v)}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            background: 'none',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <span>
+            <span style={{ color: '#e8eaed', fontWeight: 700, fontSize: 15 }}>
+              {romaneio.numero}
+            </span>
+            <span style={{ color: 'var(--p-muted)', fontSize: 13 }}>
+              {' '}· {itens.length} {itens.length === 1 ? 'peça' : 'peças'}
+            </span>
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#e8eaed', fontWeight: 700, fontSize: 14 }}>{moeda(total)}</span>
+            <span style={{
+              color: 'var(--p-muted)',
+              fontSize: 11,
+              transform: itensAbertos ? 'rotate(180deg)' : 'none',
+              transition: 'transform .2s',
+            }}>
+              ▼
+            </span>
+          </span>
+        </button>
+
+        {itensAbertos && <div style={{ marginTop: 12 }}>{itens.map((i, idx) => (
           <div key={i.id} style={{
             display: 'flex', justifyContent: 'space-between', gap: 10,
-            padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,.05)', fontSize: 13,
+            padding: '7px 0', fontSize: 13,
+            borderBottom: idx === itens.length - 1 ? 'none' : '1px solid rgba(255,255,255,.05)',
           }}>
             <span style={{ color: '#e8eaed' }}>
               {i.produto}
@@ -333,11 +370,7 @@ function FretePublico() {
             </span>
             <span style={{ color: 'var(--p-muted)', whiteSpace: 'nowrap' }}>{moeda(i.preco)}</span>
           </div>
-        ))}
-        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, fontWeight: 700, fontSize: 14 }}>
-          <span style={{ color: 'var(--p-muted)' }}>Total das peças</span>
-          <span style={{ color: '#e8eaed' }}>{moeda(total)}</span>
-        </div>
+        ))}</div>}
       </div>
 
       {/* ── Endereço ───────────────────────────────────────────────────── */}
