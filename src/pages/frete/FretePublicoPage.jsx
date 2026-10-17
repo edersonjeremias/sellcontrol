@@ -38,14 +38,28 @@ const fmtDataLive = (d) => {
   return dia ? `${dia}/${mes}/${ano}` : ''
 }
 
-// codigo, produto, modelo, cor, marca (tamanho)
+// codigo produto modelo cor marca (tamanho)
 const descricaoPeca = (i) => {
   const partes = [i.codigo, i.produto, i.modelo, i.cor, i.marca]
     .map(v => String(v || '').trim())
     .filter(Boolean)
-    .join(', ')
+    .join(' ')
   const tamanho = String(i.tamanho || '').trim()
   return tamanho ? `${partes} (${tamanho})` : partes
+}
+
+// Uma data por live, com as peças daquela live abaixo dela
+const agruparPorLive = (itens) => {
+  const grupos = new Map()
+  for (const i of itens) {
+    const chave = String(i.data_live || '').slice(0, 10)
+    if (!grupos.has(chave)) grupos.set(chave, [])
+    grupos.get(chave).push(i)
+  }
+  // Peças sem data da live ficam por último
+  return [...grupos.entries()]
+    .sort(([a], [b]) => (a && b ? a.localeCompare(b) : a ? -1 : 1))
+    .map(([data, pecas]) => ({ data, pecas }))
 }
 
 const mascaraCep = v => v.replace(/\D/g, '').slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2')
@@ -374,19 +388,24 @@ function FretePublico() {
           </span>
         </button>
 
-        {itensAbertos && <div style={{ marginTop: 12 }}>{itens.map((i, idx) => (
-          <div key={i.id} style={{
-            padding: '7px 0', fontSize: 13,
-            borderBottom: idx === itens.length - 1 ? 'none' : '1px solid rgba(255,255,255,.05)',
-          }}>
-            {fmtDataLive(i.data_live) && (
-              <div style={{ color: 'var(--p-muted)', fontSize: 11, marginBottom: 2 }}>
-                {fmtDataLive(i.data_live)}
+        {itensAbertos && (
+          <div style={{ marginTop: 12 }}>
+            {agruparPorLive(itens).map(({ data, pecas }, idx) => (
+              <div key={data || 'sem-data'} style={{ marginTop: idx === 0 ? 0 : 14 }}>
+                {fmtDataLive(data) && (
+                  <div style={{ color: 'var(--p-muted)', fontSize: 11, marginBottom: 4 }}>
+                    {fmtDataLive(data)}
+                  </div>
+                )}
+                {pecas.map(p => (
+                  <div key={p.id} style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.5 }}>
+                    {descricaoPeca(p)}
+                  </div>
+                ))}
               </div>
-            )}
-            <div style={{ color: '#e8eaed', lineHeight: 1.4 }}>{descricaoPeca(i)}</div>
+            ))}
           </div>
-        ))}</div>}
+        )}
       </div>
 
       {/* ── Endereço ───────────────────────────────────────────────────── */}
