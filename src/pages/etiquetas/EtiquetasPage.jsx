@@ -6,9 +6,27 @@ import { gerarEtiqueta, imprimirEtiqueta, calcularFrete, salvarCotacoes } from '
 import { montarLinkFrete } from '../../services/fretePublicoService'
 import { showGlobalToast } from '../../context/AppContext'
 
+// No celular a tabela em grid não cabe na tela: a listagem vira cartões
+function useIsMobile(largura = 720) {
+  const [mobile, setMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= largura : false
+  )
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${largura}px)`)
+    const aplicar = () => setMobile(mq.matches)
+    aplicar()
+    mq.addEventListener('change', aplicar)
+    return () => mq.removeEventListener('change', aplicar)
+  }, [largura])
+
+  return mobile
+}
+
 export default function EtiquetasPage() {
   const { profile } = useAuth()
   const tenantId = profile?.tenant_id
+  const isMobile = useIsMobile()
 
   const [romaneios, setRomaneios] = useState([])
   const [romaneiosFiltrados, setRomaneiosFiltrados] = useState([])
@@ -580,7 +598,7 @@ export default function EtiquetasPage() {
           display: 'flex',
           gap: 8,
           marginBottom: 16,
-          flexWrap: 'nowrap',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
           alignItems: 'center',
         }}>
           <h1 style={{
@@ -589,6 +607,7 @@ export default function EtiquetasPage() {
             fontSize: 17,
             fontWeight: 700,
             whiteSpace: 'nowrap',
+            width: isMobile ? '100%' : 'auto',
           }}>
             Gestão de Etiquetas
           </h1>
@@ -599,7 +618,7 @@ export default function EtiquetasPage() {
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             style={{
-              flex: '1 1 120px',
+              flex: isMobile ? '1 1 100%' : '1 1 120px',
               minWidth: 0,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
@@ -614,7 +633,8 @@ export default function EtiquetasPage() {
             value={statusFiltro}
             onChange={(e) => setStatusFiltro(e.target.value)}
             style={{
-              flex: '0 0 auto',
+              flex: isMobile ? '1 1 100%' : '0 0 auto',
+              minWidth: 0,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 6,
@@ -638,8 +658,9 @@ export default function EtiquetasPage() {
             onChange={(e) => setDataInicio(e.target.value)}
             title="Data início"
             style={{
-              flex: '0 0 auto',
-              width: 128,
+              flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
+              width: isMobile ? 'auto' : 128,
+              minWidth: 0,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 6,
@@ -656,8 +677,9 @@ export default function EtiquetasPage() {
             onChange={(e) => setDataFim(e.target.value)}
             title="Data fim"
             style={{
-              flex: '0 0 auto',
-              width: 128,
+              flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
+              width: isMobile ? 'auto' : 128,
+              minWidth: 0,
               background: 'rgba(255,255,255,0.05)',
               border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 6,
@@ -677,7 +699,7 @@ export default function EtiquetasPage() {
                 setDataFim('')
               }}
               style={{
-                flex: '0 0 auto',
+                flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
                 background: 'rgba(244,67,54,0.1)',
                 color: '#f44336',
                 border: '1px solid rgba(244,67,54,0.3)',
@@ -696,7 +718,7 @@ export default function EtiquetasPage() {
           <button
             onClick={carregar}
             style={{
-              flex: '0 0 auto',
+              flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
               background: 'rgba(255,255,255,0.1)',
               color: '#e8eaed',
               border: '1px solid rgba(255,255,255,0.2)',
@@ -731,9 +753,9 @@ export default function EtiquetasPage() {
             borderRadius: 12,
             overflow: 'hidden',
           }}>
-            {/* Header da Tabela */}
+            {/* Header da Tabela - no celular cada romaneio vira um cartão */}
             <div style={{
-              display: 'grid',
+              display: isMobile ? 'none' : 'grid',
               gridTemplateColumns: '110px 1fr 100px 100px 120px 250px',
               gap: 16,
               padding: '14px 20px',
@@ -766,10 +788,11 @@ export default function EtiquetasPage() {
                   key={rom.id}
                   onClick={() => setModalAberto(rom)}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '110px 1fr 100px 100px 120px 250px',
-                    gap: 16,
-                    padding: '16px 20px',
+                    display: isMobile ? 'flex' : 'grid',
+                    flexDirection: isMobile ? 'column' : undefined,
+                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 250px',
+                    gap: isMobile ? 6 : 16,
+                    padding: isMobile ? '12px 14px' : '16px 20px',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
                     cursor: 'pointer',
                     transition: 'background 0.2s',
@@ -811,13 +834,17 @@ export default function EtiquetasPage() {
                     @{rom.cliente_instagram}
                   </div>
 
-                  <div style={{ color: '#9aa0a6', fontSize: 13 }}>
-                    {formatarData(rom.frete_pago_em)}
-                  </div>
+                  {(!isMobile || rom.frete_pago_em) && (
+                    <div style={{ color: '#9aa0a6', fontSize: isMobile ? 12 : 13 }}>
+                      {isMobile && 'Pago em '}{formatarData(rom.frete_pago_em)}
+                    </div>
+                  )}
 
-                  <div style={{ color: '#9aa0a6', fontSize: 13 }}>
-                    {formatarData(rom.despachado_em)}
-                  </div>
+                  {(!isMobile || rom.despachado_em) && (
+                    <div style={{ color: '#9aa0a6', fontSize: isMobile ? 12 : 13 }}>
+                      {isMobile && 'Despachado em '}{formatarData(rom.despachado_em)}
+                    </div>
+                  )}
 
                   <div>
                   <div style={{
@@ -850,7 +877,12 @@ export default function EtiquetasPage() {
 
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  style={{ display: 'flex', gap: 6 }}
+                  style={{
+                    display: 'flex',
+                    gap: 6,
+                    flexWrap: isMobile ? 'wrap' : 'nowrap',
+                    marginTop: isMobile ? 4 : 0,
+                  }}
                 >
                   {!['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'].includes(rom.status) && (
                     <button
