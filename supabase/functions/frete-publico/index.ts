@@ -112,10 +112,13 @@ async function acaoDados(supabase: any, romaneio: any, instagram: string) {
 
   const { data: itens } = await supabase
     .from('vendas')
-    .select('id, codigo, produto, modelo, cor, tamanho, preco')
+    .select('id, codigo, produto, modelo, cor, marca, tamanho, preco, data_live')
     .eq('tenant_id', romaneio.tenant_id)
     .eq('numero_pedido', numeroRomaneio)
     .order('codigo')
+
+  // Cadastro do cliente: completa telefone, CPF e e-mail que o endereço não tem
+  const cadastro = await buscarCadastro(supabase, romaneio.tenant_id, instagram)
 
   const { data: enderecos } = await supabase
     .from('enderecos_clientes')
@@ -151,6 +154,12 @@ async function acaoDados(supabase: any, romaneio: any, instagram: string) {
       frete_pago_em: romaneio.frete_pago_em,
     },
     itens: itens || [],
+    cliente: {
+      nome: cadastro?.nome || '',
+      telefone: cadastro?.telefone || '',
+      cpf: cadastro?.cpf || '',
+      email: cadastro?.email || '',
+    },
     enderecos: enderecos || [],
     cotacoes: (cotacoes || []).map((c: any) => comMargem(c, margem)),
     pagamento,
@@ -474,6 +483,50 @@ async function acaoStatus(supabase: any, romaneio: any) {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Cadastro do cliente pelo instagram. A base tem registros duplicados e com
+ * variações de @ e maiúsculas, então buscamos uma lista e ficamos com o
+ * registro mais completo em vez de exigir linha única.
+ */
+async function buscarCadastro(supabase: any, tenantId: string, instagram: string) {
+  // ilike como filtro próprio: no `or` um instagram com ponto (fulano.rc)
+  // quebraria a sintaxe campo.operador.valor do PostgREST.
+  // select('*') de propósito: a tabela clientes variou de schema entre
+  // instalações e pedir uma coluna ausente derrubaria a consulta inteira.
+  const buscar = (valor: string) => supabase
+    .from('clientes')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .ilike('instagram', valor)
+    .limit(10)
+
+  let { data, error } = await buscar(instagram)
+  if (!error && !(data || []).length) ({ data, error } = await buscar(`@${instagram}`))
+
+  if (error) {
+    console.error('Erro ao buscar cadastro do cliente:', error)
+    return null
+  }
+
+  // Os dados pessoais ficam em colunas próprias ou no jsonb legado `detalhes`
+  const normalizar = (c: any) => {
+    const d = c.detalhes && typeof c.detalhes === 'object' ? c.detalhes : {}
+    return {
+      nome: c.nome_completo || d.nomeCompleto || c.nome || '',
+      telefone: c.whatsapp || c.telefone || d.whatsapp || '',
+      cpf: c.cpf || c.cpf_cnpj || d.cpf || '',
+      email: c.email || d.email || '',
+    }
+  }
+
+  const candidatos = (data || []).map(normalizar)
+  const preenchidos = (c: any) =>
+    [c.nome, c.telefone, c.cpf, c.email].filter(v => String(v || '').trim()).length
+
+  return candidatos.sort((a, b) => preenchidos(b) - preenchidos(a))[0] || null
+}
+
 async function buscarPagamento(supabase: any, romaneioId: string) {
   const { data } = await supabase
     .from('pagamentos_frete')

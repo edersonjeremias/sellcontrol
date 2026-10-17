@@ -31,6 +31,23 @@ const titulo = {
 
 const moeda = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+// data_live vem como YYYY-MM-DD: formatar sem Date() para não voltar um dia
+const fmtDataLive = (d) => {
+  if (!d) return ''
+  const [ano, mes, dia] = String(d).slice(0, 10).split('-')
+  return dia ? `${dia}/${mes}/${ano}` : ''
+}
+
+// codigo, produto, modelo, cor, marca (tamanho)
+const descricaoPeca = (i) => {
+  const partes = [i.codigo, i.produto, i.modelo, i.cor, i.marca]
+    .map(v => String(v || '').trim())
+    .filter(Boolean)
+    .join(', ')
+  const tamanho = String(i.tamanho || '').trim()
+  return tamanho ? `${partes} (${tamanho})` : partes
+}
+
 const mascaraCep = v => v.replace(/\D/g, '').slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2')
 
 const mascaraTelefone = v => {
@@ -64,12 +81,18 @@ const cpfValido = (valor) => {
 const dadosFiscaisOk = (endereco) =>
   Boolean(endereco && cpfValido(endereco.cpf) && EMAIL_RE.test(String(endereco.email || '')))
 
-const formDoEndereco = (e) => ({
+// Endereços antigos guardam telefone de preenchimento ("(00) 00000-0000")
+const telefoneUtil = (t) => {
+  const d = String(t || '').replace(/\D/g, '')
+  return d.length >= 10 && !/^(\d)\1+$/.test(d)
+}
+
+const formDoEndereco = (e, cliente = {}) => ({
   apelido: e.apelido || 'Entrega',
-  destinatario: e.destinatario || '',
-  telefone: mascaraTelefone(e.telefone || ''),
-  cpf: mascaraCpf(e.cpf || ''),
-  email: e.email || '',
+  destinatario: e.destinatario || cliente.nome || '',
+  telefone: mascaraTelefone(telefoneUtil(e.telefone) ? e.telefone : (cliente.telefone || '')),
+  cpf: mascaraCpf(e.cpf || cliente.cpf || ''),
+  email: e.email || cliente.email || '',
   cep: mascaraCep(e.cep || ''),
   rua: e.rua || '',
   numero: e.numero || '',
@@ -138,7 +161,7 @@ function FretePublico() {
       if (!padrao) {
         setEditandoEndereco(true)
       } else if (!dadosFiscaisOk(padrao) && !STATUS_PAGOS.includes(d.romaneio.status)) {
-        setForm(formDoEndereco(padrao))
+        setForm(formDoEndereco(padrao, d.cliente))
         setEnderecoEditId(padrao.id)
         setEditandoEndereco(true)
       }
@@ -173,7 +196,8 @@ function FretePublico() {
 
   // ── Endereço ──────────────────────────────────────────────────────────────
   const abrirNovoEndereco = () => {
-    setForm(FORM_VAZIO)
+    // Começa com o que já existe no cadastro do cliente
+    setForm(formDoEndereco({}, dados?.cliente || {}))
     setEnderecoEditId(null)
     setEditandoEndereco(true)
   }
@@ -181,7 +205,7 @@ function FretePublico() {
   const abrirEdicaoEndereco = () => {
     const e = dados.enderecos.find(x => x.id === enderecoSel)
     if (!e) return abrirNovoEndereco()
-    setForm(formDoEndereco(e))
+    setForm(formDoEndereco(e, dados.cliente || {}))
     setEnderecoEditId(e.id)
     setEditandoEndereco(true)
   }
@@ -283,7 +307,6 @@ function FretePublico() {
 
   const { loja, romaneio, itens, enderecos } = dados
   const endereco = enderecos.find(e => e.id === enderecoSel)
-  const total = itens.reduce((s, i) => s + Number(i.preco || 0), 0)
 
   return (
     <div style={{ maxWidth: 520, margin: '0 auto', padding: '20px 16px 40px' }}>
@@ -341,34 +364,27 @@ function FretePublico() {
               {' '}· {itens.length} {itens.length === 1 ? 'peça' : 'peças'}
             </span>
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: '#e8eaed', fontWeight: 700, fontSize: 14 }}>{moeda(total)}</span>
-            <span style={{
-              color: 'var(--p-muted)',
-              fontSize: 11,
-              transform: itensAbertos ? 'rotate(180deg)' : 'none',
-              transition: 'transform .2s',
-            }}>
-              ▼
-            </span>
+          <span style={{
+            color: 'var(--p-muted)',
+            fontSize: 11,
+            transform: itensAbertos ? 'rotate(180deg)' : 'none',
+            transition: 'transform .2s',
+          }}>
+            ▼
           </span>
         </button>
 
         {itensAbertos && <div style={{ marginTop: 12 }}>{itens.map((i, idx) => (
           <div key={i.id} style={{
-            display: 'flex', justifyContent: 'space-between', gap: 10,
             padding: '7px 0', fontSize: 13,
             borderBottom: idx === itens.length - 1 ? 'none' : '1px solid rgba(255,255,255,.05)',
           }}>
-            <span style={{ color: '#e8eaed' }}>
-              {i.produto}
-              {(i.cor || i.tamanho) && (
-                <span style={{ color: 'var(--p-muted)' }}>
-                  {' '}· {[i.cor, i.tamanho].filter(Boolean).join(' / ')}
-                </span>
-              )}
-            </span>
-            <span style={{ color: 'var(--p-muted)', whiteSpace: 'nowrap' }}>{moeda(i.preco)}</span>
+            {fmtDataLive(i.data_live) && (
+              <div style={{ color: 'var(--p-muted)', fontSize: 11, marginBottom: 2 }}>
+                {fmtDataLive(i.data_live)}
+              </div>
+            )}
+            <div style={{ color: '#e8eaed', lineHeight: 1.4 }}>{descricaoPeca(i)}</div>
           </div>
         ))}</div>}
       </div>
