@@ -564,7 +564,7 @@ export default function EtiquetasPage() {
 
   if (loading) {
     return (
-      <AppShell page="Etiquetas">
+      <AppShell page="Etiquetas" hideTitle>
         <div style={{ padding: 24, textAlign: 'center', color: '#9aa0a6' }}>
           Carregando...
         </div>
@@ -573,8 +573,8 @@ export default function EtiquetasPage() {
   }
 
   return (
-    <AppShell page="Etiquetas">
-      <div style={{ padding: 24 }}>
+    <AppShell page="Etiquetas" hideTitle>
+      <div style={{ padding: '4px 12px 16px' }}>
         {/* Título e filtros na mesma linha */}
         <div style={{
           display: 'flex',
