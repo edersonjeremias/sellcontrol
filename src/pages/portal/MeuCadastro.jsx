@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
-import { atualizarCadastro } from '../../services/portalService'
+import { atualizarCadastro, sincronizarCliente } from '../../services/portalService'
 
 function maskCpf(v) {
   return v.replace(/\D/g, '').slice(0, 11)
@@ -40,7 +40,7 @@ async function buscarCep(cep, setForm) {
 }
 
 export default function MeuCadastro() {
-  const { cliente, refreshCliente } = usePortalAuth()
+  const { cliente, refreshCliente, tenantId } = usePortalAuth()
   const toast = usePortalToast()
 
   const [form, setForm] = useState({
@@ -48,6 +48,7 @@ export default function MeuCadastro() {
     cpf:             cliente?.cpf             || '',
     data_nascimento: cliente?.data_nascimento || '',
     celular:         cliente?.celular         || '',
+    email:           cliente?.email           || '',
     cep:             cliente?.cep             || '',
     rua:             cliente?.rua             || '',
     numero:          cliente?.numero          || '',
@@ -71,6 +72,20 @@ export default function MeuCadastro() {
     setSaving(true)
     try {
       await atualizarCadastro(cliente.user_id, form)
+      await sincronizarCliente(tenantId, cliente.instagram, {
+        nome_completo:   form.nome_completo,
+        cpf:             form.cpf.replace(/\D/g, ''),
+        data_nascimento: form.data_nascimento,
+        whatsapp:        form.celular.replace(/\D/g, ''),
+        email:           form.email,
+        cep:             form.cep,
+        rua:             form.rua,
+        numero:          form.numero,
+        complemento:     form.complemento,
+        bairro:          form.bairro,
+        cidade:          form.cidade,
+        uf:              form.estado,
+      })
       await refreshCliente()
       toast('Cadastro salvo com sucesso!', 'success')
     } catch {
@@ -121,6 +136,14 @@ export default function MeuCadastro() {
             value={form.celular}
             onChange={e => upd('celular', maskCelular(e.target.value))}
             inputMode="numeric" />
+        </div>
+
+        <div className="portal-field">
+          <label className="portal-label">E-mail</label>
+          <input className="portal-input" type="email" placeholder="seu@email.com"
+            value={form.email}
+            onChange={e => upd('email', e.target.value.trim().toLowerCase())}
+            inputMode="email" />
         </div>
 
         <div className="portal-section-title">Endereço</div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import { supabase } from '../../lib/supabase'
+import { sincronizarCliente } from '../../services/portalService'
 
 // Máscara de CEP (função pura, pode ficar fora)
 function maskCep(v) {
@@ -119,9 +120,10 @@ export default function MeusEnderecos() {
     setErros({})
     setForm({
       apelido: '',
-      destinatario: cliente?.nome || '',
-      telefone: cliente?.whatsapp || '',
-      cpf: '',
+      destinatario: cliente?.nome_completo || '',
+      telefone: cliente?.celular || '',
+      cpf: maskCpf(cliente?.cpf),
+      email: cliente?.email || '',
       cep: '',
       rua: '',
       numero: '',
@@ -138,7 +140,13 @@ export default function MeusEnderecos() {
   const handleEditar = (end) => {
     setEditando(end.id)
     setErros({})
-    setForm({ ...end, cpf: maskCpf(end.cpf) })
+    setForm({
+      ...end,
+      destinatario: end.destinatario || cliente?.nome_completo || '',
+      telefone: end.telefone || cliente?.celular || '',
+      cpf: maskCpf(end.cpf || cliente?.cpf),
+      email: end.email || cliente?.email || '',
+    })
     setShowModal(true)
   }
 
@@ -172,6 +180,7 @@ export default function MeusEnderecos() {
         destinatario: form.destinatario.trim(),
         telefone: form.telefone.trim(),
         cpf: form.cpf.replace(/\D/g, ''),
+        email: form.email?.trim() || null,
         cep: form.cep.trim(),
         rua: form.rua.trim(),
         numero: form.numero.trim(),
@@ -209,6 +218,19 @@ export default function MeusEnderecos() {
           .eq('tenant_id', tenantId)
           .eq('cliente_instagram', cliente.instagram.replace('@', ''))
           .neq('id', editando || '00000000-0000-0000-0000-000000000000')
+      }
+
+      // O endereço padrão é o que o painel mostra na ficha do cliente
+      if (form.padrao) {
+        await sincronizarCliente(tenantId, cliente.instagram, {
+          cep:         dados.cep,
+          rua:         dados.rua,
+          numero:      dados.numero,
+          complemento: dados.complemento,
+          bairro:      dados.bairro,
+          cidade:      dados.cidade,
+          uf:          dados.estado,
+        })
       }
 
       setShowModal(false)
@@ -550,6 +572,28 @@ export default function MeusEnderecos() {
                     width: '100%',
                     background: 'rgba(255,255,255,0.05)',
                     border: erros.cpf ? '2px solid var(--p-red)' : '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 8,
+                    padding: '10px',
+                    color: '#e8eaed',
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', color: '#9aa0a6', fontSize: 12, marginBottom: 4 }}>
+                  E-mail
+                </label>
+                <input
+                  type="email"
+                  value={form.email || ''}
+                  onChange={e => setForm(p => ({ ...p, email: e.target.value.trim().toLowerCase() }))}
+                  placeholder="seu@email.com"
+                  inputMode="email"
+                  style={{
+                    width: '100%',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 8,
                     padding: '10px',
                     color: '#e8eaed',

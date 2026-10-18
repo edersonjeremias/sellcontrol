@@ -64,6 +64,28 @@ export async function encerrarSacolinha(instagram, tipoEntrega, obs) {
   return data?.[0] || {}
 }
 
+// Espelha na tabela `clientes` o que o cliente preenche no portal. É dela que
+// o painel lê (modal "Dados para Envio" e colunas de endereço da busca
+// avançada); sem isso os dados só existiriam em portal_clientes/enderecos_clientes.
+// Campos vazios são descartados para não apagar o que o lojista já cadastrou.
+// Falha aqui não interrompe o fluxo do portal — apenas registra no console.
+export async function sincronizarCliente(tenantId, instagram, campos) {
+  const payload = {}
+  for (const [chave, valor] of Object.entries(campos)) {
+    const v = typeof valor === 'string' ? valor.trim() : valor
+    if (v) payload[chave] = v
+  }
+  if (!tenantId || !instagram || Object.keys(payload).length === 0) return
+
+  const { error } = await portalSb
+    .from('clientes')
+    .update(payload)
+    .eq('tenant_id', tenantId)
+    .eq('instagram', instagram.replace('@', ''))
+
+  if (error) console.error('Erro ao sincronizar cliente:', error)
+}
+
 // Usa o client `supabase` (anon) e não `portalSb`: a sessão do cliente do portal
 // é `authenticated` sem o claim tenant_id, e a policy de RLS de configuracoes
 // filtra por esse claim — o que zera o resultado. Mesmo caminho do PortalApp.

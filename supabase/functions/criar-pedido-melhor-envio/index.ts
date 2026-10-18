@@ -210,7 +210,7 @@ serve(async (req) => {
       to: {
         name: endereco.destinatario,
         phone: endereco.telefone,
-        email: endereco.email,
+        email: endereco.email || 'cliente@email.com',
         document: String(endereco.cpf || '').replace(/\D/g, ''),
         address: endereco.rua,
         number: endereco.numero,

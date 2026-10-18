@@ -55,7 +55,17 @@
       "PowerShell(npm run build 2>$null)",
       "PowerShell(npm run build 2>&1)",
       "PowerShell(git add src/index.css src/pages/relatorio/ContasPagarPage.jsx)",
-      "Read(//c/Users/EDERSON/Downloads/**)"
+      "Read(//c/Users/EDERSON/Downloads/**)",
+      "Bash(curl -s -w \"\\\\nHTTP_STATUS:%{http_code}\\\\n\" -X POST \"https://gtsdgkalolqzjmmwtvdv.supabase.co/functions/v1/criar-pix-cobranca\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer sb_publishable_d_syRcLB_sFEWmiXeYpcmg_D0JqnzXK\" -d '{\"cobranca_id\":\"00000000-0000-0000-0000-000000000000\"}')",
+      "Bash(ls CLAUDE.md docs/ *.md 2>/dev/null; echo \"---MEMORIA---\"; ls C:/Users/EDERSON/.claude/projects/c--sellcontrol/memory/)",
+      "Read(//c/Users/EDERSON/.claude/projects/c--sellcontrol/memory/**)",
+      "Bash(grep -v ':0$')",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\1508431b-a378-450e-ac97-0f76bd14d779\\\\scratchpad\\\\achar-botoes.mjs\")",
+      "Bash(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\1508431b-a378-450e-ac97-0f76bd14d779\\\\scratchpad\\\\limpar-botoes.mjs\")",
+      "Bash(node \"C:\\\\Users\\\\EDERSON\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--sellcontrol\\\\1508431b-a378-450e-ac97-0f76bd14d779\\\\scratchpad\\\\limpar-botoes.mjs\" --aplicar)",
+      "Bash(git checkout *)",
+      "Bash(grep -E '^\\\\+\\\\s*$|^\\\\+\\\\s*</\\(button|a\\)>')"
     ],
     "additionalDirectories": [
       "\\tmp"
