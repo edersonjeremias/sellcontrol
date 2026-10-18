@@ -699,13 +699,15 @@ input[type="date"] { color-scheme: dark; }
 .save-group .btn-acao { flex: 1; }
 
 /* ── FUNDO DA PÁGINA DE VENDAS ──
-   Escurecido de propósito: é o degrau para #2b2b2b dos campos que dá o
-   contraste da página de frete. Escopado em .vendas-page para não mexer
-   no resto do sistema. */
+   Mesma paleta da página de frete: fundo #121212, campos #2b2b2b. O
+   cabeçalho usa o fundo da tabela em vez de uma faixa cinza, mas segue
+   opaco porque é sticky e as linhas rolam por baixo dele.
+   Escopado em .vendas-page para não mexer no resto do sistema. */
 .vendas-page { background: #121212; }
-.vendas-page #tabela-container { background: #1e1e1e; }
-.vendas-page thead th { background: #252525; }
-.vendas-page tbody tr:hover { background-color: #242424; }
+.vendas-page #tabela-container { background: #121212; border-color: #333; }
+.vendas-page thead th { background: #121212; border-bottom: 1px solid #333; }
+.vendas-page tbody td { border-bottom: 1px solid #1f1f1f; }
+.vendas-page tbody tr:hover { background-color: #1a1a1a; }
 
 /* ── TABELA ── */
 #tabela-container { flex: 1; min-height: 0; width: calc(100% - 32px); margin: 16px 16px 20px; background: var(--card-bg); border-radius: 8px; box-shadow: var(--shadow); border: 1px solid var(--border-light); display: flex; flex-direction: column; overflow: hidden; }
