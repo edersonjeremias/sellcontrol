@@ -175,13 +175,13 @@
    ═══════════════════════════════════════════════════════════════ */
 
 /* Código (cabe 4 dígitos: 1000) */
-.th-codigo,
-.col-codigo {
+.vendas-container .th-codigo,
+.vendas-container .col-codigo {
   width: 70px !important;
   min-width: 70px !important;
 }
 
-.col-codigo .cell-input {
+.vendas-container .col-codigo .cell-input {
   width: 100%;
   text-align: center;
   font-weight: 600;
@@ -190,14 +190,14 @@
 }
 
 /* Gênero compacto */
-.th-genero,
-.col-genero {
+.vendas-container .th-genero,
+.vendas-container .col-genero {
   width: 45px !important;
   min-width: 45px !important;
   text-align: center;
 }
 
-.col-genero .cell-select {
+.vendas-container .col-genero .cell-select {
   width: 100%;
   text-align: center;
   font-size: 12px;
@@ -205,14 +205,14 @@
 }
 
 /* Condição compacta */
-.th-condicao,
-.col-condicao {
+.vendas-container .th-condicao,
+.vendas-container .col-condicao {
   width: 45px !important;
   min-width: 45px !important;
   text-align: center;
 }
 
-.col-condicao .cell-select {
+.vendas-container .col-condicao .cell-select {
   width: 100%;
   text-align: center;
   font-size: 12px;
@@ -220,13 +220,13 @@
 }
 
 /* Preços com fonte menor */
-.th-preco,
-.col-preco {
+.vendas-container .th-preco,
+.vendas-container .col-preco {
   width: 65px !important;
   min-width: 65px !important;
 }
 
-.col-preco .cell-input {
+.vendas-container .col-preco .cell-input {
   width: 100%;
   font-weight: 600;
   color: var(--green);
@@ -236,14 +236,14 @@
 }
 
 /* Quantidade (cabe 4 dígitos: 9999) */
-.th-qtd,
-.col-qtd {
+.vendas-container .th-qtd,
+.vendas-container .col-qtd {
   width: 65px !important;
   min-width: 65px !important;
   text-align: center;
 }
 
-.col-qtd .cell-input {
+.vendas-container .col-qtd .cell-input {
   width: 100%;
   text-align: center;
   font-weight: 600;
@@ -251,20 +251,20 @@
 }
 
 /* Outras colunas */
-.col-produto { min-width: 150px; }
-.col-modelo { min-width: 130px; }
-.col-cor { min-width: 80px; }
-.col-marca { min-width: 100px; }
-.col-tam { min-width: 60px; text-align: center; }
+.vendas-container .col-produto { min-width: 150px; }
+.vendas-container .col-modelo { min-width: 130px; }
+.vendas-container .col-cor { min-width: 80px; }
+.vendas-container .col-marca { min-width: 100px; }
+.vendas-container .col-tam { min-width: 60px; text-align: center; }
 
 /* Ações */
-.th-acoes,
-.col-acoes {
+.vendas-container .th-acoes,
+.vendas-container .col-acoes {
   min-width: 140px;
   text-align: center;
 }
 
-.acoes-wrapper {
+.vendas-container .acoes-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -272,12 +272,12 @@
 }
 
 /* Botão de imagens com badge */
-.btn-action-sm.imagens {
+.vendas-container .btn-action-sm.imagens {
   position: relative;
   font-size: 16px;
 }
 
-.badge-imagens {
+.vendas-container .badge-imagens {
   position: absolute;
   top: -4px;
   right: -4px;
@@ -296,7 +296,7 @@
    INPUTS E SELECT
    ═══════════════════════════════════════════════════════════════ */
 
-.cell-input {
+.vendas-container .cell-input {
   width: 100%;
   height: 36px; /* Altura fixa para todos */
   padding: 0 8px; /* Padding horizontal apenas */
@@ -311,17 +311,17 @@
   transition: all 0.2s;
 }
 
-.cell-input:focus {
+.vendas-container .cell-input:focus {
   border-color: var(--blue) !important; /* BORDA AZUL NO FOCUS */
   background: #252525 !important; /* FUNDO ESCURO NO FOCUS */
 }
 
-.cell-input:disabled {
+.vendas-container .cell-input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.cell-select {
+.vendas-container .cell-select {
   cursor: pointer;
   height: 36px !important; /* Mesma altura dos inputs */
   border: 1px solid var(--border-light) !important; /* BORDA PADRÃO */
@@ -333,22 +333,22 @@
   transition: all 0.2s;
 }
 
-.cell-select:focus {
+.vendas-container .cell-select:focus {
   border-color: var(--blue) !important; /* BORDA AZUL NO FOCUS */
   background: #252525 !important; /* FUNDO ESCURO NO FOCUS */
 }
 
 /* Campo editado que ainda nao foi salvo.
    Especificidade maior que .cell-select para valer tambem nos selects. */
-.cell-input[data-alterado],
-.cell-select[data-alterado] {
+.vendas-container .cell-input[data-alterado],
+.vendas-container .cell-select[data-alterado] {
   border-color: #f5a623 !important;
   background: rgba(245, 166, 35, 0.07) !important;
 }
 
 /* Com o cursor dentro, a borda azul volta a mandar */
-.cell-input[data-alterado]:focus,
-.cell-select[data-alterado]:focus {
+.vendas-container .cell-input[data-alterado]:focus,
+.vendas-container .cell-select[data-alterado]:focus {
   border-color: var(--blue) !important;
   background: #252525 !important;
 }
@@ -449,8 +449,8 @@
   }
 
   /* Fonte menor nas células */
-  .cell-input,
-  .cell-select {
+  .vendas-container .cell-input,
+  .vendas-container .cell-select {
     font-size: 12px !important;
     padding: 6px 4px !important;
   }
@@ -462,11 +462,11 @@
   }
 
   /* Botões ação menores */
-  .acoes-wrapper button {
+  .vendas-container .acoes-wrapper button {
     padding: 4px !important;
   }
 
-  .acoes-wrapper svg {
+  .vendas-container .acoes-wrapper svg {
     width: 14px !important;
     height: 14px !important;
   }
