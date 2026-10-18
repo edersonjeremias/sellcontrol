@@ -150,6 +150,7 @@ async function acaoDados(supabase: any, romaneio: any, instagram: string) {
     medidas_ok: temMedidas(romaneio),
     romaneio: {
       numero: romaneio.numero,
+      link_codigo: romaneio.link_codigo,
       status: romaneio.status,
       cliente_instagram: instagram,
       transportadora: romaneio.transportadora,
