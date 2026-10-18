@@ -153,23 +153,26 @@ export default function EtiquetasPage() {
   // Abre o WhatsApp do cliente com o link onde ele mesmo cota e paga o frete
   const handleEnviarLinkFrete = async (rom) => {
     try {
-      let token = rom.link_token
+      let { link_token: linkToken, link_codigo: linkCodigo } = rom
 
-      // Romaneio antigo que ficou sem token: gera na hora
-      if (!token) {
-        token = crypto.randomUUID()
+      // Romaneio antigo que ficou sem token/código: gera na hora
+      if (!linkToken || !linkCodigo) {
+        linkToken = linkToken || crypto.randomUUID()
+        linkCodigo = linkCodigo || crypto.randomUUID().replace(/-/g, '').slice(0, 10)
+
         const { error } = await supabase
           .from('romaneios')
-          .update({ link_token: token })
+          .update({ link_token: linkToken, link_codigo: linkCodigo })
           .eq('id', rom.id)
 
         if (error) throw error
 
-        setRomaneios(prev => prev.map(r => r.id === rom.id ? { ...r, link_token: token } : r))
-        setModalAberto(m => (m && m.id === rom.id ? { ...m, link_token: token } : m))
+        const novos = { link_token: linkToken, link_codigo: linkCodigo }
+        setRomaneios(prev => prev.map(r => r.id === rom.id ? { ...r, ...novos } : r))
+        setModalAberto(m => (m && m.id === rom.id ? { ...m, ...novos } : m))
       }
 
-      const link = montarLinkFrete(token)
+      const link = montarLinkFrete({ link_token: linkToken, link_codigo: linkCodigo })
       const insta = String(rom.cliente_instagram || '').replace('@', '')
       const fone = String(whatsPorInstagram[insta.toLowerCase()] || '').replace(/\D/g, '')
 

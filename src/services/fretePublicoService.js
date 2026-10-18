@@ -41,6 +41,15 @@ export const gerarPix = (token, cotacaoId) =>
 /** Polling enquanto o cliente paga */
 export const consultarStatus = (token) => chamar('status', token)
 
-/** Monta o link que a loja manda no WhatsApp */
-export const montarLinkFrete = (linkToken) =>
-  `${window.location.origin}/frete/${linkToken}`
+/**
+ * Monta o link que a loja manda no WhatsApp.
+ * Preferimos o código curto: a URL com UUID chega quebrada em duas linhas e o
+ * WhatsApp deixa de reconhecê-la inteira, então o toque não abre nada.
+ */
+export const montarLinkFrete = (romaneio) => {
+  const base = window.location.origin
+  if (typeof romaneio === 'string') return `${base}/frete/${romaneio}`
+  return romaneio?.link_codigo
+    ? `${base}/f/${romaneio.link_codigo}`
+    : `${base}/frete/${romaneio?.link_token}`
+}

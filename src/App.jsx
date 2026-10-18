@@ -121,7 +121,10 @@ export default function App() {
             <Route path="/comissoes"             element={<RequireAuth><ComissoesPage /></RequireAuth>} />
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
             <Route path="/compras"               element={<RequireAuth><ComprasPage /></RequireAuth>} />
+            {/* /f e /r são as versões curtas: URL longa chega quebrada no WhatsApp */}
+            <Route path="/f/:codigo" element={<FretePublicoPage />} />
             <Route path="/frete/:token" element={<FretePublicoPage />} />
+            <Route path="/r/:codigo" element={<ReciboPage />} />
             <Route path="/portal/:slug" element={<PortalApp />} />
             <Route path="/portal" element={<PortalApp />} />
             <Route path="*" element={<Navigate to="/login" replace />} />

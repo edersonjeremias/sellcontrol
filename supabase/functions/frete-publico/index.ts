@@ -62,7 +62,14 @@ serve(async (req) => {
     const { acao, token, ...payload } = await req.json()
 
     if (!acao || !token) return json({ error: 'Parâmetros obrigatórios: acao, token' }, 400)
-    if (!UUID_RE.test(String(token))) return json({ error: 'Link inválido' }, 404)
+
+    const chave = String(token)
+    const ehUuid = UUID_RE.test(chave)
+
+    // Código curto: 10 caracteres hexadecimais (/f/<codigo>)
+    if (!ehUuid && !/^[0-9a-f]{6,32}$/i.test(chave)) {
+      return json({ error: 'Link inválido' }, 404)
+    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -73,7 +80,7 @@ serve(async (req) => {
     const { data: romaneio, error: romError } = await supabase
       .from('romaneios')
       .select('*')
-      .eq('link_token', token)
+      .eq(ehUuid ? 'link_token' : 'link_codigo', chave)
       .maybeSingle()
 
     if (romError) {

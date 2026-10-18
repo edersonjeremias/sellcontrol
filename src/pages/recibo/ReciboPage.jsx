@@ -27,7 +27,9 @@ async function chamarConfirmacao(cobrancaId, paymentId, externalReference) {
 }
 
 export default function ReciboPage() {
-  const { id }       = useParams()
+  // /recibo/:id (uuid antigo) ou /r/:codigo (curto, para caber no WhatsApp)
+  const { id: idParam, codigo } = useParams()
+  const [id, setId]  = useState(idParam || null)
   const [cob, setCob] = useState(null)
   const [erro, setErro] = useState(false)
   const [verificando, setVerificando] = useState(false)
@@ -47,8 +49,29 @@ export default function ReciboPage() {
   const [cupomAplicado, setCupomAplicado] = useState(null)
   const [erroCupom, setErroCupom] = useState('')
 
+  // Link curto: descobre o id da cobrança antes de carregar o recibo
+  useEffect(() => {
+    if (!codigo) return
+    let ativo = true
+
+    ;(async () => {
+      const { data } = await supabase
+        .from('cobrancas')
+        .select('id')
+        .eq('link_codigo', codigo)
+        .maybeSingle()
+
+      if (!ativo) return
+      if (data?.id) setId(data.id)
+      else setErro(true)
+    })()
+
+    return () => { ativo = false }
+  }, [codigo])
+
   const carregarCob = async () => {
-    if (!id) { setErro(true); return }
+    // Ainda resolvendo o código curto: espera o id chegar
+    if (!id) { if (!codigo) setErro(true); return }
     setErro(false)
     try {
       const res = await getCobrancaById(id)

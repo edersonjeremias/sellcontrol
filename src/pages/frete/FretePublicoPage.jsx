@@ -132,7 +132,9 @@ const FORM_VAZIO = {
 }
 
 function FretePublico() {
-  const { token } = useParams()
+  // /frete/:token (uuid antigo) ou /f/:codigo (curto)
+  const { token: tokenLongo, codigo } = useParams()
+  const token = codigo || tokenLongo
   const showToast = usePortalToast()
 
   const [loading, setLoading] = useState(true)

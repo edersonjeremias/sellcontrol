@@ -296,7 +296,10 @@ export default function CobrancasPage() {
     const nomeEmpresa = config?.nome_loja || 'SellControl'
 
     // Monta URL antes de qualquer async para abrir WhatsApp imediatamente
-    const reciboUrl = `https://sellcontrol.app/recibo/${cobranca.id}`
+    // Link curto: a URL com UUID chega quebrada no WhatsApp e perde o clique
+    const reciboUrl = cobranca.link_codigo
+      ? `https://sellcontrol.app/r/${cobranca.link_codigo}`
+      : `https://sellcontrol.app/recibo/${cobranca.id}`
     let url = `https://wa.me/55${zap}`
     if (tipo === 'lembrete') {
       let msg = `${nomeEmpresa}\n\nOlá ${cobranca.cliente}! Tudo bem?\n\nLembrando que sua compra do dia *${fmtData(cobranca.data)}* ainda está aguardando o pagamento.`
@@ -392,7 +395,9 @@ export default function CobrancasPage() {
   }
 
   function copiarLink(cobranca) {
-    const url = `${window.location.origin}/recibo/${cobranca.id}`
+    const url = cobranca.link_codigo
+      ? `${window.location.origin}/r/${cobranca.link_codigo}`
+      : `${window.location.origin}/recibo/${cobranca.id}`
     navigator.clipboard?.writeText(url)
       .then(() => { showToast('Link copiado!'); setSel(null) })
       .catch(() => showToast('Não foi possível copiar', 'error'))
