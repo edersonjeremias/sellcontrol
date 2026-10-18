@@ -79,7 +79,7 @@ export default function MeuFrete() {
     if (!tenantId) return
     try {
       const { data, error } = await supabase
-        .from('configuracoes')
+        .from('configuracoes_public')
         .select('margem_frete')
         .eq('tenant_id', tenantId)
         .single()
@@ -137,7 +137,7 @@ export default function MeuFrete() {
 
       // Buscar configurações da empresa (endereço de origem e API)
       const { data: config } = await supabase
-        .from('configuracoes')
+        .from('configuracoes_public')
         .select('melhor_envio_api_url, endereco_cep, endereco_rua, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_estado')
         .eq('tenant_id', tenantId)
         .single()

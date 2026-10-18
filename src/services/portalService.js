@@ -86,12 +86,11 @@ export async function sincronizarCliente(tenantId, instagram, campos) {
   if (error) console.error('Erro ao sincronizar cliente:', error)
 }
 
-// Usa o client `supabase` (anon) e não `portalSb`: a sessão do cliente do portal
-// é `authenticated` sem o claim tenant_id, e a policy de RLS de configuracoes
-// filtra por esse claim — o que zera o resultado. Mesmo caminho do PortalApp.
+// Lê da view configuracoes_public, e não da tabela: anon não tem SELECT em
+// configuracoes (ela guarda os tokens de pagamento e do Melhor Envio).
 export async function getMensagemEncerramento(tenantId) {
   const { data, error } = await supabase
-    .from('configuracoes')
+    .from('configuracoes_public')
     .select('mensagem_encerramento_sacolinha')
     .eq('tenant_id', tenantId)
     .maybeSingle()

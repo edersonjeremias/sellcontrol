@@ -43,7 +43,7 @@ export default function PortalApp() {
 
         // Buscar por slug
         const { data, error } = await supabase
-          .from('configuracoes')
+          .from('configuracoes_public')
           .select('tenant_id, nome_loja')
           .eq('slug', slug)
           .single()

@@ -270,7 +270,7 @@ export default function ReciboPage() {
       try {
         // Tentar 1: Buscar de configuracoes.nome_loja
         const { data: config } = await supabase
-          .from('configuracoes')
+          .from('configuracoes_public')
           .select('nome_loja')
           .eq('tenant_id', cob.tenant_id)
           .maybeSingle()
