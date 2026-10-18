@@ -134,7 +134,7 @@ export default function MinhaSacolinha() {
           onClick={handleEncerrarClick}
           disabled={ativa}
         >
-          🛍 Encerrar Sacolinha
+          Encerrar Sacolinha
         </button>
       </div>
 
@@ -236,7 +236,7 @@ export default function MinhaSacolinha() {
                             className="portal-btn portal-btn-green"
                             style={{ textDecoration:'none', fontSize:13, padding:'8px 16px' }}
                           >
-                            💳 Pagar
+                            Pagar
                           </a>
                         )}
                         <a
@@ -246,7 +246,7 @@ export default function MinhaSacolinha() {
                           className="portal-btn portal-btn-blue"
                           style={{ textDecoration:'none', fontSize:13, padding:'8px 16px' }}
                         >
-                          🧾 Ver Recibo
+                          Ver Recibo
                         </a>
                       </div>
                     </div>

@@ -65,7 +65,7 @@ export default function ModalEncerramento({ instagram, onClose, onConfirm }) {
             onClick={() => onConfirm?.()}
             disabled={!ciente}
           >
-            ✓ Entendi
+            Entendi
           </button>
         </div>
       </div>
@@ -120,7 +120,7 @@ export default function ModalEncerramento({ instagram, onClose, onConfirm }) {
             onClick={confirmar}
             disabled={saving}
           >
-            {saving ? 'Enviando...' : '✓ Confirmar'}
+            {saving ? 'Enviando...' : 'Confirmar'}
           </button>
         </div>
       </div>

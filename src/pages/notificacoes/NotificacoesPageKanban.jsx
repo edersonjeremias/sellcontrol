@@ -197,7 +197,7 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
             </div>
             <button onClick={toggleEncerrar}
               style={{ background: notif.encerrado ? 'rgba(129,201,149,0.15)' : 'rgba(242,139,130,0.15)', border:'none', borderRadius:4, color: notif.encerrado ? 'var(--green)' : 'var(--red)', fontSize:11, fontWeight:700, padding:'4px 10px', cursor:'pointer' }}>
-              {notif.encerrado ? '↩ Reabrir' : '✓ Encerrar'}
+              {notif.encerrado ? 'Reabrir' : 'Encerrar'}
             </button>
             <button onClick={onClose} style={{ background:'none', border:'none', color:'var(--muted)', fontSize:20, cursor:'pointer', lineHeight:1 }}>✕</button>
           </div>
@@ -381,7 +381,7 @@ function ModalNovaConversa({ tenantId, profile, onCriada, onClose, showToast }) 
           </button>
           <button onClick={criar} disabled={enviando || !remetente.trim() || !assunto.trim() || !mensagem.trim()}
             style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer', opacity: (enviando || !remetente.trim() || !assunto.trim() || !mensagem.trim()) ? 0.5 : 1 }}>
-            {enviando ? 'Criando…' : '✉ Criar Conversa'}
+            {enviando ? 'Criando…' : 'Criar Conversa'}
           </button>
         </div>
       </div>
@@ -625,10 +625,10 @@ export default function NotificacoesPageKanban() {
             style={{ background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'5px 10px', fontSize:13, outline:'none', minWidth:140 }}
           />
           <button onClick={() => setModalEncerrados(true)} style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', fontSize:12, padding:'5px 12px', cursor:'pointer', fontWeight:600 }}>
-            📁 Encerrados ({totalEncerrados})
+            Encerrados ({totalEncerrados})
           </button>
           <button onClick={() => setModalColunas(true)} style={{ background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', fontSize:12, padding:'5px 12px', cursor:'pointer', fontWeight:600 }}>
-            ⚙ Colunas
+            Colunas
           </button>
           <button onClick={() => setModalNova(true)} style={{ background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, fontSize:12, fontWeight:700, padding:'5px 14px', cursor:'pointer' }}>
             + Nova Conversa

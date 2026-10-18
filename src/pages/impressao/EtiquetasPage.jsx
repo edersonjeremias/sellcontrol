@@ -389,7 +389,7 @@ export default function EtiquetasPage() {
             onClick={preconfigurar}
             style={{ width: '100%', padding: '9px 0', marginBottom: 12, borderRadius: 7, border: '1px solid rgba(96,165,250,.5)', background: 'rgba(96,165,250,.12)', color: '#60a5fa', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
           >
-            ⚡ Pré-configurar campos automaticamente
+            Pré-configurar campos automaticamente
           </button>
 
           <div className="eti-section-label">CAMPOS</div>

@@ -45,6 +45,7 @@ Utilizadas nas bordas esquerdas dos cards e nos badges/ícones:
 * **Autocomplete do Navegador:** Forçar reset de fundo para manter o tema escuro: `input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #2b2b2b inset !important; -webkit-text-fill-color: white !important; }`
 
 ### 5.2. Botões (Buttons)
+* **Rótulo sem emoji.** O texto do botão é só texto: "Salvar", "Cartão", "Pagar com PIX". Nada de `💾 Salvar` ou `⚡ Pagar`. O sistema é uma ferramenta de trabalho e o emoji no rótulo tira a seriedade, além de renderizar diferente em cada aparelho. Quando precisar de apoio visual, use ícone FontAwesome — que é vetorial, herda a cor do tema e é consistente.
 * Devem ter **exatamente a mesma altura** dos Inputs para formar grupos (Input Groups) visualmente perfeitos.
 * **Padding:** `12px 15px`
 * **Font Weight:** `600` (Semi-bold)

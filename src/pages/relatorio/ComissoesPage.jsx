@@ -248,7 +248,7 @@ export default function ComissoesPage() {
           background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 6,
           padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: carregando ? 'wait' : 'pointer'
         }}>
-          {carregando ? 'Buscando...' : '🔍 Buscar'}
+          {carregando ? 'Buscando...' : 'Buscar'}
         </button>
 
         {dados.length > 0 && (
@@ -256,7 +256,7 @@ export default function ComissoesPage() {
             background: '#9b59b6', color: '#fff', border: 'none', borderRadius: 6,
             padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer'
           }}>
-            💾 Salvar PDF
+            Salvar PDF
           </button>
         )}
       </div>

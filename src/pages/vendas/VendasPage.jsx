@@ -2537,13 +2537,13 @@ export default function VendasPage() {
                 }}
                 style={{ flex: 1, padding: 10, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
-                ❌ Foi Erro
+                Foi Erro
               </button>
               <button
                 onClick={() => setAvisoPreco(null)}
                 style={{ flex: 1, padding: 10, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
               >
-                ✅ Está Correto
+                Está Correto
               </button>
             </div>
           </div>
@@ -2646,11 +2646,11 @@ export default function VendasPage() {
             <div style={{ display:'flex', gap:10 }}>
               <button onClick={descartarBackup}
                 style={{ flex:1, padding:'12px 0', background:'transparent', border:'1px solid rgba(255,255,255,.2)', borderRadius:7, color:'#8b949e', fontWeight:700, fontSize:14, cursor:'pointer' }}>
-                ❌ Descartar
+                Descartar
               </button>
               <button onClick={recuperarBackup}
                 style={{ flex:2, padding:'12px 0', background:'#1d6f42', border:'1px solid rgba(34,197,94,.3)', borderRadius:7, color:'#fff', fontWeight:800, fontSize:14, cursor:'pointer' }}>
-                ✅ Recuperar Dados
+                Recuperar Dados
               </button>
             </div>
           </div>

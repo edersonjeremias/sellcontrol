@@ -723,12 +723,12 @@ export default function PedidosPage() {
               <button className="btn-acao btn-blue" disabled={loading || !romAddVal}
                 onClick={handleBuscarRomaneio} style={{ flex: 'none', minWidth: 90 }}
                 title="Buscar itens deste romaneio">
-                🔍 Buscar
+                Buscar
               </button>
               <button className="btn-acao btn-yellow" disabled={loading || !romAddVal}
                 onClick={handleEditarRomaneio} style={{ flex: 'none', minWidth: 90 }}
                 title="Editar peso e dimensões deste romaneio">
-                ✏️ Editar
+                Editar
               </button>
               <button className="btn-acao btn-ghost" disabled={loading || !romAddVal}
                 onClick={handleAdicionarAoRomaneio} style={{ flex: 'none', minWidth: 130 }}>
@@ -982,7 +982,7 @@ export default function PedidosPage() {
                       fontWeight: 700, cursor: 'pointer',
                     }}
                   >
-                    {modoEdicao ? '✅ Salvar Alterações' : '✅ Gerar Romaneio'}
+                    {modoEdicao ? 'Salvar Alterações' : 'Gerar Romaneio'}
                   </button>
                 </div>
               </div>

@@ -76,7 +76,7 @@ export default function LimparUsuariosPage() {
             color: '#171717'
           }}
         >
-          {executando ? '⏳ Executando...' : '🗑️ Executar Limpeza'}
+          {executando ? 'Executando...' : 'Executar Limpeza'}
         </button>
 
         {resultado && (

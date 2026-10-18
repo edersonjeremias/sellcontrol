@@ -416,7 +416,7 @@ export default function ProducaoPage() {
                 className={`prod-v2-tab${mode === t.key ? ' active' : ''}`}
                 onClick={() => setMode(t.key)}>{t.label}</button>
             ))}
-            <button type="button" className="prod-v2-tab" onClick={() => setShowDash(true)}>📊 ESTATÍSTICAS</button>
+            <button type="button" className="prod-v2-tab" onClick={() => setShowDash(true)}>ESTATÍSTICAS</button>
             <span className="prod-v2-count">{filteredRows.length} REGISTROS</span>
           </div>
         </div>

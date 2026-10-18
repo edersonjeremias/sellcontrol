@@ -165,7 +165,7 @@ export default function AbaStatusExpedicao({ tenantId, showToast }) {
         onClick={() => setShowForm(v => !v)}
         disabled={loading}
       >
-        {showForm ? '✕ Cancelar' : '+ Novo Status'}
+        {showForm ? 'Cancelar' : '+ Novo Status'}
       </button>
 
       {/* Formulário */}

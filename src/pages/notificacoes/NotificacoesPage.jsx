@@ -113,11 +113,11 @@ export default function NotificacoesPage() {
           </h2>
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={carregar} className="btn-secondary">
-              🔄 Atualizar
+              Atualizar
             </button>
             {totalNaoLidas > 0 && (
               <button onClick={handleMarcarTodasLidas} className="btn-primary">
-                ✓ Marcar todas lidas
+                Marcar todas lidas
               </button>
             )}
           </div>

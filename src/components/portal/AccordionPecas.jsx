@@ -150,7 +150,7 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
                     className="portal-btn portal-btn-green"
                     style={{ textDecoration: 'none', fontSize: 13, padding: '8px 16px', flex: 1 }}
                   >
-                    💳 Pagar
+                    Pagar
                   </a>
                 )}
                 {reciboUrl && (
@@ -161,7 +161,7 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
                     className="portal-btn portal-btn-blue"
                     style={{ textDecoration: 'none', fontSize: 13, padding: '8px 16px', flex: 1 }}
                   >
-                    🧾 Recibo
+                    Recibo
                   </a>
                 )}
               </div>

@@ -445,10 +445,10 @@ function FretePublico() {
             {!pago && (
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button className="portal-btn portal-btn-gray portal-btn-sm" onClick={abrirEdicaoEndereco}>
-                  ✏️ Corrigir
+                  Corrigir
                 </button>
                 <button className="portal-btn portal-btn-gray portal-btn-sm" onClick={abrirNovoEndereco}>
-                  ➕ Outro endereço
+                  Outro endereço
                 </button>
               </div>
             )}
@@ -461,7 +461,7 @@ function FretePublico() {
               Você ainda não tem endereço cadastrado.
             </p>
             <button className="portal-btn portal-btn-blue" onClick={abrirNovoEndereco}>
-              ➕ Cadastrar endereço
+              Cadastrar endereço
             </button>
           </div>
         )}
@@ -537,7 +537,7 @@ function FretePublico() {
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <button className="portal-btn portal-btn-blue" style={{ flex: 1 }}
                 onClick={handleSalvarEndereco} disabled={salvando}>
-                {salvando ? 'Salvando...' : '💾 Salvar endereço'}
+                {salvando ? 'Salvando...' : 'Salvar endereço'}
               </button>
               {endereco && (
                 <button className="portal-btn portal-btn-gray"
@@ -576,7 +576,7 @@ function FretePublico() {
 
           <button className="portal-btn portal-btn-blue" style={{ width: '100%', marginBottom: cotacoes.length ? 14 : 0 }}
             onClick={handleCotar} disabled={cotando}>
-            {cotando ? 'Calculando...' : cotacoes.length ? '🔄 Calcular de novo' : '🚚 Calcular frete'}
+            {cotando ? 'Calculando...' : cotacoes.length ? 'Calcular de novo' : 'Calcular frete'}
           </button>
 
           {cotacoes.map(c => {
@@ -618,7 +618,7 @@ function FretePublico() {
           {cotacoes.length > 0 && (
             <button className="portal-btn portal-btn-green" style={{ width: '100%', marginTop: 6 }}
               onClick={handlePagar} disabled={gerandoPix || !cotacaoSel}>
-              {gerandoPix ? 'Gerando PIX...' : '💳 Pagar com PIX'}
+              {gerandoPix ? 'Gerando PIX...' : 'Pagar com PIX'}
             </button>
           )}
         </div>
@@ -662,7 +662,7 @@ function FretePublico() {
 
             <button className="portal-btn portal-btn-blue" style={{ width: '100%', marginBottom: 10 }}
               onClick={copiarPix}>
-              📋 Copiar código PIX
+              Copiar código PIX
             </button>
 
             {pagamento.expiracao && (

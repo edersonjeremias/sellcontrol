@@ -846,7 +846,7 @@ export default function ContasPagarPage() {
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingTop:12, borderTop:'1px solid var(--border-light)' }}>
                 {modalLinha.status !== 'PAGO' && (
                   <button onClick={() => { setModalPagar({id:modalLinha.id}); setDataPag(HOJE); setModalLinha(null) }}
-                    style={{ ...S.ok, gridColumn:'1 / -1', padding:'11px 14px' }}>✓ Dar Baixa</button>
+                    style={{ ...S.ok, gridColumn:'1 / -1', padding:'11px 14px' }}>Dar Baixa</button>
                 )}
                 <button onClick={() => { abrirEditar(modalLinha); setModalLinha(null) }}
                   style={{ ...S.btn, padding:'11px 14px' }}>Editar</button>
@@ -1002,7 +1002,7 @@ export default function ContasPagarPage() {
                                   {c.status !== 'PAGO' && (
                                     <button onClick={() => { setModalPagar({id:c.id}); setDataPag(HOJE); setModalDetalheCat(null); setSubcatsAbertas(new Set()) }}
                                       style={{ ...S.ok, padding:'4px 10px', fontSize:11 }}>
-                                      ✓ Pagar
+                                      Pagar
                                     </button>
                                   )}
                                   <button onClick={() => { abrirEditar(c); setModalDetalheCat(null); setSubcatsAbertas(new Set()) }}

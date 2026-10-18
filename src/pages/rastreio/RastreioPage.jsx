@@ -85,7 +85,7 @@ export default function RastreioPage() {
         {/* ── Botão rastrear (destaque) ── */}
         {urlRastreio && (
           <a href={urlRastreio} target="_blank" rel="noopener noreferrer" style={S.btnRastrear}>
-            📦 Rastrear Envio — {cod}
+            Rastrear Envio — {cod}
           </a>
         )}
 

@@ -392,7 +392,7 @@ export default function MeusEnderecos() {
                       cursor: 'pointer',
                     }}
                   >
-                    ⭐ Marcar como padrão
+                    Marcar como padrão
                   </button>
                 )}
                 <button
@@ -408,7 +408,7 @@ export default function MeusEnderecos() {
                     cursor: 'pointer',
                   }}
                 >
-                  ✏️ Editar
+                  Editar
                 </button>
                 <button
                   onClick={() => handleDeletar(end.id)}
@@ -423,7 +423,7 @@ export default function MeusEnderecos() {
                     cursor: 'pointer',
                   }}
                 >
-                  🗑️ Excluir
+                  Excluir
                 </button>
               </div>
             </div>
@@ -781,7 +781,7 @@ export default function MeusEnderecos() {
                     opacity: salvando ? 0.7 : 1,
                   }}
                 >
-                  {salvando ? '⏳ Salvando...' : editando ? 'Salvar' : 'Adicionar'}
+                  {salvando ? 'Salvando...' : editando ? 'Salvar' : 'Adicionar'}
                 </button>
               </div>
             </div>

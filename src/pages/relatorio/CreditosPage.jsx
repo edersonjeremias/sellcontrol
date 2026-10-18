@@ -429,7 +429,7 @@ export default function CreditosPage() {
               </div>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, paddingTop:12, borderTop:'1px solid var(--border-light)' }}>
                 <button onClick={() => { verHistorico(modalLinha.cliente); setModalLinha(null) }}
-                  style={{ ...S.btn, gridColumn:'1 / -1', padding:'11px 14px' }}>📜 Histórico</button>
+                  style={{ ...S.btn, gridColumn:'1 / -1', padding:'11px 14px' }}>Histórico</button>
                 <button onClick={() => { editar(modalLinha); setModalLinha(null) }}
                   style={{ ...S.btn, padding:'11px 14px' }}>Editar</button>
                 <button onClick={() => { setConfirmDel({ id:modalLinha.id, label:modalLinha.cliente }); setModalLinha(null) }}

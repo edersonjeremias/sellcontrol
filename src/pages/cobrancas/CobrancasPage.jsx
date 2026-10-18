@@ -822,15 +822,15 @@ export default function CobrancasPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5, marginBottom: sel.qt_envios > 0 ? 5 : 8 }}>
                 <button onClick={() => enviarWhatsApp(sel, 'chat')}
                   style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, background: 'rgba(129,201,149,0.1)', color: 'var(--green)', border: '1px solid rgba(129,201,149,0.3)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }}>
-                  💬 Conversar
+                  Conversar
                 </button>
                 <button onClick={() => enviarWhatsApp(sel, 'enviar')}
                   style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, background: 'rgba(129,201,149,0.6)', color: '#171717', border: '1px solid var(--green)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>
-                  📲 {sel.qt_envios > 0 ? 'Reenviar' : 'Enviar'}
+                  {sel.qt_envios > 0 ? 'Reenviar' : 'Enviar'}
                 </button>
                 <button onClick={() => copiarLink(sel)}
                   style={{ height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, background: 'rgba(138,180,248,0.1)', color: 'var(--blue)', border: '1px solid rgba(138,180,248,0.3)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 11 }}>
-                  🔗 Copiar
+                  Copiar
                 </button>
               </div>
 
@@ -838,7 +838,7 @@ export default function CobrancasPage() {
               {sel.qt_envios > 0 && (
                 <button onClick={() => enviarWhatsApp(sel, 'lembrete')}
                   style={{ width: '100%', height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(251,188,4,0.1)', color: 'var(--yellow)', border: '1px solid rgba(251,188,4,0.3)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
-                  ⏰ Lembrete
+                  Lembrete
                 </button>
               )}
 
@@ -847,7 +847,7 @@ export default function CobrancasPage() {
                 <button
                   onClick={() => { setDivValorP1(''); setShowDividir(true) }}
                   style={{ width: '100%', height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'rgba(110,63,217,0.12)', color: '#a78bfa', border: '1px solid rgba(110,63,217,0.35)', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 12, marginBottom: 8 }}>
-                  ✂️ Dividir Pagamento em 2 Partes
+                  Dividir Pagamento em 2 Partes
                 </button>
               )}
 
@@ -951,7 +951,7 @@ export default function CobrancasPage() {
                   </select>
                 </div>
                 <button className="btn-acao btn-ghost" style={{ minHeight: 33, padding: '0 14px', fontSize: 13 }} onClick={buscarVendas} disabled={importando}>
-                  {importando ? '…' : '🔍 Buscar'}
+                  {importando ? '…' : 'Buscar'}
                 </button>
               </div>
 
@@ -986,7 +986,7 @@ export default function CobrancasPage() {
                         textDecoration: 'underline'
                       }}
                     >
-                      {impSelecionados.length === impResultado.length ? '❌ Desmarcar Todos' : '✅ Selecionar Todos'}
+                      {impSelecionados.length === impResultado.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
                     </button>
                   </div>
 

@@ -750,7 +750,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
         style={{ marginBottom: 16, padding: '0 18px', height: 36, fontSize: 13, color: '#171717', fontWeight: 600 }}
         onClick={() => setShowForm(v => !v)}
       >
-        {showForm ? '✕ Cancelar' : '+ Novo Usuário'}
+        {showForm ? 'Cancelar' : '+ Novo Usuário'}
       </button>
 
       {/* Formulário de criação */}

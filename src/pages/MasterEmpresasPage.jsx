@@ -1223,7 +1223,7 @@ function AbaImportarBling({ showToast }) {
               style={{
                 padding: '6px 12px', fontSize: 12, background: 'var(--blue)', color: '#171717'
               }}>
-              📥 Baixar CSV dos Erros
+              Baixar CSV dos Erros
             </button>
           </div>
 
@@ -1645,7 +1645,7 @@ function AbaImportarDados({ showToast }) {
             borderBottom: tipoImport === 'clientes' ? '3px solid var(--blue)' : '3px solid transparent',
             transition: 'all 0.15s',
           }}>
-          👥 Clientes
+          Clientes
         </button>
         <button
           onClick={() => {
@@ -1662,7 +1662,7 @@ function AbaImportarDados({ showToast }) {
             borderBottom: tipoImport === 'vendas' ? '3px solid var(--blue)' : '3px solid transparent',
             transition: 'all 0.15s',
           }}>
-          🛍️ Vendas
+          Vendas
         </button>
       </div>
 
@@ -1691,7 +1691,7 @@ function AbaImportarDados({ showToast }) {
             color: metodo === 'csv' ? 'var(--blue)' : 'var(--muted)',
             borderBottom: metodo === 'csv' ? '2px solid var(--blue)' : '2px solid transparent',
           }}>
-          📁 Upload CSV
+          Upload CSV
         </button>
         <button
           onClick={() => setMetodo('sheets')}
@@ -1701,7 +1701,7 @@ function AbaImportarDados({ showToast }) {
             color: metodo === 'sheets' ? 'var(--blue)' : 'var(--muted)',
             borderBottom: metodo === 'sheets' ? '2px solid var(--blue)' : '2px solid transparent',
           }}>
-          📊 Google Sheets
+          Google Sheets
         </button>
       </div>
 
@@ -1958,7 +1958,7 @@ function AbaImportarDados({ showToast }) {
               style={{
                 padding: '6px 12px', fontSize: 12, background: 'var(--blue)', color: '#171717'
               }}>
-              📥 Baixar CSV dos Erros
+              Baixar CSV dos Erros
             </button>
           </div>
 

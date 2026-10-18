@@ -124,7 +124,7 @@ export default function ModalEdicao({ linha, listas, onConfirmar, onFechar, onBl
           {podeSalvarDireto && (
             <button className="btn-confirm" onClick={salvarDireto}
               style={{ background: 'var(--green)', borderColor: 'var(--green)' }}>
-              💾 Salvar Agora
+              Salvar Agora
             </button>
           )}
         </div>

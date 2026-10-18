@@ -534,7 +534,7 @@ export default function MeuFrete() {
                       opacity: cotando ? 0.6 : 1,
                     }}
                   >
-                    {cotando && romaneioSelecionado === rom.id ? 'Cotando...' : '🚚 Cotar Frete'}
+                    {cotando && romaneioSelecionado === rom.id ? 'Cotando...' : 'Cotar Frete'}
                   </button>
                 )}
 
@@ -566,7 +566,7 @@ export default function MeuFrete() {
                           cursor: 'pointer',
                         }}
                       >
-                        💳 Ver PIX
+                        Ver PIX
                       </button>
                       <button
                         onClick={() => handleCancelarPagamento(rom)}
@@ -582,7 +582,7 @@ export default function MeuFrete() {
                           cursor: 'pointer',
                         }}
                       >
-                        ❌ Cancelar
+                        Cancelar
                       </button>
                     </div>
                   </div>
@@ -639,7 +639,7 @@ export default function MeuFrete() {
                             textDecoration: 'none',
                           }}
                         >
-                          🔗 Rastrear Pedido →
+                          Rastrear Pedido
                         </a>
                       </div>
                     )}
@@ -673,7 +673,7 @@ export default function MeuFrete() {
                         cursor: 'pointer',
                       }}
                     >
-                      🧾 Ver Recibo
+                      Ver Recibo
                     </button>
                   </div>
                 )}
@@ -722,7 +722,7 @@ export default function MeuFrete() {
                             textDecoration: 'none',
                           }}
                         >
-                          🔗 Rastrear Pedido →
+                          Rastrear Pedido
                         </a>
                       </div>
                     )}
@@ -780,7 +780,7 @@ export default function MeuFrete() {
                               display: 'block',
                             }}
                           >
-                            🔗 Rastrear
+                            Rastrear
                           </a>
                           <button
                             onClick={() => {
@@ -799,7 +799,7 @@ export default function MeuFrete() {
                               cursor: 'pointer',
                             }}
                           >
-                            📋 Copiar
+                            Copiar
                           </button>
                         </div>
                       </div>
@@ -1001,7 +1001,7 @@ export default function MeuFrete() {
                 marginBottom: 12,
               }}
             >
-              📋 Copiar Código PIX
+              Copiar Código PIX
             </button>
 
             {pagamentoPIX.expiracao && (

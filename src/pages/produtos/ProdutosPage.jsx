@@ -1460,7 +1460,7 @@ export default function ProdutosPage() {
                       onClick={() => setConfirmarExclusao(true)}
                       style={{ flex: '1 1 calc(50% - 4px)', padding: 12, background: 'var(--red)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                     >
-                      🗑️ Excluir
+                      Excluir
                     </button>
                     <button
                       onClick={async () => {
@@ -1469,7 +1469,7 @@ export default function ProdutosPage() {
                       }}
                       style={{ flex: '1 1 calc(50% - 4px)', padding: 12, background: '#666', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                     >
-                      📋 Duplicar
+                      Duplicar
                     </button>
                     <button
                       onClick={() => {
@@ -1477,7 +1477,7 @@ export default function ProdutosPage() {
                       }}
                       style={{ flex: '1 1 100%', padding: 12, background: '#0066ff', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', position: 'relative' }}
                     >
-                      📷 Imagens {produtoEditando.imagens?.length > 0 && `(${produtoEditando.imagens.length})`}
+                      Imagens {produtoEditando.imagens?.length > 0 && `(${produtoEditando.imagens.length})`}
                     </button>
                   </>
                 )}
@@ -1489,7 +1489,7 @@ export default function ProdutosPage() {
                     }}
                     style={{ flex: 1, padding: 12, background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                   >
-                    ♻️ Reativar
+                    Reativar
                   </button>
                 )}
                 <button
@@ -1510,7 +1510,7 @@ export default function ProdutosPage() {
                   }}
                   style={{ flex: 2, padding: 12, background: 'var(--green)', color: '#000', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
                 >
-                  💾 Salvar
+                  Salvar
                 </button>
               </div>
 

@@ -183,7 +183,7 @@ function NovaConversa({ onEnviada, onCancelar }) {
         <div style={{ display:'flex', gap:10 }}>
           <button onClick={onCancelar} className="portal-btn" style={{ flex:1, background:'var(--p-card)', color:'var(--p-muted)' }}>Cancelar</button>
           <button onClick={enviar} disabled={enviando} className="portal-btn portal-btn-green" style={{ flex:2 }}>
-            {enviando ? 'Enviando…' : '✉ Enviar Mensagem'}
+            {enviando ? 'Enviando…' : 'Enviar Mensagem'}
           </button>
         </div>
       </div>
@@ -243,7 +243,7 @@ export default function MeuContato({ onAtualizar }) {
           <div style={{ position:'sticky', top:'104px', zIndex:98, background:'var(--p-bg)', padding:'14px 16px', borderBottom:'1px solid var(--p-border)' }}>
             <button onClick={() => setTela('nova')} className="portal-btn portal-btn-green"
               style={{ width:'100%', fontSize:14, padding:'12px' }}>
-              ✉ Nova Mensagem / Contato
+              Nova Mensagem / Contato
             </button>
           </div>
 

@@ -182,7 +182,7 @@ export default function MeuCadastro() {
 
         <button type="submit" className="portal-btn portal-btn-blue"
           style={{ width:'100%', marginTop:8 }} disabled={saving}>
-          {saving ? 'Salvando...' : '💾 Salvar Cadastro'}
+          {saving ? 'Salvando...' : 'Salvar Cadastro'}
         </button>
       </form>
     </div>

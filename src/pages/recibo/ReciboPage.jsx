@@ -698,7 +698,7 @@ export default function ReciboPage() {
               </div>
             ) : (
               <a href={div.link_p1} target="_blank" rel="noopener noreferrer" style={{ ...estilos.btnPagar, background: '#009ee3', marginBottom: 0 }}>
-                💳 Pagar Parte 1 — R$ {Number(div.valor_p1).toFixed(2).replace('.', ',')}
+                Pagar Parte 1 — R$ {Number(div.valor_p1).toFixed(2).replace('.', ',')}
               </a>
             )}
 
@@ -709,14 +709,14 @@ export default function ReciboPage() {
               </div>
             ) : (
               <a href={div.link_p2} target="_blank" rel="noopener noreferrer" style={{ ...estilos.btnPagar, background: '#6e3fd9', marginBottom: 0 }}>
-                💳 Pagar Parte 2 — R$ {Number(div.valor_p2).toFixed(2).replace('.', ',')}
+                Pagar Parte 2 — R$ {Number(div.valor_p2).toFixed(2).replace('.', ',')}
               </a>
             )}
 
             {/* Botão verificar pagamento (só se NÃO pago) */}
             {!pago && !verificando && !verificado && (
               <button onClick={handleVerificar} style={estilos.btnVerificar}>
-                🔄 Já paguei — Verificar Pagamento
+                Já paguei — Verificar Pagamento
               </button>
             )}
             {!pago && verificando && (
@@ -796,7 +796,7 @@ export default function ReciboPage() {
               disabled={gerandoPix}
               style={{ ...estilos.btnPix, opacity: gerandoPix ? 0.6 : 1 }}
             >
-              {gerandoPix ? 'Gerando PIX...' : '⚡ Pagar com PIX'}
+              {gerandoPix ? 'Gerando PIX...' : 'Pagar com PIX'}
             </button>
 
             {erroPix && (
@@ -825,7 +825,7 @@ export default function ReciboPage() {
               rel="noopener noreferrer"
               style={estilos.btnPagar}
             >
-              💳 Cartão / outras opções
+              Cartão / outras opções
             </a>
 
             {/* Botão dividir pagamento - só aparece se total >= 20 */}
@@ -834,7 +834,7 @@ export default function ReciboPage() {
                 onClick={() => setShowDividir(true)}
                 style={estilos.btnDividir}
               >
-                ✂️ Dividir Pagamento
+                Dividir Pagamento
               </button>
             )}
           </>
@@ -891,7 +891,7 @@ export default function ReciboPage() {
                 padding: '13px',
               }}
             >
-              {pixCopiado ? '✅ Código copiado!' : '📋 Copiar código PIX'}
+              {pixCopiado ? 'Código copiado!' : 'Copiar código PIX'}
             </button>
 
             {/* Fallback: no celular o copiar pode falhar, então deixamos o código à mão */}

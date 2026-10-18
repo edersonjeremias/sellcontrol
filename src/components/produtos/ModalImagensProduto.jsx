@@ -175,7 +175,7 @@ export default function ModalImagensProduto({ produto, onClose, onUpdate }) {
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
                 >
-                  {uploading ? '⏳ Enviando...' : '📷 Adicionar Imagens'}
+                  {uploading ? 'Enviando...' : 'Adicionar Imagens'}
                 </button>
 
                 <p className="upload-info">

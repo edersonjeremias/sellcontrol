@@ -1220,19 +1220,19 @@ function AbaBuscaAvancada({ clientes, tenantId, selecionarCliente, setAba }) {
               onClick={() => executarAcaoEmMassa('bloquear')}
               className="btn-acao"
               style={{ padding: '6px 12px', fontSize: 12, background: '#fbbc04', color: '#171717', fontWeight: 600 }}>
-              🔒 Bloquear
+              Bloquear
             </button>
             <button
               onClick={() => executarAcaoEmMassa('desbloquear')}
               className="btn-acao btn-green"
               style={{ padding: '6px 12px', fontSize: 12, fontWeight: 600 }}>
-              ✅ Desbloquear
+              Desbloquear
             </button>
             <button
               onClick={() => executarAcaoEmMassa('excluir')}
               className="btn-acao"
               style={{ padding: '6px 12px', fontSize: 12, background: 'rgba(239,68,68,0.15)', border: '1px solid var(--red)', color: 'var(--red)', fontWeight: 600 }}>
-              🗑️ Excluir
+              Excluir
             </button>
           </div>
         </div>

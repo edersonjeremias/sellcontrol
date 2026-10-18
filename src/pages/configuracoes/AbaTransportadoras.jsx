@@ -140,7 +140,7 @@ export default function AbaTransportadoras({ tenantId, showToast }) {
           opacity: salvando ? 0.6 : 1,
         }}
       >
-        {salvando ? 'Salvando...' : '✅ Salvar Configurações'}
+        {salvando ? 'Salvando...' : 'Salvar Configurações'}
       </button>
 
       <div style={{

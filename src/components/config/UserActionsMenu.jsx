@@ -113,7 +113,7 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
                 borderBottom: '1px solid var(--border-light)',
               }}
             >
-              ✏️ Editar Nome/Email
+              Editar Nome/Email
             </button>
             <button
               onClick={() => { setShowResetModal(true); setShowMenu(false) }}
@@ -129,7 +129,7 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
                 borderBottom: '1px solid var(--border-light)',
               }}
             >
-              🔑 Resetar Senha
+              Resetar Senha
             </button>
             <button
               onClick={() => { setShowVendasModal(true); setShowMenu(false) }}
@@ -145,7 +145,7 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
                 borderBottom: '1px solid var(--border-light)',
               }}
             >
-              🛒 Permissões Vendas
+              Permissões Vendas
             </button>
             <button
               onClick={() => { handleToggleAtivo(); setShowMenu(false) }}
@@ -160,7 +160,7 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
                 color: user.ativo ? '#f28b82' : 'var(--green)',
               }}
             >
-              {user.ativo ? '⛔ Inativar Usuário' : '✅ Reativar Usuário'}
+              {user.ativo ? 'Inativar Usuário' : 'Reativar Usuário'}
             </button>
           </div>
         )}

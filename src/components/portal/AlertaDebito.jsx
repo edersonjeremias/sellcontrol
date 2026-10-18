@@ -23,7 +23,7 @@ export default function AlertaDebito({ cobrancas }) {
           {c.link_pagamento && (
             <a href={c.link_pagamento} target="_blank" rel="noopener noreferrer"
               className="portal-btn portal-btn-red portal-btn-sm">
-              Pagar agora →
+              Pagar agora
             </a>
           )}
         </div>
