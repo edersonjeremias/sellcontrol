@@ -5,6 +5,7 @@
   --table-header-bg: #35363a; --table-header-text: #9aa0a6;
   --table-row-hover: #35363a; --table-border: #3c4043;
   --input-bg: #171717; --input-border: #3c4043; --input-text: #e8eaed;
+  --cell-bg: #2b2b2b; --cell-border: #333333;
   --tabela-msg: #9aa0a6; --btn-cancel-bg: #3c4043; --btn-cancel-text: #e8eaed;
   --filter-bg: #292a2d; --filter-text: #e8eaed;
   --green: #81c995; --blue: #8ab4f8; --purple: #c58af9; --red: #f28b82; --yellow: #fbbc04;
@@ -643,14 +644,14 @@ html, body {
 .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; width: 100%; padding: 0 16px; box-sizing: border-box; }
 .field { flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
-.toolbar input, .toolbar select { height: 36px; padding: 0 12px; border: 1px solid var(--border-light); border-radius: 8px; background: var(--input-bg); color: var(--text-header); font-size: 0.9rem; outline: none; width: 100%; }
+.toolbar input, .toolbar select { height: 36px; padding: 0 12px; border: 1px solid var(--cell-border); border-radius: 8px; background: var(--cell-bg); color: var(--text-header); font-size: 0.9rem; outline: none; width: 100%; }
 .toolbar input::placeholder { color: var(--muted); }
 input[type="date"] { color-scheme: dark; }
-.toolbar input:focus, .toolbar select:focus { border-color: var(--blue); background: #252525; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--blue); }
 
 .filter-header-bar { padding: 12px 0 0; display: flex; gap: 8px; align-items: center; width: 100%; }
-.filter-header-bar input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 0.9rem; background: var(--input-bg); color: var(--input-text); outline: none; transition: all 0.2s; }
-.filter-header-bar input:focus { border-color: var(--blue); background: #252525; }
+.filter-header-bar input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--cell-border); border-radius: 8px; font-size: 0.9rem; background: var(--cell-bg); color: var(--input-text); outline: none; transition: border-color 0.2s; }
+.filter-header-bar input:focus { border-color: var(--blue); }
 .filter-header-bar .filtro-vendas { flex: 1; max-width: 50%; }
 .filter-header-bar .filtro-produtos { flex: 1; max-width: 50%; position: relative; }
 
@@ -717,8 +718,8 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
 .linha-enviada .btn-action-sm.undo { display: flex !important; }
 
 /* ── INPUTS DE CÉLULA ── */
-.cell-input { width: 100%; padding: 7px 8px; border: 1px solid var(--input-border); border-radius: 6px; font-size: 16px; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--input-bg); color: var(--input-text); transition: all 0.2s; }
-.cell-input:focus { border-color: var(--blue); outline: none; background: #252525; }
+.cell-input { width: 100%; padding: 7px 10px; border: 1px solid var(--cell-border); border-radius: 8px; font-size: 16px; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--cell-bg); color: var(--input-text); transition: border-color 0.2s; }
+.cell-input:focus { border-color: var(--blue); outline: none; }
 .cell-input.price { text-align: right; color: var(--green); font-weight: 700; }
 .td-sacola { cursor: pointer; transition: background 0.2s; border-radius: 6px; }
 .td-sacola:hover { background: rgba(138, 180, 248, 0.15); box-shadow: inset 0 0 0 1px var(--blue); }
