@@ -23,7 +23,7 @@ COMMENT ON COLUMN enderecos_clientes.email IS
 -- 2. Colunas de destino em clientes (criadas fora de migration no passado)
 ALTER TABLE clientes
   ADD COLUMN IF NOT EXISTS cpf             TEXT,
-  ADD COLUMN IF NOT EXISTS data_nascimento DATE,
+  ADD COLUMN IF NOT EXISTS data_nascimento TEXT,
   ADD COLUMN IF NOT EXISTS cep             TEXT,
   ADD COLUMN IF NOT EXISTS rua             TEXT,
   ADD COLUMN IF NOT EXISTS numero          TEXT,
@@ -38,7 +38,7 @@ UPDATE clientes c
 SET
   nome_completo   = COALESCE(NULLIF(p.nome_completo, ''), c.nome_completo),
   cpf             = COALESCE(NULLIF(p.cpf, ''),           c.cpf),
-  data_nascimento = COALESCE(p.data_nascimento,           c.data_nascimento),
+  data_nascimento = COALESCE(p.data_nascimento::text,     NULLIF(c.data_nascimento, '')),
   whatsapp        = COALESCE(NULLIF(p.celular, ''),       NULLIF(c.whatsapp, '')),
   email           = COALESCE(NULLIF(p.email, ''),         c.email),
   cep             = COALESCE(NULLIF(p.cep, ''),           c.cep),
