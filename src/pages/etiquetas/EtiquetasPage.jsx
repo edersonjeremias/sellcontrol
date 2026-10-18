@@ -176,11 +176,14 @@ export default function EtiquetasPage() {
       const insta = String(rom.cliente_instagram || '').replace('@', '')
       const fone = String(whatsPorInstagram[insta.toLowerCase()] || '').replace(/\D/g, '')
 
+      // Sem emoji: eles chegam corrompidos pelo deep link do WhatsApp.
+      // O link fica sozinho na última linha, que é como o app reconhece melhor.
       const msg =
-        `Oi @${insta}! 😊\n\n` +
-        `Seu pedido ${rom.numero} já está pronto aqui na loja 📦\n\n` +
-        `É só abrir o link abaixo para escolher o frete e pagar pelo PIX:\n${link}\n\n` +
-        `Assim que o pagamento cair, a gente posta seu pedido!`
+        `Oi @${insta}! Tudo bem?\n\n` +
+        `Seu pedido ${rom.numero} já está pronto aqui na loja.\n` +
+        `Escolha o frete e pague pelo PIX no link abaixo. ` +
+        `Assim que o pagamento cair, a gente posta seu pedido!\n\n` +
+        link
 
       if (!fone) {
         try { await navigator.clipboard.writeText(link) } catch { /* sem permissão de clipboard */ }
