@@ -276,6 +276,26 @@ export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live,
   return chamarMpApi(tenant_id, payload)
 }
 
+// ── PIX no próprio recibo ──────────────────────────────────────
+// Manda só o id: o valor vem do banco dentro da Edge Function, nunca do cliente.
+export async function gerarPixCobranca(cobrancaId) {
+  const resp = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/criar-pix-cobranca`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ cobranca_id: cobrancaId }),
+    }
+  )
+
+  const data = await resp.json().catch(() => ({}))
+  if (!resp.ok) throw new Error(data.error || 'Não foi possível gerar o PIX')
+  return data
+}
+
 // ── Dividir Pagamento ──────────────────────────────────────────
 
 export async function dividirPagamento(cobranca, valorParte1, tenantId) {

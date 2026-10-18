@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { getCobrancaById, formatMoeda, dividirPagamento, gerarPreferenciaMp, getSaldoCliente } from '../../services/cobrancasService'
+import { getCobrancaById, formatMoeda, dividirPagamento, gerarPreferenciaMp, getSaldoCliente, gerarPixCobranca } from '../../services/cobrancasService'
 import { validarCupom, calcularDesconto } from '../../services/cuponsService'
 import { supabase } from '../../lib/supabase'
 
@@ -42,6 +42,12 @@ export default function ReciboPage() {
   const [valorP1, setValorP1] = useState('')
   const [dividindo, setDividindo] = useState(false)
   const [erroDivisao, setErroDivisao] = useState('')
+
+  // Estados para PIX
+  const [pix, setPix] = useState(null)
+  const [gerandoPix, setGerandoPix] = useState(false)
+  const [erroPix, setErroPix] = useState('')
+  const [pixCopiado, setPixCopiado] = useState(false)
 
   // Estados para cupom de desconto
   const [codigoCupom, setCodigoCupom] = useState('')
@@ -326,6 +332,51 @@ export default function ReciboPage() {
     setVerificando(false)
     setVerificado(true)
     carregarCob()
+  }
+
+  // Confirma sozinho enquanto o QR Code está na tela: quem dá baixa é o
+  // webhook do Mercado Pago, então só olhamos o status da cobrança.
+  useEffect(() => {
+    if (!pix || !id) return
+    if (cob?.status === 'PAGO' || cob?.status === 'BAIXADO') return
+
+    const timer = setInterval(async () => {
+      try {
+        const atual = await getCobrancaById(id)
+        if (atual?.status === 'PAGO' || atual?.status === 'BAIXADO') {
+          setPix(null)
+          carregarCob()
+        }
+      } catch {
+        // rede instável no celular do cliente: tenta de novo no próximo ciclo
+      }
+    }, 8000)
+
+    return () => clearInterval(timer)
+  }, [pix, id, cob?.status])
+
+  const handleGerarPix = async () => {
+    setErroPix('')
+    setGerandoPix(true)
+    try {
+      const dados = await gerarPixCobranca(id)
+      setPix(dados)
+      setPixCopiado(false)
+    } catch (err) {
+      setErroPix(err.message || 'Não foi possível gerar o PIX')
+    } finally {
+      setGerandoPix(false)
+    }
+  }
+
+  const copiarPix = async () => {
+    try {
+      await navigator.clipboard.writeText(pix.qr_code)
+      setPixCopiado(true)
+      setTimeout(() => setPixCopiado(false), 2500)
+    } catch {
+      setErroPix('Não conseguimos copiar. Selecione o código abaixo do QR Code.')
+    }
   }
 
   const handleAplicarCupom = async () => {
@@ -737,6 +788,34 @@ export default function ReciboPage() {
           </div>
         )}
 
+        {/* PIX — o cliente paga aqui mesmo, sem sair da página */}
+        {!pago && !div && (
+          <>
+            <button
+              onClick={handleGerarPix}
+              disabled={gerandoPix}
+              style={{ ...estilos.btnPix, opacity: gerandoPix ? 0.6 : 1 }}
+            >
+              {gerandoPix ? 'Gerando PIX...' : '⚡ Pagar com PIX'}
+            </button>
+
+            {erroPix && (
+              <div style={{
+                marginBottom: 12,
+                padding: '10px 12px',
+                background: 'rgba(242,139,130,0.1)',
+                border: '1px solid rgba(242,139,130,0.3)',
+                borderRadius: 8,
+                color: '#f28b82',
+                fontSize: 12,
+                textAlign: 'center',
+              }}>
+                {erroPix}
+              </div>
+            )}
+          </>
+        )}
+
         {/* Botão de pagamento simples (não dividido) */}
         {!pago && !div && cob.link_mp && cob.link_mp !== 'Pago com Crédito' && (
           <>
@@ -746,7 +825,7 @@ export default function ReciboPage() {
               rel="noopener noreferrer"
               style={estilos.btnPagar}
             >
-              💳 Pagar Agora
+              💳 Cartão / outras opções
             </a>
 
             {/* Botão dividir pagamento - só aparece se total >= 20 */}
@@ -769,7 +848,7 @@ export default function ReciboPage() {
 
         {!pago && !div && (!cob.link_mp || cob.link_mp === 'Pago com Crédito') && (
           <div style={{ textAlign: 'center', padding: '14px', background: 'rgba(251,188,4,0.1)', borderRadius: 8, border: '1px solid rgba(251,188,4,0.3)', color: '#fbbc04', fontWeight: 600, fontSize: 14 }}>
-            Aguardando processamento do link de pagamento
+            O pagamento no cartão ainda está sendo liberado. Você já pode pagar com PIX acima.
           </div>
         )}
 
@@ -777,6 +856,63 @@ export default function ReciboPage() {
           Em caso de dúvidas, entre em contato via WhatsApp
         </div>
       </div>
+
+      {/* Modal PIX */}
+      {pix && !pago && (
+        <div
+          style={estilos.modalOverlay}
+          onClick={e => e.target === e.currentTarget && setPix(null)}
+        >
+          <div style={{ ...estilos.modalBox, textAlign: 'center' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#e8eaed', marginBottom: 2 }}>
+              ⚡ Pague com PIX
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#81c995', marginBottom: 16 }}>
+              {formatMoeda(pix.valor)}
+            </div>
+
+            {pix.qr_code_base64 && (
+              <div style={{ background: '#fff', padding: 12, borderRadius: 12, marginBottom: 14 }}>
+                <img
+                  src={`data:image/png;base64,${pix.qr_code_base64}`}
+                  alt="QR Code do PIX"
+                  style={{ width: '100%', maxWidth: 220, display: 'block', margin: '0 auto' }}
+                />
+              </div>
+            )}
+
+            <button
+              onClick={copiarPix}
+              style={{
+                ...estilos.btnPix,
+                background: pixCopiado ? '#81c995' : '#32bcad',
+                color: pixCopiado ? '#000' : '#fff',
+                fontSize: 15,
+                padding: '13px',
+              }}
+            >
+              {pixCopiado ? '✅ Código copiado!' : '📋 Copiar código PIX'}
+            </button>
+
+            {/* Fallback: no celular o copiar pode falhar, então deixamos o código à mão */}
+            <div style={estilos.pixCodigo}>{pix.qr_code}</div>
+
+            {pix.expiracao && (
+              <div style={{ color: '#fbbc04', fontSize: 12, marginBottom: 10 }}>
+                ⏰ Válido até {new Date(pix.expiracao).toLocaleString('pt-BR')}
+              </div>
+            )}
+
+            <div style={{ color: '#9aa0a6', fontSize: 12, marginBottom: 14, lineHeight: 1.5 }}>
+              Assim que o pagamento cair, esta tela confirma sozinha.<br />Pode deixar aberta.
+            </div>
+
+            <button onClick={() => setPix(null)} style={{ ...estilos.btnCancelar, width: '100%' }}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal Dividir Pagamento */}
       {showDividir && (
@@ -990,6 +1126,37 @@ const estilos = {
     color: '#e8eaed',
     fontSize: 16,
     outline: 'none',
+    boxSizing: 'border-box',
+  },
+  btnPix: {
+    display: 'block',
+    width: '100%',
+    padding: '16px',
+    background: '#32bcad',
+    color: '#fff',
+    fontWeight: 800,
+    fontSize: 17,
+    textAlign: 'center',
+    borderRadius: 10,
+    border: 'none',
+    cursor: 'pointer',
+    marginBottom: 12,
+  },
+  pixCodigo: {
+    width: '100%',
+    maxHeight: 70,
+    overflowY: 'auto',
+    padding: '10px 12px',
+    background: '#202124',
+    border: '1px solid #3c4043',
+    borderRadius: 8,
+    color: '#9aa0a6',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    wordBreak: 'break-all',
+    textAlign: 'left',
+    userSelect: 'all',
+    marginBottom: 12,
     boxSizing: 'border-box',
   },
   btnCancelar: {
