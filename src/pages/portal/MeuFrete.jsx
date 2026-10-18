@@ -19,6 +19,16 @@ export default function MeuFrete() {
   const [pagamentoPIX, setPagamentoPIX] = useState(null)
   const [showPIX, setShowPIX] = useState(false)
   const [margemFrete, setMargemFrete] = useState(15)
+  const [itensAbertos, setItensAbertos] = useState(() => new Set())
+
+  const toggleItens = (id) => {
+    setItensAbertos(prev => {
+      const novo = new Set(prev)
+      if (novo.has(id)) novo.delete(id)
+      else novo.add(id)
+      return novo
+    })
+  }
 
   const carregar = useCallback(async () => {
     if (!tenantId || !cliente?.instagram) return
@@ -474,50 +484,6 @@ export default function MeuFrete() {
                   </div>
                 </div>
 
-                {/* LISTA DE PEÇAS */}
-                {rom.itens && rom.itens.length > 0 && (
-                  <div style={{
-                    background: 'rgba(255,255,255,0.02)',
-                    borderRadius: 8,
-                    padding: 12,
-                    marginBottom: 12,
-                  }}>
-                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, fontWeight: 600 }}>
-                      📦 ITENS DESTE ROMANEIO ({rom.itens.length}):
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {rom.itens.map((item, idx) => (
-                        <div
-                          key={item.id}
-                          style={{
-                            padding: '6px 8px',
-                            background: 'rgba(255,255,255,0.03)',
-                            borderRadius: 6,
-                            fontSize: 13,
-                            color: '#e8eaed',
-                          }}
-                        >
-                          <span style={{ color: 'var(--p-blue)', fontWeight: 600 }}>#{item.codigo}</span>
-                          {' '}
-                          {item.produto || '-'}
-                          {item.modelo && ` ${item.modelo}`}
-                          {item.cor && ` ${item.cor}`}
-                          {item.tamanho && ` • ${item.tamanho}`}
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{
-                      marginTop: 8,
-                      paddingTop: 8,
-                      borderTop: '1px solid rgba(255,255,255,0.1)',
-                      color: '#9aa0a6',
-                      fontSize: 13,
-                    }}>
-                      {rom.itens.length} produto(s)
-                    </div>
-                  </div>
-                )}
-
                 {rom.status === 'pronto' && (
                   <button
                     onClick={() => handleCotarFrete(rom)}
@@ -820,6 +786,73 @@ export default function MeuFrete() {
                     <div style={{ color: '#9aa0a6', fontSize: 13 }}>
                       Este romaneio foi cancelado.
                     </div>
+                  </div>
+                )}
+
+                {/* LISTA DE PEÇAS — recolhida por padrão para não enterrar as ações */}
+                {rom.itens && rom.itens.length > 0 && (
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      onClick={() => toggleItens(rom.id)}
+                      aria-expanded={itensAbertos.has(rom.id)}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 8,
+                        padding: '10px 12px',
+                        color: '#9aa0a6',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span>📦 ITENS DESTE ROMANEIO ({rom.itens.length})</span>
+                      <span style={{
+                        fontSize: 10,
+                        transition: 'transform 0.2s',
+                        transform: itensAbertos.has(rom.id) ? 'rotate(180deg)' : 'none',
+                      }}>
+                        ▼
+                      </span>
+                    </button>
+
+                    {itensAbertos.has(rom.id) && (
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                        background: 'rgba(255,255,255,0.02)',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginTop: 8,
+                      }}>
+                        {rom.itens.map(item => (
+                          <div
+                            key={item.id}
+                            style={{
+                              padding: '6px 8px',
+                              background: 'rgba(255,255,255,0.03)',
+                              borderRadius: 6,
+                              fontSize: 13,
+                              color: '#e8eaed',
+                            }}
+                          >
+                            <span style={{ color: 'var(--p-blue)', fontWeight: 600 }}>#{item.codigo}</span>
+                            {' '}
+                            {item.produto || '-'}
+                            {item.modelo && ` ${item.modelo}`}
+                            {item.cor && ` ${item.cor}`}
+                            {item.tamanho && ` • ${item.tamanho}`}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
