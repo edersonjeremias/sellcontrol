@@ -2109,7 +2109,7 @@ export default function VendasPage() {
 
   return (
     <AppShell title="Vendas" hideTitle flush>
-    <div style={{ height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
+    <div className="vendas-page" style={{ height:'100%', display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
       {/* TOP LOADER */}
       {busy && (
