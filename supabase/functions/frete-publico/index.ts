@@ -30,6 +30,17 @@ const SEM_MEDIDAS =
   'Este pedido ainda está sem o peso e as medidas da caixa, então não dá para calcular o frete. ' +
   'Entre em contato com a equipe da loja que a gente resolve rapidinho.'
 
+/**
+ * A balança da loja mostra gramas e é comum digitar 1168 em vez de 1,168.
+ * Nenhum serviço dos Correios aceita acima de 30 kg, então um valor maior
+ * que isso só pode estar em gramas.
+ */
+function pesoEmKg(peso: any) {
+  const n = Number(peso)
+  if (!n || n <= 0) return 0
+  return n > 30 ? n / 1000 : n
+}
+
 /** Romaneio só pode ser cotado com peso e as três dimensões preenchidas */
 function temMedidas(romaneio: any) {
   return Boolean(
@@ -337,7 +348,7 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
       height: Number(romaneio.altura),
       width: Number(romaneio.largura),
       length: Number(romaneio.comprimento),
-      weight: Number(romaneio.peso),
+      weight: pesoEmKg(romaneio.peso),
     },
   }
 
@@ -359,13 +370,38 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
 
   const todas = await resp.json()
 
-  const validas = (todas || []).filter((c: any) => {
-    if (c.error) return false
+  const doTenant = (todas || []).filter((c: any) => {
     const nome = c.company?.name || c.name || ''
     return habilitadas.some(h => nome.toLowerCase().includes(String(h).toLowerCase()))
   })
 
-  if (!validas.length) return json({ error: 'Nenhuma transportadora atende esse endereço.' }, 422)
+  const validas = doTenant.filter((c: any) => !c.error)
+
+  if (!validas.length) {
+    // O Melhor Envio recusa serviço a serviço (peso, dimensão, área de entrega).
+    // Devolvemos o motivo dele em vez de um "nenhuma transportadora" genérico.
+    const motivos = [...new Set(
+      doTenant
+        .map((c: any) => `${c.company?.name || c.name}: ${c.error}`)
+        .filter((m: string) => !m.endsWith('undefined'))
+    )]
+
+    console.log('❌ Nenhuma cotação válida', {
+      pacote: body.package,
+      destino: body.to.postal_code,
+      recebidas: (todas || []).length,
+      doTenant: doTenant.length,
+      motivos,
+    })
+
+    return json({
+      error: motivos.length
+        ? `A transportadora não aceitou este envio: ${motivos.join(' | ')}`
+        : 'Nenhuma transportadora atende esse endereço.',
+      motivos,
+      pacote: body.package,
+    }, 422)
+  }
 
   // Troca as cotações antigas pelas novas
   await supabase.from('cotacoes_frete').delete().eq('romaneio_id', romaneio.id)

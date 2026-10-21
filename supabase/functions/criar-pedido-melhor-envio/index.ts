@@ -230,7 +230,8 @@ serve(async (req) => {
         height: Number(romaneio.altura),
         width: Number(romaneio.largura),
         length: Number(romaneio.comprimento),
-        weight: Number(romaneio.peso),
+        // A balança mostra gramas: acima de 30 kg o valor só pode estar em gramas
+        weight: Number(romaneio.peso) > 30 ? Number(romaneio.peso) / 1000 : Number(romaneio.peso),
       }],
       options: {
         insurance_value: romaneio.produto_valor_declarado || 1.00,

@@ -4,6 +4,7 @@ import { usePortalToast } from '../../components/portal/PortalToast'
 import { supabase } from '../../lib/supabase'
 import { calcularFrete, salvarCotacoes, buscarCotacoes } from '../../services/melhorEnvioService'
 import { criarPagamentoPIX, buscarPagamentoRomaneio } from '../../services/mercadoPagoService'
+import { pesoEmKg } from '../../lib/peso'
 
 export default function MeuFrete() {
   const { cliente, tenantId } = usePortalAuth()
@@ -187,7 +188,7 @@ export default function MeuFrete() {
           height: Number(romaneio.altura),
           width: Number(romaneio.largura),
           length: Number(romaneio.comprimento),
-          weight: Number(romaneio.peso),
+          weight: pesoEmKg(romaneio.peso),
         }
 
         console.log('📍 Origem:', enderecoOrigem)

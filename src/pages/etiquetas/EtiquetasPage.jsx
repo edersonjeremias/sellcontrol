@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { gerarEtiqueta, imprimirEtiqueta, calcularFrete, salvarCotacoes } from '../../services/melhorEnvioService'
 import { montarLinkFrete } from '../../services/fretePublicoService'
 import { showGlobalToast } from '../../context/AppContext'
+import { pesoEmKg } from '../../lib/peso'
 
 // No celular a tabela em grid não cabe na tela: a listagem vira cartões
 function useIsMobile(largura = 720) {
@@ -416,7 +417,7 @@ export default function EtiquetasPage() {
         height: Number(romaneio.altura),
         width: Number(romaneio.largura),
         length: Number(romaneio.comprimento),
-        weight: Number(romaneio.peso),
+        weight: pesoEmKg(romaneio.peso),
       }
 
       console.log('📦 Cotando frete...', { enderecoOrigem, enderecoDestino, pacote, margemFrete })
