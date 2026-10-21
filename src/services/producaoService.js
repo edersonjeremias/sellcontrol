@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { parseDateLocal, toDateOnly, formatDateBr } from '../lib/datas'
 import { getClientes } from './clientesService'
-import { filtroPadrao } from './pedidosService'
 
 const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -73,9 +72,22 @@ function saudacaoHora() {
   return 'Boa noite'
 }
 
+// Quantas peças de cada cliente ainda esperam envio, por slug do instagram.
+// A conta é agregada no banco (migration 20261021_producao_pecas_pendentes):
+// contar aqui exigiria baixar todas as vendas em aberto do tenant, e o
+// PostgREST corta esse resultado — a coluna PEÇAS saía por baixo, calada.
+async function contarPecasPendentes(tid) {
+  const { data, error } = await supabase.rpc('producao_pecas_pendentes', { p_tenant_id: tid })
+  if (error) {
+    console.error('Contagem de peças pendentes indisponível:', error.message)
+    return new Map()
+  }
+  return new Map((data || []).map((r) => [r.cliente_slug, Number(r.pecas) || 0]))
+}
+
 export async function getProducaoData(tenantId = null) {
   const tid = TENANT_ID(tenantId)
-  const [pedidosRes, clientesRes, devedoresRes, romaneiosRes, pecasRes] = await Promise.all([
+  const [pedidosRes, clientesRes, devedoresRes, romaneiosRes, pecasMap] = await Promise.all([
     supabase
       .from('producao_pedidos')
       .select('*')
@@ -92,16 +104,7 @@ export async function getProducaoData(tenantId = null) {
       .select('numero, status, transportadora, codigo_rastreio')
       .eq('tenant_id', tid)
       .in('status', ['frete_pago', 'etiqueta_gerada', 'despachado']),
-    // Peças ainda na sacolinha. 'rascunho' é live em digitação, não conta;
-    // 'cobranca' (live aberta) conta, porque a peça já é da cliente.
-    // O banco tira o grosso e o filtroPadrao da Expedição confere o resto.
-    supabase
-      .from('vendas')
-      .select('cliente_nome, status')
-      .eq('tenant_id', tid)
-      .neq('etapa', 'rascunho')
-      .not('status', 'in', '("Enviado","Cancelado","CANCELADO")')
-      .limit(20000),
+    contarPecasPendentes(tid),
   ])
 
   if (pedidosRes.error) throw pedidosRes.error
@@ -116,18 +119,6 @@ export async function getProducaoData(tenantId = null) {
   const devedorSet = new Set(
     (devedoresRes.data || []).map((d) => (d.cliente || '').trim().toLowerCase())
   )
-
-  // Quantas peças de cada cliente ainda esperam envio
-  const pecasMap = new Map()
-  ;(pecasRes?.data || []).forEach((venda) => {
-    // Atenção à caixa: 'ENVIADO' é o aviãozinho liberando a peça na live — ela
-    // continua na sacolinha. Só 'Enviado', da Expedição, quer dizer despachada.
-    if (!filtroPadrao(venda)) return
-    if ((venda.status || '').trim().toUpperCase() === 'CANCELADO') return
-    const key = slugCliente(venda.cliente_nome)
-    if (!key) return
-    pecasMap.set(key, (pecasMap.get(key) || 0) + 1)
-  })
 
   const romaneioMap = new Map()
   ;(romaneiosRes.data || []).forEach((rom) => {
