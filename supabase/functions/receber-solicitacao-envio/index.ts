@@ -121,21 +121,24 @@ serve(async (req) => {
     ? `status_entrega "${statusEnviado}" não existe na página de Produção e foi ignorado.`
     : null
 
+  // Sem o Instagram o pedido entra assim mesmo, marcado para a equipe conferir
+  // no Direct. Descartar seria pior: a cliente pediu e ninguém ficaria sabendo.
   if (!cliente) {
-    return responder(false, 'Dados inválidos: usuário do Instagram ausente.', {
-      payload_keys: Object.keys(body || {}),
-    })
+    observacao = ['⚠ Cliente não identificado — conferir no Direct', observacao]
+      .filter(Boolean).join(' | ')
   }
 
   const hoje = hojeNaLoja()
 
   // 3. Garante a cliente cadastrada (para o WhatsApp e o controle de bloqueio)
-  await supabase
-    .from('clientes')
-    .upsert(
-      { tenant_id: tenantId, instagram: cliente },
-      { onConflict: 'tenant_id,instagram', ignoreDuplicates: true }
-    )
+  if (cliente) {
+    await supabase
+      .from('clientes')
+      .upsert(
+        { tenant_id: tenantId, instagram: cliente },
+        { onConflict: 'tenant_id,instagram', ignoreDuplicates: true }
+      )
+  }
 
   // 4. Cria o pedido na página de Produção
   const { data: criado, error: erroInsert } = await supabase
