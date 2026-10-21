@@ -312,7 +312,7 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
 
   const { data: config } = await supabase
     .from('configuracoes')
-    .select('token_melhor_envio, melhor_envio_api_url, transportadoras_habilitadas, margem_frete, endereco_cep, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado')
+    .select('token_melhor_envio, melhor_envio_api_url, transportadoras_habilitadas, servicos_bloqueados, margem_frete, endereco_cep, endereco_rua, endereco_numero, endereco_bairro, endereco_cidade, endereco_estado')
     .eq('tenant_id', romaneio.tenant_id)
     .maybeSingle()
 
@@ -370,9 +370,20 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
 
   const todas = await resp.json()
 
+  // Modalidades que a loja não usa (ex.: Jadlog Centralizado, que exige
+  // levar o volume até uma unidade centralizadora)
+  const bloqueados: string[] = config.servicos_bloqueados || []
+
   const doTenant = (todas || []).filter((c: any) => {
-    const nome = c.company?.name || c.name || ''
-    return habilitadas.some(h => nome.toLowerCase().includes(String(h).toLowerCase()))
+    const transportadora = c.company?.name || c.name || ''
+    const servico = c.name || ''
+    const completo = `${transportadora} ${servico}`.toLowerCase()
+
+    if (bloqueados.some(b => String(b).trim() && completo.includes(String(b).trim().toLowerCase()))) {
+      return false
+    }
+
+    return habilitadas.some(h => transportadora.toLowerCase().includes(String(h).toLowerCase()))
   })
 
   const validas = doTenant.filter((c: any) => !c.error)

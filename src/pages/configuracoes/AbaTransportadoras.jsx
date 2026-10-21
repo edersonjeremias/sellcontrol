@@ -1,6 +1,26 @@
 import { useState, useEffect } from 'react'
 import { getConfig, saveConfig } from '../../services/configService'
 
+// Modalidades que costumam atrapalhar: o nome do serviço que contiver o
+// termo deixa de ser oferecido na cotação.
+const SERVICOS_OCULTAVEIS = [
+  {
+    termo: 'Centralizado',
+    nome: 'Jadlog .Package Centralizado',
+    desc: 'Mais barato, mas exige levar o volume até uma unidade centralizadora da Jadlog',
+  },
+  {
+    termo: '.Com',
+    nome: 'Jadlog .Com',
+    desc: 'Modalidade da Jadlog para e-commerce, com coleta na loja',
+  },
+  {
+    termo: 'Mini',
+    nome: 'Correios PAC Mini',
+    desc: 'Só aceita objetos pequenos e leves',
+  },
+]
+
 const TRANSPORTADORAS_DISPONIVEIS = [
   { id: 'correios', nome: 'Correios (PAC e SEDEX)' },
   { id: 'jadlog', nome: 'Jadlog' },
@@ -12,6 +32,7 @@ const TRANSPORTADORAS_DISPONIVEIS = [
 
 export default function AbaTransportadoras({ tenantId, showToast }) {
   const [habilitadas, setHabilitadas] = useState(['correios'])
+  const [bloqueados, setBloqueados] = useState([])
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
@@ -30,6 +51,7 @@ export default function AbaTransportadoras({ tenantId, showToast }) {
         )
         setHabilitadas(habilitadasNormalizadas)
       }
+      setBloqueados(cfg?.servicos_bloqueados || [])
     })
   }, [tenantId])
 
@@ -58,7 +80,8 @@ export default function AbaTransportadoras({ tenantId, showToast }) {
       })
 
       await saveConfig(tenantId, {
-        transportadoras_habilitadas: transportadorasNomes
+        transportadoras_habilitadas: transportadorasNomes,
+        servicos_bloqueados: bloqueados,
       })
       showToast('Transportadoras atualizadas!', 'success')
     } catch (e) {
@@ -121,6 +144,57 @@ export default function AbaTransportadoras({ tenantId, showToast }) {
             </span>
           </label>
         ))}
+      </div>
+
+      <h3 style={{ margin: '28px 0 8px 0', color: 'var(--blue)', fontSize: 16 }}>
+        Modalidades ocultas
+      </h3>
+      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
+        Marque o que você não quer que apareça para o cliente escolher na cotação
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {SERVICOS_OCULTAVEIS.map(serv => {
+          const oculto = bloqueados.includes(serv.termo)
+          return (
+            <label
+              key={serv.termo}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+                padding: 12,
+                background: oculto ? 'rgba(244, 67, 54, 0.08)' : 'rgba(255,255,255,0.02)',
+                border: `1px solid ${oculto ? 'rgba(244, 67, 54, 0.4)' : 'var(--border-light)'}`,
+                borderRadius: 8,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={oculto}
+                onChange={() => setBloqueados(prev => (
+                  prev.includes(serv.termo)
+                    ? prev.filter(t => t !== serv.termo)
+                    : [...prev, serv.termo]
+                ))}
+                style={{ width: 18, height: 18, marginTop: 2, cursor: 'pointer', accentColor: '#f44336' }}
+              />
+              <span>
+                <span style={{
+                  display: 'block',
+                  color: oculto ? '#e8eaed' : 'var(--muted)',
+                  fontWeight: oculto ? 600 : 400,
+                  fontSize: 14,
+                }}>
+                  {serv.nome}
+                </span>
+                <span style={{ color: 'var(--muted)', fontSize: 12 }}>{serv.desc}</span>
+              </span>
+            </label>
+          )
+        })}
       </div>
 
       <button

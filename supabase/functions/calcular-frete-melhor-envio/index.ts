@@ -28,7 +28,7 @@ serve(async (req) => {
 
     const { data: config, error: configError } = await supabaseClient
       .from('configuracoes')
-      .select('token_melhor_envio, melhor_envio_api_url, transportadoras_habilitadas')
+      .select('token_melhor_envio, melhor_envio_api_url, transportadoras_habilitadas, servicos_bloqueados')
       .eq('tenant_id', tenant_id)
       .single()
 
@@ -75,9 +75,22 @@ serve(async (req) => {
       })
     })
 
+    // Modalidades que a loja não usa (ex.: Jadlog Centralizado)
+    const servicosBloqueados: string[] = config.servicos_bloqueados || []
+
     // Filtra apenas as transportadoras habilitadas
     const cotacoesFiltradas = cotacoes.filter((cotacao: any) => {
       const nomeTransportadora = cotacao.company?.name || cotacao.name || ''
+      const nomeCompleto = `${nomeTransportadora} ${cotacao.name || ''}`.toLowerCase()
+
+      const bloqueado = servicosBloqueados.some(
+        (b: string) => String(b).trim() && nomeCompleto.includes(String(b).trim().toLowerCase())
+      )
+
+      if (bloqueado) {
+        console.log(`  ⛔ Serviço bloqueado pela loja: "${nomeCompleto}"`)
+        return false
+      }
 
       console.log(`🔍 Verificando: "${nomeTransportadora}"`)
 
