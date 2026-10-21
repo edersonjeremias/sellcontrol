@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
 import { parseDateLocal, toDateOnly, formatDateBr } from '../lib/datas'
 import { getClientes } from './clientesService'
+import { filtroPadrao } from './pedidosService'
 
 const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -18,13 +19,6 @@ export const STATUS_ENTREGA_OPTS = [
 ]
 
 const FINAL_ENTREGA = new Set(['Enviado', 'Retirou', 'Voltou estoque', 'Cliente Retira'])
-
-// Peça que já saiu (ou nunca vai sair) não conta como pendente. Espelha o
-// filtro "não enviados" da Expedição, mais os status de entrega do portal.
-const STATUS_PECA_FINALIZADA = new Set([
-  'enviado', 'entregue', 'retirou', 'retirada',
-  'cancelado', 'devolução', 'devolucao', 'gerar crédito', 'gerar credito',
-])
 
 // Instagram é digitado com ou sem @ e com maiúsculas trocadas: compara pelo slug.
 function slugCliente(value) {
@@ -98,14 +92,15 @@ export async function getProducaoData(tenantId = null) {
       .select('numero, status, transportadora, codigo_rastreio')
       .eq('tenant_id', tid)
       .in('status', ['frete_pago', 'etiqueta_gerada', 'despachado']),
-    // Peças ainda na sacolinha. O grosso já sai filtrado pelo banco; o que
-    // escapa (status em caixa alta ou acentuado) cai no filtro em JS abaixo.
+    // Peças ainda na sacolinha. 'rascunho' é live em digitação, não conta;
+    // 'cobranca' (live aberta) conta, porque a peça já é da cliente.
+    // O banco tira o grosso e o filtroPadrao da Expedição confere o resto.
     supabase
       .from('vendas')
       .select('cliente_nome, status')
       .eq('tenant_id', tid)
-      .eq('etapa', 'fechada')
-      .not('status', 'in', '("Enviado","ENVIADO","Cancelado","CANCELADO")')
+      .neq('etapa', 'rascunho')
+      .not('status', 'in', '("Enviado","Cancelado","CANCELADO")')
       .limit(20000),
   ])
 
@@ -125,7 +120,10 @@ export async function getProducaoData(tenantId = null) {
   // Quantas peças de cada cliente ainda esperam envio
   const pecasMap = new Map()
   ;(pecasRes?.data || []).forEach((venda) => {
-    if (STATUS_PECA_FINALIZADA.has((venda.status || '').trim().toLowerCase())) return
+    // Atenção à caixa: 'ENVIADO' é o aviãozinho liberando a peça na live — ela
+    // continua na sacolinha. Só 'Enviado', da Expedição, quer dizer despachada.
+    if (!filtroPadrao(venda)) return
+    if ((venda.status || '').trim().toUpperCase() === 'CANCELADO') return
     const key = slugCliente(venda.cliente_nome)
     if (!key) return
     pecasMap.set(key, (pecasMap.get(key) || 0) + 1)
