@@ -19,6 +19,18 @@ export const STATUS_ENTREGA_OPTS = [
 
 const FINAL_ENTREGA = new Set(['Enviado', 'Retirou', 'Voltou estoque', 'Cliente Retira'])
 
+// Peça que já saiu (ou nunca vai sair) não conta como pendente. Espelha o
+// filtro "não enviados" da Expedição, mais os status de entrega do portal.
+const STATUS_PECA_FINALIZADA = new Set([
+  'enviado', 'entregue', 'retirou', 'retirada',
+  'cancelado', 'devolução', 'devolucao', 'gerar crédito', 'gerar credito',
+])
+
+// Instagram é digitado com ou sem @ e com maiúsculas trocadas: compara pelo slug.
+function slugCliente(value) {
+  return (value || '').replace(/^@+/, '').trim().toLowerCase()
+}
+
 // Helpers de data no fuso local vivem em src/lib/datas.js
 
 function parseMoney(value) {
@@ -69,7 +81,7 @@ function saudacaoHora() {
 
 export async function getProducaoData(tenantId = null) {
   const tid = TENANT_ID(tenantId)
-  const [pedidosRes, clientesRes, devedoresRes, romaneiosRes] = await Promise.all([
+  const [pedidosRes, clientesRes, devedoresRes, romaneiosRes, pecasRes] = await Promise.all([
     supabase
       .from('producao_pedidos')
       .select('*')
@@ -86,6 +98,15 @@ export async function getProducaoData(tenantId = null) {
       .select('numero, status, transportadora, codigo_rastreio')
       .eq('tenant_id', tid)
       .in('status', ['frete_pago', 'etiqueta_gerada', 'despachado']),
+    // Peças ainda na sacolinha. O grosso já sai filtrado pelo banco; o que
+    // escapa (status em caixa alta ou acentuado) cai no filtro em JS abaixo.
+    supabase
+      .from('vendas')
+      .select('cliente_nome, status')
+      .eq('tenant_id', tid)
+      .eq('etapa', 'fechada')
+      .not('status', 'in', '("Enviado","ENVIADO","Cancelado","CANCELADO")')
+      .limit(20000),
   ])
 
   if (pedidosRes.error) throw pedidosRes.error
@@ -93,13 +114,22 @@ export async function getProducaoData(tenantId = null) {
 
   const clientMap = new Map()
   ;(clientesRes.data || []).forEach((row) => {
-    const key = (row.instagram || '').replace(/^@/, '').trim().toLowerCase()
+    const key = slugCliente(row.instagram)
     if (key) clientMap.set(key, { whatsapp: row.whatsapp || '', bloqueado: !!row.bloqueado })
   })
 
   const devedorSet = new Set(
     (devedoresRes.data || []).map((d) => (d.cliente || '').trim().toLowerCase())
   )
+
+  // Quantas peças de cada cliente ainda esperam envio
+  const pecasMap = new Map()
+  ;(pecasRes?.data || []).forEach((venda) => {
+    if (STATUS_PECA_FINALIZADA.has((venda.status || '').trim().toLowerCase())) return
+    const key = slugCliente(venda.cliente_nome)
+    if (!key) return
+    pecasMap.set(key, (pecasMap.get(key) || 0) + 1)
+  })
 
   const romaneioMap = new Map()
   ;(romaneiosRes.data || []).forEach((rom) => {
@@ -116,7 +146,7 @@ export async function getProducaoData(tenantId = null) {
 
   const today = new Date()
   let rows = (pedidosRes.data || []).map((row) => {
-    const clienteKey = (row.cliente_nome || '').replace(/^@/, '').trim().toLowerCase()
+    const clienteKey = slugCliente(row.cliente_nome)
     const clientInfo = clientMap.get(clienteKey) || { whatsapp: '', bloqueado: false }
 
     const romaneioNum = String(row.romaneio || '').replace(/\D/g, '')
@@ -132,6 +162,7 @@ export async function getProducaoData(tenantId = null) {
       data_pronto_fmt: formatDateBr(row.data_pronto),
       data_enviado_fmt: formatDateBr(row.data_enviado),
       dias_u: diasUteis,
+      pecas_pendentes: pecasMap.get(clienteKey) || 0,
       atrasado: !isFinal && diasUteis >= 5,
       bloqueado: !!clientInfo.bloqueado,
       whatsapp: clientInfo.whatsapp,

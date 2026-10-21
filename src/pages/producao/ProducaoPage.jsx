@@ -57,6 +57,10 @@ const SP_COLOR = {
 const spColor = (v) => SP_COLOR[v] || '#f0f0f1'
 const fk = (id, field) => `${id}__${field}`
 
+// Até esta quantidade de peças a sacolinha é pequena o bastante para a equipe
+// montar na hora, na frente de quem tem 20+ peças. Destacada em verde.
+const PECAS_RAPIDO = 3
+
 function saudacao() {
   const h = new Date().getHours()
   if (h < 12) return 'Bom dia'
@@ -429,11 +433,12 @@ export default function ProducaoPage() {
             <table className={`prod-v2-table${mode === 'producao' ? ' prod-table-producao' : ''}`}>
               {mode === 'producao' && (
                 <colgroup>
-                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '9%' }}  />
+                  <col style={{ width: '4%' }}  />
                   <col style={{ width: '5%' }}  />
                   <col style={{ width: '13%' }} />
                   <col style={{ width: '12%' }} />
-                  <col style={{ width: '19%' }} />
+                  <col style={{ width: '18%' }} />
                   <col style={{ width: '18%' }} />
                   <col style={{ width: '6%' }}  />
                   <col style={{ width: '12%' }} />
@@ -443,7 +448,8 @@ export default function ProducaoPage() {
               <thead>
                 <tr>
                   <th>SOLICITADO</th>
-                  <th>DIAS</th>
+                  <th style={{ textAlign:'center' }}>DIAS</th>
+                  {!showDelivery && <th style={{ textAlign:'center' }} title="Peças do cliente ainda não enviadas">PEÇAS</th>}
                   <th>CLIENTE</th>
                   <th>STATUS PROD.</th>
                   <th>OBS. CLIENTE</th>
@@ -479,6 +485,16 @@ export default function ProducaoPage() {
                       <td className="prod-td-nb" style={{ textAlign:'center' }}>
                         <span style={{ color: row.atrasado ? '#ff9800' : '#f0f0f1', fontWeight: row.atrasado ? 700 : 400 }}>{row.dias_u}</span>
                       </td>
+
+                      {/* Peças pendentes: verde = sacolinha pequena, dá p/ montar na frente */}
+                      {!showDelivery && (
+                        <td className="prod-td-nb" style={{ textAlign:'center' }}
+                          title={`${row.pecas_pendentes} peça(s) ainda não enviada(s)`}>
+                          {row.pecas_pendentes > 0
+                            ? <span style={{ color: row.pecas_pendentes <= PECAS_RAPIDO ? '#22c55e' : '#f0f0f1', fontWeight: row.pecas_pendentes <= PECAS_RAPIDO ? 700 : 400 }}>{row.pecas_pendentes}</span>
+                            : <span style={{ color: '#6b7280' }}>—</span>}
+                        </td>
+                      )}
 
                       {/* Cliente */}
                       <td className="prod-td-nb">
