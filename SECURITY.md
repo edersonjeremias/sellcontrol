@@ -1,62 +1,32 @@
 # Guia de Segurança e Controle de Acesso
 
-## Auto-Registro (Signup)
+## Criação de acessos — não existe auto-registro
 
 ### Como funciona
-1. Qualquer pessoa pode acessar `/signup` e se registrar
-2. Ao registrar, o novo usuário **automaticamente** vira `master`
-3. Master tem acesso a **todas as páginas** e pode gerenciar outras pessoas
+1. **Não há `/signup`.** A rota não existe e a página foi removida do projeto.
+2. Acesso novo só é criado pelo master/admin em **Configurações → Usuários e
+   Permissões**, que chama `api/criar-usuario.js` (roda com *service role*, no
+   servidor, nunca no navegador).
+3. **Login com Google não cria perfil.** Quem não tem linha em `users_perfil` é
+   deslogado com um aviso para procurar o administrador.
 
-### Variação 1: Signup aberto (atual)
-**Ideal para**: Time interno, startup, organizações pequenas.
-- ✅ Qualquer pessoa pode entrar
-- ✅ Novo usuário já vira master
-- ✅ Master pode depois mudar role de outro usuário para `user` ou `admin`
+### ⚠️ Falha corrigida em out/2026
+O login com Google criava perfil automático com `role: 'master'`
+(`createGoogleUserProfile`). Qualquer pessoa com conta Google que abrisse a tela
+de login virava **master** — e master ignora o filtro de `tenant_id` no RLS, ou
+seja, enxergava todas as empresas. Clientes da loja entraram no sistema assim.
 
-### Variação 2: Desabilitar signup (para produção segura)
+Corrigido em:
+- `src/services/authService.js` — função de criação automática removida
+- `src/context/AuthContext.jsx` — sem perfil = logout imediato com aviso
+- `sql/fix_master_automatico.sql` — limpeza dos masters indevidos + trava no banco
 
-Se você quer que **apenas administradores** possam criar usuários, comente a rota de signup:
-
-```jsx
-// src/App.jsx
-<Routes>
-  <Route path="/" element={<LoginPage />} />
-  {/* <Route path="/signup" element={<SignupPage />} /> */}  {/* Desabilitado */}
-  <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
-  ...
-</Routes>
-```
-
-Depois, qualquer novo usuário deve ser criado manualmente:
-1. **No Supabase Auth**: Vá em **Authentication > Users > Add user**
-2. **No banco**: Insira em `users_perfil` com role desejada
-
-### Variação 3: Signup com email de domínio permitido
-
-Para permitir signup apenas de emails de um domínio específico (ex: `@suaempresa.com`):
-
-```jsx
-// src/pages/SignupPage.jsx
-const ALLOWED_DOMAIN = import.meta.env.VITE_ALLOWED_DOMAIN || '@suaempresa.com'
-
-const handleSubmit = async (e) => {
-  // ... validações ...
-  
-  if (!formData.email.endsWith(ALLOWED_DOMAIN)) {
-    setError(`Use um email de ${ALLOWED_DOMAIN}`)
-    return
-  }
-  
-  // ... resto do código ...
-}
-```
-
-Depois, adicione no `.env`:
-```env
-VITE_ALLOWED_DOMAIN=@suaempresa.com
-```
-
-E configure no Vercel também.
+### Checklist para manter fechado
+- `users_perfil` **não** pode ter policy de `INSERT` nem policy `FOR ALL`
+  (uma policy `FOR ALL` sem `WITH CHECK` libera o INSERT pelo `USING`).
+- Nenhum arquivo em `src/` pode fazer `.from('users_perfil').insert(...)`.
+- O trigger `trg_bloqueia_master_indevido` impede que alguém que não é master
+  conceda a função master, inclusive para si mesmo.
 
 ---
 
@@ -133,7 +103,6 @@ Todas as tabelas têm **RLS habilitado**. Exemplos:
 
 ### `VITE_TENANT_ID`
 - UUID do seu tenant
-- Necessário para novo signup funcionar
 
 ### Nunca coloque no frontend:
 - ❌ `VITE_SUPABASE_SERVICE_KEY` (chave privada)
@@ -190,4 +159,5 @@ Verifique no **painel do Supabase**:
 Se tiver dúvidas sobre segurança:
 1. Verifique [docs Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security)
 2. Consulte [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-3. Revise o código de signup em `src/pages/SignupPage.jsx`
+3. Revise o fluxo de login em `src/context/AuthContext.jsx` e a criação de
+   usuários em `api/criar-usuario.js`

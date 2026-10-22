@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { getUserProfile, getPagesForUser, createGoogleUserProfile } from '../services/authService'
+import { getUserProfile, getPagesForUser } from '../services/authService'
 
 const AuthContext = createContext(null)
 
@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
   const [profile,    setProfile]    = useState(null)
   const [menuItems,  setMenuItems]  = useState([])
   const [isRecovery, setIsRecovery] = useState(_recoveryOnLoad)
+  const [authError,  setAuthError]  = useState('')
   const initializedRef              = useRef(false)
 
   const loadProfile = useCallback(async (user) => {
@@ -27,21 +28,13 @@ export function AuthProvider({ children }) {
     }
     const { data, error } = await getUserProfile(user.id)
     if (error || !data) {
-      const isGoogle =
-        user.app_metadata?.provider === 'google' ||
-        (user.identities || []).some((i) => i.provider === 'google')
-      const tenantId = import.meta.env.VITE_TENANT_ID
-      if (isGoogle && tenantId) {
-        const created = await createGoogleUserProfile(user, tenantId)
-        if (created) {
-          setProfile(created)
-          setMenuItems([])
-          return created
-        }
-      }
+      // Sem perfil = sem acesso ao sistema. NÃO criamos perfil automaticamente:
+      // era isso que transformava clientes com conta Google em usuários master.
       console.error('Perfil não encontrado', error)
+      setAuthError('Este e-mail não tem acesso ao sistema. Peça ao administrador para criar seu usuário em Configurações → Usuários e Permissões.')
       setProfile(null)
       setMenuItems([])
+      await supabase.auth.signOut()
       return null
     }
     // Verifica se o usuário está ativo
@@ -54,6 +47,7 @@ export function AuthProvider({ children }) {
     }
 
     setProfile(data)
+    setAuthError('')
     const pagesRes = await getPagesForUser(data.id, data.tenant_id, data.role)
     if (pagesRes.error) {
       console.error('Erro ao carregar menu', pagesRes.error)
@@ -160,7 +154,7 @@ export function AuthProvider({ children }) {
     setSession(result.data.session)
     initializedRef.current = true
     if (!profileData) {
-      throw new Error('Login feito, mas o perfil não existe em users_perfil. Crie o perfil manualmente no Supabase ou use outro email.')
+      throw new Error('Este e-mail não tem acesso ao sistema. Peça ao administrador para criar seu usuário.')
     }
     return result
   }, [loadProfile])
@@ -181,6 +175,7 @@ export function AuthProvider({ children }) {
     setMenuItems([])
     setSession(null)
     setIsRecovery(false)
+    setAuthError('')
     initializedRef.current = false
     return result
   }, [])
@@ -191,10 +186,11 @@ export function AuthProvider({ children }) {
     profile,
     menuItems,
     isRecovery,
+    authError,
     signIn,
     signInWithGoogle,
     signOut,
-  }), [loading, session, profile, menuItems, isRecovery, signIn, signInWithGoogle, signOut])
+  }), [loading, session, profile, menuItems, isRecovery, authError, signIn, signInWithGoogle, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

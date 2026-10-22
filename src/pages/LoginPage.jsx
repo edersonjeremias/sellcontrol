@@ -3,7 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 export default function LoginPage() {
-  const { profile, loading, signIn, signInWithGoogle } = useAuth()
+  const { profile, loading, signIn, signInWithGoogle, authError } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -48,8 +48,6 @@ export default function LoginPage() {
         setError('Email não confirmado. Verifique sua caixa de entrada e clique no link enviado pelo sistema.')
       } else if (message.includes('invalid login credentials') || message.includes('invalid credentials')) {
         setError('Username/email ou senha incorretos. Se você entrou pelo Google antes, use o botão "Entrar com Google" abaixo.')
-      } else if (message.includes('perfil não existe')) {
-        setError('Usuário sem perfil no sistema. Entre pelo Google ou contate o administrador.')
       } else {
         setError(err.message || 'Erro ao efetuar login')
       }
@@ -98,7 +96,7 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
 
-          {error && <div className="login-error">{error}</div>}
+          {(error || authError) && <div className="login-error">{error || authError}</div>}
           {success && <div style={{ color: 'var(--green)', padding: '10px 12px', borderRadius: '10px', background: 'rgba(74, 222, 128, 0.12)', fontWeight: 600 }}>{success}</div>}
 
           <button type="submit" className="btn-acao btn-blue" disabled={submitting}>

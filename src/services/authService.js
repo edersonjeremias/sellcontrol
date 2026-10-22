@@ -279,21 +279,7 @@ export async function saveTenantPages(tenantId, slugs) {
   }
 }
 
-// Cria perfil automático para usuários que entram pela primeira vez via Google OAuth
-export async function createGoogleUserProfile(user, tenantId) {
-  const nome =
-    user.user_metadata?.full_name ||
-    user.user_metadata?.name ||
-    user.email?.split('@')[0] ||
-    'Usuário Google'
-  const { data, error } = await supabase
-    .from('users_perfil')
-    .insert([{ id: user.id, tenant_id: tenantId, role: 'master', nome, email: user.email || '' }])
-    .select('id, nome, role, tenant_id')
-    .single()
-  if (error) {
-    console.error('Erro ao criar perfil para usuário Google:', error)
-    return null
-  }
-  return data
-}
+// NÃO criamos perfil automaticamente para quem entra pelo Google.
+// Quem cria acesso é o master/admin em Configurações → Usuários e Permissões
+// (api/criar-usuario.js, que roda com service role). Qualquer criação automática
+// aqui transformava qualquer pessoa com conta Google em usuário do sistema.
