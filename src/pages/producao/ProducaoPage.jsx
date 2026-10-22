@@ -9,6 +9,7 @@ import {
 // PACOTE_OPTS é usado como fallback quando a empresa não cadastrou embalagens
 import { getConfig } from '../../services/configService'
 import { hojeISO } from '../../lib/datas'
+import { linkRastreio } from '../../lib/rastreio'
 import { calcRomaneioTotal } from '../../services/pedidosService'
 import DashboardModal from './DashboardModal'
 import DetalheModal   from './DetalheModal'
@@ -96,14 +97,9 @@ function buildWaRastreio(phone, clienteNome, rastreio, romaneio, tenantId) {
     return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
   }
 
-  let url = ''
-  if (cod.toUpperCase().startsWith('BLI')) {
-    url = `https://www.loggi.com/rastreador/${cod}`
-  } else if (cod.match(/^[A-Za-z]/)) {
-    url = `https://rastreamento.correios.com.br/app/index.php?objetos=${cod}`
-  } else {
-    return null
-  }
+  // Melhor Rastreio: abre preenchido, sem captcha, e atende Jadlog também
+  const url = linkRastreio(cod)
+  if (!url) return null
   const msg = `${saudacao()} ${clienteNome || ''}, segue seu código de rastreio: ${url}`
   return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
 }

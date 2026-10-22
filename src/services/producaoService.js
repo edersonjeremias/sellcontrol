@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { parseDateLocal, toDateOnly, formatDateBr } from '../lib/datas'
+import { linkRastreio } from '../lib/rastreio'
 import { getClientes } from './clientesService'
 
 const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
@@ -57,12 +58,8 @@ function businessDaysBetween(startDateValue, endDateValue) {
 }
 
 function buildRastreioLink(code) {
-  const value = (code || '').trim()
-  if (!value) return ''
-  if (value.toUpperCase().startsWith('BLI')) {
-    return `https://www.loggi.com/rastreador/${value}`
-  }
-  return `https://rastreamento.correios.com.br/app/index.php?objetos=${value}`
+  // O Melhor Rastreio abre preenchido e sem captcha, e atende Jadlog também
+  return linkRastreio(code) || ''
 }
 
 function saudacaoHora() {

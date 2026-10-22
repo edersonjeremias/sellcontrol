@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { linkRastreio } from '../../lib/rastreio'
 
 function fmtDate(d) {
   if (!d) return ''
@@ -14,11 +15,7 @@ function fmtMoney(v) {
 }
 
 function trackUrl(cod) {
-  const c = (cod || '').trim()
-  if (!c) return null
-  if (c.toUpperCase().startsWith('BLI')) return `https://www.loggi.com/rastreador/${c}`
-  if (c.match(/^[A-Za-z]/)) return `https://rastreamento.correios.com.br/app/index.php?objetos=${c}`
-  return null
+  return linkRastreio(cod)
 }
 
 const STATUS_COR = {
