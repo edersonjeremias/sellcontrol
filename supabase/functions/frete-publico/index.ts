@@ -120,6 +120,32 @@ serve(async (req) => {
 // DADOS — tudo que a página precisa para montar a tela
 // ────────────────────────────────────────────────────────────────────────────
 async function acaoDados(supabase: any, romaneio: any, instagram: string) {
+  // O código de rastreio só existe depois que a transportadora registra o
+  // objeto: tentamos buscar agora para o cliente não ficar sem resposta.
+  if (romaneio.melhor_envio_order_id && !romaneio.codigo_rastreio &&
+      ['etiqueta_gerada', 'despachado', 'em_transito'].includes(romaneio.status)) {
+    try {
+      await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/sincronizar-rastreio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({ tenant_id: romaneio.tenant_id, romaneio_id: romaneio.id }),
+      })
+
+      const { data: atualizado } = await supabase
+        .from('romaneios')
+        .select('codigo_rastreio')
+        .eq('id', romaneio.id)
+        .maybeSingle()
+
+      if (atualizado?.codigo_rastreio) romaneio.codigo_rastreio = atualizado.codigo_rastreio
+    } catch (err) {
+      console.error('Falha ao sincronizar rastreio:', err)
+    }
+  }
+
   const { data: config } = await supabase
     .from('configuracoes')
     .select('nome_loja, margem_frete')

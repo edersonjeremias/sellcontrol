@@ -158,6 +158,7 @@ export async function getProducaoData(tenantId = null) {
       romaneio_frete_pago: romaneioInfo?.frete_pago || false,
       romaneio_status: romaneioInfo?.status || null,
       romaneio_transportadora: romaneioInfo?.transportadora || null,
+      romaneio_codigo_rastreio: romaneioInfo?.codigo_rastreio || null,
     }
   })
 

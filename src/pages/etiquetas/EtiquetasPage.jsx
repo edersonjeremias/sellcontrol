@@ -6,6 +6,7 @@ import { gerarEtiqueta, imprimirEtiqueta, calcularFrete, salvarCotacoes } from '
 import { montarLinkFrete } from '../../services/fretePublicoService'
 import { showGlobalToast } from '../../context/AppContext'
 import { pesoEmKg } from '../../lib/peso'
+import { linkRastreio, sincronizarRastreio } from '../../lib/rastreio'
 
 // No celular a tabela em grid não cabe na tela: a listagem vira cartões
 function useIsMobile(largura = 720) {
@@ -64,6 +65,10 @@ export default function EtiquetasPage() {
     if (!tenantId) return
     setLoading(true)
     try {
+      // O Melhor Envio só devolve o código depois que a transportadora
+      // registra o objeto, então buscamos os que ainda estão sem rastreio
+      await sincronizarRastreio({ tenant_id: tenantId })
+
       const { data, error } = await supabase
         .from('romaneios')
         .select('*, enderecos_clientes(*)')
@@ -813,7 +818,7 @@ export default function EtiquetasPage() {
                     </div>
                     {rom.codigo_rastreio && (
                       <a
-                        href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                        href={linkRastreio(rom.codigo_rastreio, rom.transportadora)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -1168,9 +1173,14 @@ export default function EtiquetasPage() {
                     <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
                       Código de Rastreio
                     </div>
-                    <div style={{ color: '#2196f3', fontSize: 16, fontWeight: 700, fontFamily: 'monospace' }}>
+                    <a
+                      href={linkRastreio(modalAberto.codigo_rastreio, modalAberto.transportadora)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#2196f3', fontSize: 16, fontWeight: 700, fontFamily: 'monospace', textDecoration: 'none' }}
+                    >
                       {modalAberto.codigo_rastreio}
-                    </div>
+                    </a>
                   </div>
                 )}
 

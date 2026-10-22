@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { calcularFrete, salvarCotacoes, buscarCotacoes } from '../../services/melhorEnvioService'
 import { criarPagamentoPIX, buscarPagamentoRomaneio } from '../../services/mercadoPagoService'
 import { pesoEmKg } from '../../lib/peso'
+import { linkRastreio, sincronizarRastreio } from '../../lib/rastreio'
 
 export default function MeuFrete() {
   const { cliente, tenantId } = usePortalAuth()
@@ -35,6 +36,12 @@ export default function MeuFrete() {
     if (!tenantId || !cliente?.instagram) return
     setLoading(true)
     try {
+      // Busca no Melhor Envio o rastreio dos envios deste cliente que ainda não têm
+      await sincronizarRastreio({
+        tenant_id: tenantId,
+        cliente_instagram: cliente.instagram.replace('@', ''),
+      })
+
       const { data: romsData, error: romsError } = await supabase
         .from('romaneios')
         .select('*, romaneio_sacolinhas(*)')
@@ -595,7 +602,7 @@ export default function MeuFrete() {
                           {rom.codigo_rastreio}
                         </div>
                         <a
-                          href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                          href={linkRastreio(rom.codigo_rastreio, rom.transportadora)}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{
@@ -678,7 +685,7 @@ export default function MeuFrete() {
                           {rom.codigo_rastreio}
                         </div>
                         <a
-                          href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                          href={linkRastreio(rom.codigo_rastreio, rom.transportadora)}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{
@@ -730,7 +737,7 @@ export default function MeuFrete() {
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <a
-                            href={`https://rastreamento.correios.com.br/app/index.php?codigo=${rom.codigo_rastreio}`}
+                            href={linkRastreio(rom.codigo_rastreio, rom.transportadora)}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{

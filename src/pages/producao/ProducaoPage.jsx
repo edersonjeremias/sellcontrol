@@ -645,8 +645,12 @@ export default function ProducaoPage() {
 
                       {showDelivery && (
                         <td>
+                          {/* Sem digitação, mostra o código que veio do Melhor Envio */}
                           <input className="prod-v2-cell" style={{ width: 75, borderColor: bc(row.id,'rastreio') }}
-                            value={row.rastreio || ''}
+                            title={!row.rastreio && row.romaneio_codigo_rastreio
+                              ? `Rastreio do romaneio ${row.romaneio} (${row.romaneio_transportadora || 'transportadora'})`
+                              : undefined}
+                            value={row.rastreio || row.romaneio_codigo_rastreio || ''}
                             onChange={(e) => updRow(row.id, { rastreio: e.target.value })}
                             onBlur={(e) => savePatch(row.id, 'rastreio', e.target.value)} />
                         </td>
@@ -655,7 +659,7 @@ export default function ProducaoPage() {
                       {showDelivery && (
                         <td style={{ textAlign: 'center' }}>
                           {(() => {
-                            const waRastreio = buildWaRastreio(row.whatsapp, row.cliente_nome, row.rastreio, row.romaneio, tenantId)
+                            const waRastreio = buildWaRastreio(row.whatsapp, row.cliente_nome, row.rastreio || row.romaneio_codigo_rastreio, row.romaneio, tenantId)
                             if (waRastreio) return <a href={waRastreio} target="_blank" rel="noreferrer" title="Enviar código de rastreio via WhatsApp"><IconWa /></a>
                             if (waLink) return <a href={waLink} target="_blank" rel="noreferrer" title="Abrir WhatsApp"><IconWa /></a>
                             return (

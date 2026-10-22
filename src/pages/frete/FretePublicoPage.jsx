@@ -8,6 +8,7 @@ import {
   gerarPix,
   consultarStatus,
 } from '../../services/fretePublicoService'
+import { linkRastreio } from '../../lib/rastreio'
 import '../../styles/portal.css'
 
 const STATUS_PAGOS = ['frete_pago', 'etiqueta_gerada', 'despachado']
@@ -295,6 +296,15 @@ function FretePublico() {
     }
   }
 
+  const copiarRastreio = async () => {
+    try {
+      await navigator.clipboard.writeText(dados.romaneio.codigo_rastreio)
+      showToast('Código de rastreio copiado!', 'success')
+    } catch {
+      showToast('Copie o código manualmente', 'error')
+    }
+  }
+
   const copiarPix = async () => {
     try {
       await navigator.clipboard.writeText(pagamento.qr_code)
@@ -345,11 +355,40 @@ function FretePublico() {
               <>Enviaremos pela <b>{romaneio.transportadora}</b>
                 {romaneio.prazo_entrega ? ` em até ${romaneio.prazo_entrega} dias úteis` : ''}.<br /></>
             )}
-            Agora é só aguardar: a loja vai postar seu pedido.
+            {romaneio.codigo_rastreio
+              ? 'Seu pedido já foi postado. Acompanhe pelo código abaixo.'
+              : 'Agora é só aguardar: assim que a loja postar, o código de rastreio aparece aqui.'}
           </div>
+
           {romaneio.codigo_rastreio && (
-            <div style={{ marginTop: 12, fontFamily: 'monospace', color: 'var(--p-blue)', fontSize: 14 }}>
-              📍 {romaneio.codigo_rastreio}
+            <div style={{ marginTop: 14 }}>
+              <div style={{ color: 'var(--p-muted)', fontSize: 11, marginBottom: 4 }}>
+                CÓDIGO DE RASTREIO
+              </div>
+              <div style={{
+                fontFamily: 'monospace',
+                color: '#e8eaed',
+                fontSize: 16,
+                fontWeight: 700,
+                letterSpacing: .5,
+              }}>
+                {romaneio.codigo_rastreio}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 10 }}>
+                <a
+                  className="portal-btn portal-btn-blue"
+                  href={linkRastreio(romaneio.codigo_rastreio, romaneio.transportadora)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: 'none' }}
+                >
+                  Acompanhar entrega
+                </a>
+                <button className="portal-btn portal-btn-gray" onClick={copiarRastreio}>
+                  Copiar código
+                </button>
+              </div>
             </div>
           )}
         </div>
