@@ -919,6 +919,28 @@ export default function EtiquetasPage() {
                      rom.status === 'cancelado' ? 'Cancelado' :
                      rom.status === 'pronto' ? 'Pronto' : rom.status}
                   </div>
+
+                  {/* Quem deu a baixa e por quê, sem precisar abrir o romaneio */}
+                  {ehBaixaManual(rom) && (() => {
+                    const pag = pagamentoDoRomaneio(rom)
+                    const quem = pag?.registrado_por_nome || 'não identificado'
+                    const motivo = pag?.observacao || ''
+
+                    return (
+                      <div
+                        title={`Baixa manual por ${quem}${motivo ? ` — ${motivo}` : ''}`}
+                        style={{
+                          marginTop: 4,
+                          fontSize: 10,
+                          color: '#ffc107',
+                          lineHeight: 1.35,
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {quem}{motivo && <><br />{motivo}</>}
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 <div
