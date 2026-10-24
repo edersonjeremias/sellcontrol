@@ -8,6 +8,33 @@ import { showGlobalToast } from '../../context/AppContext'
 import { pesoEmKg } from '../../lib/peso'
 import { linkRastreio, sincronizarRastreio } from '../../lib/rastreio'
 
+/**
+ * Pagamento aprovado mais recente do romaneio, para distinguir o que entrou
+ * pelo Mercado Pago do que foi baixado na mão.
+ */
+function pagamentoDoRomaneio(rom) {
+  const aprovados = (rom.pagamentos_frete || [])
+    .filter(p => p.status === 'aprovado')
+    .sort((a, b) => new Date(b.pago_em || b.created_at) - new Date(a.pago_em || a.created_at))
+
+  return aprovados[0] || null
+}
+
+function formatarDataHora(valor) {
+  if (!valor) return '-'
+  return new Date(valor).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+/** Frete pago sem transação no gateway: baixa manual ou registro perdido */
+function ehBaixaManual(rom) {
+  if (!['frete_pago', 'etiqueta_gerada', 'despachado'].includes(rom.status)) return false
+  const pag = pagamentoDoRomaneio(rom)
+  return !pag?.gateway_transaction_id
+}
+
 // No celular a tabela em grid não cabe na tela: a listagem vira cartões
 function useIsMobile(largura = 720) {
   const [mobile, setMobile] = useState(
@@ -71,7 +98,7 @@ export default function EtiquetasPage() {
 
       const { data, error } = await supabase
         .from('romaneios')
-        .select('*, enderecos_clientes(*)')
+        .select('*, enderecos_clientes(*), pagamentos_frete(*)')
         .eq('tenant_id', tenantId)
         .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'])
         .order('created_at', { ascending: false })
@@ -342,16 +369,9 @@ export default function EtiquetasPage() {
     if (motivo === null) return // Cancelou
 
     try {
-      await supabase
-        .from('romaneios')
-        .update({
-          status: 'frete_pago',
-          frete_pago_em: new Date().toISOString(),
-        })
-        .eq('id', romaneio.id)
-
-      // Opcional: registrar em pagamentos_frete como "manual"
-      await supabase
+      // O registro vem primeiro: se ele falhar, o romaneio não pode ficar
+      // marcado como pago sem nenhum rastro de quem deu a baixa
+      const { error: pagError } = await supabase
         .from('pagamentos_frete')
         .insert({
           romaneio_id: romaneio.id,
@@ -360,8 +380,21 @@ export default function EtiquetasPage() {
           status: 'aprovado',
           pago_em: new Date().toISOString(),
           observacao: motivo || 'Marcado manualmente como pago',
-          tenant_id: tenantId,
+          registrado_por: profile?.id || null,
+          registrado_por_nome: profile?.nome || profile?.username || null,
         })
+
+      if (pagError) throw pagError
+
+      const { error: romError } = await supabase
+        .from('romaneios')
+        .update({
+          status: 'frete_pago',
+          frete_pago_em: new Date().toISOString(),
+        })
+        .eq('id', romaneio.id)
+
+      if (romError) throw romError
 
       showGlobalToast('Frete marcado como pago com sucesso!')
       carregar()
@@ -878,6 +911,7 @@ export default function EtiquetasPage() {
                     borderRadius: 6,
                     textTransform: 'uppercase',
                   }}>
+                    {ehBaixaManual(rom) ? 'Pago na mão · ' : ''}
                     {rom.status === 'despachado' ? 'Despachado' :
                      rom.status === 'etiqueta_gerada' ? 'Etiqueta Gerada' :
                      rom.status === 'frete_pago' ? 'Frete Pago' :
@@ -1160,6 +1194,42 @@ export default function EtiquetasPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Origem do pagamento do frete */}
+                {['frete_pago', 'etiqueta_gerada', 'despachado'].includes(modalAberto.status) && (() => {
+                  const pag = pagamentoDoRomaneio(modalAberto)
+                  const manual = !pag?.gateway_transaction_id
+
+                  return (
+                    <div style={{
+                      padding: 16,
+                      background: manual ? 'rgba(255,193,7,0.08)' : 'rgba(76,175,80,0.08)',
+                      border: `1px solid ${manual ? 'rgba(255,193,7,0.3)' : 'rgba(76,175,80,0.3)'}`,
+                      borderRadius: 8,
+                      marginBottom: 20,
+                    }}>
+                      <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
+                        Pagamento do Frete
+                      </div>
+
+                      {manual ? (
+                        <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.6 }}>
+                          <strong style={{ color: '#ffc107' }}>Baixa manual</strong> — não entrou pelo Mercado Pago.<br />
+                          {pag?.registrado_por_nome && <>Por: {pag.registrado_por_nome}<br /></>}
+                          {pag?.observacao && <>Motivo: {pag.observacao}<br /></>}
+                          {!pag && 'Sem registro em pagamentos_frete (baixa anterior à auditoria).'}
+                          {pag?.pago_em && <>Em: {formatarDataHora(pag.pago_em)}</>}
+                        </div>
+                      ) : (
+                        <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.6 }}>
+                          <strong style={{ color: '#4caf50' }}>Mercado Pago</strong> — {pag.metodo?.toUpperCase()}<br />
+                          Transação: <span style={{ fontFamily: 'monospace' }}>{pag.gateway_transaction_id}</span><br />
+                          {pag.pago_em && <>Em: {formatarDataHora(pag.pago_em)}</>}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
 
                 {/* Código de Rastreio */}
                 {modalAberto.codigo_rastreio && (
