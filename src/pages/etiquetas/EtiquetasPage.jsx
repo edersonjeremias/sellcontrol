@@ -20,6 +20,30 @@ function pagamentoDoRomaneio(rom) {
   return aprovados[0] || null
 }
 
+/**
+ * Orientação para os erros do Melhor Envio que a loja resolve sozinha.
+ * O código vem na própria mensagem deles (ex.: E-CRT-0001).
+ */
+function dicaDoErro(mensagem) {
+  const texto = String(mensagem || '').toLowerCase()
+
+  if (texto.includes('valor segurado') || texto.includes('e-crt-0001')) {
+    return 'Conta de pessoa física tem limite de R$ 1.500,00 de valor segurado. ' +
+           'Clique em Editar e reduza o valor declarado do romaneio para até R$ 1.500,00, ' +
+           'ou use uma conta empresarial no Melhor Envio.'
+  }
+  if (texto.includes('saldo') || texto.includes('insufficient')) {
+    return 'A compra da etiqueta usa o saldo da carteira do Melhor Envio. Adicione saldo e tente de novo.'
+  }
+  if (texto.includes('document') || texto.includes('cpf')) {
+    return 'Confira o CPF do destinatário no endereço de entrega e os dados da loja em Configurações.'
+  }
+  if (texto.includes('peso') || texto.includes('dimens')) {
+    return 'Clique em Editar e revise o peso e as medidas da caixa.'
+  }
+  return null
+}
+
 function formatarDataHora(valor) {
   if (!valor) return '-'
   return new Date(valor).toLocaleString('pt-BR', {
@@ -64,6 +88,8 @@ export default function EtiquetasPage() {
   const [modalAberto, setModalAberto] = useState(null)
   // instagram (minúsculo, sem @) -> whatsapp do cliente, para o botão de envio do link
   const [whatsPorInstagram, setWhatsPorInstagram] = useState({})
+  // Erros da transportadora ficam em modal: o toast some antes de dar tempo de ler
+  const [erroModal, setErroModal] = useState(null)
 
   // Estados para cotação
   const [cotando, setCotando] = useState(false)
@@ -309,7 +335,7 @@ export default function EtiquetasPage() {
       setStatusFiltro('etiqueta_gerada')
       carregar()
     } catch (err) {
-      showGlobalToast(`Erro ao gerar etiqueta: ${err.message}`, 'error')
+      setErroModal({ titulo: 'Não foi possível gerar a etiqueta', mensagem: err.message })
     } finally {
       setGerando(null)
     }
@@ -333,7 +359,7 @@ export default function EtiquetasPage() {
 
       window.open(pdfUrl, '_blank')
     } catch (err) {
-      showGlobalToast(`Erro ao imprimir etiqueta: ${err.message}`, 'error')
+      setErroModal({ titulo: 'Não foi possível imprimir a etiqueta', mensagem: err.message })
     }
   }
 
@@ -494,7 +520,7 @@ export default function EtiquetasPage() {
       setCotacoes(cotacoesFiltradas)
     } catch (err) {
       console.error('❌ Erro ao cotar:', err)
-      showGlobalToast(`Erro ao cotar frete: ${err.message}`, 'error')
+      setErroModal({ titulo: 'Não foi possível cotar o frete', mensagem: err.message })
     } finally {
       setCotando(false)
     }
@@ -548,7 +574,7 @@ export default function EtiquetasPage() {
       carregar()
       setModalAberto(null)
     } catch (err) {
-      showGlobalToast(`Erro ao confirmar cotação: ${err.message}`, 'error')
+      setErroModal({ titulo: 'Não foi possível confirmar a cotação', mensagem: err.message })
     }
   }
 
@@ -1519,6 +1545,100 @@ export default function EtiquetasPage() {
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Erro da transportadora: fica na tela até a pessoa fechar */}
+        {erroModal && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            zIndex: 11000,
+          }}>
+            <div style={{
+              background: '#1e1e1e',
+              border: '1px solid rgba(244,67,54,0.4)',
+              borderRadius: 12,
+              maxWidth: 520,
+              width: '100%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '16px 20px',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+              }}>
+                <h3 style={{ margin: 0, color: '#f44336', fontSize: 16, fontWeight: 700 }}>
+                  {erroModal.titulo}
+                </h3>
+                <button
+                  onClick={() => setErroModal(null)}
+                  title="Fechar"
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#e8eaed',
+                    border: 'none',
+                    borderRadius: 6,
+                    width: 28,
+                    height: 28,
+                    fontSize: 15,
+                    lineHeight: 1,
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ padding: 20 }}>
+                <p style={{ margin: 0, color: '#e8eaed', fontSize: 14, lineHeight: 1.6 }}>
+                  {erroModal.mensagem}
+                </p>
+
+                {dicaDoErro(erroModal.mensagem) && (
+                  <div style={{
+                    marginTop: 16,
+                    padding: 14,
+                    background: 'rgba(255,193,7,0.1)',
+                    border: '1px solid rgba(255,193,7,0.3)',
+                    borderRadius: 8,
+                    color: '#e8eaed',
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                  }}>
+                    <strong style={{ color: '#ffc107' }}>Como resolver:</strong><br />
+                    {dicaDoErro(erroModal.mensagem)}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => setErroModal(null)}
+                  style={{
+                    marginTop: 20,
+                    width: '100%',
+                    padding: 12,
+                    background: 'rgba(255,255,255,0.1)',
+                    color: '#e8eaed',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 8,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Entendi
+                </button>
               </div>
             </div>
           </div>
