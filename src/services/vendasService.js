@@ -472,9 +472,27 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
 // ── fecharLive ─────────────────────────────────────────────────
 // Promove tudo da live para 'fechada' de uma vez. Pega também as peças que
 // salvarVendas ignora por já estarem enviadas (isSent) pelo aviãozinho.
+//
+// Antes de promover, carimba Vendido em quem tem cliente e ficou sem status.
+// A tela so marca as linhas carregadas nela, mas o auto-save grava como
+// rascunho sem status: uma peca salva assim e ausente da tela na hora do
+// Salvar (pagina recarregada, troca de live, outra aba) era promovida aqui
+// sem status e sumia da cobranca, que exige ENVIADO ou Vendido.
 export async function fecharLive(tenantId = null, dataLive, liveNome) {
   if (!dataLive) return { ok: true, fechadas: 0 }
   const tid = TENANT_ID(tenantId)
+
+  let qs = supabase.from('vendas')
+    .update({ status: 'Vendido' })
+    .eq('tenant_id', tid)
+    .eq('data_live', dataLive)
+    .eq('status', '')          // nunca sobrescreve ENVIADO, Comprar, Separado, Pendente
+    .neq('cliente_nome', '')   // sem cliente nao e venda
+
+  if (liveNome?.trim()) qs = qs.eq('live_nome', liveNome.trim())
+
+  const { error: errStatus } = await qs
+  if (errStatus) throw errStatus
 
   let q = supabase.from('vendas')
     .update({ etapa: 'fechada' })
