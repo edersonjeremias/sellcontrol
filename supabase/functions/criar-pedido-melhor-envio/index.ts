@@ -7,6 +7,27 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+/**
+ * Mensagem legível a partir do erro do Melhor Envio.
+ * Ele devolve { message, errors: { "to.document": ["CPF inválido"], ... } },
+ * e é nesse "errors" que está o que realmente impede a etiqueta.
+ */
+function detalharErro(erro: any): string {
+  const partes: string[] = []
+
+  if (erro?.errors && typeof erro.errors === 'object') {
+    for (const [campo, msgs] of Object.entries(erro.errors)) {
+      const texto = Array.isArray(msgs) ? msgs.join(', ') : String(msgs)
+      partes.push(`${campo}: ${texto}`)
+    }
+  }
+
+  if (!partes.length && erro?.message) partes.push(String(erro.message))
+  if (!partes.length && erro?.error) partes.push(String(erro.error))
+
+  return partes.join(' | ') || 'motivo não informado'
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -255,10 +276,13 @@ serve(async (req) => {
     })
 
     if (!cartResponse.ok) {
-      const errorData = await cartResponse.json()
-      console.error('❌ Erro ao criar pedido:', errorData)
+      const errorData = await cartResponse.json().catch(() => ({}))
+      console.error('❌ Erro ao criar pedido:', JSON.stringify(errorData))
       return new Response(
-        JSON.stringify({ error: 'Erro ao criar pedido no Melhor Envio', details: errorData }),
+        JSON.stringify({
+          error: `Melhor Envio recusou o pedido: ${detalharErro(errorData)}`,
+          details: errorData,
+        }),
         { status: cartResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -284,10 +308,14 @@ serve(async (req) => {
     })
 
     if (!checkoutResponse.ok) {
-      const errorData = await checkoutResponse.json()
-      console.error('❌ Erro no checkout:', errorData)
+      const errorData = await checkoutResponse.json().catch(() => ({}))
+      console.error('❌ Erro no checkout:', JSON.stringify(errorData))
       return new Response(
-        JSON.stringify({ error: 'Erro ao finalizar compra', details: errorData }),
+        JSON.stringify({
+          // O checkout debita o saldo da carteira do Melhor Envio
+          error: `Melhor Envio não concluiu a compra da etiqueta: ${detalharErro(errorData)}`,
+          details: errorData,
+        }),
         { status: checkoutResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
