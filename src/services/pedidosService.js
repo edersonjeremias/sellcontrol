@@ -362,3 +362,17 @@ export async function atualizarDimensoesRomaneio(tenantId, numeroRomaneio, dimen
 
   if (updateError) throw updateError
 }
+
+/**
+ * Histórico de mudanças de status de uma peça
+ */
+export async function getHistoricoVenda(vendaId) {
+  const { data, error } = await supabase
+    .from('vendas_historico')
+    .select('*')
+    .eq('venda_id', vendaId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}

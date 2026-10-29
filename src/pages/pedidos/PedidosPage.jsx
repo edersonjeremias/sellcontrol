@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import AppShell from '../../components/ui/AppShell'
 import {
-  STATUS_PEDIDO_OPTS, calcTotal, getStatusPedido,
+  STATUS_PEDIDO_OPTS, calcTotal, getStatusPedido, getHistoricoVenda,
   buscarItensPedido, salvarItens, gerarPedido, buscarPedidoParaReimprimir,
   atribuirRomaneio, adicionarSeparadosAoRomaneio, criarRomaneioComDimensoes,
   atualizarDimensoesRomaneio,
@@ -36,6 +36,7 @@ const COLS = [
   { key: 'status',        label: 'STATUS',     w: 130 },
   { key: 'status_alterado_em', label: 'DATA STATUS', w: 90 },
   { key: 'numero_pedido', label: 'ROM.',       w: 60 },
+  { key: 'acoes',         label: '',           w: 44 },
 ]
 
 const SI = {
@@ -184,6 +185,89 @@ function PrintModal({ data, onClose }) {
   )
 }
 
+// ── Histórico da peça ────────────────────────────────────────
+function HistoricoModal({ item, onClose, statusCores }) {
+  const [hist, setHist] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState(null)
+
+  useEffect(() => {
+    let vivo = true
+    getHistoricoVenda(item.id)
+      .then(d => { if (vivo) setHist(d) })
+      .catch(e => { if (vivo) setErro(e.message || 'Erro ao carregar histórico') })
+      .finally(() => { if (vivo) setCarregando(false) })
+    return () => { vivo = false }
+  }, [item.id])
+
+  const descricao = [item.produto, item.modelo, item.cor, item.marca, item.tamanho]
+    .filter(Boolean).join(' • ')
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background: 'var(--card-bg)', border: '1px solid var(--border-light)',
+        borderRadius: 10, padding: 20, width: 'min(560px,95vw)', maxHeight: '80vh',
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ color: 'var(--text-header)', fontWeight: 700, fontSize: 15 }}>
+              Histórico de status
+            </div>
+            <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
+              {item.codigo ? `#${item.codigo} — ` : ''}{descricao}
+            </div>
+          </div>
+          <button className="btn-acao btn-dark" onClick={onClose} style={{ flex: 'none', minWidth: 60 }}>
+            Fechar
+          </button>
+        </div>
+
+        <div style={{ overflow: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {carregando && (
+            <div style={{ color: 'var(--muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>
+              Carregando...
+            </div>
+          )}
+          {erro && (
+            <div style={{ color: '#f28b82', fontSize: 13, padding: 12 }}>{erro}</div>
+          )}
+          {!carregando && !erro && hist.length === 0 && (
+            <div style={{ color: 'var(--muted)', fontSize: 13, padding: 20, textAlign: 'center' }}>
+              Nenhuma alteração de status registrada ainda.
+            </div>
+          )}
+          {hist.map(h => (
+            <div key={h.id} style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '8px 10px', borderRadius: 6,
+              background: 'var(--input-bg)', border: '1px solid var(--border-light)',
+            }}>
+              <span style={{ color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap' }}>
+                {fmtTimestampCompleto(h.created_at)}
+              </span>
+              <span style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: 'var(--muted)' }}>{h.status_anterior || '—'}</span>
+                <span style={{ color: 'var(--muted)' }}>→</span>
+                <span style={{ fontWeight: 700, color: statusCores[h.status_novo] || 'var(--text-body)' }}>
+                  {h.status_novo || '—'}
+                </span>
+              </span>
+              <span style={{ color: 'var(--muted)', fontSize: 11, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                {h.alterado_por_nome || 'Sistema'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ────────────────────────────────────────────────
 export default function PedidosPage() {
   const { profile } = useAuth()
@@ -205,6 +289,7 @@ export default function PedidosPage() {
   const [err, setErr]           = useState(null)
   const [msg, setMsg]           = useState(null)
   const [printData, setPrintData] = useState(null)
+  const [historicoItem, setHistoricoItem] = useState(null)
   const [romAddVal, setRomAddVal] = useState('')
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
   const [statusOpts, setStatusOpts] = useState(STATUS_PEDIDO_OPTS)
@@ -804,6 +889,7 @@ export default function PedidosPage() {
                 item={item}
                 onChange={handleChange}
                 onRomaneioBlur={handleRomaneioItemBlur}
+                onHistorico={setHistoricoItem}
                 statusOpts={statusOpts}
                 statusCores={statusCores}
               />
@@ -857,6 +943,7 @@ export default function PedidosPage() {
                     item={item}
                     onChange={handleChange}
                     onRomaneioBlur={handleRomaneioItemBlur}
+                    onHistorico={setHistoricoItem}
                     statusOpts={statusOpts}
                     statusCores={statusCores}
                   />
@@ -868,6 +955,14 @@ export default function PedidosPage() {
 
         {printData && (
           <PrintModal data={printData} onClose={() => setPrintData(null)} />
+        )}
+
+        {historicoItem && (
+          <HistoricoModal
+            item={historicoItem}
+            statusCores={statusCores}
+            onClose={() => setHistoricoItem(null)}
+          />
         )}
 
         {/* Modal Dimensões Romaneio */}
@@ -1023,7 +1118,7 @@ export default function PedidosPage() {
 }
 
 // ── Row component (Desktop) ────────────────────────────────────────────
-function ItemRow({ item, onChange, onRomaneioBlur, statusOpts, statusCores }) {
+function ItemRow({ item, onChange, onRomaneioBlur, statusOpts, statusCores, onHistorico }) {
   return (
     <tr style={{ borderBottom: '1px solid var(--table-border)' }}
       onMouseEnter={e => { e.currentTarget.style.background = 'var(--table-row-hover)' }}
@@ -1084,12 +1179,24 @@ function ItemRow({ item, onChange, onRomaneioBlur, statusOpts, statusCores }) {
           }}
         />
       </td>
+      <td style={{ ...TD, padding: '4px 2px', textAlign: 'center' }}>
+        <button
+          onClick={() => onHistorico(item)}
+          title="Ver histórico de status"
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--muted)', fontSize: 14, lineHeight: 1, padding: 2,
+          }}
+        >
+          🕐
+        </button>
+      </td>
     </tr>
   )
 }
 
 // ── Card component (Mobile) ────────────────────────────────────────────
-function ItemCardMobile({ item, onChange, onRomaneioBlur, statusOpts, statusCores }) {
+function ItemCardMobile({ item, onChange, onRomaneioBlur, statusOpts, statusCores, onHistorico }) {
   return (
     <div style={{
       background: 'var(--card-bg)',
@@ -1228,6 +1335,16 @@ function ItemCardMobile({ item, onChange, onRomaneioBlur, statusOpts, statusCore
             {fmtTimestamp(item.status_alterado_em)}
           </span>
         )}
+        <button
+          onClick={() => onHistorico(item)}
+          title="Ver histórico de status"
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: 'var(--muted)', fontSize: 14, lineHeight: 1, padding: 2,
+          }}
+        >
+          🕐
+        </button>
       </div>
 
       {/* LINHA 4: Observação */}
