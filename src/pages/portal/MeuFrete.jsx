@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
-import { supabase } from '../../lib/supabase'
+import { portalSb } from '../../lib/portalSupabase'
 import { calcularFrete, salvarCotacoes, buscarCotacoes } from '../../services/melhorEnvioService'
 import { criarPagamentoPIX, buscarPagamentoRomaneio } from '../../services/mercadoPagoService'
 import { pesoEmKg } from '../../lib/peso'
@@ -42,7 +42,7 @@ export default function MeuFrete() {
         cliente_instagram: cliente.instagram.replace('@', ''),
       })
 
-      const { data: romsData, error: romsError } = await supabase
+      const { data: romsData, error: romsError } = await portalSb
         .from('romaneios')
         .select('*, romaneio_sacolinhas(*)')
         .eq('tenant_id', tenantId)
@@ -57,7 +57,7 @@ export default function MeuFrete() {
       for (const rom of romsData || []) {
         const numeroRomaneio = parseInt(rom.numero.replace(/\D/g, ''))
 
-        const { data: itens, error: itensError } = await supabase
+        const { data: itens, error: itensError } = await portalSb
           .from('vendas')
           .select('id, codigo, produto, modelo, cor, tamanho, preco, status')
           .eq('tenant_id', tenantId)
@@ -69,7 +69,7 @@ export default function MeuFrete() {
         }
       }
 
-      const { data: endsData, error: endsError } = await supabase
+      const { data: endsData, error: endsError } = await portalSb
         .from('enderecos_clientes')
         .select('*')
         .eq('tenant_id', tenantId)
@@ -96,7 +96,7 @@ export default function MeuFrete() {
   const carregarMargem = useCallback(async () => {
     if (!tenantId) return
     try {
-      const { data, error } = await supabase
+      const { data, error } = await portalSb
         .from('configuracoes_public')
         .select('margem_frete')
         .eq('tenant_id', tenantId)
@@ -154,7 +154,7 @@ export default function MeuFrete() {
       console.log('📦 Preparando cotação via API do Melhor Envio...')
 
       // Buscar configurações da empresa (endereço de origem e API)
-      const { data: config } = await supabase
+      const { data: config } = await portalSb
         .from('configuracoes_public')
         .select('melhor_envio_api_url, endereco_cep, endereco_rua, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_estado')
         .eq('tenant_id', tenantId)
@@ -213,7 +213,7 @@ export default function MeuFrete() {
 
         console.log('💾 Salvando cotações no banco...')
         // Guarda o retorno: as linhas salvas trazem o UUID que a etiqueta usa
-        const cotacoesSalvas = await salvarCotacoes(romaneio.id, cotacoesAPI)
+        const cotacoesSalvas = await salvarCotacoes(romaneio.id, cotacoesAPI, portalSb)
 
         console.log('✅ Cotações recebidas da API:', cotacoesAPI)
 
@@ -255,7 +255,7 @@ export default function MeuFrete() {
       const romaneio = romaneios.find(r => r.id === romaneioSelecionado)
 
       // Atualiza o romaneio com a escolha do frete
-      await supabase
+      await portalSb
         .from('romaneios')
         .update({
           transportadora: cotacao.transportadora || cotacao.company?.name || cotacao.name,
@@ -304,7 +304,7 @@ export default function MeuFrete() {
 
   const handleVerPIX = async (romaneio) => {
     try {
-      const pagamento = await buscarPagamentoRomaneio(romaneio.id)
+      const pagamento = await buscarPagamentoRomaneio(romaneio.id, portalSb)
       if (!pagamento || !pagamento.pix_qr_code) {
         showToast('PIX não encontrado ou expirado', 'error')
         return
@@ -329,14 +329,14 @@ export default function MeuFrete() {
 
     try {
       // Deleta pagamento pendente
-      await supabase
+      await portalSb
         .from('pagamentos_frete')
         .delete()
         .eq('romaneio_id', romaneio.id)
         .eq('status', 'pendente')
 
       // Volta status para pronto
-      await supabase
+      await portalSb
         .from('romaneios')
         .update({
           status: 'pronto',
@@ -620,7 +620,7 @@ export default function MeuFrete() {
                     <button
                       onClick={async () => {
                         try {
-                          const pag = await buscarPagamentoRomaneio(rom.id)
+                          const pag = await buscarPagamentoRomaneio(rom.id, portalSb)
                           if (pag) {
                             alert(`📄 RECIBO DE PAGAMENTO\n\n` +
                               `Romaneio: ${rom.numero}\n` +

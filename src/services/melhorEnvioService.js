@@ -95,7 +95,7 @@ export async function calcularFrete(tenantId, { from, to, package: pkg }) {
  * @param {string} romaneioId - ID do romaneio
  * @param {Array} cotacoes - Lista de cotações do Melhor Envio
  */
-export async function salvarCotacoes(romaneioId, cotacoes) {
+export async function salvarCotacoes(romaneioId, cotacoes, client = supabase) {
   console.log('📝 Salvando cotações:', cotacoes)
 
   const registros = cotacoes.map(c => {
@@ -120,7 +120,7 @@ export async function salvarCotacoes(romaneioId, cotacoes) {
     }
   })
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('cotacoes_frete')
     .insert(registros)
     .select()
@@ -139,8 +139,8 @@ export async function salvarCotacoes(romaneioId, cotacoes) {
  * @param {string} romaneioId - ID do romaneio
  * @returns {Promise<Array>} - Lista de cotações
  */
-export async function buscarCotacoes(romaneioId) {
-  const { data, error } = await supabase
+export async function buscarCotacoes(romaneioId, client = supabase) {
+  const { data, error } = await client
     .from('cotacoes_frete')
     .select('*')
     .eq('romaneio_id', romaneioId)

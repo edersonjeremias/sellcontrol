@@ -1,5 +1,5 @@
 import { portalSb } from '../lib/portalSupabase'
-import { supabase } from '../lib/supabase'
+
 
 const STATUS_ENCERRADO = ['Pronto', 'Enviado', 'Entregue', 'Retirou', 'Repetido']
 // Valores de status_entrega que indicam que o pedido já foi despachado
@@ -71,7 +71,7 @@ export async function getFretePendente(tenantId, instagram) {
   if (!tenantId || !instagram) return null
   const ig = instagram.replace('@', '')
 
-  const { data: roms, error } = await supabase
+  const { data: roms, error } = await portalSb
     .from('romaneios')
     .select('numero, status, valor_frete')
     .eq('tenant_id', tenantId)
@@ -85,7 +85,7 @@ export async function getFretePendente(tenantId, instagram) {
   // A aba Frete omite romaneios sem itens. O aviso segue a mesma regra, senão
   // mandaria o cliente para uma tela vazia.
   const numeroDe = r => parseInt(r.numero.replace(/\D/g, ''))
-  const { data: vendas } = await supabase
+  const { data: vendas } = await portalSb
     .from('vendas')
     .select('numero_pedido')
     .eq('tenant_id', tenantId)
@@ -99,7 +99,7 @@ export async function getFretePendente(tenantId, instagram) {
   const cotado = validos.find(r => r.status === 'frete_cotado')
   if (!cotado) return { tipo: 'cotar', quantidade: validos.length }
 
-  const { data: cfg } = await supabase
+  const { data: cfg } = await portalSb
     .from('configuracoes_public')
     .select('margem_frete')
     .eq('tenant_id', tenantId)
@@ -132,10 +132,11 @@ export async function sincronizarCliente(tenantId, instagram, campos) {
   if (error) console.error('Erro ao sincronizar cliente:', error)
 }
 
-// Lê da view configuracoes_public, e não da tabela: anon não tem SELECT em
-// configuracoes (ela guarda os tokens de pagamento e do Melhor Envio).
+// Lê da view configuracoes_public, e não da tabela: nem anon nem o cliente do
+// portal têm SELECT em configuracoes (ela guarda os tokens de pagamento e do
+// Melhor Envio).
 export async function getMensagemEncerramento(tenantId) {
-  const { data, error } = await supabase
+  const { data, error } = await portalSb
     .from('configuracoes_public')
     .select('mensagem_encerramento_sacolinha')
     .eq('tenant_id', tenantId)

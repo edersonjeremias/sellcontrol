@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
-import { supabase } from '../../lib/supabase'
+import { portalSb } from '../../lib/portalSupabase'
 import { sincronizarCliente } from '../../services/portalService'
 import { mensagemErro } from '../../lib/erroPortal'
 
@@ -95,7 +95,7 @@ export default function MeusEnderecos() {
     if (!tenantId || !cliente?.instagram) return
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      const { data, error } = await portalSb
         .from('enderecos_clientes')
         .select('*')
         .eq('tenant_id', tenantId)
@@ -194,7 +194,7 @@ export default function MeusEnderecos() {
 
       if (editando) {
         // Atualizar
-        const { error } = await supabase
+        const { error } = await portalSb
           .from('enderecos_clientes')
           .update(dados)
           .eq('id', editando)
@@ -203,7 +203,7 @@ export default function MeusEnderecos() {
         showToast('Endereço atualizado!', 'success')
       } else {
         // Criar
-        const { error } = await supabase
+        const { error } = await portalSb
           .from('enderecos_clientes')
           .insert([dados])
 
@@ -213,7 +213,7 @@ export default function MeusEnderecos() {
 
       // Se marcou como padrão, desmarcar os outros
       if (form.padrao) {
-        await supabase
+        await portalSb
           .from('enderecos_clientes')
           .update({ padrao: false })
           .eq('tenant_id', tenantId)
@@ -250,7 +250,7 @@ export default function MeusEnderecos() {
     if (!window.confirm('Tem certeza que deseja excluir este endereço?')) return
 
     try {
-      const { error } = await supabase
+      const { error } = await portalSb
         .from('enderecos_clientes')
         .delete()
         .eq('id', id)
@@ -268,14 +268,14 @@ export default function MeusEnderecos() {
   const handleMarcarPadrao = async (id) => {
     try {
       // Desmarca todos
-      await supabase
+      await portalSb
         .from('enderecos_clientes')
         .update({ padrao: false })
         .eq('tenant_id', tenantId)
         .eq('cliente_instagram', cliente.instagram.replace('@', ''))
 
       // Marca o selecionado
-      const { error } = await supabase
+      const { error } = await portalSb
         .from('enderecos_clientes')
         .update({ padrao: true })
         .eq('id', id)

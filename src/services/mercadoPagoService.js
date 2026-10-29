@@ -127,8 +127,8 @@ export async function consultarPagamento(tenantId, paymentId) {
  * @param {string} romaneioId - ID do romaneio
  * @returns {Promise<Object|null>} - Dados do pagamento
  */
-export async function buscarPagamentoRomaneio(romaneioId) {
-  const { data, error } = await supabase
+export async function buscarPagamentoRomaneio(romaneioId, client = supabase) {
+  const { data, error } = await client
     .from('pagamentos_frete')
     .select('*')
     .eq('romaneio_id', romaneioId)
