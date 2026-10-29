@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { usePortalToast } from './PortalToast'
 import { uploadComprovante, salvarComprovante } from '../../services/portalService'
+import { mensagemErro } from '../../lib/erroPortal'
 
 export default function AlertaFrete({ producao, instagram, onAtualizar }) {
   const [uploading, setUploading] = useState(false)
@@ -29,8 +30,9 @@ export default function AlertaFrete({ producao, instagram, onAtualizar }) {
       await salvarComprovante(producao.id, url)
       toast('Comprovante enviado com sucesso!', 'success')
       onAtualizar?.()
-    } catch {
-      toast('Erro ao enviar o comprovante. Tente novamente.', 'error')
+    } catch (err) {
+      console.error(err)
+      toast(mensagemErro(err, 'Erro ao enviar o comprovante'), 'error', 7000)
     } finally {
       setUploading(false)
       if (ref.current) ref.current.value = ''

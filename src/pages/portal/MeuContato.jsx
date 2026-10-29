@@ -5,6 +5,7 @@ import {
   portalGetMensagens, portalResponder, portalMarcarLida,
 } from '../../services/conversasService'
 import { ASSUNTOS_DISPONIVEIS } from '../../services/assuntosService'
+import { mensagemErro } from '../../lib/erroPortal'
 
 function fmtHora(iso) {
   if (!iso) return ''
@@ -66,7 +67,7 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
       setTexto('')
       const novas = await portalGetMensagens(conversa.id)
       setMsgs(novas)
-    } catch { toast('Erro ao enviar mensagem.', 'error') }
+    } catch (err) { console.error(err); toast(mensagemErro(err, 'Erro ao enviar mensagem'), 'error', 7000) }
     setEnviando(false)
   }
 
@@ -154,7 +155,7 @@ function NovaConversa({ onEnviada, onCancelar }) {
       await portalCriarConversa(assunto.trim(), mensagem.trim())
       toast('Mensagem enviada!', 'success')
       onEnviada()
-    } catch { toast('Erro ao enviar.', 'error') }
+    } catch (err) { console.error(err); toast(mensagemErro(err, 'Erro ao enviar'), 'error', 7000) }
     setEnviando(false)
   }
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { usePortalToast } from './PortalToast'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { encerrarSacolinha, getMensagemEncerramento } from '../../services/portalService'
+import { mensagemErro } from '../../lib/erroPortal'
 
 const OPCOES = [
   { value: 'Correio', label: '📮 Enviar por Correio / Transportadora' },
@@ -35,8 +36,9 @@ export default function ModalEncerramento({ instagram, onClose, onConfirm }) {
       } else {
         onConfirm?.()
       }
-    } catch {
-      toast('Erro ao encerrar. Tente novamente.', 'error')
+    } catch (err) {
+      console.error(err)
+      toast(mensagemErro(err, 'Erro ao encerrar a sacolinha'), 'error', 7000)
     } finally {
       setSaving(false)
     }

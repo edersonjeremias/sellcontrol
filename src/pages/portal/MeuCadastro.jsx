@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import { atualizarCadastro, sincronizarCliente } from '../../services/portalService'
+import { mensagemErro } from '../../lib/erroPortal'
 
 function maskCpf(v) {
   return v.replace(/\D/g, '').slice(0, 11)
@@ -88,8 +89,9 @@ export default function MeuCadastro() {
       })
       await refreshCliente()
       toast('Cadastro salvo com sucesso!', 'success')
-    } catch {
-      toast('Erro ao salvar. Tente novamente.', 'error')
+    } catch (err) {
+      console.error(err)
+      toast(mensagemErro(err, 'Erro ao salvar o cadastro'), 'error', 7000)
     } finally {
       setSaving(false)
     }

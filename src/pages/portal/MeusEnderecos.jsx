@@ -3,6 +3,7 @@ import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import { supabase } from '../../lib/supabase'
 import { sincronizarCliente } from '../../services/portalService'
+import { mensagemErro } from '../../lib/erroPortal'
 
 // Máscara de CEP (função pura, pode ficar fora)
 function maskCep(v) {
@@ -105,8 +106,8 @@ export default function MeusEnderecos() {
       if (error) throw error
       setEnderecos(data || [])
     } catch (err) {
-      showToast('Erro ao carregar endereços', 'error')
       console.error(err)
+      showToast(mensagemErro(err, 'Erro ao carregar endereços'), 'error', 7000)
     } finally {
       setLoading(false)
     }
@@ -237,8 +238,8 @@ export default function MeusEnderecos() {
       setErros({})
       carregar()
     } catch (err) {
-      showToast('Erro ao salvar endereço', 'error')
       console.error(err)
+      showToast(mensagemErro(err, 'Erro ao salvar endereço'), 'error', 7000)
     } finally {
       setSalvando(false)
     }
@@ -258,8 +259,8 @@ export default function MeusEnderecos() {
       showToast('Endereço excluído', 'success')
       carregar()
     } catch (err) {
-      showToast('Erro ao excluir endereço', 'error')
       console.error(err)
+      showToast(mensagemErro(err, 'Erro ao excluir endereço'), 'error', 7000)
     }
   }
 
@@ -283,8 +284,8 @@ export default function MeusEnderecos() {
       showToast('Endereço padrão atualizado', 'success')
       carregar()
     } catch (err) {
-      showToast('Erro ao marcar como padrão', 'error')
       console.error(err)
+      showToast(mensagemErro(err, 'Erro ao marcar como padrão'), 'error', 7000)
     }
   }
 
