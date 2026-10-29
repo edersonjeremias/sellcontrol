@@ -105,6 +105,7 @@ export async function salvarItens(tenantId, dirty) {
       observacao: item.observacao || '',
       updated_at: agora,
     }
+    if (item._statusMudou) updates.status_alterado_em = item.status ? agora : null
     if (!item.status) updates.numero_pedido = null
     const { error } = await supabase.from('vendas')
       .update(updates)
@@ -140,7 +141,7 @@ export async function gerarPedido(tenantId, itensSemPedido) {
   const idsSep = itensSemPedido.filter(i => i.status === 'Separado').map(i => i.id)
   if (idsSep.length) {
     const { error: e2 } = await supabase.from('vendas')
-      .update({ status: 'Enviado', data_envio: hoje, updated_at: agora })
+      .update({ status: 'Enviado', data_envio: hoje, updated_at: agora, status_alterado_em: agora })
       .eq('tenant_id', tenantId).in('id', idsSep)
     if (e2) throw e2
   }
@@ -170,7 +171,7 @@ export async function adicionarSeparadosAoRomaneio(tenantId, ids, romaneio) {
   const hoje = hojeISO()
   const agora = new Date().toISOString()
   const { error } = await supabase.from('vendas')
-    .update({ status: 'Enviado', numero_pedido: romaneio, data_envio: hoje, updated_at: agora })
+    .update({ status: 'Enviado', numero_pedido: romaneio, data_envio: hoje, updated_at: agora, status_alterado_em: agora })
     .eq('tenant_id', tenantId)
     .in('id', ids)
   if (error) throw error
@@ -301,7 +302,7 @@ export async function criarRomaneioComDimensoes(tenantId, itensSemPedido, dimens
   if (idsSep.length) {
     const { error: e2 } = await supabase
       .from('vendas')
-      .update({ status: 'Enviado', data_envio: hoje, updated_at: agora })
+      .update({ status: 'Enviado', data_envio: hoje, updated_at: agora, status_alterado_em: agora })
       .eq('tenant_id', tenantId)
       .in('id', idsSep)
 

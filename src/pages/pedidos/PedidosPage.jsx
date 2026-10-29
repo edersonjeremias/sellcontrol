@@ -34,6 +34,7 @@ const COLS = [
   { key: 'data_live',     label: 'DATA LIVE',  w: 90 },
   { key: 'observacao',    label: 'OBSERVAÇÃO', w: 140 },
   { key: 'status',        label: 'STATUS',     w: 130 },
+  { key: 'status_alterado_em', label: 'DATA STATUS', w: 90 },
   { key: 'numero_pedido', label: 'ROM.',       w: 60 },
 ]
 
@@ -65,6 +66,20 @@ function fmtDate(d) {
   if (!d) return ''
   const [y, m, day] = d.split('-')
   return `${day}/${m}/${y}`
+}
+
+function fmtTimestamp(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (isNaN(d)) return ''
+  return d.toLocaleDateString('pt-BR')
+}
+
+function fmtTimestampCompleto(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  if (isNaN(d)) return ''
+  return d.toLocaleString('pt-BR')
 }
 
 // ── Print modal ──────────────────────────────────────────────
@@ -297,6 +312,10 @@ export default function PedidosPage() {
         const statusAntigo = originalStatus.get(i.id) || i.status
         const statusNovo = dirty.get(i.id).status
 
+        if (statusNovo !== undefined) {
+          updated = { ...updated, _statusMudou: true }
+        }
+
         if (i.numero_pedido && statusNovo === '') {
           updated = { ...updated, numero_pedido: null }
         }
@@ -312,6 +331,13 @@ export default function PedidosPage() {
     setLoading(true)
     try {
       await salvarItens(tenantId, dirtyWithFull)
+
+      const agoraISO = new Date().toISOString()
+      setItens(prev => prev.map(i => {
+        const upd = dirtyWithFull.get(i.id)
+        if (!upd?._statusMudou) return i
+        return { ...i, status_alterado_em: upd.status ? agoraISO : null }
+      }))
 
       for (const item of itemsCancelados) {
         try {
@@ -391,9 +417,10 @@ export default function PedidosPage() {
         showMsg(`Romaneio #${numPedido} gerado com sucesso!`)
 
         const separadosIds = new Set(separados.map(i => i.id))
+        const agoraISO = new Date().toISOString()
         setItens(prev => prev.map(i => {
           if (!separadosIds.has(i.id)) return i
-          return { ...i, numero_pedido: numPedido, status: 'Enviado' }
+          return { ...i, numero_pedido: numPedido, status: 'Enviado', status_alterado_em: agoraISO }
         }))
         setDirty(new Map())
       }
@@ -476,8 +503,9 @@ export default function PedidosPage() {
       const ids = separados.map(i => i.id)
       await adicionarSeparadosAoRomaneio(tenantId, ids, num)
       const idSet = new Set(ids)
+      const agoraISO = new Date().toISOString()
       setItens(prev => prev.map(i =>
-        idSet.has(i.id) ? { ...i, status: 'Enviado', numero_pedido: num } : i
+        idSet.has(i.id) ? { ...i, status: 'Enviado', numero_pedido: num, status_alterado_em: agoraISO } : i
       ))
       setDirty(prev => {
         const next = new Map(prev)
@@ -1036,6 +1064,9 @@ function ItemRow({ item, onChange, onRomaneioBlur, statusOpts, statusCores }) {
           ))}
         </select>
       </td>
+      <td style={{ ...TD, color: 'var(--muted)' }} title={fmtTimestampCompleto(item.status_alterado_em)}>
+        {fmtTimestamp(item.status_alterado_em)}
+      </td>
       <td style={{ ...TD, padding: '4px 4px' }}>
         <input
           type="number" min="1"
@@ -1161,12 +1192,13 @@ function ItemCardMobile({ item, onChange, onRomaneioBlur, statusOpts, statusCore
       </div>
 
       {/* LINHA 3: Status */}
-      <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <select
           value={item.status || ''}
           onChange={e => onChange(item.id, 'status', e.target.value)}
           style={{
-            width: '100%',
+            flex: 1,
+            minWidth: 0,
             padding: '10px',
             fontSize: 14,
             fontWeight: 600,
@@ -1191,6 +1223,11 @@ function ItemCardMobile({ item, onChange, onRomaneioBlur, statusOpts, statusCore
             </option>
           ))}
         </select>
+        {item.status_alterado_em && (
+          <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+            {fmtTimestamp(item.status_alterado_em)}
+          </span>
+        )}
       </div>
 
       {/* LINHA 4: Observação */}
