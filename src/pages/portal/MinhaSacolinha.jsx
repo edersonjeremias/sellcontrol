@@ -4,10 +4,11 @@ import { usePortalToast } from '../../components/portal/PortalToast'
 import {
   getProdutos, getCobrancas, getUltimaProducao,
   isProducaoAtiva, STATUS_ENVIADO_PECA,
-  getMeusDebitos,
+  getMeusDebitos, getFretePendente,
 } from '../../services/portalService'
 import AlertaDebito      from '../../components/portal/AlertaDebito'
 import AlertaFrete       from '../../components/portal/AlertaFrete'
+import AvisoFrete        from '../../components/portal/AvisoFrete'
 import AccordionPecas    from '../../components/portal/AccordionPecas'
 import ModalEncerramento from '../../components/portal/ModalEncerramento'
 
@@ -36,8 +37,8 @@ const STATUS_COR = {
   LEMBRETE:  { color: 'var(--p-yellow)',  bg: 'rgba(251,188,4,0.12)'   },
 }
 
-export default function MinhaSacolinha() {
-  const { cliente }                   = usePortalAuth()
+export default function MinhaSacolinha({ onIrParaFrete }) {
+  const { cliente, tenantId }         = usePortalAuth()
   const toast                         = usePortalToast()
   const [produtos,  setProdutos]      = useState([])
   const [cobrancas, setCobrancas]     = useState([])
@@ -46,27 +47,31 @@ export default function MinhaSacolinha() {
   const [loading,   setLoading]       = useState(true)
   const [aba,       setAba]           = useState('sacola')
   const [modalOpen, setModalOpen]     = useState(false)
+  const [avisoFrete, setAvisoFrete]   = useState(null)
 
   const carregar = useCallback(async () => {
     if (!cliente) return
     setLoading(true)
     try {
-      const [p, c, pr, d] = await Promise.all([
+      const [p, c, pr, d, af] = await Promise.all([
         getProdutos(cliente.instagram),
         getCobrancas(cliente.instagram),
         getUltimaProducao(cliente.instagram),
         getMeusDebitos(),
+        // O aviso é acessório: se falhar, não derruba o resto da página
+        getFretePendente(tenantId, cliente.instagram).catch(() => null),
       ])
       setProdutos(p)
       setCobrancas(c)
       setProducao(pr)
       setDebitos(d)
+      setAvisoFrete(af)
     } catch {
       toast('Erro ao carregar dados.', 'error')
     } finally {
       setLoading(false)
     }
-  }, [cliente, toast])
+  }, [cliente, tenantId, toast])
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -103,6 +108,8 @@ export default function MinhaSacolinha() {
   return (
     <div style={{ padding: '14px 16px 0' }}>
       <AlertaDebito cobrancas={cobrancas} />
+
+      <AvisoFrete aviso={avisoFrete} onIr={onIrParaFrete} />
 
       {producao && (
         <AlertaFrete

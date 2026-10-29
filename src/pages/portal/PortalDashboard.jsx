@@ -75,7 +75,7 @@ export default function PortalDashboard({ nomeEmpresa = 'Portal' }) {
 
       {/* Conteúdo - SEM padding extra */}
       <div style={{ marginTop: '104px' }}>
-        {aba === 'sacola'    && <MinhaSacolinha />}
+        {aba === 'sacola'    && <MinhaSacolinha onIrParaFrete={() => setAba('frete')} />}
         {aba === 'frete'     && <MeuFrete />}
         {aba === 'enderecos' && <MeusEnderecos />}
         {aba === 'contato'   && <MeuContato onAtualizar={() => setTotalNovas(0)} />}

@@ -64,6 +64,52 @@ export async function encerrarSacolinha(instagram, tipoEntrega, obs) {
   return data?.[0] || {}
 }
 
+// Resumo do que o cliente precisa resolver na aba Frete, para o aviso que
+// aparece na Sacolinha. Consulta enxuta de propósito: quem carrega os
+// romaneios completos, com itens e endereços, é a própria aba Frete.
+export async function getFretePendente(tenantId, instagram) {
+  if (!tenantId || !instagram) return null
+  const ig = instagram.replace('@', '')
+
+  const { data: roms, error } = await supabase
+    .from('romaneios')
+    .select('numero, status, valor_frete')
+    .eq('tenant_id', tenantId)
+    .eq('cliente_instagram', ig)
+    .in('status', ['pronto', 'frete_cotado'])
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  if (!roms?.length) return null
+
+  // A aba Frete omite romaneios sem itens. O aviso segue a mesma regra, senão
+  // mandaria o cliente para uma tela vazia.
+  const numeroDe = r => parseInt(r.numero.replace(/\D/g, ''))
+  const { data: vendas } = await supabase
+    .from('vendas')
+    .select('numero_pedido')
+    .eq('tenant_id', tenantId)
+    .in('numero_pedido', roms.map(numeroDe))
+
+  const comItens = new Set((vendas || []).map(v => v.numero_pedido))
+  const validos = roms.filter(r => comItens.has(numeroDe(r)))
+  if (!validos.length) return null
+
+  // Pagamento tem precedência sobre cotação: é a ação mais urgente.
+  const cotado = validos.find(r => r.status === 'frete_cotado')
+  if (!cotado) return { tipo: 'cotar', quantidade: validos.length }
+
+  const { data: cfg } = await supabase
+    .from('configuracoes_public')
+    .select('margem_frete')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  const margem = Number(cfg?.margem_frete) || 0
+  const valor = Number(cotado.valor_frete || 0) * (1 + margem / 100)
+  return { tipo: 'pagar', valor }
+}
+
 // Espelha na tabela `clientes` o que o cliente preenche no portal. É dela que
 // o painel lê (modal "Dados para Envio" e colunas de endereço da busca
 // avançada); sem isso os dados só existiriam em portal_clientes/enderecos_clientes.
