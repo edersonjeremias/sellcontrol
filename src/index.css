@@ -706,7 +706,7 @@ input[type="date"] { color-scheme: dark; }
    e precisa ser opaco porque é sticky: as linhas rolam por baixo dele. */
 .vendas-page { background: #121212; }
 .vendas-page #tabela-container { background: #121212; border-color: #333; }
-.vendas-page thead th { background: #1e1e1e; color: #c9d1d9; border-bottom: 1px solid #333; }
+.vendas-page thead th { background: #1e1e1e; color: #e8eaed; font-size: 12px; letter-spacing: 0.5px; border-bottom: 1px solid #333; }
 .vendas-page tbody td { border-bottom: 1px solid #1f1f1f; }
 .vendas-page tbody tr:hover { background-color: #1a1a1a; }
 .vendas-page .cell-input { background: var(--cell-bg); border-color: var(--cell-border); border-radius: 8px; }
