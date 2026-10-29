@@ -644,13 +644,15 @@ html, body {
 .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; width: 100%; padding: 0 16px; box-sizing: border-box; }
 .field { flex: 1 1 150px; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); }
-.toolbar input, .toolbar select { height: 36px; padding: 0 12px; border: 1px solid var(--cell-border); border-radius: 8px; background: var(--cell-bg); color: var(--text-header); font-size: 0.9rem; outline: none; width: 100%; }
+/* Campos do topo mais claros que os da tabela: aqui ficam soltos sobre o
+   fundo preto, sem as bordas vizinhas da grade para delimita-los. */
+.toolbar input, .toolbar select { height: 36px; padding: 0 12px; border: 1px solid #4a4a4a; border-radius: 8px; background: #3a3a3a; color: var(--text-header); font-size: 0.9rem; outline: none; width: 100%; }
 .toolbar input::placeholder { color: var(--muted); }
 input[type="date"] { color-scheme: dark; }
 .toolbar input:focus, .toolbar select:focus { border-color: var(--blue); }
 
 .filter-header-bar { padding: 12px 0 0; display: flex; gap: 8px; align-items: center; width: 100%; }
-.filter-header-bar input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--cell-border); border-radius: 8px; font-size: 0.9rem; background: var(--cell-bg); color: var(--input-text); outline: none; transition: border-color 0.2s; }
+.filter-header-bar input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid #4a4a4a; border-radius: 8px; font-size: 0.9rem; background: #3a3a3a; color: var(--input-text); outline: none; transition: border-color 0.2s; }
 .filter-header-bar input:focus { border-color: var(--blue); }
 .filter-header-bar .filtro-vendas { flex: 1; max-width: 50%; }
 .filter-header-bar .filtro-produtos { flex: 1; max-width: 50%; position: relative; }
