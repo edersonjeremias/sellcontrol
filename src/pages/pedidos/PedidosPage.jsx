@@ -1180,16 +1180,14 @@ function ItemRow({ item, onChange, onRomaneioBlur, statusOpts, statusCores, onHi
         />
       </td>
       <td style={{ ...TD, padding: '4px 2px', textAlign: 'center' }}>
-        <button
-          onClick={() => onHistorico(item)}
-          title="Ver histórico de status"
-          style={{
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--muted)', fontSize: 14, lineHeight: 1, padding: 2,
-          }}
-        >
-          🕐
-        </button>
+        <div className="acoes-wrapper">
+          <button type="button" className="btn-action-sm hist" title="Ver histórico de status"
+            onClick={e => { e.stopPropagation(); onHistorico(item) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </button>
+        </div>
       </td>
     </tr>
   )
@@ -1335,16 +1333,14 @@ function ItemCardMobile({ item, onChange, onRomaneioBlur, statusOpts, statusCore
             {fmtTimestamp(item.status_alterado_em)}
           </span>
         )}
-        <button
-          onClick={() => onHistorico(item)}
-          title="Ver histórico de status"
-          style={{
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--muted)', fontSize: 14, lineHeight: 1, padding: 2,
-          }}
-        >
-          🕐
-        </button>
+        <div className="acoes-wrapper">
+          <button type="button" className="btn-action-sm hist" title="Ver histórico de status"
+            onClick={e => { e.stopPropagation(); onHistorico(item) }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* LINHA 4: Observação */}

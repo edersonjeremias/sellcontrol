@@ -769,6 +769,8 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
 .btn-action-sm.copy-txt { color: #4fc3f7; border-color: rgba(79,195,247,0.3); }
 .btn-action-sm.copy-txt:hover { background: rgba(79,195,247,0.15); transform: scale(1.05); }
 .btn-action-sm.del { color: var(--red); border-color: rgba(242,139,130,0.2); }
+.btn-action-sm.hist { color: var(--muted); border-color: var(--border-light); }
+.btn-action-sm.hist:hover { background: rgba(255,255,255,0.05); transform: scale(1.05); }
 .btn-action-sm.del:hover { background: rgba(242,139,130,0.15); transform: scale(1.05); }
 
 /* ── SCROLL TO TOP ── */
