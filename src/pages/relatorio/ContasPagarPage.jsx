@@ -43,14 +43,28 @@ function mascaraValor(s) {
   return v
 }
 
+// Parcelas sugeridas ao escolher a frequência (o usuário pode trocar)
+const PARCELAS_PADRAO = { unica: 1, sem: 4, quin: 2, mensal: 12 }
+const MAX_PARCELAS = 120
+
+function normParcelas(freq, n) {
+  if (freq === 'unica') return 1
+  return Math.min(MAX_PARCELAS, Math.max(1, parseInt(n, 10) || 1))
+}
+
 // Gera datas para repetição
 function gerarDatas(venc, freq, parcelas) {
   const [ano, mes, dia] = venc.split('-').map(Number)
   return Array.from({ length: parcelas }, (_, i) => {
+    if (freq === 'mensal') {
+      // Vencimento 29/30/31 pularia para o mês seguinte quando o mês é curto
+      const alvo = new Date(ano, mes - 1 + i, 1)
+      const ultimo = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate()
+      return isoLocal(new Date(alvo.getFullYear(), alvo.getMonth(), Math.min(dia, ultimo)))
+    }
     const d = new Date(ano, mes - 1, dia)
-    if (freq === 'mensal')    d.setMonth(d.getMonth() + i)
-    else if (freq === 'quin') d.setDate(d.getDate() + 15 * i)
-    else if (freq === 'sem')  d.setDate(d.getDate() + 7 * i)
+    if (freq === 'quin')     d.setDate(d.getDate() + 15 * i)
+    else if (freq === 'sem') d.setDate(d.getDate() + 7 * i)
     return isoLocal(d)
   })
 }
@@ -94,12 +108,12 @@ function Campo({ label, children }) {
   )
 }
 
-function FreqRadios({ value, onChange, name }) {
+function FreqRadios({ value, onChange, name, parcelas, onParcelas }) {
   const opts = [
-    { v:'unica', l:'1x', title:'Uma parcela' },
-    { v:'sem',   l:'7d', title:'Semanal — 4 parcelas' },
-    { v:'quin',  l:'15d', title:'Quinzenal — 2 parcelas' },
-    { v:'mensal',l:'30d', title:'Mensal — 12 parcelas' },
+    { v:'unica', l:'1x', title:'Lançamento único' },
+    { v:'sem',   l:'7d', title:'Semanal — de 7 em 7 dias' },
+    { v:'quin',  l:'15d', title:'Quinzenal — de 15 em 15 dias' },
+    { v:'mensal',l:'30d', title:'Mensal — todo mês' },
   ]
   return (
     <div style={{ display:'flex', gap:6, alignItems:'center', background:'rgba(0,0,0,0.15)', padding:'4px 8px', borderRadius:6, border:'1px solid var(--border-light)' }}>
@@ -109,6 +123,16 @@ function FreqRadios({ value, onChange, name }) {
           {o.l}
         </label>
       ))}
+      {value !== 'unica' && (
+        <>
+          <input type="number" min="1" max={MAX_PARCELAS} value={parcelas}
+            onChange={e => onParcelas(e.target.value)}
+            onFocus={e => e.target.select()}
+            title="Quantidade de parcelas"
+            style={{ width:48, background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:4, color:'var(--input-text)', padding:'3px 4px', fontSize:12, fontWeight:700, textAlign:'center', outline:'none' }} />
+          <span style={{ fontSize:12, fontWeight:700, color:'var(--muted)' }}>x</span>
+        </>
+      )}
     </div>
   )
 }
@@ -154,10 +178,12 @@ export default function ContasPagarPage() {
   // ── Formulário modal novo / editar ─────────────────────────
   const [form,    setForm]    = useState(FORM_VAZIO)
   const [freqNova, setFreqNova] = useState('unica')
+  const [parcelasNova, setParcelasNova] = useState(1)
 
   // ── Quick Add bar ──────────────────────────────────────────
   const [qa, setQa] = useState({ observacao:'', categoria:'', tipo_despesa:'Fixa', subcat:'', valor:'', data_vencimento:HOJE, pago:false })
   const [qaFreq, setQaFreq] = useState('unica')
+  const [qaParcelas, setQaParcelas] = useState(1)
   const qaDescRef = useRef(null)
 
   // ── Carregar ───────────────────────────────────────────────
@@ -224,7 +250,7 @@ export default function ContasPagarPage() {
   async function salvarQA() {
     if (!qa.observacao?.trim() && !qa.categoria?.trim()) return showToast('Preencha descrição ou categoria.', 'error')
     if (!qa.valor) return showToast('Informe o valor.', 'error')
-    const parcelas = qaFreq === 'mensal' ? 12 : qaFreq === 'quin' ? 2 : qaFreq === 'sem' ? 4 : 1
+    const parcelas = normParcelas(qaFreq, qaParcelas)
     const datas = gerarDatas(qa.data_vencimento || HOJE, qaFreq, parcelas)
     const tipoQA = isProLabore(qa.categoria) ? (qa.subcat || 'Pro labore') : (qa.tipo_despesa || 'Fixa')
     const linhas = datas.map((d, i) => ({
@@ -248,6 +274,7 @@ export default function ContasPagarPage() {
       if (filtroSt !== 'Todos' && filtroSt !== statusSalvo) setFiltroSt('Todos')
       setQa({ observacao:'', categoria:'', tipo_despesa:'Fixa', subcat:'', valor:'', data_vencimento:HOJE, pago:false })
       setQaFreq('unica')
+      setQaParcelas(1)
       qaDescRef.current?.focus()
       if (qa.categoria && !categorias.includes(qa.categoria))
         setCategorias(prev => [...prev, qa.categoria].sort())
@@ -260,7 +287,7 @@ export default function ContasPagarPage() {
   async function salvarNovo() {
     if (!form.categoria?.trim()) return showToast('Informe a categoria.', 'error')
     if (!form.valor) return showToast('Informe o valor.', 'error')
-    const parcelas = freqNova === 'mensal' ? 12 : freqNova === 'quin' ? 2 : freqNova === 'sem' ? 4 : 1
+    const parcelas = normParcelas(freqNova, parcelasNova)
     const datas = gerarDatas(form.data_vencimento || HOJE, freqNova, parcelas)
     const tipoForm = isProLabore(form.categoria) ? (form.subcat || 'Pro labore') : form.tipo_despesa
     const linhas = datas.map((d, i) => ({
@@ -346,6 +373,7 @@ export default function ContasPagarPage() {
       data_pagamento:  '',
     })
     setFreqNova('unica')
+    setParcelasNova(1)
     setModalNova(true) // Abre modal de nova conta
   }
 
@@ -427,7 +455,7 @@ export default function ContasPagarPage() {
         </div>
         <div className="cp-barra-acoes">
           <button onClick={carregar} style={{ ...S.btn, padding:'5px 14px' }}>Filtrar</button>
-          <button onClick={() => { setForm(FORM_VAZIO); setFreqNova('unica'); setModalNova(true) }}
+          <button onClick={() => { setForm(FORM_VAZIO); setFreqNova('unica'); setParcelasNova(1); setModalNova(true) }}
             style={{ ...S.ok, padding:'5px 14px' }}>+ Novo</button>
           <div className="cp-abas">
             {[['lancamentos','Lançamentos'],['relatorios','Relatórios']].map(([id, label]) => (
@@ -483,7 +511,9 @@ export default function ContasPagarPage() {
           <input type="checkbox" checked={qa.pago} onChange={e => setQa(p=>({...p,pago:e.target.checked}))}
             style={{ width:13, height:13 }} /> Pago
         </label>
-        <FreqRadios value={qaFreq} onChange={setQaFreq} name="qa_freq" />
+        <FreqRadios name="qa_freq" value={qaFreq}
+          onChange={f => { setQaFreq(f); setQaParcelas(PARCELAS_PADRAO[f]) }}
+          parcelas={qaParcelas} onParcelas={setQaParcelas} />
         <button onClick={salvarQA} disabled={salvando} style={{ ...S.ok, padding:'5px 12px', whiteSpace:'nowrap' }}>
           {salvando ? '…' : 'Inserir'}
         </button>
@@ -689,9 +719,13 @@ export default function ContasPagarPage() {
               )}
               <div>
                 <label style={{ fontSize:11, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.4px', display:'block', marginBottom:6 }}>Repetição</label>
-                <FreqRadios value={freqNova} onChange={setFreqNova} name="nova_freq" />
+                <FreqRadios name="nova_freq" value={freqNova}
+                  onChange={f => { setFreqNova(f); setParcelasNova(PARCELAS_PADRAO[f]) }}
+                  parcelas={parcelasNova} onParcelas={setParcelasNova} />
                 <div style={{ fontSize:11, color:'var(--muted)', marginTop:4 }}>
-                  {freqNova==='mensal' ? '12 parcelas mensais' : freqNova==='quin' ? '2 parcelas (15 em 15 dias)' : freqNova==='sem' ? '4 parcelas (7 em 7 dias)' : '1 lançamento único'}
+                  {freqNova==='unica'
+                    ? '1 lançamento único'
+                    : `${normParcelas(freqNova, parcelasNova)} parcelas ${freqNova==='mensal' ? 'mensais' : freqNova==='quin' ? 'de 15 em 15 dias' : 'de 7 em 7 dias'}`}
                 </div>
               </div>
               <div style={{ display:'flex', gap:8, justifyContent:'flex-end', paddingTop:8, borderTop:'1px solid var(--border-light)' }}>
