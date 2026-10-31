@@ -1036,6 +1036,7 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
 }
 .prod-v2-tab:hover  { border-color: #00bcd4; color: #00bcd4; }
 .prod-v2-tab.active { background: #00bcd4; border-color: #00bcd4; color: #000; }
+.prod-v2-tab-icon { display: inline-flex; align-items: center; justify-content: center; padding: 3px 8px; }
 .prod-v2-count { font-size: 11px; color: #abb1bd; white-space: nowrap; padding: 0 4px; font-weight: 700; }
 
 /* ── Buttons ── */

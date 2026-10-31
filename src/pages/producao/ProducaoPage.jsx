@@ -146,6 +146,41 @@ function MotivoModal({ value, onChange, onConfirm, onClose }) {
   )
 }
 
+// ── Modal: Colunas opcionais ───────────────────────────────────
+const COLUNAS_OPCIONAIS = [
+  { key: 'peso',   label: 'Coluna Peso' },
+  { key: 'pacote', label: 'Coluna Pacote' },
+]
+
+function ColunasModal({ cols, onChange, onClose }) {
+  return (
+    <div className="prod-modal-overlay" onClick={onClose}>
+      <div className="prod-modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 320 }}>
+        <div className="prod-modal-header">
+          <span>⚙ Colunas Opcionais</span>
+          <button type="button" className="prod-modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="prod-modal-body">
+          {COLUNAS_OPCIONAIS.map(({ key, label }) => (
+            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', color: '#f0f0f1', fontSize: 13 }}>
+              <input type="checkbox" checked={!!cols[key]}
+                onChange={(e) => onChange((prev) => ({ ...prev, [key]: e.target.checked }))}
+                style={{ width: 16, height: 16, accentColor: '#00bcd4', cursor: 'pointer' }} />
+              {label}
+            </label>
+          ))}
+          <p style={{ color: '#abb1bd', fontSize: 12, marginTop: 12, lineHeight: 1.5 }}>
+            As colunas desmarcadas somem da tabela e o espaço vai para as colunas de texto.
+          </p>
+        </div>
+        <div className="prod-modal-footer">
+          <button type="button" className="prod-btn prod-btn-ghost" onClick={onClose}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Main ───────────────────────────────────────────────────────
 export default function ProducaoPage() {
   const { profile } = useAuth()
@@ -168,6 +203,22 @@ export default function ProducaoPage() {
   const [showDash,    setShowDash]    = useState(false)
   const [detalhe,     setDetalhe]     = useState(null)
   const [linkFrete,   setLinkFrete]   = useState('')
+
+  const [showSettings, setShowSettings] = useState(false)
+  const [colsConfig,   setColsConfig]   = useState({ peso: true, pacote: true })
+
+  // ── Colunas opcionais (lembradas por empresa) ───────────────
+  useEffect(() => {
+    if (!tenantId) return
+    try {
+      const salvo = JSON.parse(localStorage.getItem(`sc_prod_cols_${tenantId}`))
+      if (salvo) setColsConfig((p) => ({ ...p, ...salvo }))
+    } catch {}
+  }, [tenantId])
+  useEffect(() => {
+    if (!tenantId) return
+    localStorage.setItem(`sc_prod_cols_${tenantId}`, JSON.stringify(colsConfig))
+  }, [colsConfig, tenantId])
 
   // ── Load ────────────────────────────────────────────────────
   // silencioso: recarrega sem esconder a tabela nem abrir modal de erro
@@ -386,6 +437,29 @@ export default function ProducaoPage() {
 
   const showDelivery = mode !== 'producao'
 
+  // Larguras do modo "Em Produção" (table-layout: fixed). O espaço das colunas
+  // ocultas volta para as colunas de texto, que são as que ganham com mais área.
+  const colWidths = useMemo(() => {
+    const base = [
+      { key: 'solicitado',  w: 9  },
+      { key: 'dias',        w: 4  },
+      { key: 'pecas',       w: 5  },
+      { key: 'cliente',     w: 13 },
+      { key: 'status',      w: 12 },
+      { key: 'obs_cliente', w: 18 },
+      { key: 'obs_prod',    w: 18 },
+      { key: 'peso',        w: 6  },
+      { key: 'pacote',      w: 12 },
+      { key: 'mais',        w: 3  },
+    ]
+    const opcional = (k) => k === 'peso' || k === 'pacote'
+    const sobra = base.filter((c) => opcional(c.key) && !colsConfig[c.key])
+                      .reduce((acc, c) => acc + c.w, 0)
+    const fatia = { cliente: .25, obs_cliente: .375, obs_prod: .375 }
+    return base.filter((c) => !opcional(c.key) || colsConfig[c.key])
+               .map((c) => c.w + sobra * (fatia[c.key] || 0))
+  }, [colsConfig])
+
   return (
     <AppShell title="Produção" flush hideTitle>
       <div className="prod-v2">
@@ -411,6 +485,12 @@ export default function ProducaoPage() {
             </select>
           </div>
           <div className="prod-v2-toolbar-right">
+            <button type="button" className="prod-v2-tab prod-v2-tab-icon"
+              onClick={() => setShowSettings(true)} title="Configurações de colunas">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+            </button>
             {[{ key:'producao', label:'EM PRODUÇÃO'}, { key:'prontos', label:'PRONTOS'}, { key:'finalizados', label:'ENVIADOS'}].map((t) => (
               <button type="button" key={t.key}
                 className={`prod-v2-tab${mode === t.key ? ' active' : ''}`}
@@ -429,16 +509,7 @@ export default function ProducaoPage() {
             <table className={`prod-v2-table${mode === 'producao' ? ' prod-table-producao' : ''}`}>
               {mode === 'producao' && (
                 <colgroup>
-                  <col style={{ width: '9%' }}  />
-                  <col style={{ width: '4%' }}  />
-                  <col style={{ width: '5%' }}  />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '18%' }} />
-                  <col style={{ width: '6%' }}  />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '3%' }}  />
+                  {colWidths.map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}
                 </colgroup>
               )}
               <thead>
@@ -450,8 +521,8 @@ export default function ProducaoPage() {
                   <th>STATUS PROD.</th>
                   <th>OBS. CLIENTE</th>
                   <th>OBS. PROD.</th>
-                  <th>PESO</th>
-                  <th>PACOTE</th>
+                  {colsConfig.peso   && <th>PESO</th>}
+                  {colsConfig.pacote && <th>PACOTE</th>}
                   {showDelivery && <th>PRONTO</th>}
                   {showDelivery && <th>STATUS ENTREGA</th>}
                   {mode === 'finalizados' && <th>ENVIADO</th>}
@@ -531,22 +602,26 @@ export default function ProducaoPage() {
                       </td>
 
                       {/* Peso */}
-                      <td>
-                        <input className="prod-v2-cell" style={{ width: 50, borderColor: bc(row.id,'peso') }}
-                          value={row.peso || ''}
-                          onChange={(e) => updRow(row.id, { peso: e.target.value })}
-                          onBlur={(e) => savePatch(row.id, 'peso', e.target.value)} />
-                      </td>
+                      {colsConfig.peso && (
+                        <td>
+                          <input className="prod-v2-cell" style={{ width: 50, borderColor: bc(row.id,'peso') }}
+                            value={row.peso || ''}
+                            onChange={(e) => updRow(row.id, { peso: e.target.value })}
+                            onBlur={(e) => savePatch(row.id, 'peso', e.target.value)} />
+                        </td>
+                      )}
 
                       {/* Pacote */}
-                      <td>
-                        <select className="prod-v2-cell" style={{ width: 100, borderColor: bc(row.id,'pacote') }}
-                          value={row.pacote || ''}
-                          onChange={(e) => handlePacote(row, e.target.value)}>
-                          <option value="">--</option>
-                          {pacoteOpts.map((o) => <option key={o} value={o}>{o}</option>)}
-                        </select>
-                      </td>
+                      {colsConfig.pacote && (
+                        <td>
+                          <select className="prod-v2-cell" style={{ width: 100, borderColor: bc(row.id,'pacote') }}
+                            value={row.pacote || ''}
+                            onChange={(e) => handlePacote(row, e.target.value)}>
+                            <option value="">--</option>
+                            {pacoteOpts.map((o) => <option key={o} value={o}>{o}</option>)}
+                          </select>
+                        </td>
+                      )}
 
                       {/* Data Pronto — só nas abas Prontos e Enviados */}
                       {showDelivery && (
@@ -698,6 +773,9 @@ export default function ProducaoPage() {
         )}
         {detalhe && <DetalheModal row={detalhe} onSave={handleDetalheSave} onClose={() => setDetalhe(null)} />}
         {showDash && <DashboardModal rows={rows} onClose={() => setShowDash(false)} />}
+        {showSettings && (
+          <ColunasModal cols={colsConfig} onChange={setColsConfig} onClose={() => setShowSettings(false)} />
+        )}
       </div>
     </AppShell>
   )
