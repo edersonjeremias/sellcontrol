@@ -577,13 +577,16 @@ export default function VendasPage() {
       const precoPromocional = parseFloat(String(l.preco_promocional || '').replace(/\./g, '').replace(',', '.'))
       const precoNormal = parseFloat(String(l.preco || '').replace(/\./g, '').replace(',', '.'))
 
-      // Se tem promoção E é maior que zero, usa promoção; senão usa preço normal
-      const precoFinal = (precoPromocional > 0) ? precoPromocional : precoNormal
+      // Promoção só conta com a coluna ativa: produtos do catálogo trazem
+      // preco_promocional gravado, que não vale numa live sem promoção.
+      const precoFinal = (colsConfig.preco_promocional && precoPromocional > 0)
+        ? precoPromocional
+        : precoNormal
 
       if (!isNaN(precoFinal)) total += precoFinal
     })
     return { total, qtd }
-  }, [linhas, filtro])
+  }, [linhas, filtro, colsConfig.preco_promocional])
 
   // ── BUSCA DE PRODUTOS DESABILITADA (evita bugs de sacolinha) ──
   // O filtro agora só filtra linhas JÁ EM MEMÓRIA, não busca no banco
@@ -1179,7 +1182,10 @@ export default function VendasPage() {
       condicao: produto.condicao || '',
       custo: formatMoney(produto.custo) || '0,00', // Formata com vírgula
       preco: formatMoney(produto.preco) || '0,00', // Formata com vírgula
-      preco_promocional: formatMoney(produto.preco_promocional) || '0,00', // Formata com vírgula
+      // Sem a coluna ativa a promoção do catálogo não entra na venda
+      preco_promocional: colsConfig.preco_promocional
+        ? (formatMoney(produto.preco_promocional) || '0,00')
+        : '',
       codigo: produto.codigo || '',
       cliente_nome: '',
       sacolinha: null,
@@ -1213,7 +1219,7 @@ export default function VendasPage() {
       const primeiraLinha = document.querySelector('#tabela tbody tr:first-child .col-cliente input')
       primeiraLinha?.focus()
     }, 100)
-  }, [tenantId])
+  }, [tenantId, colsConfig.preco_promocional])
 
   // ── UPDATE DE CAMPO ──
   const handleFieldChange = useCallback((key, field, value) => {
