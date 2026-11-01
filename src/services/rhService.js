@@ -177,7 +177,7 @@ export async function excluirFuncionario(id) {
 // VALES E PAGAMENTOS
 // ════════════════════════════════════════════════════════════════
 export const TIPOS_LANCAMENTO = [
-  'VALE', 'ADIANTAMENTO', 'SALARIO', 'BONUS',
+  'VALE', 'ADIANTAMENTO', 'SALARIO', 'COMISSAO', 'BONUS',
   'COMPRA_LOJA', 'DESCONTO', 'VALE_TRANSPORTE', 'REEMBOLSO',
 ]
 
@@ -185,6 +185,7 @@ export const LABEL_TIPO = {
   VALE:            'Vale',
   ADIANTAMENTO:    'Adiantamento',
   SALARIO:         'Salário',
+  COMISSAO:        'Comissão',
   BONUS:           'Bônus',
   COMPRA_LOJA:     'Compra na loja',
   DESCONTO:        'Desconto',
