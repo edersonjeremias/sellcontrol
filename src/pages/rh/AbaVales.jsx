@@ -5,7 +5,8 @@ import {
   getLancamentos, salvarLancamento, pagarLancamento, reabrirLancamento, excluirLancamento,
   resumoPorFuncionario, sinalTipo, TIPOS_LANCAMENTO, LABEL_TIPO,
 } from '../../services/rhService'
-import { S, Campo, Modal, ModalConfirma, IconCheck, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
+import { S, Campo, Modal, ModalConfirma, IconCheck, IconClip, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
+import ModalComprovantes from './ModalComprovantes'
 
 const HOJE = isoLocal(new Date())
 
@@ -61,6 +62,7 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
   const [modalPagar, setModalPagar] = useState(null)
   const [dataPag,    setDataPag]    = useState(HOJE)
   const [formaPag,   setFormaPag]   = useState('PIX')
+  const [modalComp,  setModalComp]  = useState(null)   // lançamento dos comprovantes
 
   // Quick add
   const [qa, setQa] = useState({ funcionario_id:'', tipo:'VALE', descricao:'', valor:'', data_prevista:HOJE, pago:false })
@@ -346,6 +348,14 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
                         {l.status === 'PAGO' ? 'Pago' : 'Pendente'}
                       </span>
                       <div className="rh-row-acoes">
+                        <button onClick={() => setModalComp(l)}
+                          className={`btn-action-sm anexo${(l.comprovantes?.length || 0) ? ' tem' : ''}`}
+                          title="Comprovantes de pagamento">
+                          <IconClip />
+                          {(l.comprovantes?.length || 0) > 0 && (
+                            <span className="rh-anexo-qtd">{l.comprovantes.length}</span>
+                          )}
+                        </button>
                         {l.status !== 'PAGO' ? (
                           <button onClick={() => { setModalPagar(l); setDataPag(HOJE); setFormaPag('PIX') }}
                             className="btn-action-sm send" title="Marcar como pago">
@@ -461,6 +471,16 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
             </select>
           </Campo>
         </Modal>
+      )}
+
+      {modalComp && (
+        <ModalComprovantes
+          lancamento={modalComp}
+          tenantId={tenantId}
+          showToast={showToast}
+          onFechar={() => setModalComp(null)}
+          onAtualizar={carregar}
+        />
       )}
 
       {confirmDel && (

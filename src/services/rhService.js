@@ -224,6 +224,83 @@ export async function excluirLancamento(id) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// COMPROVANTES DE PAGAMENTO (Supabase Storage)
+// ════════════════════════════════════════════════════════════════
+// O bucket é PRIVADO: recibo de banco e recibo assinado trazem nome, valor e
+// assinatura do funcionário, então o registro guarda o caminho do arquivo e a
+// tela exibe por URL assinada temporária — URL pública ficaria aberta a quem
+// tivesse o link.
+const BUCKET_COMPROVANTES = 'rh-comprovantes'
+const MAX_COMPROVANTES     = 3
+const MAX_TAMANHO          = 5 * 1024 * 1024
+const VALIDADE_URL         = 60 * 60   // 1 hora
+const TIPOS_COMPROVANTE    = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+
+export const LIMITE_COMPROVANTES = MAX_COMPROVANTES
+
+export function ehPdf(caminho) {
+  return /\.pdf$/i.test(String(caminho || ''))
+}
+
+export async function uploadComprovante(file, lancamentoId, tenantId) {
+  if (!TIPOS_COMPROVANTE.includes(file.type)) {
+    throw new Error('Formato não suportado. Use JPG, PNG, WEBP ou PDF.')
+  }
+  if (file.size > MAX_TAMANHO) {
+    throw new Error('Arquivo muito grande. Máximo 5MB.')
+  }
+
+  const extensao = (file.name.split('.').pop() || 'jpg').toLowerCase()
+  const caminho  = `${tid(tenantId)}/${lancamentoId}/${Date.now()}.${extensao}`
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_COMPROVANTES)
+    .upload(caminho, file, { cacheControl: '3600', upsert: false })
+
+  if (error) {
+    // Bucket ainda não criado no Storage do Supabase
+    if (error.message?.toLowerCase().includes('bucket')) {
+      throw new Error('Bucket "rh-comprovantes" não existe no Storage do Supabase.')
+    }
+    throw new Error('Erro ao enviar o arquivo: ' + error.message)
+  }
+
+  return data.path
+}
+
+// Gera as URLs temporárias de exibição: { caminho: url }
+export async function assinarComprovantes(caminhos) {
+  if (!caminhos?.length) return {}
+  const { data, error } = await supabase.storage
+    .from(BUCKET_COMPROVANTES)
+    .createSignedUrls(caminhos, VALIDADE_URL)
+  if (error) throw new Error('Erro ao abrir os comprovantes: ' + error.message)
+  const mapa = {}
+  ;(data || []).forEach(item => {
+    if (item.signedUrl) mapa[item.path] = item.signedUrl
+  })
+  return mapa
+}
+
+export async function excluirComprovante(caminho) {
+  // Falha ao apagar o arquivo não deve travar a remoção do anexo na tela:
+  // o caminho sai do registro de qualquer forma, então só registramos no console.
+  const { error } = await supabase.storage.from(BUCKET_COMPROVANTES).remove([caminho])
+  if (error) console.error('Erro ao apagar comprovante do storage', error)
+}
+
+export async function atualizarComprovantes(lancamentoId, comprovantes) {
+  const { error } = await supabase.from('rh_lancamentos')
+    .update({ comprovantes }).eq('id', lancamentoId)
+  if (!error) return
+  // Coluna ainda não criada: o aviso genérico do Postgres não diz o que fazer
+  if (error.message?.includes('comprovantes')) {
+    throw new Error('Rode a migration 20261101_rh_comprovantes.sql no Supabase.')
+  }
+  throw error
+}
+
+// ════════════════════════════════════════════════════════════════
 // FALTAS, ATRASOS E OCORRÊNCIAS
 // ════════════════════════════════════════════════════════════════
 export const TIPOS_OCORRENCIA = ['FALTA', 'ATRASO', 'SAIDA_ANTECIPADA', 'ATESTADO', 'FOLGA']

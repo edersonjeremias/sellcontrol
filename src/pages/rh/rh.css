@@ -221,3 +221,101 @@
 @media (max-width: 768px) {
   .rh-qa { display: none !important; }
 }
+
+/* ── Comprovantes de pagamento ── */
+.rh-comp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.rh-comp-item {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  overflow: hidden;
+  height: 130px;
+}
+.rh-comp-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  cursor: zoom-in;
+  display: block;
+}
+.rh-comp-pdf {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--text-body);
+}
+.rh-comp-pdf:hover { background: var(--table-row-hover); }
+.rh-comp-pdf-ext {
+  background: var(--red);
+  color: #171717;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.rh-comp-pdf-txt { font-size: 12px; color: var(--muted); }
+
+.rh-comp-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0,0,0,0.65);
+  border: 1px solid rgba(242,139,130,0.4);
+  border-radius: 6px;
+  color: var(--red);
+  padding: 5px;
+  cursor: pointer;
+  display: flex;
+}
+.rh-comp-del svg { width: 14px; height: 14px; }
+.rh-comp-del:hover { background: rgba(242,139,130,0.2); }
+
+.rh-comp-upload {
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+.rh-comp-upload.arrasta { border-color: var(--blue); background: rgba(138,180,248,0.08); }
+
+/* Clipe de anexo na linha do lançamento */
+.btn-action-sm.anexo { color: var(--muted); border-color: var(--border-light); position: relative; }
+.btn-action-sm.anexo:hover { background: rgba(255,255,255,0.05); transform: scale(1.05); }
+.btn-action-sm.anexo.tem { color: var(--blue); border-color: rgba(138,180,248,0.4); background: rgba(138,180,248,0.12); }
+.rh-anexo-qtd {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--blue);
+  color: #0f0f0f;
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  /* Ações descem para uma segunda linha em vez de comprimir o nome */
+  .rh-linha { flex-wrap: wrap; }
+  .rh-row-acoes { width: 100%; justify-content: flex-end; }
+  .rh-comp-grid { grid-template-columns: 1fr 1fr; }
+}

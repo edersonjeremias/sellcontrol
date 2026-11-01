@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS rh_lancamentos (
   forma_pagamento TEXT,
   observacao      TEXT,
   vt_periodo_id   UUID,
+  -- Caminhos dos comprovantes no bucket rh-comprovantes (maximo 3)
+  comprovantes    JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
