@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getConfig } from '../../services/configService'
 
-const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impressão', 'Cadastro', 'Admin', 'Outros']
+const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impressão', 'Cadastro', 'RH', 'Admin', 'Outros']
 
 const SLUG_TO_CATEGORY = {
   'dashboard':                   'Principal',
@@ -26,6 +26,7 @@ const SLUG_TO_CATEGORY = {
   'impressao-sacolinha-cliente': 'Impressão',
   'etiquetas':                   'Impressão',
   'clientes':                    'Cadastro',
+  'rh':                          'RH',
   'configuracoes':               'Admin',
   'master/empresas':             'Admin',
 }

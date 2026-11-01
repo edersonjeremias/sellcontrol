@@ -1,0 +1,223 @@
+/* ══════════════════════════════════════════════════════════
+   RH — abas, filtros, listas e grid do vale transporte
+   ══════════════════════════════════════════════════════════ */
+
+.rh-topbar {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.rh-abas {
+  display: flex;
+  gap: 4px;
+  background: rgba(0,0,0,0.2);
+  padding: 5px;
+  border-radius: 8px;
+}
+.rh-aba {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.rh-aba.ativa {
+  background: var(--card-bg);
+  color: var(--blue);
+  box-shadow: var(--shadow);
+}
+
+.rh-filtros {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 10px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+.rh-f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.rh-f-busca { flex: 2; min-width: 170px; }
+.rh-f label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.rh-filtros input, .rh-filtros select { width: 100%; min-width: 0; }
+.rh-acoes { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+.rh-resumo {
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-light);
+  padding: 10px 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rh-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 8px 16px;
+  min-width: 140px;
+}
+.rh-card-label { font-size: 11px; color: var(--muted); }
+.rh-card-valor { font-size: 18px; font-weight: 800; }
+
+.rh-conteudo { padding: 16px; }
+
+/* ── Linhas de lista ── */
+.rh-linha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--body-bg);
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.15s;
+}
+.rh-linha:hover { background: var(--table-row-hover); }
+.rh-linha-info { flex: 1; min-width: 0; }
+.rh-linha-nome {
+  font-size: 14px;
+  color: var(--text-header);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rh-linha-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.rh-row-acoes { display: flex; gap: 4px; flex-shrink: 0; }
+
+.rh-grupo-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--filter-bg);
+  border-left: 3px solid var(--blue);
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 1px;
+}
+
+.rh-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.rh-badge.ok    { color: var(--green);  background: rgba(129,201,149,0.12); }
+.rh-badge.pend  { color: var(--yellow); background: rgba(251,188,4,0.12); }
+.rh-badge.off   { color: var(--muted);  background: rgba(255,255,255,0.05); }
+.rh-badge.alert { color: var(--red);    background: rgba(242,139,130,0.12); }
+
+.rh-vazio { color: var(--muted); text-align: center; padding: 28px 12px; }
+
+/* ── Grid de dias do vale transporte ── */
+.rh-dias {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.rh-dia {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rh-dia.folga { opacity: 0.45; }
+.rh-dia.descontado { border-color: rgba(251,188,4,0.4); }
+.rh-dia-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.rh-dia-data { font-size: 13px; font-weight: 700; color: var(--text-header); }
+.rh-dia-dow { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+.rh-dia-checks { display: flex; gap: 12px; }
+.rh-dia-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-body);
+  cursor: pointer;
+  user-select: none;
+}
+.rh-dia-check input { width: 14px; height: 14px; cursor: pointer; accent-color: var(--blue); }
+.rh-dia-valor { font-size: 12px; font-weight: 700; color: var(--green); }
+.rh-dia-valor.zero { color: var(--muted); }
+.rh-dia select {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--input-text);
+  padding: 4px 6px;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+}
+
+/* ── Aviso de migração pendente ── */
+.rh-migracao {
+  margin: 16px;
+  padding: 16px;
+  background: rgba(251,188,4,0.1);
+  border: 1px solid rgba(251,188,4,0.35);
+  border-radius: 8px;
+  color: var(--text-body);
+  font-size: 13px;
+}
+.rh-migracao h4 { margin: 0 0 8px; color: var(--yellow); font-size: 14px; }
+.rh-migracao code {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--input-bg);
+  border-radius: 6px;
+  color: var(--blue);
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .rh-topbar, .rh-filtros, .rh-resumo { padding: 10px 12px; }
+  .rh-abas { width: 100%; }
+  .rh-aba { flex: 1; min-width: 0; padding: 8px 4px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+
+  .rh-filtros { display: grid; grid-template-columns: 1fr 1fr; }
+  .rh-f-busca, .rh-acoes { grid-column: 1 / -1; }
+  .rh-acoes { margin-left: 0; gap: 6px; }
+  .rh-acoes > button { flex: 1; min-width: 0; padding: 9px 4px !important; font-size: 11px !important; white-space: nowrap; }
+
+  /* iOS dá ao input[type=date] largura intrínseca maior que a coluna */
+  .rh-f { overflow: hidden; }
+  .rh-filtros input[type="date"] { font-size: 12px !important; padding: 7px 6px !important; max-width: 100%; }
+
+  .rh-card { flex: 1; min-width: 0; text-align: center; padding: 10px 8px; }
+  .rh-conteudo { padding: 12px; }
+  .rh-dias { grid-template-columns: 1fr 1fr; }
+  .rh-dia { padding: 8px; }
+}
+
+/* Ação de WhatsApp nas linhas (mesma base de .btn-action-sm do index.css) */
+.btn-action-sm.wpp { color: #25d366; border-color: rgba(37,211,102,0.3); }
+.btn-action-sm.wpp:hover { background: rgba(37,211,102,0.15); transform: scale(1.05); }
+
+/* Barra de inserção rápida: no celular o lançamento é feito pelo botão "+ Novo" */
+@media (max-width: 768px) {
+  .rh-qa { display: none !important; }
+}
