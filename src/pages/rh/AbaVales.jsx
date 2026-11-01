@@ -3,7 +3,9 @@ import {
   fmtR, fmtData, isoLocal, primeiroDiaMes, ultimoDiaMes,
   mascaraValor, parseValor, valorParaInput, abrirWhatsApp,
   getLancamentos, salvarLancamento, pagarLancamento, reabrirLancamento, excluirLancamento,
-  resumoPorFuncionario, sinalTipo, TIPOS_LANCAMENTO, LABEL_TIPO,
+  criarLancamentoParcelado, excluirGrupoLancamentos,
+  resumoPorFuncionario, ehDesconto, labelStatus,
+  TIPOS_LANCAMENTO, LABEL_TIPO, FREQUENCIAS, MAX_PARCELAS,
 } from '../../services/rhService'
 import { S, Campo, Modal, ModalConfirma, IconCheck, IconClip, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
 import ModalComprovantes from './ModalComprovantes'
@@ -15,7 +17,7 @@ const FORMAS = ['PIX', 'Dinheiro', 'Transferência', 'Cartão', 'Desconto em fol
 const FORM_VAZIO = {
   funcionario_id: '', tipo: 'VALE', descricao: '', valor: '',
   data_prevista: HOJE, status: 'PENDENTE', data_pagamento: '',
-  forma_pagamento: '', observacao: '',
+  forma_pagamento: '', observacao: '', parcelas: 1, freq: 'mensal',
 }
 
 // Extrato do período para mandar no WhatsApp
@@ -28,20 +30,22 @@ function mensagemExtrato(resumo, lancs, dataIni, dataFim) {
     '',
   ]
   lancs.forEach(l => {
-    const sinal = l.tipo === 'DESCONTO' ? '-' : ''
+    const desconto = ehDesconto(l.tipo)
     const situacao = l.status === 'PAGO'
-      ? `pago${l.data_pagamento ? ' em ' + fmtData(l.data_pagamento) : ''}`
-      : 'a pagar'
+      ? `${desconto ? 'descontado' : 'pago'}${l.data_pagamento ? ' em ' + fmtData(l.data_pagamento) : ''}`
+      : desconto ? 'a descontar' : 'a pagar'
     linhas.push(`• ${fmtData(l.data_prevista)} — ${LABEL_TIPO[l.tipo] || l.tipo}` +
-      `${l.descricao ? ` (${l.descricao})` : ''}: ${sinal}${fmtR(l.valor)} — ${situacao}`)
+      `${l.descricao ? ` (${l.descricao})` : ''}: ${desconto ? '-' : ''}${fmtR(l.valor)} — ${situacao}`)
   })
-  linhas.push(
-    '',
-    `Total já pago: ${fmtR(resumo.pago)}`,
-    `Total a pagar: ${fmtR(resumo.pendente)}`,
-    '',
-    'Qualquer dúvida, me avise!',
-  )
+
+  linhas.push('', `Total já pago: ${fmtR(resumo.pago)}`)
+  if (resumo.descontado) linhas.push(`Total já descontado: ${fmtR(resumo.descontado)}`)
+  linhas.push(`Total a receber: ${fmtR(resumo.aReceber)}`)
+  if (resumo.aDescontar) {
+    linhas.push(`Descontos a aplicar: -${fmtR(resumo.aDescontar)}`)
+    linhas.push(`*Saldo: ${fmtR(resumo.saldo)}*`)
+  }
+  linhas.push('', 'Qualquer dúvida, me avise!')
   return linhas.join('\n')
 }
 
@@ -65,7 +69,10 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
   const [modalComp,  setModalComp]  = useState(null)   // lançamento dos comprovantes
 
   // Quick add
-  const [qa, setQa] = useState({ funcionario_id:'', tipo:'VALE', descricao:'', valor:'', data_prevista:HOJE, pago:false })
+  const [qa, setQa] = useState({
+    funcionario_id:'', tipo:'VALE', descricao:'', valor:'',
+    data_prevista:HOJE, pago:false, parcelas:1, freq:'mensal',
+  })
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
@@ -91,10 +98,10 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
     return termos.every(t => txt.includes(t))
   })
 
-  const totalPendente = filtrados.filter(l => l.status !== 'PAGO')
-    .reduce((s, l) => s + (Number(l.valor) || 0) * sinalTipo(l.tipo), 0)
-  const totalPago = filtrados.filter(l => l.status === 'PAGO')
-    .reduce((s, l) => s + (Number(l.valor) || 0) * sinalTipo(l.tipo), 0)
+  const soma = (fn) => filtrados.filter(fn).reduce((s, l) => s + (Number(l.valor) || 0), 0)
+  const totalPendente  = soma(l => l.status !== 'PAGO' && !ehDesconto(l.tipo))
+  const totalPago      = soma(l => l.status === 'PAGO' && !ehDesconto(l.tipo))
+  const totalDescontar = soma(l => l.status !== 'PAGO' &&  ehDesconto(l.tipo))
 
   const resumos = resumoPorFuncionario(filtrados)
 
@@ -109,9 +116,10 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
   async function salvarQA() {
     if (!qa.funcionario_id) return showToast('Escolha o funcionário.', 'error')
     if (!qa.valor)          return showToast('Informe o valor.', 'error')
+    const parcelas = Math.max(1, parseInt(qa.parcelas, 10) || 1)
     setSalvando(true)
     try {
-      await salvarLancamento(tenantId, {
+      await criarLancamentoParcelado(tenantId, {
         funcionario_id: qa.funcionario_id,
         tipo:           qa.tipo,
         descricao:      qa.descricao.trim() || null,
@@ -119,11 +127,11 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
         data_prevista:  qa.data_prevista || HOJE,
         status:         qa.pago ? 'PAGO' : 'PENDENTE',
         data_pagamento: qa.pago ? (qa.data_prevista || HOJE) : null,
-      })
-      showToast('Lançamento salvo!', 'success')
+      }, { freq: qa.freq, parcelas })
+      showToast(parcelas > 1 ? `${parcelas} parcelas lançadas!` : 'Lançamento salvo!', 'success')
       setAbertos(prev => new Set([...prev, qa.funcionario_id]))
       if (filtroSt !== 'Todos' && filtroSt !== (qa.pago ? 'PAGO' : 'PENDENTE')) setFiltroSt('Todos')
-      setQa(p => ({ ...p, descricao:'', valor:'', pago:false }))
+      setQa(p => ({ ...p, descricao:'', valor:'', pago:false, parcelas:1 }))
       carregar()
     } catch (e) { showToast('Erro ao salvar: ' + e.message, 'error') }
     setSalvando(false)
@@ -145,6 +153,8 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
       data_pagamento:  l.data_pagamento || '',
       forma_pagamento: l.forma_pagamento || '',
       observacao:      l.observacao || '',
+      parcelas:        1,          // edição mexe só nesta parcela
+      freq:            'mensal',
     })
     setModal(l)
   }
@@ -152,10 +162,12 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
   async function salvar() {
     if (!form.funcionario_id) return showToast('Escolha o funcionário.', 'error')
     if (!form.valor)          return showToast('Informe o valor.', 'error')
+    const novo = modal === 'novo'
+    const parcelas = novo ? Math.max(1, parseInt(form.parcelas, 10) || 1) : 1
     setSalvando(true)
     try {
-      await salvarLancamento(tenantId, {
-        id:              modal === 'novo' ? undefined : modal.id,
+      const base = {
+        id:              novo ? undefined : modal.id,
         funcionario_id:  form.funcionario_id,
         tipo:            form.tipo,
         descricao:       form.descricao.trim() || null,
@@ -165,8 +177,15 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
         data_pagamento:  form.status === 'PAGO' ? (form.data_pagamento || form.data_prevista) : null,
         forma_pagamento: form.forma_pagamento || null,
         observacao:      form.observacao.trim() || null,
-      })
-      showToast(modal === 'novo' ? 'Lançamento salvo!' : 'Lançamento atualizado!', 'success')
+      }
+      if (novo) await criarLancamentoParcelado(tenantId, base, { freq: form.freq, parcelas })
+      else      await salvarLancamento(tenantId, base)
+
+      showToast(
+        parcelas > 1 ? `${parcelas} parcelas lançadas!`
+          : novo ? 'Lançamento salvo!' : 'Lançamento atualizado!',
+        'success',
+      )
       setAbertos(prev => new Set([...prev, form.funcionario_id]))
       setModal(null)
       carregar()
@@ -191,10 +210,15 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
     } catch (e) { showToast('Erro: ' + e.message, 'error') }
   }
 
-  async function confirmarExclusao() {
+  async function confirmarExclusao(grupoInteiro = false) {
     try {
-      await excluirLancamento(confirmDel.id)
-      showToast('Lançamento excluído.', 'success')
+      if (grupoInteiro && confirmDel.grupo_id) {
+        await excluirGrupoLancamentos(confirmDel.grupo_id)
+        showToast('Parcelas excluídas.', 'success')
+      } else {
+        await excluirLancamento(confirmDel.id)
+        showToast('Lançamento excluído.', 'success')
+      }
       carregar()
     } catch (e) { showToast('Erro: ' + e.message, 'error') }
     setConfirmDel(null)
@@ -258,6 +282,10 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
           <div className="rh-card-valor" style={{ color:'var(--green)' }}>{fmtR(totalPago)}</div>
         </div>
         <div className="rh-card">
+          <div className="rh-card-label">A descontar</div>
+          <div className="rh-card-valor" style={{ color:'var(--yellow)' }}>{fmtR(totalDescontar)}</div>
+        </div>
+        <div className="rh-card">
           <div className="rh-card-label">Lançamentos</div>
           <div className="rh-card-valor" style={{ color:'var(--blue)' }}>{filtrados.length}</div>
         </div>
@@ -281,6 +309,19 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
           onKeyDown={e => e.key === 'Enter' && salvarQA()} />
         <input type="date" value={qa.data_prevista} onChange={e => setQa(p => ({ ...p, data_prevista: e.target.value }))}
           style={{ ...S.inpS, minWidth:110 }} />
+        <div style={{ display:'flex', alignItems:'center', gap:4, background:'rgba(0,0,0,0.15)', padding:'3px 8px', borderRadius:6, border:'1px solid var(--border-light)' }}>
+          <input type="number" min="1" max={MAX_PARCELAS} value={qa.parcelas}
+            onChange={e => setQa(p => ({ ...p, parcelas: e.target.value }))}
+            onFocus={e => e.target.select()} title="Quantidade de parcelas"
+            style={{ ...S.inpS, width:44, padding:'3px 4px', fontSize:12, fontWeight:700, textAlign:'center' }} />
+          <span style={{ fontSize:12, fontWeight:700, color:'var(--muted)' }}>x</span>
+          {Number(qa.parcelas) > 1 && (
+            <select value={qa.freq} onChange={e => setQa(p => ({ ...p, freq: e.target.value }))}
+              style={{ ...S.inpS, padding:'3px 4px', fontSize:12 }}>
+              {FREQUENCIAS.map(f => <option key={f.v} value={f.v}>{f.l}</option>)}
+            </select>
+          )}
+        </div>
         <label style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, fontWeight:700, color:'var(--green)', cursor:'pointer', whiteSpace:'nowrap' }}>
           <input type="checkbox" checked={qa.pago} onChange={e => setQa(p => ({ ...p, pago: e.target.checked }))}
             style={{ width:13, height:13 }} /> Pago
@@ -316,8 +357,18 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
                         pago <b style={{ color:'var(--green)' }}>{fmtR(r.pago)}</b>
                       </span>
                       <span style={{ fontSize:12, color:'var(--muted)' }}>
-                        a pagar <b style={{ color:'var(--red)' }}>{fmtR(r.pendente)}</b>
+                        a pagar <b style={{ color:'var(--red)' }}>{fmtR(r.aReceber)}</b>
                       </span>
+                      {r.aDescontar > 0 && (
+                        <>
+                          <span style={{ fontSize:12, color:'var(--muted)' }}>
+                            a descontar <b style={{ color:'var(--yellow)' }}>{fmtR(r.aDescontar)}</b>
+                          </span>
+                          <span style={{ fontSize:12, color:'var(--muted)' }}>
+                            saldo <b style={{ color: r.saldo < 0 ? 'var(--red)' : 'var(--green)' }}>{fmtR(r.saldo)}</b>
+                          </span>
+                        </>
+                      )}
                       <button onClick={e => { e.stopPropagation(); enviarExtrato(r) }}
                         className="btn-action-sm wpp" title="Enviar extrato no WhatsApp">
                         <IconWhats />
@@ -331,21 +382,28 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
                       <div className="rh-linha-info">
                         <div className="rh-linha-nome">
                           {LABEL_TIPO[l.tipo] || l.tipo}{l.descricao ? ` — ${l.descricao}` : ''}
+                          {l.total_parcelas > 1 && (
+                            <span className="rh-badge off" style={{ marginLeft:8 }}>
+                              {l.parcela}/{l.total_parcelas}
+                            </span>
+                          )}
                         </div>
                         <div className="rh-linha-sub">
                           {fmtData(l.data_prevista)}
                           {l.forma_pagamento ? ` • ${l.forma_pagamento}` : ''}
                           {l.status === 'PAGO' && l.data_pagamento && (
-                            <span style={{ color:'var(--green)', marginLeft:6 }}>✓ pago {fmtData(l.data_pagamento)}</span>
+                            <span style={{ color:'var(--green)', marginLeft:6 }}>
+                              ✓ {ehDesconto(l.tipo) ? 'descontado' : 'pago'} {fmtData(l.data_pagamento)}
+                            </span>
                           )}
                         </div>
                       </div>
                       <span style={{ fontWeight:700, fontSize:14, flexShrink:0,
-                        color: l.tipo === 'DESCONTO' ? 'var(--red)' : l.status === 'PAGO' ? 'var(--green)' : 'var(--yellow)' }}>
-                        {l.tipo === 'DESCONTO' ? '-' : ''}{fmtR(l.valor)}
+                        color: ehDesconto(l.tipo) ? 'var(--red)' : l.status === 'PAGO' ? 'var(--green)' : 'var(--yellow)' }}>
+                        {ehDesconto(l.tipo) ? '-' : ''}{fmtR(l.valor)}
                       </span>
                       <span className={`rh-badge ${l.status === 'PAGO' ? 'ok' : 'pend'}`}>
-                        {l.status === 'PAGO' ? 'Pago' : 'Pendente'}
+                        {labelStatus(l)}
                       </span>
                       <div className="rh-row-acoes">
                         <button onClick={() => setModalComp(l)}
@@ -358,7 +416,8 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
                         </button>
                         {l.status !== 'PAGO' ? (
                           <button onClick={() => { setModalPagar(l); setDataPag(HOJE); setFormaPag('PIX') }}
-                            className="btn-action-sm send" title="Marcar como pago">
+                            className="btn-action-sm send"
+                            title={ehDesconto(l.tipo) ? 'Marcar como descontado' : 'Marcar como pago'}>
                             <IconCheck />
                           </button>
                         ) : (
@@ -417,17 +476,41 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
               style={S.inp} placeholder="Ex: Vale do dia 10" />
           </Campo>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
-            <Campo label="Data prevista">
+            <Campo label={modal === 'novo' && Number(form.parcelas) > 1 ? 'Primeira parcela em' : 'Data prevista'}>
               <input type="date" value={form.data_prevista}
                 onChange={e => setForm(p => ({ ...p, data_prevista: e.target.value }))} style={S.inp} />
             </Campo>
             <Campo label="Status">
               <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={S.inp}>
-                <option value="PENDENTE">Pendente</option>
-                <option value="PAGO">Pago</option>
+                <option value="PENDENTE">{ehDesconto(form.tipo) ? 'A descontar' : 'Pendente'}</option>
+                <option value="PAGO">{ehDesconto(form.tipo) ? 'Descontado' : 'Pago'}</option>
               </select>
             </Campo>
           </div>
+
+          {modal === 'novo' && (
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+              <Campo label="Parcelas">
+                <input type="number" min="1" max={MAX_PARCELAS} value={form.parcelas}
+                  onChange={e => setForm(p => ({ ...p, parcelas: e.target.value }))}
+                  onFocus={e => e.target.select()} style={S.inp} />
+              </Campo>
+              {Number(form.parcelas) > 1 && (
+                <Campo label="Repetir a cada">
+                  <select value={form.freq} onChange={e => setForm(p => ({ ...p, freq: e.target.value }))} style={S.inp}>
+                    {FREQUENCIAS.map(f => <option key={f.v} value={f.v}>{f.l}</option>)}
+                  </select>
+                </Campo>
+              )}
+            </div>
+          )}
+
+          {modal === 'novo' && Number(form.parcelas) > 1 && (
+            <p style={{ color:'var(--muted)', fontSize:12, margin:0 }}>
+              O valor informado é o de <b>cada parcela</b>: {form.parcelas}x de {fmtR(parseValor(form.valor))} ={' '}
+              <b style={{ color:'var(--text-body)' }}>{fmtR(parseValor(form.valor) * Number(form.parcelas))}</b> no total.
+            </p>
+          )}
           {form.status === 'PAGO' && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
               <Campo label="Data do pagamento">
@@ -483,14 +566,37 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
         />
       )}
 
-      {confirmDel && (
+      {confirmDel && (confirmDel.grupo_id ? (
+        <Modal
+          titulo="Excluir lançamento parcelado"
+          onFechar={() => setConfirmDel(null)}
+          largura={460}
+          footer={
+            <>
+              <button className="btn-cancel" onClick={() => setConfirmDel(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={() => confirmarExclusao(false)}>Só esta</button>
+              <button className="btn-danger" onClick={() => confirmarExclusao(true)}>
+                Todas ({confirmDel.total_parcelas})
+              </button>
+            </>
+          }
+        >
+          <p style={{ margin:0 }}>
+            {LABEL_TIPO[confirmDel.tipo] || confirmDel.tipo}
+            {confirmDel.descricao ? ` — ${confirmDel.descricao}` : ''} de {fmtR(confirmDel.valor)}.
+            <br /><br />
+            Excluir somente a parcela {confirmDel.parcela} ou todas as {confirmDel.total_parcelas} parcelas
+            deste lançamento, inclusive as já quitadas?
+          </p>
+        </Modal>
+      ) : (
         <ModalConfirma
           titulo="Excluir lançamento"
           texto={`Excluir ${LABEL_TIPO[confirmDel.tipo] || confirmDel.tipo} de ${fmtR(confirmDel.valor)}?`}
           onCancelar={() => setConfirmDel(null)}
-          onConfirmar={confirmarExclusao}
+          onConfirmar={() => confirmarExclusao(false)}
         />
-      )}
+      ))}
     </>
   )
 }

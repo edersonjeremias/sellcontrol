@@ -177,7 +177,8 @@ export async function excluirFuncionario(id) {
 // VALES E PAGAMENTOS
 // ════════════════════════════════════════════════════════════════
 export const TIPOS_LANCAMENTO = [
-  'VALE', 'ADIANTAMENTO', 'SALARIO', 'BONUS', 'DESCONTO', 'VALE_TRANSPORTE', 'REEMBOLSO',
+  'VALE', 'ADIANTAMENTO', 'SALARIO', 'BONUS',
+  'COMPRA_LOJA', 'DESCONTO', 'VALE_TRANSPORTE', 'REEMBOLSO',
 ]
 
 export const LABEL_TIPO = {
@@ -185,14 +186,95 @@ export const LABEL_TIPO = {
   ADIANTAMENTO:    'Adiantamento',
   SALARIO:         'Salário',
   BONUS:           'Bônus',
+  COMPRA_LOJA:     'Compra na loja',
   DESCONTO:        'Desconto',
   VALE_TRANSPORTE: 'Vale transporte',
   REEMBOLSO:       'Reembolso',
 }
 
-// DESCONTO abate do que o funcionário recebe; o resto soma
+// Tipos que o funcionário deve à loja: abatem do que ele tem a receber
+export const TIPOS_DESCONTO = ['DESCONTO', 'COMPRA_LOJA']
+
+export function ehDesconto(tipo) {
+  return TIPOS_DESCONTO.includes(tipo)
+}
+
 export function sinalTipo(tipo) {
-  return tipo === 'DESCONTO' ? -1 : 1
+  return ehDesconto(tipo) ? -1 : 1
+}
+
+// "Pago" não descreve um desconto: o que acontece com ele é ser descontado
+export function labelStatus(lanc) {
+  if (lanc.status !== 'PAGO') return ehDesconto(lanc.tipo) ? 'A descontar' : 'Pendente'
+  return ehDesconto(lanc.tipo) ? 'Descontado' : 'Pago'
+}
+
+// ── Parcelamento ───────────────────────────────────────────────
+export const FREQUENCIAS = [
+  { v: 'mensal', l: 'Mensal' },
+  { v: 'quin',   l: 'Quinzenal' },
+  { v: 'sem',    l: 'Semanal' },
+]
+
+export const MAX_PARCELAS = 36
+
+/**
+ * Datas das parcelas a partir da primeira. No mensal, vencimento 29/30/31
+ * cairia no mês seguinte quando o mês é curto, então prende no último dia.
+ */
+export function gerarDatasParcelas(dataBase, freq, parcelas) {
+  const [ano, mes, dia] = String(dataBase).slice(0, 10).split('-').map(Number)
+  return Array.from({ length: parcelas }, (_, i) => {
+    if (freq === 'mensal') {
+      const alvo   = new Date(ano, mes - 1 + i, 1)
+      const ultimo = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate()
+      return isoLocal(new Date(alvo.getFullYear(), alvo.getMonth(), Math.min(dia, ultimo)))
+    }
+    const d = new Date(ano, mes - 1, dia)
+    if (freq === 'quin')     d.setDate(d.getDate() + 15 * i)
+    else if (freq === 'sem') d.setDate(d.getDate() + 7 * i)
+    return isoLocal(d)
+  })
+}
+
+function novoId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  // Navegador antigo sem crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
+  })
+}
+
+/**
+ * Grava uma compra/vale parcelado: uma linha por parcela, todas com o mesmo
+ * grupo_id, cada uma com seu vencimento e seu status próprio.
+ * O valor informado é o da parcela, não o total.
+ */
+export async function criarLancamentoParcelado(tenantId, base, { freq = 'mensal', parcelas = 1 } = {}) {
+  const qtd = Math.min(MAX_PARCELAS, Math.max(1, parseInt(parcelas, 10) || 1))
+  if (qtd === 1) return salvarLancamento(tenantId, base)
+
+  const grupo = novoId()
+  const datas = gerarDatasParcelas(base.data_prevista, freq, qtd)
+  const linhas = datas.map((data, i) => ({
+    ...base,
+    descricao:      `${base.descricao || LABEL_TIPO[base.tipo] || ''} (${i + 1}/${qtd})`.trim(),
+    data_prevista:  data,
+    // Só a primeira parcela pode já nascer quitada
+    status:         i === 0 ? base.status : 'PENDENTE',
+    data_pagamento: i === 0 ? base.data_pagamento : null,
+    grupo_id:       grupo,
+    parcela:        i + 1,
+    total_parcelas: qtd,
+  }))
+  await inserirLancamentosLote(tenantId, linhas)
+  return grupo
+}
+
+export async function excluirGrupoLancamentos(grupoId) {
+  const { error } = await supabase.from('rh_lancamentos').delete().eq('grupo_id', grupoId)
+  if (error) throw error
 }
 
 export async function getLancamentos(tenantId, { dataInicio, dataFim, funcionarioId } = {}) {
@@ -655,7 +737,11 @@ export async function lancarVTComoPagamento(tenantId, periodo, funcionarioNome) 
   })
 }
 
-// Resumo por funcionário usado no painel da aba Vales
+/**
+ * Resumo por funcionário. Receber e descontar ficam separados: somados com
+ * sinal, uma compra parcelada deixava o "a pagar" negativo e ilegível.
+ * `saldo` é o que sobra para o funcionário depois dos descontos pendentes.
+ */
 export function resumoPorFuncionario(lancamentos) {
   const mapa = new Map()
   lancamentos.forEach(l => {
@@ -664,16 +750,25 @@ export function resumoPorFuncionario(lancamentos) {
     if (!mapa.has(key)) {
       mapa.set(key, {
         funcionario_id: key,
-        nome:     f.apelido || f.nome || 'Sem nome',
-        whatsapp: f.whatsapp || '',
-        pendente: 0,
-        pago:     0,
+        nome:       f.apelido || f.nome || 'Sem nome',
+        whatsapp:   f.whatsapp || '',
+        aReceber:   0,
+        aDescontar: 0,
+        pago:       0,
+        descontado: 0,
       })
     }
-    const item = mapa.get(key)
-    const valor = (Number(l.valor) || 0) * sinalTipo(l.tipo)
-    if (l.status === 'PAGO') item.pago += valor
-    else item.pendente += valor
+    const item  = mapa.get(key)
+    const valor = Number(l.valor) || 0
+    if (ehDesconto(l.tipo)) {
+      if (l.status === 'PAGO') item.descontado += valor
+      else                     item.aDescontar += valor
+    } else {
+      if (l.status === 'PAGO') item.pago     += valor
+      else                     item.aReceber += valor
+    }
   })
-  return [...mapa.values()].sort((a, b) => a.nome.localeCompare(b.nome))
+  return [...mapa.values()]
+    .map(r => ({ ...r, saldo: r.aReceber - r.aDescontar }))
+    .sort((a, b) => a.nome.localeCompare(b.nome))
 }
