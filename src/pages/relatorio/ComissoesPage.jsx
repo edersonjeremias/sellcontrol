@@ -51,6 +51,7 @@ export default function ComissoesPage() {
   const [funcionariosRH, setFuncionariosRH] = useState([])
   const [modalRH,        setModalRH]        = useState(null)
   const [salvandoRH,     setSalvandoRH]     = useState(false)
+  const [percentTodas,   setPercentTodas]   = useState('')
 
   useEffect(() => {
     if (!tenantId) return
@@ -206,6 +207,17 @@ export default function ComissoesPage() {
       resultado.sort((a, b) => a.data.localeCompare(b.data))
       setDados(resultado)
 
+      // Percentual do cadastro já preenchido: sem ele nada é calculado e o
+      // relatório fechava zerado até digitar linha a linha.
+      const preenchidos = {}
+      resultado.forEach(item => {
+        const pct = percentualDaVendedora(item.vendedora)
+        if (pct) preenchidos[item.chave] = String(pct)
+      })
+      if (Object.keys(preenchidos).length) {
+        setComissoes(prev => ({ ...preenchidos, ...prev }))
+      }
+
       if (!resultado.length) {
         showToast('Nenhuma venda encontrada no período', 'info')
       }
@@ -241,6 +253,28 @@ export default function ComissoesPage() {
     window.print()
   }
 
+  // Acha o funcionário do RH correspondente à vendedora da live
+  function funcionarioDaVendedora(vendedora) {
+    const alvo = normalizar(vendedora)
+    return (
+      funcionariosRH.find(f => f.nome_live && normalizar(f.nome_live) === alvo) ||
+      funcionariosRH.find(f => f.apelido   && normalizar(f.apelido)   === alvo) ||
+      funcionariosRH.find(f => f.nome      && normalizar(f.nome).includes(alvo))
+    )
+  }
+
+  function percentualDaVendedora(vendedora) {
+    return Number(funcionarioDaVendedora(vendedora)?.comissao_percentual) || 0
+  }
+
+  // Mesmo percentual em todas as linhas de uma vez
+  function aplicarPercentualEmTodas(valor) {
+    setPercentTodas(valor)
+    const novo = {}
+    dados.forEach(item => { novo[item.chave] = valor })
+    setComissoes(novo)
+  }
+
   // ── Lançar a comissão calculada no RH ───────────────────────
   const porVendedora = (() => {
     const mapa = new Map()
@@ -252,19 +286,19 @@ export default function ComissoesPage() {
       atual.liquido  += item.liquido
       atual.comissao += calcValorPagar(item.liquido, item.chave)
     })
+    // Mostra mesmo sem percentual: é assim que se percebe que falta informá-lo
     return [...mapa.values()]
-      .filter(v => v.comissao > 0)
+      .filter(v => v.liquido > 0)
       .sort((a, b) => b.comissao - a.comissao)
   })()
 
   function abrirLancamentoRH(v) {
+    if (!v.comissao) {
+      return showToast('Informe o % de comissão antes de lançar.', 'error')
+    }
     // O nome da live raramente é igual ao nome do cadastro, por isso o campo
     // "Nome nas lives" do funcionário; nome e apelido ficam como alternativa.
-    const alvo = normalizar(v.vendedora)
-    const achado =
-      funcionariosRH.find(f => f.nome_live && normalizar(f.nome_live) === alvo) ||
-      funcionariosRH.find(f => f.apelido   && normalizar(f.apelido)   === alvo) ||
-      funcionariosRH.find(f => f.nome      && normalizar(f.nome).includes(alvo))
+    const achado = funcionarioDaVendedora(v.vendedora)
 
     setModalRH({
       vendedora:      v.vendedora,
@@ -327,6 +361,16 @@ export default function ComissoesPage() {
         }}>
           {carregando ? 'Buscando...' : 'Buscar'}
         </button>
+
+        {dados.length > 0 && (
+          <>
+            <label style={{ fontSize: 12, color: 'var(--muted)' }}>% todas:</label>
+            <input type="number" min="0" max="100" step="0.5" value={percentTodas}
+              onChange={e => aplicarPercentualEmTodas(e.target.value)}
+              title="Aplica o mesmo percentual em todas as linhas"
+              style={{ ...S.inp, width: 70 }} />
+          </>
+        )}
 
         {dados.length > 0 && (
           <button onClick={imprimirPDF} style={{
@@ -495,6 +539,12 @@ export default function ComissoesPage() {
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>
               Comissão por vendedora
             </div>
+            {porVendedora.every(v => !v.comissao) && (
+              <div style={{ fontSize: 12, color: 'var(--yellow)', marginBottom: 8 }}>
+                Nenhum percentual informado. Use o campo <b>% todas</b> no topo, digite linha a linha,
+                ou grave o percentual no cadastro em RH → Funcionários para ele já vir preenchido.
+              </div>
+            )}
             {porVendedora.map(v => (
               <div key={v.vendedora} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 0', borderTop: '1px solid var(--border-light)' }}>
                 <span style={{ flex: 1, minWidth: 140, fontSize: 14, color: 'var(--text-header)', fontWeight: 600 }}>

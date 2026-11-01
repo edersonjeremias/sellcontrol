@@ -11,7 +11,7 @@ const TIPOS_CONTRATO = ['CLT', 'PJ', 'Diarista', 'Freelancer', 'Estágio', 'Temp
 
 const FORM_VAZIO = {
   nome: '', apelido: '', cpf: '', rg: '', whatsapp: '', email: '',
-  cargo: '', setor: '', nome_live: '', data_admissao: '', data_demissao: '',
+  cargo: '', setor: '', nome_live: '', comissao_percentual: '', data_admissao: '', data_demissao: '',
   salario: '', tipo_contrato: 'CLT', dia_pagamento: '',
   chave_pix: '', banco: '', endereco: '',
   dias_trabalho: '1,2,3,4,5', vt_valor_ida: '', vt_valor_volta: '',
@@ -48,6 +48,7 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
       nome: f.nome || '', apelido: f.apelido || '', cpf: f.cpf || '', rg: f.rg || '',
       whatsapp: mascaraTelefone(f.whatsapp || ''), email: f.email || '',
       cargo: f.cargo || '', setor: f.setor || '', nome_live: f.nome_live || '',
+      comissao_percentual: f.comissao_percentual ?? '',
       data_admissao: f.data_admissao || '', data_demissao: f.data_demissao || '',
       salario: valorParaInput(f.salario), tipo_contrato: f.tipo_contrato || 'CLT',
       dia_pagamento: f.dia_pagamento ?? '',
@@ -80,6 +81,7 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
         cargo:          form.cargo.trim() || null,
         setor:          form.setor.trim() || null,
         nome_live:      form.nome_live.trim() || null,
+        comissao_percentual: form.comissao_percentual === '' ? 0 : Number(form.comissao_percentual) || 0,
         data_admissao:  form.data_admissao || null,
         data_demissao:  form.data_demissao || null,
         salario:        parseValor(form.salario),
@@ -244,9 +246,14 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
               <input value={form.setor} onChange={e => setForm(p => ({ ...p, setor: e.target.value }))}
                 style={S.inp} placeholder="Ex: Produção" />
             </Campo>
-            <Campo label="Nome nas lives" span={2}>
+            <Campo label="Nome nas lives">
               <input value={form.nome_live} onChange={e => setForm(p => ({ ...p, nome_live: e.target.value }))}
                 style={S.inp} placeholder="Como aparece no relatório de comissões" />
+            </Campo>
+            <Campo label="% de comissão">
+              <input type="number" min="0" max="100" step="0.5" value={form.comissao_percentual}
+                onChange={e => setForm(p => ({ ...p, comissao_percentual: e.target.value }))}
+                style={S.inp} placeholder="Ex: 3" />
             </Campo>
             <Campo label="Tipo de contrato">
               <select value={form.tipo_contrato} onChange={e => setForm(p => ({ ...p, tipo_contrato: e.target.value }))} style={S.inp}>
