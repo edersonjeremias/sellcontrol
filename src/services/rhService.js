@@ -577,40 +577,49 @@ export function montarDiasVT({ funcionario, dataInicio, dataFim, feriados = [], 
 /**
  * Totais do período. Dia fora da escala (FOLGA) não entra no bruto nem no
  * líquido; feriado e falta entram no bruto e viram desconto.
+ *
+ * Linhas com `ajuste` são dias de períodos já pagos que só agora estão sendo
+ * descontados (a funcionária não usou a volta em 20/10 e isso é cobrado no
+ * pagamento de novembro). Elas não entram no valor cheio — só abatem.
  */
 export function calcularTotaisVT(dias, valorIda, valorVolta) {
   const vIda   = Number(valorIda)   || 0
   const vVolta = Number(valorVolta) || 0
-  const uteis  = dias.filter(d => d.dia_util !== false)
+  const uteis   = dias.filter(d => !d.ajuste && d.dia_util !== false)
+  const ajustes = dias.filter(d => d.ajuste)
 
-  const totalBruto = uteis.length * (vIda + vVolta)
-  const totalLiquido = uteis.reduce((s, d) =>
-    s + (d.ida ? vIda : 0) + (d.volta ? vVolta : 0), 0)
+  const linhaDesconto = (d) => ({
+    data:   d.data,
+    motivo: d.motivo || 'NAO_USOU',
+    ida:    !d.ida,
+    volta:  !d.volta,
+    valor:  (d.ida ? 0 : vIda) + (d.volta ? 0 : vVolta),
+    observacao: d.observacao || '',
+  })
 
-  const descontos = uteis
-    .filter(d => !d.ida || !d.volta)
-    .map(d => ({
-      data:   d.data,
-      motivo: d.motivo || 'NAO_USOU',
-      ida:    !d.ida,
-      volta:  !d.volta,
-      valor:  (d.ida ? 0 : vIda) + (d.volta ? 0 : vVolta),
-    }))
+  const descontos       = uteis.filter(d => !d.ida || !d.volta).map(linhaDesconto)
+  const descontosAjuste = ajustes.filter(d => !d.ida || !d.volta).map(linhaDesconto)
+
+  const totalBruto      = uteis.length * (vIda + vVolta)
+  const descontoPeriodo = descontos.reduce((s, d) => s + d.valor, 0)
+  const descontoAjustes = descontosAjuste.reduce((s, d) => s + d.valor, 0)
 
   return {
     diasUteis:      uteis.length,
     diasPagos:      uteis.filter(d => d.ida || d.volta).length,
     totalBruto,
-    totalLiquido,
-    totalDescontos: totalBruto - totalLiquido,
+    totalLiquido:   totalBruto - descontoPeriodo - descontoAjustes,
+    totalDescontos: descontoPeriodo + descontoAjustes,
     descontos,
+    descontosAjuste,
   }
 }
 
 export function textoDesconto(desc) {
   const trecho = desc.ida && desc.volta ? 'ida e volta' : desc.ida ? 'ida' : 'volta'
   const motivo = LABEL_MOTIVO_VT[desc.motivo] || 'Desconto'
-  return `${fmtData(desc.data)} — ${motivo} (${trecho}) -${fmtR(desc.valor)}`
+  return `${fmtData(desc.data)} — ${motivo} (${trecho}) -${fmtR(desc.valor)}` +
+    (desc.observacao ? ` — ${desc.observacao}` : '')
 }
 
 /** Mensagem de WhatsApp com os valores, dias e descontos do período */
@@ -626,9 +635,18 @@ export function mensagemVT({ funcionario, dataInicio, dataFim, valorIda, valorVo
     `Valor cheio do período: ${fmtR(totais.totalBruto)}`,
   ]
 
-  if (totais.descontos.length) {
+  const ajustes = totais.descontosAjuste || []
+
+  if (totais.descontos.length || ajustes.length) {
     linhas.push('', `*Descontos: -${fmtR(totais.totalDescontos)}*`)
     totais.descontos.forEach(d => linhas.push(`• ${textoDesconto(d)}`))
+
+    // Dias de períodos anteriores saem em bloco próprio: no corrido, a data
+    // de outubro no meio dos dias de novembro parece erro de lançamento.
+    if (ajustes.length) {
+      linhas.push('', '*Ajustes de dias anteriores:*')
+      ajustes.forEach(d => linhas.push(`• ${textoDesconto(d)}`))
+    }
   } else {
     linhas.push('', 'Nenhum desconto no período.')
   }
@@ -693,7 +711,9 @@ export async function salvarPeriodoVT(tenantId, periodo, dias) {
     ida:        !!d.ida,
     volta:      !!d.volta,
     // dia_util é derivado da escala; guardamos como FOLGA para reconstruir o grid
-    motivo:     d.dia_util === false ? 'FOLGA' : (d.motivo || null),
+    motivo:     d.dia_util === false && !d.ajuste ? 'FOLGA' : (d.motivo || null),
+    ajuste:     !!d.ajuste,
+    observacao: d.observacao || null,
   }))
 
   if (rows.length) {

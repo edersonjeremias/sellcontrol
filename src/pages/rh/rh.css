@@ -394,3 +394,42 @@
   .rh-topbar-dir { margin-left: 0; width: 100%; }
   .rh-topbar-dir select { flex: 1; min-width: 0; }
 }
+
+/* ── Ajustes de dias anteriores no vale transporte ── */
+.rh-ajustes {
+  margin-top: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.rh-ajustes-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.rh-ajustes-titulo {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.rh-ajustes-sub { font-size: 12px; color: var(--muted); margin-top: 4px; max-width: 620px; }
+
+.rh-ajuste {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 0 0;
+  margin-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+@media (max-width: 768px) {
+  .rh-ajustes-top { flex-direction: column; }
+  .rh-ajustes-top button { width: 100%; }
+  .rh-ajuste > input[type="date"] { flex: 1; }
+}

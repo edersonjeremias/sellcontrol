@@ -152,12 +152,14 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
         data_pagamento: p.data_pagamento || '',
         observacao:     p.observacao || '',
         dias: dias.map(d => ({
-          data:     String(d.data).slice(0, 10),
-          ida:      !!d.ida,
-          volta:    !!d.volta,
-          motivo:   d.motivo === 'FOLGA' ? 'FOLGA' : (d.motivo || ''),
+          data:       String(d.data).slice(0, 10),
+          ida:        !!d.ida,
+          volta:      !!d.volta,
+          motivo:     d.motivo === 'FOLGA' ? 'FOLGA' : (d.motivo || ''),
           // FOLGA é dia fora da escala: não entra no valor cheio do período
-          dia_util: d.motivo !== 'FOLGA',
+          dia_util:   d.motivo !== 'FOLGA',
+          ajuste:     !!d.ajuste,
+          observacao: d.observacao || '',
         })),
       })
     } catch (e) { showToast('Erro ao abrir período: ' + e.message, 'error') }
@@ -188,11 +190,32 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
     return setDia(dia.data, { motivo, ida:false, volta:false, dia_util:true })
   }
 
+  // ── Ajustes de dias anteriores ──────────────────────────────
+  // Dia de um período já pago que só agora está sendo descontado.
+  function adicionarAjuste() {
+    const vespera = isoLocal(new Date(dataLocal(editor.data_inicio).getTime() - 86400000))
+    setEditor(p => ({
+      ...p,
+      dias: [...p.dias, {
+        data: vespera, ida: true, volta: false,
+        motivo: 'NAO_USOU', dia_util: true, ajuste: true, observacao: '',
+      }],
+    }))
+  }
+
+  function patchAjuste(indice, patch) {
+    setEditor(p => ({ ...p, dias: p.dias.map((d, i) => (i === indice ? { ...d, ...patch } : d)) }))
+  }
+
+  function removerAjuste(indice) {
+    setEditor(p => ({ ...p, dias: p.dias.filter((_, i) => i !== indice) }))
+  }
+
   function marcarTodos(valor) {
     setEditor(p => ({
       ...p,
       dias: p.dias.map(d => {
-        if (d.dia_util === false) return d
+        if (d.ajuste || d.dia_util === false) return d
         if (valor) return { ...d, ida:true, volta:true, motivo: d.motivo === 'NAO_USOU' ? '' : d.motivo }
         return { ...d, ida:false, volta:false, motivo: d.motivo || 'NAO_USOU' }
       }),
@@ -207,6 +230,20 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
   async function salvar({ lancarPagamento = false } = {}) {
     if (!editor.funcionario_id) return showToast('Escolha o funcionário.', 'error')
     if (!editor.dias.length)    return showToast('Gere os dias do período antes de salvar.', 'error')
+
+    // Cada data entra uma vez só no período (há índice único periodo+data)
+    const datasPeriodo = new Set(editor.dias.filter(d => !d.ajuste).map(d => d.data))
+    const vistas = new Set()
+    for (const a of editor.dias.filter(d => d.ajuste)) {
+      if (!a.data) return showToast('Informe a data de todos os ajustes.', 'error')
+      if (datasPeriodo.has(a.data)) {
+        return showToast(`${fmtData(a.data)} está dentro do período — desmarque a ida ou a volta no calendário.`, 'error')
+      }
+      if (vistas.has(a.data)) {
+        return showToast(`Há dois ajustes em ${fmtData(a.data)}. Use um só por dia.`, 'error')
+      }
+      vistas.add(a.data)
+    }
     setSalvando(true)
     try {
       const periodo = {
@@ -262,11 +299,13 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
     try {
       const dias = await getDiasVT(p.id)
       const normalizados = dias.map(d => ({
-        data:     String(d.data).slice(0, 10),
-        ida:      !!d.ida,
-        volta:    !!d.volta,
-        motivo:   d.motivo || '',
-        dia_util: d.motivo !== 'FOLGA',
+        data:       String(d.data).slice(0, 10),
+        ida:        !!d.ida,
+        volta:      !!d.volta,
+        motivo:     d.motivo || '',
+        dia_util:   d.motivo !== 'FOLGA',
+        ajuste:     !!d.ajuste,
+        observacao: d.observacao || '',
       }))
       const totaisP = calcularTotaisVT(normalizados, p.valor_ida, p.valor_volta)
       const url = urlWhatsApp(func.whatsapp, mensagemVT({
@@ -394,7 +433,7 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
                 </span>
               </div>
 
-              {montarCalendario(editor.dias).map(mes => (
+              {montarCalendario(editor.dias.filter(d => !d.ajuste)).map(mes => (
                 <div key={mes.chave} className="rh-cal-mes">
                   <div className="rh-cal-titulo">{mes.label}</div>
                   <div className="rh-cal-dows">
@@ -441,7 +480,61 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
                 </div>
               ))}
 
-              {totais.descontos.length > 0 && (
+              {/* Dias de períodos já pagos, descontados agora com a data original */}
+              <div className="rh-ajustes">
+                <div className="rh-ajustes-top">
+                  <div>
+                    <div className="rh-ajustes-titulo">Ajustes de dias anteriores</div>
+                    <div className="rh-ajustes-sub">
+                      Dia de um período já pago que só agora vai ser descontado. Entra com a data
+                      original e não muda o valor cheio deste período.
+                    </div>
+                  </div>
+                  <button onClick={adicionarAjuste} style={{ ...S.sec, padding:'6px 12px', fontSize:13, whiteSpace:'nowrap' }}>
+                    + Adicionar ajuste
+                  </button>
+                </div>
+
+                {editor.dias.map((d, i) => ({ d, i })).filter(x => x.d.ajuste).map(({ d, i }) => {
+                  const valor = (d.ida ? 0 : vIda) + (d.volta ? 0 : vVolta)
+                  return (
+                    <div key={`ajuste-${i}`} className="rh-ajuste">
+                      <input type="date" value={d.data}
+                        onChange={e => patchAjuste(i, { data: e.target.value })}
+                        style={{ ...S.inpS, minWidth:140 }} />
+                      <label className="rh-dia-check">
+                        <input type="checkbox" checked={!d.ida}
+                          onChange={e => patchAjuste(i, { ida: !e.target.checked })} />
+                        Descontar ida
+                      </label>
+                      <label className="rh-dia-check">
+                        <input type="checkbox" checked={!d.volta}
+                          onChange={e => patchAjuste(i, { volta: !e.target.checked })} />
+                        Descontar volta
+                      </label>
+                      <select value={d.motivo || 'NAO_USOU'}
+                        onChange={e => patchAjuste(i, { motivo: e.target.value })}
+                        style={{ ...S.inpS, minWidth:130 }}>
+                        {MOTIVOS.filter(m => m).map(m => (
+                          <option key={m} value={m}>{LABEL_MOTIVO_VT[m] || m}</option>
+                        ))}
+                      </select>
+                      <input value={d.observacao || ''}
+                        onChange={e => patchAjuste(i, { observacao: e.target.value })}
+                        placeholder="Observação (opcional)"
+                        style={{ ...S.inpS, flex:1, minWidth:120 }} />
+                      <span style={{ fontWeight:700, fontSize:13, color: valor ? 'var(--red)' : 'var(--muted)', whiteSpace:'nowrap' }}>
+                        -{fmtR(valor)}
+                      </span>
+                      <button onClick={() => removerAjuste(i)} className="btn-action-sm del" title="Remover ajuste">
+                        <IconTrash />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {(totais.descontos.length > 0 || totais.descontosAjuste.length > 0) && (
                 <div style={{ marginTop:18, background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'12px 16px' }}>
                   <div style={{ fontSize:12, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.4px', marginBottom:8 }}>
                     Descontos do período
@@ -457,6 +550,26 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
                       <span style={{ color:'var(--red)', fontWeight:700 }}>-{fmtR(d.valor)}</span>
                     </div>
                   ))}
+
+                  {totais.descontosAjuste.length > 0 && (
+                    <>
+                      <div style={{ fontSize:12, fontWeight:700, color:'var(--muted)', textTransform:'uppercase', letterSpacing:'0.4px', margin:'10px 0 4px' }}>
+                        Dias anteriores
+                      </div>
+                      {totais.descontosAjuste.map(d => (
+                        <div key={`aj-${d.data}`} style={{ display:'flex', justifyContent:'space-between', fontSize:13, color:'var(--text-body)', padding:'3px 0' }}>
+                          <span>
+                            {fmtData(d.data)} — {LABEL_MOTIVO_VT[d.motivo] || 'Desconto'}
+                            <small style={{ color:'var(--muted)', marginLeft:6 }}>
+                              ({d.ida && d.volta ? 'ida e volta' : d.ida ? 'ida' : 'volta'})
+                              {d.observacao ? ` • ${d.observacao}` : ''}
+                            </small>
+                          </span>
+                          <span style={{ color:'var(--red)', fontWeight:700 }}>-{fmtR(d.valor)}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
 
