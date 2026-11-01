@@ -319,6 +319,15 @@ export async function criarLancamentoParcelado(tenantId, base, { freq = 'mensal'
   return grupo
 }
 
+/** Move lançamentos já existentes para outro acerto (ex.: vales de outubro
+ *  que só serão descontados no pagamento de novembro). */
+export async function moverParaCompetencia(ids, competencia) {
+  if (!ids?.length) return
+  const { error } = await supabase.from('rh_lancamentos')
+    .update({ competencia }).in('id', ids)
+  if (error) throw error
+}
+
 export async function excluirGrupoLancamentos(grupoId) {
   const { error } = await supabase.from('rh_lancamentos').delete().eq('grupo_id', grupoId)
   if (error) throw error

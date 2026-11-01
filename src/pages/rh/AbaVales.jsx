@@ -5,7 +5,7 @@ import {
   getLancamentos, salvarLancamento, pagarLancamento, reabrirLancamento, excluirLancamento,
   criarLancamentoParcelado, excluirGrupoLancamentos,
   resumoPorFuncionario, ehDesconto, labelStatus,
-  competenciaDe, formatarCompetencia, competenciaCurta,
+  competenciaDe, formatarCompetencia, competenciaCurta, moverParaCompetencia,
   TIPOS_LANCAMENTO, LABEL_TIPO, FREQUENCIAS, MAX_PARCELAS,
 } from '../../services/rhService'
 import { S, Campo, Modal, ModalConfirma, IconCheck, IconClip, IconEdit, IconRecibo, IconTrash, IconUndo, IconWhats } from './RhUI'
@@ -72,6 +72,8 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
   const [dataPag,    setDataPag]    = useState(HOJE)
   const [formaPag,   setFormaPag]   = useState('PIX')
   const [modalComp,  setModalComp]  = useState(null)   // lançamento dos comprovantes
+  // Trazer lançamentos de outro acerto para o acerto filtrado
+  const [modalTrazer, setModalTrazer] = useState(null) // { origem, itens, sel, carregando }
 
   // Quick add
   const [qa, setQa] = useState({
@@ -244,6 +246,47 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
     setConfirmDel(null)
   }
 
+  // ── Trazer lançamentos de outro acerto ──────────────────────
+  function mesAnterior(comp) {
+    const [ano, mes] = comp.split('-').map(Number)
+    const d = new Date(ano, mes - 2, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  }
+
+  async function abrirTrazer(origem) {
+    const mes = origem || mesAnterior(competencia)
+    setModalTrazer({ origem: mes, itens: [], sel: new Set(), carregando: true })
+    try {
+      const { data } = await getLancamentos(tenantId, {
+        competencia:   `${mes}-01`,
+        funcionarioId: filtroFunc || undefined,
+      })
+      setModalTrazer(p => (p ? { ...p, itens: data, carregando: false } : p))
+    } catch (e) {
+      showToast('Erro ao buscar: ' + e.message, 'error')
+      setModalTrazer(p => (p ? { ...p, carregando: false } : p))
+    }
+  }
+
+  function alternarSelTrazer(id) {
+    setModalTrazer(p => {
+      const sel = new Set(p.sel)
+      sel.has(id) ? sel.delete(id) : sel.add(id)
+      return { ...p, sel }
+    })
+  }
+
+  async function confirmarTrazer() {
+    const ids = [...modalTrazer.sel]
+    if (!ids.length) return showToast('Marque os lançamentos que vão entrar neste acerto.', 'error')
+    try {
+      await moverParaCompetencia(ids, `${competencia}-01`)
+      showToast(`${ids.length} ${ids.length === 1 ? 'lançamento movido' : 'lançamentos movidos'} para ${formatarCompetencia(`${competencia}-01`)}.`, 'success')
+      setModalTrazer(null)
+      carregar()
+    } catch (e) { showToast('Erro ao mover: ' + e.message, 'error') }
+  }
+
   function gerarRecibo(resumo) {
     const doFunc = filtrados.filter(l => l.funcionario_id === resumo.funcionario_id)
     if (!doFunc.length) return showToast('Nenhum lançamento no período.', 'error')
@@ -314,6 +357,12 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
         </div>
         <div className="rh-acoes">
           <button onClick={carregar} style={{ ...S.btn, padding:'5px 14px' }}>Filtrar</button>
+          {competencia && (
+            <button onClick={() => abrirTrazer()} style={{ ...S.sec, padding:'5px 14px' }}
+              title="Puxar lançamentos de outro mês para este acerto">
+              Trazer de outro mês
+            </button>
+          )}
           <button onClick={abrirNovo} style={{ ...S.ok, padding:'5px 14px' }}>+ Novo</button>
         </div>
       </div>
@@ -617,6 +666,74 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
               {FORMAS.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
           </Campo>
+        </Modal>
+      )}
+
+      {modalTrazer && (
+        <Modal
+          titulo={`Trazer para o acerto de ${formatarCompetencia(`${competencia}-01`)}`}
+          onFechar={() => setModalTrazer(null)}
+          largura={620}
+          footer={
+            <>
+              <button className="btn-cancel" onClick={() => setModalTrazer(null)}>Cancelar</button>
+              <button className="btn-confirm" onClick={confirmarTrazer}>
+                Mover {modalTrazer.sel.size || ''}
+              </button>
+            </>
+          }
+        >
+          <Campo label="Buscar no acerto de">
+            <input type="month" value={modalTrazer.origem}
+              onChange={e => abrirTrazer(e.target.value)} style={S.inp} />
+          </Campo>
+
+          {modalTrazer.carregando ? (
+            <p style={{ color:'var(--muted)', margin:0 }}>Carregando…</p>
+          ) : !modalTrazer.itens.length ? (
+            <p style={{ color:'var(--muted)', margin:0 }}>Nenhum lançamento nesse acerto.</p>
+          ) : (
+            <>
+              <button
+                onClick={() => setModalTrazer(p => ({
+                  ...p,
+                  sel: p.sel.size === p.itens.length ? new Set() : new Set(p.itens.map(i => i.id)),
+                }))}
+                style={{ ...S.sec, padding:'5px 12px', fontSize:12, justifySelf:'start' }}>
+                {modalTrazer.sel.size === modalTrazer.itens.length ? 'Desmarcar todos' : 'Marcar todos'}
+              </button>
+
+              <div style={{ display:'grid', gap:2 }}>
+                {modalTrazer.itens.map(l => {
+                  const f = l.funcionarios || {}
+                  const marcado = modalTrazer.sel.has(l.id)
+                  return (
+                    <label key={l.id} style={{
+                      display:'flex', alignItems:'center', gap:10, padding:'8px 10px',
+                      background: marcado ? 'rgba(138,180,248,0.1)' : 'var(--card-bg)',
+                      border:'1px solid var(--border-light)', borderRadius:6, cursor:'pointer',
+                    }}>
+                      <input type="checkbox" checked={marcado}
+                        onChange={() => alternarSelTrazer(l.id)} style={{ width:14, height:14 }} />
+                      <span style={{ flex:1, minWidth:0 }}>
+                        <span style={{ fontSize:13, color:'var(--text-header)' }}>
+                          {f.apelido || f.nome} — {LABEL_TIPO[l.tipo] || l.tipo}
+                          {l.descricao ? ` (${l.descricao})` : ''}
+                        </span>
+                        <span style={{ display:'block', fontSize:11, color:'var(--muted)' }}>
+                          {fmtData(l.data_prevista)} • {labelStatus(l)}
+                        </span>
+                      </span>
+                      <span style={{ fontWeight:700, fontSize:13, whiteSpace:'nowrap',
+                        color: ehDesconto(l.tipo) ? 'var(--red)' : 'var(--green)' }}>
+                        {ehDesconto(l.tipo) ? '-' : ''}{fmtR(l.valor)}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </Modal>
       )}
 
