@@ -43,6 +43,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
   const [form, setForm]         = useState({
     mp_access_token: '',
     nome_loja: '',
+    cnpj: '',
     whatsapp: '',
     email_contato: '',
     link_frete: '',
@@ -76,6 +77,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
         setForm({
           mp_access_token: cfg.mp_access_token || '',
           nome_loja: cfg.nome_loja || '',
+          cnpj: cfg.cnpj || '',
           whatsapp: cfg.whatsapp || '',
           email_contato: cfg.email_contato || '',
           link_frete: cfg.link_frete || '',
@@ -159,6 +161,23 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           placeholder="Ex: VM Kids"
           style={SI}
         />
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>CNPJ da empresa</label>
+        <input
+          type="text"
+          value={form.cnpj}
+          onChange={e => setForm(p => ({ ...p, cnpj: e.target.value }))}
+          placeholder="00.000.000/0001-00"
+          style={SI}
+          autoComplete="off"
+          name="loja-cnpj"
+          data-form-type="other"
+        />
+        <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+          Sai no cabeçalho do recibo de pagamento do RH.
+        </span>
       </div>
 
       <div style={{ marginBottom: 20 }}>

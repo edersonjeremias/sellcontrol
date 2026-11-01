@@ -98,12 +98,15 @@ export function gerarReciboPdf({
   doc.setFont('helvetica', 'normal')
   doc.text(String(empresa.nome_loja || empresa.nome || '—'), margem + 26, y)
 
-  if (empresa.cpf_cnpj) {
+  // configuracoes.cpf_cnpj é o documento do remetente (muitas vezes o CPF do
+  // dono); o da empresa é configuracoes.cnpj. O rótulo segue o que veio.
+  const docEmpresa = soNumeros(empresa.cnpj || empresa.cpf_cnpj)
+  if (docEmpresa) {
     y += 6
     doc.setFont('helvetica', 'bold')
-    doc.text('CNPJ:', margem, y)
+    doc.text(docEmpresa.length === 11 ? 'CPF:' : 'CNPJ:', margem, y)
     doc.setFont('helvetica', 'normal')
-    doc.text(fmtCnpj(empresa.cpf_cnpj), margem + 26, y)
+    doc.text(docEmpresa.length === 11 ? fmtCpf(docEmpresa) : fmtCnpj(docEmpresa), margem + 26, y)
   }
 
   // Funcionário
