@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import { getFuncionarios, getDestinoWhats, setDestinoWhats } from '../../services/rhService'
+import { getConfig } from '../../services/configService'
 import AbaFuncionarios from './AbaFuncionarios'
 import AbaVales from './AbaVales'
 import AbaOcorrencias from './AbaOcorrencias'
@@ -26,6 +27,7 @@ export default function RhPage() {
   const [funcionarios, setFuncionarios] = useState([])
   const [semTabela,    setSemTabela]    = useState(false)
   const [carregando,   setCarregando]   = useState(true)
+  const [empresa,      setEmpresa]      = useState(null)   // cabeçalho do recibo
 
   const carregarFuncionarios = useCallback(async () => {
     if (!tenantId) return
@@ -42,7 +44,12 @@ export default function RhPage() {
 
   useEffect(() => { carregarFuncionarios() }, [carregarFuncionarios])
 
-  const props = { tenantId, showToast, funcionarios, recarregarFuncionarios: carregarFuncionarios }
+  useEffect(() => {
+    if (!tenantId) return
+    getConfig(tenantId).then(setEmpresa).catch(() => setEmpresa(null))
+  }, [tenantId])
+
+  const props = { tenantId, showToast, funcionarios, empresa, recarregarFuncionarios: carregarFuncionarios }
 
   return (
     <AppShell title="RH" hideTitle>

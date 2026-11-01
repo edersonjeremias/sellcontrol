@@ -7,7 +7,8 @@ import {
   resumoPorFuncionario, ehDesconto, labelStatus,
   TIPOS_LANCAMENTO, LABEL_TIPO, FREQUENCIAS, MAX_PARCELAS,
 } from '../../services/rhService'
-import { S, Campo, Modal, ModalConfirma, IconCheck, IconClip, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
+import { S, Campo, Modal, ModalConfirma, IconCheck, IconClip, IconEdit, IconRecibo, IconTrash, IconUndo, IconWhats } from './RhUI'
+import { gerarReciboPdf } from './reciboPdf'
 import ModalComprovantes from './ModalComprovantes'
 
 const HOJE = isoLocal(new Date())
@@ -49,7 +50,7 @@ function mensagemExtrato(resumo, lancs, dataIni, dataFim) {
   return linhas.join('\n')
 }
 
-export default function AbaVales({ tenantId, showToast, funcionarios }) {
+export default function AbaVales({ tenantId, showToast, funcionarios, empresa }) {
   const [lancs,      setLancs]      = useState([])
   const [carregando, setCarregando] = useState(false)
   const [dataIni,    setDataIni]    = useState(primeiroDiaMes)
@@ -224,6 +225,24 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
     setConfirmDel(null)
   }
 
+  function gerarRecibo(resumo) {
+    const doFunc = filtrados.filter(l => l.funcionario_id === resumo.funcionario_id)
+    if (!doFunc.length) return showToast('Nenhum lançamento no período.', 'error')
+    const func = funcionarios.find(f => f.id === resumo.funcionario_id) || { nome: resumo.nome }
+    try {
+      gerarReciboPdf({
+        empresa:    empresa || {},
+        funcionario: func,
+        dataInicio: dataIni,
+        dataFim,
+        lancamentos: doFunc,
+      })
+      showToast('Recibo gerado!', 'success')
+    } catch (e) {
+      showToast('Erro ao gerar o recibo: ' + e.message, 'error')
+    }
+  }
+
   function enviarExtrato(resumo) {
     const doFunc = filtrados
       .filter(l => l.funcionario_id === resumo.funcionario_id)
@@ -369,6 +388,10 @@ export default function AbaVales({ tenantId, showToast, funcionarios }) {
                           </span>
                         </>
                       )}
+                      <button onClick={e => { e.stopPropagation(); gerarRecibo(r) }}
+                        className="btn-action-sm copy" title="Gerar recibo em PDF">
+                        <IconRecibo />
+                      </button>
                       <button onClick={e => { e.stopPropagation(); enviarExtrato(r) }}
                         className="btn-action-sm wpp" title="Enviar extrato no WhatsApp">
                         <IconWhats />

@@ -4,8 +4,16 @@ import { hojeISO, toDateOnly } from '../../lib/datas'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import { supabase } from '../../lib/supabase'
+import {
+  getFuncionarios, salvarLancamento, mascaraValor, parseValor, valorParaInput,
+} from '../../services/rhService'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+
+// Compara nome de live com nome de cadastro ignorando acento e caixa
+function normalizar(txt) {
+  return String(txt || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
 
 // Formata valor monetário
 function fmtR(val) {
@@ -38,6 +46,18 @@ export default function ComissoesPage() {
   const [comissoes, setComissoes] = useState({}) // { "chave": percentual }
   const [carregando, setCarregando] = useState(false)
   const [nomeEmpresa, setNomeEmpresa] = useState('')
+
+  // Lançamento da comissão no módulo RH
+  const [funcionariosRH, setFuncionariosRH] = useState([])
+  const [modalRH,        setModalRH]        = useState(null)
+  const [salvandoRH,     setSalvandoRH]     = useState(false)
+
+  useEffect(() => {
+    if (!tenantId) return
+    getFuncionarios(tenantId, { incluirInativos: false })
+      .then(({ data }) => setFuncionariosRH(data))
+      .catch(() => setFuncionariosRH([]))
+  }, [tenantId])
 
   // Busca nome da empresa
   useEffect(() => {
@@ -219,6 +239,63 @@ export default function ComissoesPage() {
   // Imprimir PDF
   function imprimirPDF() {
     window.print()
+  }
+
+  // ── Lançar a comissão calculada no RH ───────────────────────
+  const porVendedora = (() => {
+    const mapa = new Map()
+    dados.forEach(item => {
+      if (!mapa.has(item.vendedora)) {
+        mapa.set(item.vendedora, { vendedora: item.vendedora, liquido: 0, comissao: 0 })
+      }
+      const atual = mapa.get(item.vendedora)
+      atual.liquido  += item.liquido
+      atual.comissao += calcValorPagar(item.liquido, item.chave)
+    })
+    return [...mapa.values()]
+      .filter(v => v.comissao > 0)
+      .sort((a, b) => b.comissao - a.comissao)
+  })()
+
+  function abrirLancamentoRH(v) {
+    // O nome da live raramente é igual ao nome do cadastro, por isso o campo
+    // "Nome nas lives" do funcionário; nome e apelido ficam como alternativa.
+    const alvo = normalizar(v.vendedora)
+    const achado =
+      funcionariosRH.find(f => f.nome_live && normalizar(f.nome_live) === alvo) ||
+      funcionariosRH.find(f => f.apelido   && normalizar(f.apelido)   === alvo) ||
+      funcionariosRH.find(f => f.nome      && normalizar(f.nome).includes(alvo))
+
+    setModalRH({
+      vendedora:      v.vendedora,
+      funcionario_id: achado?.id || '',
+      valor:          valorParaInput(v.comissao),
+      data:           dataFim,
+      descricao:      `Comissão ${fmtData(dataInicio)} a ${fmtData(dataFim)}`,
+    })
+  }
+
+  async function confirmarLancamentoRH() {
+    if (!modalRH.funcionario_id) return showToast('Escolha o funcionário.', 'error')
+    const valor = parseValor(modalRH.valor)
+    if (!valor) return showToast('Informe o valor da comissão.', 'error')
+
+    setSalvandoRH(true)
+    try {
+      await salvarLancamento(tenantId, {
+        funcionario_id: modalRH.funcionario_id,
+        tipo:           'COMISSAO',
+        descricao:      modalRH.descricao.trim() || null,
+        valor,
+        data_prevista:  modalRH.data,
+        status:         'PENDENTE',
+      })
+      showToast('Comissão lançada no RH!', 'success')
+      setModalRH(null)
+    } catch (e) {
+      showToast('Erro ao lançar: ' + e.message, 'error')
+    }
+    setSalvandoRH(false)
   }
 
   const S = {
@@ -411,7 +488,97 @@ export default function ComissoesPage() {
             </table>
           </div>
         )}
+
+        {/* Fecha o ciclo: o que foi calculado aqui vira lançamento no RH */}
+        {porVendedora.length > 0 && (
+          <div className="print:hidden" style={{ maxWidth: 900, margin: '24px auto 0', background: 'var(--card-bg)', border: '1px solid var(--border-light)', borderRadius: 8, padding: '14px 18px' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 10 }}>
+              Comissão por vendedora
+            </div>
+            {porVendedora.map(v => (
+              <div key={v.vendedora} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 0', borderTop: '1px solid var(--border-light)' }}>
+                <span style={{ flex: 1, minWidth: 140, fontSize: 14, color: 'var(--text-header)', fontWeight: 600 }}>
+                  {v.vendedora}
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                  base {fmtR(v.liquido)}
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--green)', minWidth: 110, textAlign: 'right' }}>
+                  {fmtR(v.comissao)}
+                </span>
+                <button onClick={() => abrirLancamentoRH(v)} style={{
+                  background: 'var(--blue)', color: '#0f0f0f', border: 'none', borderRadius: 6,
+                  padding: '7px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}>
+                  Lançar no RH
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {modalRH && (
+        <div className="modal-overlay" onClick={() => setModalRH(null)}>
+          <div className="modal-card" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 16 }}>Lançar comissão no RH</h3>
+              <button onClick={() => setModalRH(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 18, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div className="modal-body" style={{ padding: 20, paddingBottom: 20, display: 'grid', gap: 12 }}>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+                Vendedora nas lives: <b style={{ color: 'var(--text-header)' }}>{modalRH.vendedora}</b>
+              </div>
+
+              <label style={{ display: 'grid', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Funcionário *</span>
+                <select value={modalRH.funcionario_id}
+                  onChange={e => setModalRH(p => ({ ...p, funcionario_id: e.target.value }))}
+                  style={{ ...S.inp, width: '100%' }}>
+                  <option value="">Selecione…</option>
+                  {funcionariosRH.map(f => (
+                    <option key={f.id} value={f.id}>{f.apelido || f.nome}</option>
+                  ))}
+                </select>
+              </label>
+
+              {!funcionariosRH.length && (
+                <p style={{ color: 'var(--yellow)', fontSize: 12, margin: 0 }}>
+                  Nenhum funcionário cadastrado no RH. Cadastre em RH → Funcionários.
+                </p>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <label style={{ display: 'grid', gap: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Valor *</span>
+                  <input value={modalRH.valor}
+                    onChange={e => setModalRH(p => ({ ...p, valor: mascaraValor(e.target.value) }))}
+                    style={{ ...S.inp, width: '100%' }} inputMode="numeric" />
+                </label>
+                <label style={{ display: 'grid', gap: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Pagar em</span>
+                  <input type="date" value={modalRH.data}
+                    onChange={e => setModalRH(p => ({ ...p, data: e.target.value }))}
+                    style={{ ...S.inp, width: '100%' }} />
+                </label>
+              </div>
+
+              <label style={{ display: 'grid', gap: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Descrição</span>
+                <input value={modalRH.descricao}
+                  onChange={e => setModalRH(p => ({ ...p, descricao: e.target.value }))}
+                  style={{ ...S.inp, width: '100%' }} />
+              </label>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setModalRH(null)}>Cancelar</button>
+              <button className="btn-confirm" onClick={confirmarLancamentoRH} disabled={salvandoRH}>
+                {salvandoRH ? 'Lançando…' : 'Lançar comissão'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Estilos para impressão */}
       <style>{`
