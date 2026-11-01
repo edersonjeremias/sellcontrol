@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
-import { getFuncionarios } from '../../services/rhService'
+import { getFuncionarios, getDestinoWhats, setDestinoWhats } from '../../services/rhService'
 import AbaFuncionarios from './AbaFuncionarios'
 import AbaVales from './AbaVales'
 import AbaOcorrencias from './AbaOcorrencias'
@@ -22,6 +22,7 @@ export default function RhPage() {
   const tenantId      = profile?.tenant_id
 
   const [aba,          setAba]          = useState('funcionarios')
+  const [destinoWhats, setDestinoWhatsUI] = useState(getDestinoWhats)
   const [funcionarios, setFuncionarios] = useState([])
   const [semTabela,    setSemTabela]    = useState(false)
   const [carregando,   setCarregando]   = useState(true)
@@ -56,6 +57,18 @@ export default function RhPage() {
               {label}
             </button>
           ))}
+        </div>
+
+        <div className="rh-topbar-dir">
+          <label htmlFor="rh-destino-whats">Enviar WhatsApp pelo</label>
+          <select
+            id="rh-destino-whats"
+            value={destinoWhats}
+            onChange={e => { setDestinoWhatsUI(e.target.value); setDestinoWhats(e.target.value) }}
+          >
+            <option value="web">WhatsApp Web</option>
+            <option value="app">App do WhatsApp</option>
+          </select>
         </div>
       </div>
 

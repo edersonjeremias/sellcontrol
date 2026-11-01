@@ -92,11 +92,36 @@ export function diaSemana(iso) {
   return DIAS_SEMANA[dataLocal(iso).getDay()]
 }
 
-export function urlWhatsApp(telefone, mensagem) {
+// api.whatsapp.com é o link que o Chrome entrega ao app instalado no micro.
+// Quem atende os funcionários pelo celular espelhado no WhatsApp Web precisa
+// de web.whatsapp.com, então o destino é uma preferência deste navegador.
+const CHAVE_DESTINO_WHATS = 'rh_whatsapp_destino'
+
+export function ehMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+}
+
+export function getDestinoWhats() {
+  try {
+    const salvo = localStorage.getItem(CHAVE_DESTINO_WHATS)
+    if (salvo === 'web' || salvo === 'app') return salvo
+  } catch (_) { /* navegação privada / storage bloqueado */ }
+  // No celular o Web só redireciona para o app: lá o padrão é o app mesmo
+  return ehMobile() ? 'app' : 'web'
+}
+
+export function setDestinoWhats(destino) {
+  try { localStorage.setItem(CHAVE_DESTINO_WHATS, destino) } catch (_) { /* idem */ }
+}
+
+export function urlWhatsApp(telefone, mensagem, destino = getDestinoWhats()) {
   let phone = String(telefone || '').replace(/\D/g, '')
   if (!phone) return null
   if (!phone.startsWith('55')) phone = '55' + phone
-  return `https://api.whatsapp.com/send?phone=${phone}` +
+  const base = destino === 'app'
+    ? 'https://api.whatsapp.com/send'
+    : 'https://web.whatsapp.com/send'
+  return `${base}?phone=${phone}` +
     (mensagem ? `&text=${encodeURIComponent(mensagem)}` : '')
 }
 

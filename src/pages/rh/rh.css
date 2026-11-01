@@ -364,3 +364,33 @@
   .rh-dia-num { font-size: 14px; }
   .rh-dia-valor { font-size: 11px; }
 }
+
+/* Escolha do destino do WhatsApp (app do micro x WhatsApp Web) */
+.rh-topbar-dir {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rh-topbar-dir label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.rh-topbar-dir select {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--input-text);
+  padding: 6px 9px;
+  font-size: 13px;
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .rh-topbar-dir { margin-left: 0; width: 100%; }
+  .rh-topbar-dir select { flex: 1; min-width: 0; }
+}
