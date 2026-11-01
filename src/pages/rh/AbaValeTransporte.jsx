@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  fmtR, fmtData, fmtDataCurta, isoLocal, primeiroDiaMes, ultimoDiaMes, diaSemana,
+  fmtR, fmtData, isoLocal, primeiroDiaMes, ultimoDiaMes, diaSemana, dataLocal, DIAS_SEMANA,
   mascaraValor, parseValor, valorParaInput, abrirWhatsApp,
   getFeriados, getOcorrencias,
   getPeriodosVT, getDiasVT, salvarPeriodoVT, pagarPeriodoVT, reabrirPeriodoVT,
@@ -12,6 +12,35 @@ import { S, Campo, Modal, ModalConfirma, IconCheck, IconEdit, IconTrash, IconUnd
 const HOJE = isoLocal(new Date())
 
 const MOTIVOS = ['', 'NAO_USOU', 'FALTA', 'ATESTADO', 'FERIADO', 'FOLGA']
+
+const NOMES_MES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+/**
+ * Agrupa os dias por mês e devolve quantas células vazias entram antes do
+ * primeiro dia, para ele cair na coluna certa da semana (domingo primeiro).
+ */
+function montarCalendario(dias) {
+  const meses = []
+  dias.forEach(d => {
+    const data  = dataLocal(d.data)
+    const chave = `${data.getFullYear()}-${data.getMonth()}`
+    let mes = meses.find(m => m.chave === chave)
+    if (!mes) {
+      mes = {
+        chave,
+        label:       `${NOMES_MES[data.getMonth()]} de ${data.getFullYear()}`,
+        vaziosInicio: data.getDay(),
+        celulas:     [],
+      }
+      meses.push(mes)
+    }
+    mes.celulas.push(d)
+  })
+  return meses
+}
 
 const EDITOR_VAZIO = {
   id: null, funcionario_id: '', data_inicio: primeiroDiaMes(), data_fim: ultimoDiaMes(),
@@ -365,41 +394,52 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
                 </span>
               </div>
 
-              <div className="rh-dias">
-                {editor.dias.map(d => {
-                  const folga = d.dia_util === false
-                  const valorDia = folga ? 0 : (d.ida ? vIda : 0) + (d.volta ? vVolta : 0)
-                  const descontado = !folga && (!d.ida || !d.volta)
-                  return (
-                    <div key={d.data} className={`rh-dia${folga ? ' folga' : ''}${descontado ? ' descontado' : ''}`}>
-                      <div className="rh-dia-top">
-                        <span className="rh-dia-data">{fmtDataCurta(d.data)}</span>
-                        <span className="rh-dia-dow">{diaSemana(d.data)}</span>
-                      </div>
-                      <div className="rh-dia-checks">
-                        <label className="rh-dia-check">
-                          <input type="checkbox" checked={!!d.ida} disabled={folga}
-                            onChange={() => toggleTrecho(d, 'ida')} />
-                          Ida
-                        </label>
-                        <label className="rh-dia-check">
-                          <input type="checkbox" checked={!!d.volta} disabled={folga}
-                            onChange={() => toggleTrecho(d, 'volta')} />
-                          Volta
-                        </label>
-                      </div>
-                      <select value={d.motivo || ''} onChange={e => trocarMotivo(d, e.target.value)}>
-                        {MOTIVOS.map(m => (
-                          <option key={m || 'normal'} value={m}>
-                            {m === '' ? 'Dia normal' : LABEL_MOTIVO_VT[m] || m}
-                          </option>
-                        ))}
-                      </select>
-                      <span className={`rh-dia-valor${valorDia ? '' : ' zero'}`}>{fmtR(valorDia)}</span>
-                    </div>
-                  )
-                })}
-              </div>
+              {montarCalendario(editor.dias).map(mes => (
+                <div key={mes.chave} className="rh-cal-mes">
+                  <div className="rh-cal-titulo">{mes.label}</div>
+                  <div className="rh-cal-dows">
+                    {DIAS_SEMANA.map(d => <span key={d} className="rh-cal-dow">{d}</span>)}
+                  </div>
+                  <div className="rh-cal">
+                    {Array.from({ length: mes.vaziosInicio }).map((_, i) => (
+                      <div key={`vazio-${i}`} className="rh-cal-vazio" />
+                    ))}
+                    {mes.celulas.map(d => {
+                      const folga = d.dia_util === false
+                      const valorDia = folga ? 0 : (d.ida ? vIda : 0) + (d.volta ? vVolta : 0)
+                      const descontado = !folga && (!d.ida || !d.volta)
+                      return (
+                        <div key={d.data} className={`rh-dia${folga ? ' folga' : ''}${descontado ? ' descontado' : ''}`}>
+                          <div className="rh-dia-top">
+                            <span className="rh-dia-num">{Number(d.data.slice(8, 10))}</span>
+                            <span className="rh-dia-dow">{diaSemana(d.data)}</span>
+                          </div>
+                          <div className="rh-dia-checks">
+                            <label className="rh-dia-check">
+                              <input type="checkbox" checked={!!d.ida} disabled={folga}
+                                onChange={() => toggleTrecho(d, 'ida')} />
+                              Ida
+                            </label>
+                            <label className="rh-dia-check">
+                              <input type="checkbox" checked={!!d.volta} disabled={folga}
+                                onChange={() => toggleTrecho(d, 'volta')} />
+                              Volta
+                            </label>
+                          </div>
+                          <select value={d.motivo || ''} onChange={e => trocarMotivo(d, e.target.value)}>
+                            {MOTIVOS.map(m => (
+                              <option key={m || 'normal'} value={m}>
+                                {m === '' ? 'Dia normal' : LABEL_MOTIVO_VT[m] || m}
+                              </option>
+                            ))}
+                          </select>
+                          <span className={`rh-dia-valor${valorDia ? '' : ' zero'}`}>{fmtR(valorDia)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
 
               {totais.descontos.length > 0 && (
                 <div style={{ marginTop:18, background:'var(--card-bg)', border:'1px solid var(--border-light)', borderRadius:8, padding:'12px 16px' }}>

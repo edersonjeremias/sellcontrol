@@ -128,11 +128,43 @@
 .rh-vazio { color: var(--muted); text-align: center; padding: 28px 12px; }
 
 /* ── Grid de dias do vale transporte ── */
-.rh-dias {
+/* Calendário: cada dia cai na coluna do seu dia da semana (domingo primeiro) */
+.rh-cal-mes { margin-bottom: 20px; }
+.rh-cal-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+}
+.rh-cal-dows {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.rh-cal-dow {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.rh-cal {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   gap: 8px;
 }
+.rh-cal-vazio {
+  border: 1px dashed var(--border-light);
+  border-radius: 8px;
+  opacity: 0.25;
+}
+.rh-dia-num { font-size: 16px; font-weight: 800; color: var(--text-header); line-height: 1; }
+/* No desktop o cabeçalho da coluna já diz o dia da semana */
+.rh-cal .rh-dia-dow { display: none; }
 .rh-dia {
   background: var(--card-bg);
   border: 1px solid var(--border-light);
@@ -147,7 +179,7 @@
 .rh-dia-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 .rh-dia-data { font-size: 13px; font-weight: 700; color: var(--text-header); }
 .rh-dia-dow { font-size: 11px; color: var(--muted); text-transform: uppercase; }
-.rh-dia-checks { display: flex; gap: 12px; }
+.rh-dia-checks { display: flex; gap: 10px; flex-wrap: wrap; }
 .rh-dia-check {
   display: flex;
   align-items: center;
@@ -209,7 +241,11 @@
 
   .rh-card { flex: 1; min-width: 0; text-align: center; padding: 10px 8px; }
   .rh-conteudo { padding: 12px; }
-  .rh-dias { grid-template-columns: 1fr 1fr; }
+  /* 7 colunas não cabem no celular: volta a ser lista de 2 colunas,
+     com o dia da semana dentro do card e sem as células vazias */
+  .rh-cal { grid-template-columns: 1fr 1fr; }
+  .rh-cal-dows, .rh-cal-vazio { display: none; }
+  .rh-cal .rh-dia-dow { display: inline; }
   .rh-dia { padding: 8px; }
 }
 
@@ -318,4 +354,13 @@
   .rh-linha { flex-wrap: wrap; }
   .rh-row-acoes { width: 100%; justify-content: flex-end; }
   .rh-comp-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* Telas médias: mantém as 7 colunas do calendário empilhando ida/volta */
+@media (max-width: 1100px) and (min-width: 769px) {
+  .rh-cal, .rh-cal-dows { gap: 5px; }
+  .rh-dia { padding: 7px 6px; gap: 4px; }
+  .rh-dia-checks { flex-direction: column; gap: 3px; }
+  .rh-dia-num { font-size: 14px; }
+  .rh-dia-valor { font-size: 11px; }
 }
