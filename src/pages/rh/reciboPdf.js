@@ -72,7 +72,11 @@ export function montarLinhasRecibo(lancamentos) {
  * Gera e baixa o recibo do período. `empresa` vem de configuracoes
  * (nome_loja / cpf_cnpj) e `funcionario` do cadastro do RH.
  */
-export function gerarReciboPdf({ empresa = {}, funcionario = {}, dataInicio, dataFim, lancamentos = [] }) {
+export function gerarReciboPdf({
+  empresa = {}, funcionario = {}, dataInicio, dataFim, lancamentos = [], periodoTexto = null,
+}) {
+  // Filtrado por competência, o recibo é do acerto do mês, não de um intervalo
+  const periodo = periodoTexto || `${fmtData(dataInicio)} a ${fmtData(dataFim)}`
   const resumo = montarLinhasRecibo(lancamentos)
   const doc    = new jsPDF()
   const larg   = doc.internal.pageSize.getWidth()
@@ -129,7 +133,7 @@ export function gerarReciboPdf({ empresa = {}, funcionario = {}, dataInicio, dat
   doc.setFont('helvetica', 'bold')
   doc.text('Período:', margem, y)
   doc.setFont('helvetica', 'normal')
-  doc.text(`${fmtData(dataInicio)} a ${fmtData(dataFim)}`, margem + 30, y)
+  doc.text(periodo, margem + 30, y)
 
   // Verbas e descontos
   const corpo = [
@@ -160,7 +164,7 @@ export function gerarReciboPdf({ empresa = {}, funcionario = {}, dataInicio, dat
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
   const texto = `Recebi a importância líquida de ${fmtR(resumo.liquido)}, correspondente ao pagamento ` +
-    `das verbas descritas neste recibo, referente ao período de ${fmtData(dataInicio)} a ${fmtData(dataFim)}.`
+    `das verbas descritas neste recibo, referente a ${periodo}.`
   doc.text(doc.splitTextToSize(texto, larg - margem * 2), margem, fim)
 
   // Assinatura
@@ -181,9 +185,11 @@ export function gerarReciboPdf({ empresa = {}, funcionario = {}, dataInicio, dat
   doc.setFontSize(8)
   doc.text(`Emitido em ${fmtData(isoLocal(new Date()))}`, meio, fim, { align: 'center' })
 
-  const apelidoArquivo = String(funcionario.apelido || funcionario.nome || 'funcionario')
+  const slug = (txt) => String(txt || '')
     .toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  doc.save(`recibo-${apelidoArquivo}-${dataInicio}-a-${dataFim}.pdf`)
+  const nome    = slug(funcionario.apelido || funcionario.nome || 'funcionario')
+  const periodoArquivo = periodoTexto ? slug(periodoTexto) : `${dataInicio}-a-${dataFim}`
+  doc.save(`recibo-${nome}-${periodoArquivo}.pdf`)
 
   return resumo
 }

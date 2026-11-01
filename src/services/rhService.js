@@ -210,6 +210,45 @@ export function labelStatus(lanc) {
   return ehDesconto(lanc.tipo) ? 'Descontado' : 'Pago'
 }
 
+// ── Competência (o acerto em que o lançamento entra) ───────────
+// A data do lançamento não diz em que pagamento ele é acertado: o vale de
+// 14/10 e o salário de outubro pago em 06/11 fecham no mesmo acerto. A
+// competência guarda isso, sempre no primeiro dia do mês.
+export const MESES_NOME = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
+export function competenciaDe(dataISO) {
+  if (!dataISO) return null
+  return `${String(dataISO).slice(0, 7)}-01`
+}
+
+export function formatarCompetencia(comp) {
+  if (!comp) return ''
+  const [ano, mes] = String(comp).slice(0, 7).split('-')
+  return `${MESES_NOME[Number(mes) - 1] || mes} de ${ano}`
+}
+
+export function competenciaCurta(comp) {
+  if (!comp) return ''
+  const [ano, mes] = String(comp).slice(0, 7).split('-')
+  return `${(MESES_NOME[Number(mes) - 1] || mes).slice(0, 3).toLowerCase()}/${ano}`
+}
+
+export function somarMesesCompetencia(comp, n) {
+  const [ano, mes] = String(comp).slice(0, 7).split('-').map(Number)
+  const d = new Date(ano, mes - 1 + n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+}
+
+// Diferença em meses entre duas competências (b - a)
+export function diferencaMeses(a, b) {
+  const [aa, am] = String(a).slice(0, 7).split('-').map(Number)
+  const [ba, bm] = String(b).slice(0, 7).split('-').map(Number)
+  return (ba - aa) * 12 + (bm - am)
+}
+
 // ── Parcelamento ───────────────────────────────────────────────
 export const FREQUENCIAS = [
   { v: 'mensal', l: 'Mensal' },
@@ -258,10 +297,17 @@ export async function criarLancamentoParcelado(tenantId, base, { freq = 'mensal'
 
   const grupo = novoId()
   const datas = gerarDatasParcelas(base.data_prevista, freq, qtd)
+
+  // Se a primeira parcela foi jogada para um acerto diferente do mês do
+  // vencimento, as seguintes andam junto, mantendo a mesma distância.
+  const compBase = base.competencia || competenciaDe(base.data_prevista)
+  const desloca  = diferencaMeses(competenciaDe(base.data_prevista), compBase)
+
   const linhas = datas.map((data, i) => ({
     ...base,
     descricao:      `${base.descricao || LABEL_TIPO[base.tipo] || ''} (${i + 1}/${qtd})`.trim(),
     data_prevista:  data,
+    competencia:    somarMesesCompetencia(competenciaDe(data), desloca),
     // Só a primeira parcela pode já nascer quitada
     status:         i === 0 ? base.status : 'PENDENTE',
     data_pagamento: i === 0 ? base.data_pagamento : null,
@@ -278,15 +324,20 @@ export async function excluirGrupoLancamentos(grupoId) {
   if (error) throw error
 }
 
-export async function getLancamentos(tenantId, { dataInicio, dataFim, funcionarioId } = {}) {
+export async function getLancamentos(tenantId, { dataInicio, dataFim, funcionarioId, competencia } = {}) {
   let q = supabase
     .from('rh_lancamentos')
     .select('*, funcionarios(id, nome, apelido, whatsapp)')
     .eq('tenant_id', tid(tenantId))
     .order('data_prevista', { ascending: false })
 
-  if (dataInicio)     q = q.gte('data_prevista', dataInicio)
-  if (dataFim)        q = q.lte('data_prevista', dataFim)
+  // Competência manda sozinha: o acerto não cabe numa janela de datas
+  if (competencia) {
+    q = q.eq('competencia', competencia)
+  } else {
+    if (dataInicio) q = q.gte('data_prevista', dataInicio)
+    if (dataFim)    q = q.lte('data_prevista', dataFim)
+  }
   if (funcionarioId)  q = q.eq('funcionario_id', funcionarioId)
 
   const { data, error } = await q
@@ -297,6 +348,10 @@ export async function getLancamentos(tenantId, { dataInicio, dataFim, funcionari
 
 export async function salvarLancamento(tenantId, lanc) {
   const { id, funcionarios: _f, ...fields } = { ...lanc, tenant_id: tid(tenantId) }
+  // Sem escolha explícita, o acerto é o do mês do vencimento
+  if (fields.competencia === undefined && fields.data_prevista) {
+    fields.competencia = competenciaDe(fields.data_prevista)
+  }
   if (id) {
     const { error } = await supabase.from('rh_lancamentos').update(fields).eq('id', id)
     if (error) throw error
@@ -308,7 +363,11 @@ export async function salvarLancamento(tenantId, lanc) {
 }
 
 export async function inserirLancamentosLote(tenantId, linhas) {
-  const rows = linhas.map(({ id: _id, ...l }) => ({ ...l, tenant_id: tid(tenantId) }))
+  const rows = linhas.map(({ id: _id, ...l }) => ({
+    ...l,
+    competencia: l.competencia || competenciaDe(l.data_prevista),
+    tenant_id:   tid(tenantId),
+  }))
   const { error } = await supabase.from('rh_lancamentos').insert(rows)
   if (error) throw error
 }

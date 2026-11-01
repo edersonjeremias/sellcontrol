@@ -5,6 +5,7 @@ import {
   getLancamentos, salvarLancamento, pagarLancamento, reabrirLancamento, excluirLancamento,
   criarLancamentoParcelado, excluirGrupoLancamentos,
   resumoPorFuncionario, ehDesconto, labelStatus,
+  competenciaDe, formatarCompetencia, competenciaCurta,
   TIPOS_LANCAMENTO, LABEL_TIPO, FREQUENCIAS, MAX_PARCELAS,
 } from '../../services/rhService'
 import { S, Campo, Modal, ModalConfirma, IconCheck, IconClip, IconEdit, IconRecibo, IconTrash, IconUndo, IconWhats } from './RhUI'
@@ -19,15 +20,16 @@ const FORM_VAZIO = {
   funcionario_id: '', tipo: 'VALE', descricao: '', valor: '',
   data_prevista: HOJE, status: 'PENDENTE', data_pagamento: '',
   forma_pagamento: '', observacao: '', parcelas: 1, freq: 'mensal',
+  competencia: HOJE.slice(0, 7),
 }
 
 // Extrato do período para mandar no WhatsApp
-function mensagemExtrato(resumo, lancs, dataIni, dataFim) {
+function mensagemExtrato(resumo, lancs, periodoTexto) {
   const primeiroNome = String(resumo.nome).split(' ')[0]
   const linhas = [
     `Olá, ${primeiroNome}!`,
     '',
-    `*Vales e pagamentos — ${fmtData(dataIni)} a ${fmtData(dataFim)}*`,
+    `*Vales e pagamentos — ${periodoTexto}*`,
     '',
   ]
   lancs.forEach(l => {
@@ -59,6 +61,8 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
   const [filtroFunc, setFiltroFunc] = useState('')
   const [filtroSt,   setFiltroSt]   = useState('Todos')
   const [abertos,    setAbertos]    = useState(new Set())
+  // yyyy-MM do <input type="month">; vazio = filtra pelas datas
+  const [competencia, setCompetencia] = useState('')
 
   const [modal,      setModal]      = useState(null)   // 'novo' | lançamento
   const [form,       setForm]       = useState(FORM_VAZIO)
@@ -80,12 +84,15 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
     setCarregando(true)
     try {
       const { data } = await getLancamentos(tenantId, {
-        dataInicio: dataIni, dataFim, funcionarioId: filtroFunc || undefined,
+        dataInicio: dataIni,
+        dataFim,
+        funcionarioId: filtroFunc || undefined,
+        competencia:   competencia ? `${competencia}-01` : undefined,
       })
       setLancs(data)
     } catch (e) { showToast('Erro ao carregar lançamentos: ' + e.message, 'error') }
     setCarregando(false)
-  }, [tenantId, dataIni, dataFim, filtroFunc, showToast])
+  }, [tenantId, dataIni, dataFim, filtroFunc, competencia, showToast])
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -105,6 +112,10 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
   const totalDescontar = soma(l => l.status !== 'PAGO' &&  ehDesconto(l.tipo))
 
   const resumos = resumoPorFuncionario(filtrados)
+
+  const rotuloPeriodo = competencia
+    ? formatarCompetencia(`${competencia}-01`)
+    : `${fmtData(dataIni)} a ${fmtData(dataFim)}`
 
   function toggleFunc(id) {
     setAbertos(prev => {
@@ -128,6 +139,8 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
         data_prevista:  qa.data_prevista || HOJE,
         status:         qa.pago ? 'PAGO' : 'PENDENTE',
         data_pagamento: qa.pago ? (qa.data_prevista || HOJE) : null,
+        // Com um acerto filtrado, o lançamento rápido cai nele
+        competencia:    competencia ? `${competencia}-01` : competenciaDe(qa.data_prevista || HOJE),
       }, { freq: qa.freq, parcelas })
       showToast(parcelas > 1 ? `${parcelas} parcelas lançadas!` : 'Lançamento salvo!', 'success')
       setAbertos(prev => new Set([...prev, qa.funcionario_id]))
@@ -139,7 +152,11 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
   }
 
   function abrirNovo() {
-    setForm({ ...FORM_VAZIO, funcionario_id: filtroFunc || '' })
+    setForm({
+      ...FORM_VAZIO,
+      funcionario_id: filtroFunc || '',
+      competencia:    competencia || HOJE.slice(0, 7),
+    })
     setModal('novo')
   }
 
@@ -156,6 +173,7 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
       observacao:      l.observacao || '',
       parcelas:        1,          // edição mexe só nesta parcela
       freq:            'mensal',
+      competencia:     (l.competencia || l.data_prevista || HOJE).slice(0, 7),
     })
     setModal(l)
   }
@@ -178,6 +196,7 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
         data_pagamento:  form.status === 'PAGO' ? (form.data_pagamento || form.data_prevista) : null,
         forma_pagamento: form.forma_pagamento || null,
         observacao:      form.observacao.trim() || null,
+        competencia:     form.competencia ? `${form.competencia}-01` : competenciaDe(form.data_prevista || HOJE),
       }
       if (novo) await criarLancamentoParcelado(tenantId, base, { freq: form.freq, parcelas })
       else      await salvarLancamento(tenantId, base)
@@ -231,11 +250,12 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
     const func = funcionarios.find(f => f.id === resumo.funcionario_id) || { nome: resumo.nome }
     try {
       gerarReciboPdf({
-        empresa:    empresa || {},
-        funcionario: func,
-        dataInicio: dataIni,
+        empresa:      empresa || {},
+        funcionario:  func,
+        dataInicio:   dataIni,
         dataFim,
-        lancamentos: doFunc,
+        periodoTexto: competencia ? formatarCompetencia(`${competencia}-01`) : null,
+        lancamentos:  doFunc,
       })
       showToast('Recibo gerado!', 'success')
     } catch (e) {
@@ -248,7 +268,7 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
       .filter(l => l.funcionario_id === resumo.funcionario_id)
       .sort((a, b) => String(a.data_prevista).localeCompare(String(b.data_prevista)))
     if (!doFunc.length) return showToast('Nenhum lançamento no período.', 'error')
-    const ok = abrirWhatsApp(resumo.whatsapp, mensagemExtrato(resumo, doFunc, dataIni, dataFim))
+    const ok = abrirWhatsApp(resumo.whatsapp, mensagemExtrato(resumo, doFunc, rotuloPeriodo))
     if (!ok) showToast('Funcionário sem WhatsApp cadastrado.', 'error')
   }
 
@@ -277,13 +297,20 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
             <option value="PAGO">Pagos</option>
           </select>
         </div>
-        <div className="rh-f">
-          <label>Início</label>
-          <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={S.inpS} />
+        <div className="rh-f" style={{ minWidth:140 }}>
+          <label>Acerto (competência)</label>
+          <input type="month" value={competencia} onChange={e => setCompetencia(e.target.value)}
+            title="Mostra tudo que entra no acerto deste mês, qualquer que seja a data" style={S.inpS} />
         </div>
-        <div className="rh-f">
+        <div className="rh-f" style={{ opacity: competencia ? 0.4 : 1 }}>
+          <label>Início</label>
+          <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)}
+            disabled={!!competencia} style={S.inpS} />
+        </div>
+        <div className="rh-f" style={{ opacity: competencia ? 0.4 : 1 }}>
           <label>Fim</label>
-          <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inpS} />
+          <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)}
+            disabled={!!competencia} style={S.inpS} />
         </div>
         <div className="rh-acoes">
           <button onClick={carregar} style={{ ...S.btn, padding:'5px 14px' }}>Filtrar</button>
@@ -413,6 +440,11 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
                         </div>
                         <div className="rh-linha-sub">
                           {fmtData(l.data_prevista)}
+                          {l.competencia && l.competencia.slice(0, 7) !== String(l.data_prevista).slice(0, 7) && (
+                            <span style={{ color:'var(--blue)', marginLeft:6 }}>
+                              acerto {competenciaCurta(l.competencia)}
+                            </span>
+                          )}
                           {l.forma_pagamento ? ` • ${l.forma_pagamento}` : ''}
                           {l.status === 'PAGO' && l.data_pagamento && (
                             <span style={{ color:'var(--green)', marginLeft:6 }}>
@@ -510,6 +542,15 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
               </select>
             </Campo>
           </div>
+
+          <Campo label="Entra no acerto de">
+            <input type="month" value={form.competencia}
+              onChange={e => setForm(p => ({ ...p, competencia: e.target.value }))} style={S.inp} />
+            <span style={{ fontSize:11, color:'var(--muted)' }}>
+              Mês do acerto, não do vencimento. Salário de outubro pago em novembro fica em outubro,
+              junto dos vales do mês.
+            </span>
+          </Campo>
 
           {modal === 'novo' && (
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
