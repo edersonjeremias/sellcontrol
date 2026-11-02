@@ -96,7 +96,8 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
     ]
   })
 
-  autoTable(doc, {
+  // Nesta versao do jspdf-autotable so o metodo do doc existe
+  doc.autoTable({
     head: [['Dia', 'Sem.', ...TIPOS_BATIDA.map(t => LABEL_BATIDA[t]), 'Horas', 'Saldo', 'Observação']],
     body: corpo,
     foot: [[

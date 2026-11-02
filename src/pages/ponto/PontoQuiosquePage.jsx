@@ -86,6 +86,11 @@ export default function PontoQuiosquePage() {
     return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.75))
   }
 
+  // Teclado próprio: o teclado do sistema sobe e empurra a câmera para fora
+  // da tela. Com estas teclas a tela fica parada do começo ao fim.
+  const digitar = useCallback(d => setPin(p => (p + d).slice(0, 4)), [])
+  const apagar  = useCallback(() => setPin(p => p.slice(0, -1)), [])
+
   function batidasDe(funcionarioId) {
     return doDia.filter(m => m.funcionario_id === funcionarioId).map(m => m.tipo)
   }
@@ -140,6 +145,18 @@ export default function PontoQuiosquePage() {
     setEnviando(false)
   }
 
+  // No computador o teclado físico continua valendo
+  useEffect(() => {
+    if (!escolhido || recibo) return
+    function aoTeclar(e) {
+      if (/^[0-9]$/.test(e.key))      digitar(e.key)
+      else if (e.key === 'Backspace') apagar()
+      else if (e.key === 'Enter' && pin.length === 4) confirmar()
+    }
+    window.addEventListener('keydown', aoTeclar)
+    return () => window.removeEventListener('keydown', aoTeclar)
+  })
+
   // ── Comprovante ─────────────────────────────────────────────
   if (recibo) {
     return (
@@ -171,11 +188,10 @@ export default function PontoQuiosquePage() {
           <div className="pt-pin-topo">
             <button className="pt-voltar" onClick={fechar}>‹ Voltar</button>
             <span className="pt-pin-nome">{escolhido.apelido || escolhido.nome}</span>
-          </div>
-
-          <div className="pt-camera">
-            <video ref={videoRef} autoPlay playsInline muted />
-            {!camOk && <div className="pt-camera-off">Câmera indisponível</div>}
+            <div className="pt-camera">
+              <video ref={videoRef} autoPlay playsInline muted />
+              {!camOk && <span className="pt-camera-off">sem câmera</span>}
+            </div>
           </div>
 
           <div className="pt-tipos">
@@ -189,15 +205,23 @@ export default function PontoQuiosquePage() {
             ))}
           </div>
 
-          <div className="pt-pin-campo">
-            <label>PIN de 4 dígitos</label>
-            <input
-              type="password" inputMode="numeric" autoComplete="off"
-              maxLength={4} value={pin}
-              onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              onKeyDown={e => e.key === 'Enter' && confirmar()}
-              autoFocus
-            />
+          <div className="pt-pin-dots" aria-label={`PIN: ${pin.length} de 4 dígitos`}>
+            {[0, 1, 2, 3].map(i => (
+              <span key={i} className={`pt-dot${pin.length > i ? ' cheio' : ''}`} />
+            ))}
+          </div>
+
+          <div className="pt-teclado">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
+              <button key={d} className="pt-tecla" onClick={() => digitar(d)}>{d}</button>
+            ))}
+            <button className="pt-tecla pt-tecla-aux" onClick={() => setPin('')} disabled={!pin}>
+              limpar
+            </button>
+            <button className="pt-tecla" onClick={() => digitar('0')}>0</button>
+            <button className="pt-tecla pt-tecla-aux" onClick={apagar} disabled={!pin}>
+              apagar
+            </button>
           </div>
 
           <button className="pt-btn-grande" onClick={confirmar} disabled={enviando || pin.length !== 4}>
@@ -205,7 +229,7 @@ export default function PontoQuiosquePage() {
           </button>
 
           <p className="pt-aviso">
-            Ao bater o ponto, uma foto sua é registrada para conferência e guardada por até 6 meses.
+            Uma foto sua é registrada para conferência e guardada por até 6 meses.
             O horário é o do sistema, não o do aparelho.
           </p>
         </div>

@@ -126,7 +126,7 @@ DECLARE
   v_tenant UUID;
   v_role   TEXT;
 BEGIN
-  SELECT tenant_id, role INTO v_tenant, v_role FROM users_perfil WHERE id = auth.uid();
+  SELECT up.tenant_id, up.role INTO v_tenant, v_role FROM users_perfil up WHERE up.id = auth.uid();
   IF v_tenant IS NULL THEN
     RAISE EXCEPTION 'Sem permissao';
   END IF;
@@ -135,10 +135,10 @@ BEGIN
     RAISE EXCEPTION 'O PIN deve ter 4 digitos';
   END IF;
 
-  UPDATE funcionarios
-     SET pin_ponto_hash = md5(p_pin || id::text)
-   WHERE id = p_funcionario
-     AND (tenant_id = v_tenant OR v_role = 'master');
+  UPDATE funcionarios f
+     SET pin_ponto_hash = md5(p_pin || f.id::text)
+   WHERE f.id = p_funcionario
+     AND (f.tenant_id = v_tenant OR v_role = 'master');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Funcionario nao encontrado';
@@ -166,7 +166,7 @@ DECLARE
   v_func        funcionarios%ROWTYPE;
   v_comprovante TEXT;
 BEGIN
-  SELECT tenant_id, role INTO v_tenant, v_role FROM users_perfil WHERE id = auth.uid();
+  SELECT up.tenant_id, up.role INTO v_tenant, v_role FROM users_perfil up WHERE up.id = auth.uid();
   IF v_tenant IS NULL THEN
     RAISE EXCEPTION 'Sem permissao';
   END IF;
@@ -175,9 +175,9 @@ BEGIN
     RAISE EXCEPTION 'Tipo de marcacao invalido';
   END IF;
 
-  SELECT * INTO v_func FROM funcionarios
-   WHERE id = p_funcionario
-     AND (tenant_id = v_tenant OR v_role = 'master');
+  SELECT f.* INTO v_func FROM funcionarios f
+   WHERE f.id = p_funcionario
+     AND (f.tenant_id = v_tenant OR v_role = 'master');
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Funcionario nao encontrado';
@@ -198,14 +198,12 @@ BEGIN
   v_comprovante := upper(substr(md5(gen_random_uuid()::text), 1, 6));
 
   RETURN QUERY
-  INSERT INTO rh_ponto_marcacoes (
+  INSERT INTO rh_ponto_marcacoes AS m (
     tenant_id, funcionario_id, tipo, origem, foto_path, comprovante, registrado_por
   ) VALUES (
     v_func.tenant_id, v_func.id, p_tipo, p_origem, p_foto, v_comprovante, auth.uid()
   )
-  RETURNING rh_ponto_marcacoes.id,
-            rh_ponto_marcacoes.registrado_em,
-            rh_ponto_marcacoes.comprovante;
+  RETURNING m.id, m.registrado_em, m.comprovante;
 END;
 $$;
 
@@ -219,7 +217,7 @@ AS $$
   SELECT f.id, f.nome, f.apelido, (f.pin_ponto_hash IS NOT NULL)
     FROM funcionarios f
    WHERE f.ativo IS TRUE
-     AND f.tenant_id = (SELECT tenant_id FROM users_perfil WHERE id = auth.uid())
+     AND f.tenant_id = (SELECT up.tenant_id FROM users_perfil up WHERE up.id = auth.uid())
    ORDER BY COALESCE(f.apelido, f.nome);
 $$;
 
@@ -274,7 +272,7 @@ AS $$
 DECLARE
   v_tenant UUID;
 BEGIN
-  SELECT tenant_id INTO v_tenant FROM users_perfil WHERE id = auth.uid();
+  SELECT up.tenant_id INTO v_tenant FROM users_perfil up WHERE up.id = auth.uid();
   IF v_tenant IS NULL THEN
     RAISE EXCEPTION 'Sem permissao';
   END IF;
