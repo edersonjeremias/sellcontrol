@@ -9,6 +9,7 @@ import {
   TIPOS_BATIDA, LABEL_BATIDA, horaDe, fmtHoras, tabelaFaltaPonto,
 } from '../../services/pontoService'
 import { saveConfig } from '../../services/configService'
+import PontoHoje from './PontoHoje'
 import { gerarEspelhoPdf } from './espelhoPontoPdf'
 import { S, Campo, Modal, IconCheck, IconEdit, IconRecibo, IconWhats } from './RhUI'
 
@@ -34,6 +35,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   const [ajustes,     setAjustes]     = useState([])
   const [feriados,    setFeriados]    = useState([])
   const [fechamentos, setFechamentos] = useState([])
+  const [deHoje,     setDeHoje]     = useState([])   // batidas de hoje, fora do filtro
   const [carregando,  setCarregando]  = useState(false)
   const [semEstrutura, setSemEstrutura] = useState(false)
 
@@ -59,12 +61,16 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
     if (!tenantId) return
     setCarregando(true)
     try {
-      const [ms, ajs, fes, fechs] = await Promise.all([
+      // As batidas de hoje vêm à parte: o painel do dia tem que funcionar
+      // mesmo com a competência apontando para outro mês.
+      const [ms, ajs, fes, fechs, hj] = await Promise.all([
         getMarcacoes(tenantId, { dataInicio: dataIni, dataFim, funcionarioId: filtroFunc || undefined }),
         getAjustes(tenantId,   { dataInicio: dataIni, dataFim, funcionarioId: filtroFunc || undefined }),
         getFeriados(tenantId,  { dataInicio: dataIni, dataFim }),
         getFechamentos(tenantId, { competencia: dataIni }),
+        getMarcacoes(tenantId, { dataInicio: HOJE, dataFim: HOJE }),
       ])
+      setDeHoje(hj.data)
       setMarcacoes(ms.data)
       setAjustes(ajs.data)
       setFeriados(fes.data)
@@ -78,6 +84,18 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   }, [tenantId, dataIni, dataFim, filtroFunc, showToast])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // O painel de hoje é uma visão ao vivo: sem isto você veria a loja
+  // como ela estava no momento em que abriu a página.
+  useEffect(() => {
+    if (!tenantId || semEstrutura) return
+    const relogio = setInterval(() => {
+      getMarcacoes(tenantId, { dataInicio: HOJE, dataFim: HOJE })
+        .then(r => setDeHoje(r.data))
+        .catch(() => {})
+    }, 60000)
+    return () => clearInterval(relogio)
+  }, [tenantId, semEstrutura])
 
   // A cerca vem junto das configurações da empresa
   useEffect(() => { if (empresa) setCerca(empresa) }, [empresa])
@@ -117,9 +135,12 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   // ── Detalhe do dia (com as fotos) ───────────────────────────
   async function abrirDia(func, dia) {
     setModalDia({ funcionario: func, dia })
-    const caminhos = marcacoes
-      .filter(m => m.funcionario_id === func.id && String(m.dia).slice(0, 10) === dia.dia && m.foto_path)
-      .map(m => m.foto_path)
+    // Os caminhos saem do próprio dia: assim o modal funciona tanto pelo
+    // mês filtrado quanto pelo painel de hoje.
+    const caminhos = Object.values(dia.marcacoes || {})
+      .concat(dia.extras || [])
+      .map(m => m?.foto_path)
+      .filter(Boolean)
     if (!caminhos.length) return
     try {
       const mapa = await assinarUrlsPonto(caminhos)
@@ -333,6 +354,14 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
       </div>
 
       <div className="rh-conteudo">
+        <PontoHoje
+          hoje={HOJE}
+          funcionarios={funcionarios.filter(f => f.ativo && f.bate_ponto !== false)}
+          marcacoes={deHoje}
+          feriados={feriados}
+          onAbrirDia={abrirDia}
+        />
+
         {carregando ? (
           <p style={{ color:'var(--muted)' }}>Carregando…</p>
         ) : !daLista.length ? (
