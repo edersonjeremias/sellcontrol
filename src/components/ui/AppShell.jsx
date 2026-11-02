@@ -27,6 +27,7 @@ const SLUG_TO_CATEGORY = {
   'etiquetas':                   'Impressão',
   'clientes':                    'Cadastro',
   'rh':                          'RH',
+  'ponto':                       'RH',
   'configuracoes':               'Admin',
   'master/empresas':             'Admin',
 }

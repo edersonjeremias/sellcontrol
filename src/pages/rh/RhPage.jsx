@@ -8,6 +8,7 @@ import AbaFuncionarios from './AbaFuncionarios'
 import AbaVales from './AbaVales'
 import AbaOcorrencias from './AbaOcorrencias'
 import AbaValeTransporte from './AbaValeTransporte'
+import AbaPonto from './AbaPonto'
 import './rh.css'
 
 const ABAS = [
@@ -15,6 +16,7 @@ const ABAS = [
   ['vales',        'Vales e Pagamentos'],
   ['ocorrencias',  'Faltas e Atrasos'],
   ['vt',           'Vale Transporte'],
+  ['ponto',        'Ponto'],
 ]
 
 export default function RhPage() {
@@ -92,6 +94,7 @@ export default function RhPage() {
           {aba === 'vales'        && <AbaVales {...props} />}
           {aba === 'ocorrencias'  && <AbaOcorrencias {...props} />}
           {aba === 'vt'           && <AbaValeTransporte {...props} />}
+          {aba === 'ponto'        && <AbaPonto {...props} profile={profile} />}
         </>
       )}
     </AppShell>

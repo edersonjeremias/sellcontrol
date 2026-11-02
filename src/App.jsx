@@ -79,6 +79,7 @@ import DebugPage                      from './pages/DebugPage'
 import LimparUsuariosPage             from './pages/admin/LimparUsuariosPage'
 import ComprasPage                    from './pages/compras/ComprasPage'
 import RhPage                         from './pages/rh/RhPage'
+import PontoQuiosquePage               from './pages/ponto/PontoQuiosquePage'
 
 export default function App() {
   return (
@@ -123,6 +124,7 @@ export default function App() {
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
             <Route path="/compras"               element={<RequireAuth><ComprasPage /></RequireAuth>} />
             <Route path="/rh"                    element={<RequireAuth><RequireRole allowed={['master','admin']}><RhPage /></RequireRole></RequireAuth>} />
+            <Route path="/ponto"                 element={<RequireAuth><PontoQuiosquePage /></RequireAuth>} />
             {/* /f e /r são as versões curtas: URL longa chega quebrada no WhatsApp */}
             <Route path="/f/:codigo" element={<FretePublicoPage />} />
             <Route path="/frete/:token" element={<FretePublicoPage />} />
