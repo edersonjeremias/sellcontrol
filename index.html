@@ -8,9 +8,48 @@
     <meta property="og:title" content="SellControl" />
     <meta property="og:site_name" content="SellControl" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+      /* Tela de partida: se o app não subir, o navegador mostra o motivo
+         em vez de uma página em branco (que não diz nada a quem usa). */
+      #boot {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        color: #9aa0a6; background: #202124;
+        position: fixed; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 10px; padding: 24px; text-align: center;
+      }
+      #boot b { color: #e8eaed; font-size: 19px; font-weight: 700; }
+      #boot p { margin: 0; font-size: 13px; max-width: 320px; line-height: 1.5; }
+      #boot .tarde { display: none; color: #fbbc04; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot">
+        <b>SellControl</b>
+        <p>Carregando…</p>
+        <p class="tarde">
+          Se esta tela não sair, o navegador deste aparelho pode estar
+          desatualizado demais para abrir o sistema. Atualize o Chrome pela
+          Play Store ou abra em outro navegador.
+        </p>
+      </div>
+    </div>
+    <script>
+      // Demora demais = algo travou. Só então aparece a dica, para não
+      // assustar quem está só esperando a internet.
+      setTimeout(function () {
+        var dica = document.querySelector('#boot .tarde')
+        if (dica) dica.style.display = 'block'
+      }, 8000)
+    </script>
+    <script nomodule>
+      document.getElementById('boot').innerHTML =
+        '<b>Navegador desatualizado</b>' +
+        '<p>Este navegador nao consegue abrir o SellControl. ' +
+        'Atualize o Chrome pela Play Store ou use outro navegador no aparelho.</p>'
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
