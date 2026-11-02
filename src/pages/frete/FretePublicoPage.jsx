@@ -11,7 +11,8 @@ import {
 import { linkRastreio } from '../../lib/rastreio'
 import '../../styles/portal.css'
 
-const STATUS_PAGOS = ['frete_pago', 'etiqueta_gerada', 'despachado']
+// Status em que não há mais nada a pagar neste link
+const STATUS_PAGOS = ['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado']
 
 const card = {
   background: 'rgba(255,255,255,.03)',
@@ -343,8 +344,20 @@ function FretePublico() {
         </div>
       </div>
 
+      {/* ── Retirado na loja: não há frete a pagar ─────────────────────── */}
+      {romaneio.status === 'retirado' && (
+        <div style={{ ...card, borderColor: 'rgba(197,138,249,.4)', background: 'rgba(197,138,249,.08)', textAlign: 'center' }}>
+          <div style={{ color: '#c58af9', fontWeight: 800, fontSize: 17, marginBottom: 6 }}>
+            Pedido retirado na loja
+          </div>
+          <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.5 }}>
+            Este pedido foi entregue em mãos, então não há frete a pagar por aqui.
+          </div>
+        </div>
+      )}
+
       {/* ── Pago ───────────────────────────────────────────────────────── */}
-      {pago && (
+      {pago && romaneio.status !== 'retirado' && (
         <div style={{ ...card, borderColor: 'rgba(129,201,149,.4)', background: 'rgba(129,201,149,.08)', textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>✅</div>
           <div style={{ color: 'var(--p-green)', fontWeight: 800, fontSize: 17, marginBottom: 6 }}>

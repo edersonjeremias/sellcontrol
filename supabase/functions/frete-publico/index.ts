@@ -311,7 +311,7 @@ async function acaoSalvarEndereco(supabase: any, romaneio: any, instagram: strin
 // COTAR — chama o Melhor Envio e devolve as opções já com a margem da loja
 // ────────────────────────────────────────────────────────────────────────────
 async function acaoCotar(supabase: any, romaneio: any, instagram: string, payload: any) {
-  if (['frete_pago', 'etiqueta_gerada', 'despachado'].includes(romaneio.status)) {
+  if (['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado'].includes(romaneio.status)) {
     return json({ error: 'O frete deste pedido já foi pago' }, 409)
   }
 
@@ -472,7 +472,7 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
 // PAGAR — grava a escolha e gera o PIX (reusa a função já existente)
 // ────────────────────────────────────────────────────────────────────────────
 async function acaoPagar(supabase: any, romaneio: any, payload: any) {
-  if (['frete_pago', 'etiqueta_gerada', 'despachado'].includes(romaneio.status)) {
+  if (['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado'].includes(romaneio.status)) {
     return json({ error: 'O frete deste pedido já foi pago' }, 409)
   }
   if (!temMedidas(romaneio)) return json({ error: SEM_MEDIDAS, sem_medidas: true }, 422)
@@ -558,7 +558,7 @@ async function acaoStatus(supabase: any, romaneio: any) {
   const pagamento = await buscarPagamento(supabase, romaneio.id)
   return json({
     status: romaneio.status,
-    pago: ['frete_pago', 'etiqueta_gerada', 'despachado'].includes(romaneio.status),
+    pago: ['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado'].includes(romaneio.status),
     pagamento_status: pagamento?.status || null,
   })
 }

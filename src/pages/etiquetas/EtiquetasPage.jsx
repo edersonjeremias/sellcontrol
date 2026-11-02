@@ -126,7 +126,7 @@ export default function EtiquetasPage() {
         .from('romaneios')
         .select('*, enderecos_clientes(*), pagamentos_frete(*)')
         .eq('tenant_id', tenantId)
-        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'cancelado'])
+        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado', 'cancelado'])
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -256,6 +256,33 @@ export default function EtiquetasPage() {
     } catch (err) {
       console.error('Erro ao gerar link de frete:', err)
       showGlobalToast('Não foi possível gerar o link do frete', 'error')
+    }
+  }
+
+  // Cliente buscou na loja: não há frete, etiqueta nem rastreio a gerar
+  const handleMarcarRetirado = async (romaneio) => {
+    if (!window.confirm(
+      `Confirmar que a cliente @${romaneio.cliente_instagram} retirou o ${romaneio.numero} na loja?`
+    )) return
+
+    try {
+      const { error } = await supabase
+        .from('romaneios')
+        .update({
+          status: 'retirado',
+          retirado_em: new Date().toISOString(),
+          retirado_por_nome: profile?.nome || profile?.username || null,
+        })
+        .eq('id', romaneio.id)
+
+      if (error) throw error
+
+      showGlobalToast(`${romaneio.numero} marcado como retirado na loja`)
+      setModalAberto(null)
+      setStatusFiltro('retirado')
+      carregar()
+    } catch (err) {
+      setErroModal({ titulo: 'Não foi possível registrar a retirada', mensagem: err.message })
     }
   }
 
@@ -719,6 +746,7 @@ export default function EtiquetasPage() {
             <option value="aguardando_pagamento">Aguardando Pagamento</option>
             <option value="despachado">Despachado</option>
             <option value="entregue">Entregue</option>
+            <option value="retirado">Retirado na loja</option>
             <option value="frete_pago">Frete Pago</option>
             <option value="cancelado">Cancelado</option>
             <option value="todos">Todos</option>
@@ -912,23 +940,26 @@ export default function EtiquetasPage() {
                     </div>
                   )}
 
-                  {(!isMobile || rom.despachado_em) && (
+                  {(!isMobile || rom.despachado_em || rom.retirado_em) && (
                     <div style={{ color: '#9aa0a6', fontSize: isMobile ? 12 : 13 }}>
-                      {isMobile && 'Despachado em '}{formatarData(rom.despachado_em)}
+                      {isMobile && (rom.status === 'retirado' ? 'Retirado em ' : 'Despachado em ')}
+                      {formatarData(rom.status === 'retirado' ? rom.retirado_em : rom.despachado_em)}
                     </div>
                   )}
 
                   <div>
                   <div style={{
                     display: 'inline-block',
-                    background: rom.status === 'entregue' ? 'rgba(129,201,149,0.25)' :
+                    background: rom.status === 'retirado' ? 'rgba(156,39,176,0.2)' :
+                               rom.status === 'entregue' ? 'rgba(129,201,149,0.25)' :
                                rom.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
                                rom.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
                                rom.status === 'frete_pago' ? 'rgba(255,193,7,0.2)' :
                                rom.status === 'frete_cotado' ? 'rgba(156,39,176,0.2)' :
                                rom.status === 'cancelado' ? 'rgba(244,67,54,0.2)' :
                                'rgba(158,158,158,0.2)',
-                    color: rom.status === 'entregue' ? '#81c995' :
+                    color: rom.status === 'retirado' ? '#ce93d8' :
+                           rom.status === 'entregue' ? '#81c995' :
                            rom.status === 'despachado' ? '#4caf50' :
                            rom.status === 'etiqueta_gerada' ? '#2196f3' :
                            rom.status === 'frete_pago' ? '#ffc107' :
@@ -941,7 +972,8 @@ export default function EtiquetasPage() {
                     textTransform: 'uppercase',
                   }}>
                     {ehBaixaManual(rom) ? 'Pago na mão · ' : ''}
-                    {rom.status === 'entregue' ? 'Entregue' :
+                    {rom.status === 'retirado' ? 'Retirado na loja' :
+                     rom.status === 'entregue' ? 'Entregue' :
                      rom.status === 'despachado' ? 'Despachado' :
                      rom.status === 'etiqueta_gerada' ? 'Etiqueta Gerada' :
                      rom.status === 'frete_pago' ? 'Frete Pago' :
@@ -982,6 +1014,26 @@ export default function EtiquetasPage() {
                     marginTop: isMobile ? 4 : 0,
                   }}
                 >
+                  {['pronto', 'frete_cotado', 'frete_pago'].includes(rom.status) && (
+                    <button
+                      onClick={() => handleMarcarRetirado(rom)}
+                      title="Cliente retirou o pedido na loja"
+                      style={{
+                        background: 'rgba(156,39,176,0.15)',
+                        color: '#ce93d8',
+                        border: '1px solid rgba(156,39,176,0.5)',
+                        borderRadius: 6,
+                        padding: '6px 10px',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Retirou
+                    </button>
+                  )}
+
                   {!['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'].includes(rom.status) && (
                     <button
                       onClick={() => handleEnviarLinkFrete(rom)}
@@ -1164,14 +1216,16 @@ export default function EtiquetasPage() {
                   </div>
                   <div style={{
                     display: 'inline-block',
-                    background: modalAberto.status === 'entregue' ? 'rgba(129,201,149,0.25)' :
+                    background: modalAberto.status === 'retirado' ? 'rgba(156,39,176,0.2)' :
+                               modalAberto.status === 'entregue' ? 'rgba(129,201,149,0.25)' :
                                modalAberto.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
                                modalAberto.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
                                modalAberto.status === 'frete_pago' ? 'rgba(255,193,7,0.2)' :
                                modalAberto.status === 'frete_cotado' ? 'rgba(156,39,176,0.2)' :
                                modalAberto.status === 'cancelado' ? 'rgba(244,67,54,0.2)' :
                                'rgba(158,158,158,0.2)',
-                    color: modalAberto.status === 'entregue' ? '#81c995' :
+                    color: modalAberto.status === 'retirado' ? '#ce93d8' :
+                           modalAberto.status === 'entregue' ? '#81c995' :
                            modalAberto.status === 'despachado' ? '#4caf50' :
                            modalAberto.status === 'etiqueta_gerada' ? '#2196f3' :
                            modalAberto.status === 'frete_pago' ? '#ffc107' :
@@ -1183,7 +1237,8 @@ export default function EtiquetasPage() {
                     borderRadius: 8,
                     textTransform: 'uppercase',
                   }}>
-                    {modalAberto.status === 'entregue' ? 'Entregue' :
+                    {modalAberto.status === 'retirado' ? 'Retirado na loja' :
+                     modalAberto.status === 'entregue' ? 'Entregue' :
                      modalAberto.status === 'despachado' ? 'Despachado' :
                      modalAberto.status === 'etiqueta_gerada' ? 'Etiqueta Gerada' :
                      modalAberto.status === 'frete_pago' ? 'Frete Pago' :
@@ -1246,6 +1301,26 @@ export default function EtiquetasPage() {
                       {modalAberto.enderecos_clientes.complemento && ` - ${modalAberto.enderecos_clientes.complemento}`}<br />
                       {modalAberto.enderecos_clientes.bairro} - {modalAberto.enderecos_clientes.cidade}/{modalAberto.enderecos_clientes.estado}<br />
                       CEP: {modalAberto.enderecos_clientes.cep}
+                    </div>
+                  </div>
+                )}
+
+                {/* Retirada na loja */}
+                {modalAberto.status === 'retirado' && (
+                  <div style={{
+                    padding: 16,
+                    background: 'rgba(156,39,176,0.1)',
+                    border: '1px solid rgba(156,39,176,0.3)',
+                    borderRadius: 8,
+                    marginBottom: 20,
+                  }}>
+                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', fontWeight: 700 }}>
+                      Retirada na Loja
+                    </div>
+                    <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.6 }}>
+                      A cliente buscou o pedido na loja — sem frete e sem etiqueta.<br />
+                      {modalAberto.retirado_em && <>Em: {formatarDataHora(modalAberto.retirado_em)}<br /></>}
+                      {modalAberto.retirado_por_nome && <>Registrado por: {modalAberto.retirado_por_nome}</>}
                     </div>
                   </div>
                 )}
@@ -1507,6 +1582,26 @@ export default function EtiquetasPage() {
                         </button>
                       )}
                     </>
+                  )}
+
+                  {/* Retirada na loja: encerra o romaneio sem frete */}
+                  {['pronto', 'frete_cotado', 'frete_pago'].includes(modalAberto.status) && (
+                    <button
+                      onClick={() => handleMarcarRetirado(modalAberto)}
+                      style={{
+                        flex: 1,
+                        minWidth: 150,
+                        background: 'rgba(156,39,176,0.15)',
+                        color: '#ce93d8',
+                        border: '1px solid rgba(156,39,176,0.5)',
+                        borderRadius: 8,
+                        padding: '14px 20px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Retirou na loja
+                    </button>
                   )}
 
                   {/* Link de frete no WhatsApp - o cliente cota e paga sozinho */}

@@ -47,7 +47,7 @@ export default function MeuFrete() {
         .select('*, romaneio_sacolinhas(*)')
         .eq('tenant_id', tenantId)
         .eq('cliente_instagram', cliente.instagram.replace('@', ''))
-        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'])
+        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado', 'cancelado'])
         .order('created_at', { ascending: false })
 
       if (romsError) throw romsError
