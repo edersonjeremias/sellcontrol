@@ -105,16 +105,11 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
     expurgarFotosAntigas().catch(() => {})
   }, [semEstrutura])
 
-  // Quem não bate ponto fica de fora, mas continua aparecendo se já tiver
-  // marcação no período — histórico não some ao desmarcar a opção.
-  const bateOuTemHistorico = (f) =>
-    f.bate_ponto !== false || marcacoes.some(m => m.funcionario_id === f.id)
-
-  const daLista = funcionarios.filter(f =>
-    (filtroFunc ? f.id === filtroFunc : true) &&
-    bateOuTemHistorico(f) &&
-    (f.ativo || marcacoes.some(m => m.funcionario_id === f.id))
-  )
+  // Inativo ou sem ponto some da lista. O histórico continua no banco:
+  // para vê-lo, basta escolher a pessoa no filtro de funcionário.
+  const daLista = filtroFunc
+    ? funcionarios.filter(f => f.id === filtroFunc)
+    : funcionarios.filter(f => f.ativo !== false && f.bate_ponto !== false)
 
   function espelhoDe(func) {
     return montarEspelho({
@@ -356,8 +351,11 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
           <label>Funcionário</label>
           <select value={filtroFunc} onChange={e => setFiltroFunc(e.target.value)} style={S.inpS}>
             <option value="">Todos</option>
-            {funcionarios.filter(bateOuTemHistorico).map(f => (
-              <option key={f.id} value={f.id}>{f.apelido || f.nome}</option>
+            {funcionarios.map(f => (
+              <option key={f.id} value={f.id}>
+                {f.apelido || f.nome}
+                {f.ativo === false ? ' (inativo)' : f.bate_ponto === false ? ' (sem ponto)' : ''}
+              </option>
             ))}
           </select>
         </div>
