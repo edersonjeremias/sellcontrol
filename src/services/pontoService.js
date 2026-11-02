@@ -55,6 +55,20 @@ export function minutosDeHora(h) {
 const hhmm = (h) => String(h || '').slice(0, 5)
 
 /**
+ * Em que pé está o dia, lendo a sequência das batidas. Quem bateu a saída
+ * consta como fora, mesmo que ainda esteja na loja: o ponto registra o que
+ * foi marcado, não o que parece.
+ */
+export function situacaoDoDia(horarios = {}) {
+  const { ENTRADA, SAIDA_ALMOCO, VOLTA_ALMOCO, SAIDA } = horarios
+  if (SAIDA)        return { texto: `saiu ${horaDe(SAIDA)}`,                  estado: 'fim'    }
+  if (VOLTA_ALMOCO) return { texto: `trabalhando desde ${horaDe(VOLTA_ALMOCO)}`, estado: 'ativo'  }
+  if (SAIDA_ALMOCO) return { texto: `em almoço desde ${horaDe(SAIDA_ALMOCO)}`,   estado: 'almoco' }
+  if (ENTRADA)      return { texto: `trabalhando desde ${horaDe(ENTRADA)}`,      estado: 'ativo'  }
+  return { texto: 'sem batida', estado: 'nada' }
+}
+
+/**
  * Jornada contratual do funcionário. As horas por dia saem dos horários
  * quando eles existem; carga_horaria_diaria fica como reserva para quem
  * ainda não tem jornada cadastrada.

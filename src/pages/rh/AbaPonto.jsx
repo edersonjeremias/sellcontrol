@@ -6,10 +6,9 @@ import {
   getMarcacoes, getAjustes, getFechamentos, salvarFechamento,
   registrarAjuste, assinarUrlsPonto, montarEspelho, expurgarFotosAntigas,
   hashArquivo, enviarEspelhoAssinado, definirPinPonto, pegarLocalizacao,
-  TIPOS_BATIDA, LABEL_BATIDA, horaDe, fmtHoras, tabelaFaltaPonto,
+  TIPOS_BATIDA, LABEL_BATIDA, horaDe, fmtHoras, tabelaFaltaPonto, situacaoDoDia,
 } from '../../services/pontoService'
 import { saveConfig } from '../../services/configService'
-import PontoHoje from './PontoHoje'
 import { gerarEspelhoPdf } from './espelhoPontoPdf'
 import { S, Campo, Modal, IconCheck, IconEdit, IconRecibo, IconWhats } from './RhUI'
 
@@ -126,6 +125,21 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
       ajustes:     ajustes.filter(a => a.funcionario_id === func.id),
       feriados,
     })
+  }
+
+  // O dia de hoje é montado com as batidas carregadas à parte, para a linha
+  // continuar certa mesmo com a competência apontando para outro mês.
+  function diaDeHoje(func) {
+    const esp = montarEspelho({
+      funcionario: func,
+      dataInicio:  HOJE,
+      dataFim:     HOJE,
+      marcacoes:   deHoje.filter(m => m.funcionario_id === func.id),
+      ajustes:     [],
+      feriados,
+      hoje:        HOJE,
+    })
+    return esp.dias[0]
   }
 
   function fechamentoDe(funcId) {
@@ -354,14 +368,6 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
       </div>
 
       <div className="rh-conteudo">
-        <PontoHoje
-          hoje={HOJE}
-          funcionarios={funcionarios.filter(f => f.ativo && f.bate_ponto !== false)}
-          marcacoes={deHoje}
-          feriados={feriados}
-          onAbrirDia={abrirDia}
-        />
-
         {carregando ? (
           <p style={{ color:'var(--muted)' }}>Carregando…</p>
         ) : !daLista.length ? (
@@ -371,6 +377,8 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
             {daLista.map(func => {
               const espelho = espelhoDe(func)
               const fech    = fechamentoDe(func.id)
+              const diaHoje = diaDeHoje(func)
+              const hoje    = { dia: diaHoje, sit: situacaoDoDia(diaHoje.horarios) }
               const aberto  = expandido === func.id
               return (
                 <div key={func.id} className="pt-bloco">
@@ -391,6 +399,21 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
                             {' • '}{fmtHoras(espelho.totais.horasNaoUteis)} em feriado/folga
                           </span>
                         )}
+                      </div>
+
+                      <div
+                        className={`pt-bloco-hoje ${hoje.sit.estado}`}
+                        onClick={e => { e.stopPropagation(); abrirDia(func, hoje.dia) }}
+                        title="Ver as fotos das batidas de hoje"
+                      >
+                        <b>Hoje: {hoje.sit.texto}</b>
+                        {TIPOS_BATIDA.map(t => (
+                          <span key={t} className={hoje.dia.horarios[t] ? 'feita' : ''} title={LABEL_BATIDA[t]}>
+                            {horaDe(hoje.dia.horarios[t]) || '—'}
+                          </span>
+                        ))}
+                        {hoje.dia.trabalhadas > 0 && <em>{fmtHoras(hoje.dia.trabalhadas)}</em>}
+                        {hoje.dia.atrasoMin > 0 && <em className="atraso">{hoje.dia.atrasoMin} min de atraso</em>}
                       </div>
                     </div>
                     <div className="pt-bloco-acoes" onClick={e => e.stopPropagation()}>
