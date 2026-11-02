@@ -8,6 +8,7 @@ import { showGlobalToast } from '../../context/AppContext'
 import { pesoEmKg } from '../../lib/peso'
 import { linkRastreio, sincronizarRastreio } from '../../lib/rastreio'
 import ModalPergunta from '../../components/ui/ModalPergunta'
+import { getHistoricoRomaneio } from '../../services/pedidosService'
 
 /**
  * Pagamento aprovado mais recente do romaneio, para distinguir o que entrou
@@ -60,6 +61,125 @@ function ehBaixaManual(rom) {
   return !pag?.gateway_transaction_id
 }
 
+const LABEL_STATUS = {
+  preparando: 'Preparando',
+  pronto: 'Pronto',
+  frete_cotado: 'Cotado',
+  frete_pago: 'Frete Pago',
+  etiqueta_gerada: 'Etiqueta Gerada',
+  despachado: 'Despachado',
+  em_transito: 'Em trânsito',
+  entregue: 'Entregue',
+  retirado: 'Retirado na loja',
+  cancelado: 'Cancelado',
+}
+
+const COR_STATUS = {
+  entregue: '#81c995',
+  retirado: '#ce93d8',
+  despachado: '#4caf50',
+  etiqueta_gerada: '#2196f3',
+  frete_pago: '#ffc107',
+  frete_cotado: '#9c27b0',
+  cancelado: '#f44336',
+}
+
+/** Histórico de status do romaneio, alimentado por trigger no banco */
+function ModalHistorico({ romaneio, onFechar }) {
+  const [hist, setHist] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState(null)
+
+  useEffect(() => {
+    let vivo = true
+    getHistoricoRomaneio(romaneio.id)
+      .then(d => { if (vivo) setHist(d) })
+      .catch(e => { if (vivo) setErro(e.message || 'Erro ao carregar histórico') })
+      .finally(() => { if (vivo) setCarregando(false) })
+    return () => { vivo = false }
+  }, [romaneio.id])
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 12000,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}
+      onClick={e => e.target === e.currentTarget && onFechar()}
+    >
+      <div style={{
+        background: '#1e1e1e', border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: 12, width: 'min(560px, 100%)', maxHeight: '80vh',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+          gap: 12, padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          <div>
+            <div style={{ color: '#e8eaed', fontWeight: 700, fontSize: 15 }}>
+              Histórico de status
+            </div>
+            <div style={{ color: '#9aa0a6', fontSize: 12, marginTop: 2 }}>
+              {romaneio.numero} — @{romaneio.cliente_instagram}
+            </div>
+          </div>
+          <button
+            onClick={onFechar}
+            style={{
+              background: 'rgba(255,255,255,0.08)', color: '#e8eaed', border: 'none',
+              borderRadius: 6, padding: '6px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Fechar
+          </button>
+        </div>
+
+        <div style={{ overflow: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {carregando && (
+            <div style={{ color: '#9aa0a6', fontSize: 13, padding: 20, textAlign: 'center' }}>
+              Carregando...
+            </div>
+          )}
+
+          {erro && <div style={{ color: '#f28b82', fontSize: 13, padding: 12 }}>{erro}</div>}
+
+          {!carregando && !erro && hist.length === 0 && (
+            <div style={{ color: '#9aa0a6', fontSize: 13, padding: 20, textAlign: 'center' }}>
+              Nenhuma alteração de status registrada ainda.
+            </div>
+          )}
+
+          {hist.map(h => (
+            <div key={h.id} style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '8px 10px', borderRadius: 6,
+              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <span style={{ color: '#9aa0a6', fontSize: 11, whiteSpace: 'nowrap' }}>
+                {formatarDataHora(h.created_at)}
+              </span>
+              <span style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: '#9aa0a6' }}>
+                  {LABEL_STATUS[h.status_anterior] || h.status_anterior || '—'}
+                </span>
+                <span style={{ color: '#9aa0a6' }}>→</span>
+                <span style={{ fontWeight: 700, color: COR_STATUS[h.status_novo] || '#e8eaed' }}>
+                  {LABEL_STATUS[h.status_novo] || h.status_novo || '—'}
+                </span>
+              </span>
+              <span style={{ color: '#9aa0a6', fontSize: 11, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                {h.alterado_por_nome || 'Sistema'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // No celular a tabela em grid não cabe na tela: a listagem vira cartões
 function useIsMobile(largura = 720) {
   const [mobile, setMobile] = useState(
@@ -93,6 +213,7 @@ export default function EtiquetasPage() {
   const [erroModal, setErroModal] = useState(null)
   // Confirmações em modal, no lugar de window.confirm e prompt
   const [pergunta, setPergunta] = useState(null)
+  const [historicoDe, setHistoricoDe] = useState(null)
 
   // Estados para cotação
   const [cotando, setCotando] = useState(false)
@@ -1150,6 +1271,24 @@ export default function EtiquetasPage() {
                     </>
                   )}
 
+                  <button
+                    onClick={() => setHistoricoDe(rom)}
+                    title="Ver histórico de status"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      color: '#9aa0a6',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      borderRadius: 6,
+                      padding: '6px 10px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    Histórico
+                  </button>
+
                   {/* Botão Editar - sempre visível */}
                   <button
                     onClick={() => handleAbrirEdicao(rom)}
@@ -1683,6 +1822,10 @@ export default function EtiquetasPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {historicoDe && (
+          <ModalHistorico romaneio={historicoDe} onFechar={() => setHistoricoDe(null)} />
         )}
 
         {/* Confirmações do sistema, no lugar de window.confirm e prompt */}

@@ -376,3 +376,17 @@ export async function getHistoricoVenda(vendaId) {
   if (error) throw error
   return data || []
 }
+
+/**
+ * Histórico de mudanças de status de um romaneio
+ */
+export async function getHistoricoRomaneio(romaneioId) {
+  const { data, error } = await supabase
+    .from('romaneios_historico')
+    .select('*')
+    .eq('romaneio_id', romaneioId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
