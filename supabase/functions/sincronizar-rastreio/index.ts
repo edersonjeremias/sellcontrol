@@ -50,12 +50,12 @@ serve(async (req) => {
 
     let query = supabase
       .from('romaneios')
-      .select('id, numero, melhor_envio_order_id')
+      .select('id, numero, status, codigo_rastreio, despachado_em, melhor_envio_order_id')
       .eq('tenant_id', tenant_id)
       .not('melhor_envio_order_id', 'is', null)
-      .is('codigo_rastreio', null)
       .in('status', RASTREAVEIS)
       .limit(60)
+
 
     if (romaneio_id) query = query.eq('id', romaneio_id)
     if (cliente_instagram) query = query.eq('cliente_instagram', String(cliente_instagram).replace('@', ''))
@@ -90,24 +90,52 @@ serve(async (req) => {
 
     // A resposta vem como { "<order_id>": { tracking, status, ... } }
     const dados = await resp.json()
+
     let atualizados = 0
+    let despachados = 0
+    let entregues = 0
 
     for (const romaneio of pendentes) {
       const info = dados?.[romaneio.melhor_envio_order_id]
-      const codigo = info?.tracking || info?.melhorenvio_tracking || null
-      if (!codigo) continue
+      if (!info) continue
+
+      const updates: Record<string, unknown> = {}
+
+      const codigo = info.tracking || info.melhorenvio_tracking || null
+      if (codigo && !romaneio.codigo_rastreio) updates.codigo_rastreio = codigo
+
+      // A transportadora registrou a postagem: o pacote saiu da loja
+      if (info.posted_at && romaneio.status === 'etiqueta_gerada') {
+        updates.status = 'despachado'
+        updates.despachado_em = info.posted_at
+      }
+
+      // Entrega confirmada tem precedência sobre a postagem
+      if (info.delivered_at && romaneio.status !== 'entregue') {
+        updates.status = 'entregue'
+        updates.entregue_em = info.delivered_at
+        if (!romaneio.despachado_em && info.posted_at) updates.despachado_em = info.posted_at
+      }
+
+      if (!Object.keys(updates).length) continue
 
       const { error: upError } = await supabase
         .from('romaneios')
-        .update({ codigo_rastreio: codigo })
+        .update(updates)
         .eq('id', romaneio.id)
 
-      if (upError) console.error(`Erro ao salvar rastreio de ${romaneio.numero}:`, upError)
-      else atualizados++
+      if (upError) {
+        console.error(`Erro ao atualizar ${romaneio.numero}:`, upError)
+        continue
+      }
+
+      if (updates.codigo_rastreio) atualizados++
+      if (updates.status === 'despachado') despachados++
+      if (updates.status === 'entregue') entregues++
     }
 
-    console.log(`📍 Rastreios atualizados: ${atualizados}/${pendentes.length}`)
-    return json({ atualizados, verificados: pendentes.length })
+    console.log(`📍 Rastreios: ${atualizados} | despachados: ${despachados} | entregues: ${entregues}`)
+    return json({ atualizados, despachados, entregues, verificados: pendentes.length })
   } catch (error) {
     console.error('Erro:', error)
     return json({ error: (error as Error).message }, 500)

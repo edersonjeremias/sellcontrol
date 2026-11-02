@@ -54,7 +54,7 @@ function formatarDataHora(valor) {
 
 /** Frete pago sem transação no gateway: baixa manual ou registro perdido */
 function ehBaixaManual(rom) {
-  if (!['frete_pago', 'etiqueta_gerada', 'despachado'].includes(rom.status)) return false
+  if (!['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue'].includes(rom.status)) return false
   const pag = pagamentoDoRomaneio(rom)
   return !pag?.gateway_transaction_id
 }
@@ -126,7 +126,7 @@ export default function EtiquetasPage() {
         .from('romaneios')
         .select('*, enderecos_clientes(*), pagamentos_frete(*)')
         .eq('tenant_id', tenantId)
-        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'])
+        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'cancelado'])
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -718,6 +718,7 @@ export default function EtiquetasPage() {
             <option value="etiqueta_gerada">Etiqueta Gerada</option>
             <option value="aguardando_pagamento">Aguardando Pagamento</option>
             <option value="despachado">Despachado</option>
+            <option value="entregue">Entregue</option>
             <option value="frete_pago">Frete Pago</option>
             <option value="cancelado">Cancelado</option>
             <option value="todos">Todos</option>
@@ -920,13 +921,15 @@ export default function EtiquetasPage() {
                   <div>
                   <div style={{
                     display: 'inline-block',
-                    background: rom.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
+                    background: rom.status === 'entregue' ? 'rgba(129,201,149,0.25)' :
+                               rom.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
                                rom.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
                                rom.status === 'frete_pago' ? 'rgba(255,193,7,0.2)' :
                                rom.status === 'frete_cotado' ? 'rgba(156,39,176,0.2)' :
                                rom.status === 'cancelado' ? 'rgba(244,67,54,0.2)' :
                                'rgba(158,158,158,0.2)',
-                    color: rom.status === 'despachado' ? '#4caf50' :
+                    color: rom.status === 'entregue' ? '#81c995' :
+                           rom.status === 'despachado' ? '#4caf50' :
                            rom.status === 'etiqueta_gerada' ? '#2196f3' :
                            rom.status === 'frete_pago' ? '#ffc107' :
                            rom.status === 'frete_cotado' ? '#9c27b0' :
@@ -938,7 +941,8 @@ export default function EtiquetasPage() {
                     textTransform: 'uppercase',
                   }}>
                     {ehBaixaManual(rom) ? 'Pago na mão · ' : ''}
-                    {rom.status === 'despachado' ? 'Despachado' :
+                    {rom.status === 'entregue' ? 'Entregue' :
+                     rom.status === 'despachado' ? 'Despachado' :
                      rom.status === 'etiqueta_gerada' ? 'Etiqueta Gerada' :
                      rom.status === 'frete_pago' ? 'Frete Pago' :
                      rom.status === 'frete_cotado' ? 'Cotado' :
@@ -1160,13 +1164,15 @@ export default function EtiquetasPage() {
                   </div>
                   <div style={{
                     display: 'inline-block',
-                    background: modalAberto.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
+                    background: modalAberto.status === 'entregue' ? 'rgba(129,201,149,0.25)' :
+                               modalAberto.status === 'despachado' ? 'rgba(76,175,80,0.2)' :
                                modalAberto.status === 'etiqueta_gerada' ? 'rgba(33,150,243,0.2)' :
                                modalAberto.status === 'frete_pago' ? 'rgba(255,193,7,0.2)' :
                                modalAberto.status === 'frete_cotado' ? 'rgba(156,39,176,0.2)' :
                                modalAberto.status === 'cancelado' ? 'rgba(244,67,54,0.2)' :
                                'rgba(158,158,158,0.2)',
-                    color: modalAberto.status === 'despachado' ? '#4caf50' :
+                    color: modalAberto.status === 'entregue' ? '#81c995' :
+                           modalAberto.status === 'despachado' ? '#4caf50' :
                            modalAberto.status === 'etiqueta_gerada' ? '#2196f3' :
                            modalAberto.status === 'frete_pago' ? '#ffc107' :
                            modalAberto.status === 'frete_cotado' ? '#9c27b0' :
@@ -1177,7 +1183,8 @@ export default function EtiquetasPage() {
                     borderRadius: 8,
                     textTransform: 'uppercase',
                   }}>
-                    {modalAberto.status === 'despachado' ? 'Despachado' :
+                    {modalAberto.status === 'entregue' ? 'Entregue' :
+                     modalAberto.status === 'despachado' ? 'Despachado' :
                      modalAberto.status === 'etiqueta_gerada' ? 'Etiqueta Gerada' :
                      modalAberto.status === 'frete_pago' ? 'Frete Pago' :
                      modalAberto.status === 'frete_cotado' ? 'Cotado' :
@@ -1244,7 +1251,7 @@ export default function EtiquetasPage() {
                 )}
 
                 {/* Origem do pagamento do frete */}
-                {['frete_pago', 'etiqueta_gerada', 'despachado'].includes(modalAberto.status) && (() => {
+                {['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue'].includes(modalAberto.status) && (() => {
                   const pag = pagamentoDoRomaneio(modalAberto)
                   const manual = !pag?.gateway_transaction_id
 
@@ -1523,7 +1530,7 @@ export default function EtiquetasPage() {
                   )}
 
                   {/* Botão Marcar como Pago - aparece apenas quando NÃO está pago */}
-                  {!['frete_pago', 'etiqueta_gerada', 'despachado'].includes(modalAberto.status) && (
+                  {!['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue'].includes(modalAberto.status) && (
                     <button
                       onClick={() => {
                         handleMarcarComoPago(modalAberto)
