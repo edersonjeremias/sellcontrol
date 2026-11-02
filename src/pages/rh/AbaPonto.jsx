@@ -5,9 +5,10 @@ import {
 import {
   getMarcacoes, getAjustes, getFechamentos, salvarFechamento,
   registrarAjuste, assinarUrlsPonto, montarEspelho, expurgarFotosAntigas,
-  hashArquivo, enviarEspelhoAssinado, definirPinPonto,
+  hashArquivo, enviarEspelhoAssinado, definirPinPonto, pegarLocalizacao,
   TIPOS_BATIDA, LABEL_BATIDA, horaDe, fmtHoras, tabelaFaltaPonto,
 } from '../../services/pontoService'
+import { saveConfig } from '../../services/configService'
 import { gerarEspelhoPdf } from './espelhoPontoPdf'
 import { S, Campo, Modal, IconCheck, IconEdit, IconRecibo, IconWhats } from './RhUI'
 
@@ -41,6 +42,10 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   const [modalAjuste, setModalAjuste] = useState(null) // { funcionario, dia, tipo, atual }
   const [formAjuste, setFormAjuste] = useState({ hora: '', motivo: '' })
   const [modalPin,   setModalPin]   = useState(null)   // funcionário
+  const [modalCerca, setModalCerca] = useState(false)
+  const [cerca,      setCerca]      = useState({})
+  const [formCerca,  setFormCerca]  = useState({ latitude:'', longitude:'', raio:150, exigir:true })
+  const [buscandoLocal, setBuscandoLocal] = useState(false)
   const [pin,        setPin]        = useState('')
   const [salvando,   setSalvando]   = useState(false)
   const [expandido,  setExpandido]  = useState(null)   // id do funcionário aberto
@@ -73,6 +78,9 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   }, [tenantId, dataIni, dataFim, filtroFunc, showToast])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // A cerca vem junto das configurações da empresa
+  useEffect(() => { if (empresa) setCerca(empresa) }, [empresa])
 
   // Selfies com mais de 6 meses somem; a batida permanece
   useEffect(() => {
@@ -153,6 +161,53 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
       setModalAjuste(null)
       setModalDia(null)
       carregar()
+    } catch (e) { showToast('Erro: ' + e.message, 'error') }
+    setSalvando(false)
+  }
+
+  // ── Cerca de localização ────────────────────────────────────
+  function abrirCerca() {
+    setModalCerca(true)
+    setFormCerca({
+      latitude:  cerca.ponto_latitude  ?? '',
+      longitude: cerca.ponto_longitude ?? '',
+      raio:      cerca.ponto_raio_metros ?? 150,
+      exigir:    cerca.ponto_exigir_local !== false,
+    })
+  }
+
+  async function usarLocalAtual() {
+    setBuscandoLocal(true)
+    const pos = await pegarLocalizacao()
+    setBuscandoLocal(false)
+    if (!pos) {
+      return showToast('Não consegui a localização. Libere o acesso no navegador e tente de novo.', 'error')
+    }
+    setFormCerca(p => ({ ...p, latitude: pos.latitude.toFixed(7), longitude: pos.longitude.toFixed(7) }))
+    showToast(`Posição capturada com precisão de ${pos.precisao} m.`, 'success')
+  }
+
+  async function salvarCerca() {
+    const lat = formCerca.latitude === '' ? null : Number(formCerca.latitude)
+    const lng = formCerca.longitude === '' ? null : Number(formCerca.longitude)
+    if ((lat === null) !== (lng === null)) {
+      return showToast('Informe latitude e longitude, ou deixe as duas em branco.', 'error')
+    }
+    if (lat !== null && (Math.abs(lat) > 90 || Math.abs(lng) > 180)) {
+      return showToast('Coordenada inválida.', 'error')
+    }
+    setSalvando(true)
+    try {
+      const campos = {
+        ponto_latitude:     lat,
+        ponto_longitude:    lng,
+        ponto_raio_metros:  Number(formCerca.raio) || 150,
+        ponto_exigir_local: !!formCerca.exigir,
+      }
+      await saveConfig(tenantId, campos)
+      setCerca(c => ({ ...c, ...campos }))
+      showToast(lat === null ? 'Cerca desligada.' : 'Local da loja salvo!', 'success')
+      setModalCerca(false)
     } catch (e) { showToast('Erro: ' + e.message, 'error') }
     setSalvando(false)
   }
@@ -272,6 +327,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
           </select>
         </div>
         <div className="rh-acoes">
+          <button onClick={abrirCerca} style={{ ...S.btn, padding:'5px 14px' }}>Local da loja</button>
           <button onClick={carregar} style={{ ...S.btn, padding:'5px 14px' }}>Atualizar</button>
         </div>
       </div>
@@ -413,6 +469,13 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
                     {marc
                       ? `${marc.origem || 'QUIOSQUE'} • comprovante ${marc.comprovante}`
                       : 'Sem marcação'}
+                    {marc && marc.distancia_metros != null && (
+                      <span style={{ color: marc.fora_da_cerca ? 'var(--yellow)' : 'var(--muted)' }}>
+                        {' • '}{marc.distancia_metros} m da loja
+                        {marc.fora_da_cerca && ' (fora da cerca)'}
+                      </span>
+                    )}
+                    {marc && marc.distancia_metros == null && marc.latitude == null && ' • sem localização'}
                     {ajuste && (
                       <><br />Ajustado por {ajuste.autor_nome || 'usuário'}: {ajuste.motivo}</>
                     )}
@@ -463,6 +526,66 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
           </Campo>
           <p style={{ fontSize:11, color:'var(--muted)', margin:0 }}>
             A batida original não é apagada: o ajuste entra como correção, com seu nome e a data.
+          </p>
+        </Modal>
+      )}
+
+      {modalCerca && (
+        <Modal
+          titulo="Local da loja"
+          onFechar={() => setModalCerca(false)}
+          largura={460}
+          footer={
+            <>
+              <button className="btn-cancel" onClick={() => setModalCerca(false)}>Cancelar</button>
+              <button className="btn-confirm" onClick={salvarCerca} disabled={salvando}>
+                {salvando ? 'Salvando…' : 'Salvar'}
+              </button>
+            </>
+          }
+        >
+          <p style={{ margin:0, fontSize:13, color:'var(--muted)' }}>
+            Estando <b style={{ color:'var(--text-body)' }}>dentro da loja</b>, toque no botão abaixo
+            para gravar a posição. É contra ela que cada batida é conferida.
+          </p>
+
+          <button onClick={usarLocalAtual} disabled={buscandoLocal}
+            style={{ ...S.btn, width:'100%', padding:'10px', fontWeight:700 }}>
+            {buscandoLocal ? 'Procurando…' : 'Usar a localização atual'}
+          </button>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+            <Campo label="Latitude">
+              <input value={formCerca.latitude}
+                onChange={e => setFormCerca(p => ({ ...p, latitude: e.target.value }))}
+                style={S.inp} placeholder="-23.5505199" inputMode="decimal" />
+            </Campo>
+            <Campo label="Longitude">
+              <input value={formCerca.longitude}
+                onChange={e => setFormCerca(p => ({ ...p, longitude: e.target.value }))}
+                style={S.inp} placeholder="-46.6333094" inputMode="decimal" />
+            </Campo>
+          </div>
+
+          <Campo label="Distância aceita (metros)">
+            <input type="number" min="30" max="2000" step="10" value={formCerca.raio}
+              onChange={e => setFormCerca(p => ({ ...p, raio: e.target.value }))}
+              style={S.inp} />
+          </Campo>
+
+          <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'var(--text-body)', cursor:'pointer' }}>
+            <input type="checkbox" checked={formCerca.exigir}
+              onChange={e => setFormCerca(p => ({ ...p, exigir: e.target.checked }))}
+              style={{ width:14, height:14 }} />
+            Recusar a batida fora da loja
+          </label>
+          <p style={{ fontSize:11, color:'var(--muted)', margin:0, lineHeight:1.5 }}>
+            Desmarcado, a batida é aceita de qualquer lugar, mas fica
+            <b style={{ color:'var(--yellow)' }}> marcada como fora da cerca</b> para você conferir.
+            Deixar latitude e longitude em branco desliga a conferência.
+            <br />
+            O GPS dentro de loja costuma errar de 20 a 60 metros — por isso 150 m é um bom começo.
+            Apertar demais faz a batida ser recusada com a funcionária parada no balcão.
           </p>
         </Modal>
       )}

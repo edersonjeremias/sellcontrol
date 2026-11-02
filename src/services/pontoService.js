@@ -113,16 +113,40 @@ export async function enviarFotoPonto(blob, tenantId, funcionarioId) {
  * Grava a batida. Quem confere o PIN e carimba a hora é o banco:
  * o relógio do aparelho não entra na conta.
  */
-export async function registrarPonto({ funcionarioId, pin, tipo, fotoPath, origem = 'QUIOSQUE' }) {
+export async function registrarPonto({
+  funcionarioId, pin, tipo, fotoPath, origem = 'QUIOSQUE', local = null,
+}) {
   const { data, error } = await supabase.rpc('rh_registrar_ponto', {
     p_funcionario: funcionarioId,
     p_pin:         pin,
     p_tipo:        tipo,
     p_foto:        fotoPath || null,
     p_origem:      origem,
+    p_lat:         local?.latitude ?? null,
+    p_lng:         local?.longitude ?? null,
+    p_precisao:    local?.precisao ?? null,
   })
   if (error) throw error
   return Array.isArray(data) ? data[0] : data
+}
+
+/**
+ * Posição do aparelho. Devolve null em vez de estourar: quem decide se a
+ * batida vale sem localização é o banco, não esta função.
+ */
+export function pegarLocalizacao({ timeout = 12000 } = {}) {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(null)
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({
+        latitude:  pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        precisao:  Math.round(pos.coords.accuracy || 0),
+      }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout, maximumAge: 0 },
+    )
+  })
 }
 
 export async function definirPinPonto(funcionarioId, pin) {

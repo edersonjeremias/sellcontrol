@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import {
-  getFuncionariosPonto, registrarPonto, enviarFotoPonto, getMarcacoes,
+  getFuncionariosPonto, registrarPonto, enviarFotoPonto, getMarcacoes, pegarLocalizacao,
   TIPOS_BATIDA, LABEL_BATIDA, horaDe,
 } from '../../services/pontoService'
 import { isoLocal } from '../../services/rhService'
@@ -32,6 +32,8 @@ export default function PontoQuiosquePage() {
   const [enviando,  setEnviando]  = useState(false)
   const [recibo,    setRecibo]    = useState(null)  // comprovante na tela
   const [camOk,     setCamOk]     = useState(false)
+  const [local,     setLocal]     = useState(null)   // posição do aparelho
+  const [buscandoLocal, setBuscandoLocal] = useState(false)
 
   const videoRef  = useRef(null)
   const streamRef = useRef(null)
@@ -86,6 +88,20 @@ export default function PontoQuiosquePage() {
     return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.75))
   }
 
+  // A posição é pedida junto com a câmera, para já estar pronta quando ela
+  // terminar de digitar o PIN — o GPS costuma levar alguns segundos.
+  useEffect(() => {
+    if (!escolhido) { setLocal(null); return }
+    let cancelado = false
+    setBuscandoLocal(true)
+    pegarLocalizacao().then(pos => {
+      if (cancelado) return
+      setLocal(pos)
+      setBuscandoLocal(false)
+    })
+    return () => { cancelado = true }
+  }, [escolhido])
+
   // Teclado próprio: o teclado do sistema sobe e empurra a câmera para fora
   // da tela. Com estas teclas a tela fica parada do começo ao fim.
   const digitar = useCallback(d => setPin(p => (p + d).slice(0, 4)), [])
@@ -121,11 +137,16 @@ export default function PontoQuiosquePage() {
       const blob = await capturarFoto()
       const fotoPath = await enviarFotoPonto(blob, tenantId, escolhido.id)
 
+      // Última tentativa de posição: o primeiro pedido pode ter falhado
+      const posicao = local || await pegarLocalizacao({ timeout: 8000 })
+      if (posicao && !local) setLocal(posicao)
+
       const res = await registrarPonto({
         funcionarioId: escolhido.id,
         pin,
         tipo,
         fotoPath,
+        local: posicao,
       })
 
       setRecibo({
@@ -134,12 +155,17 @@ export default function PontoQuiosquePage() {
         tipo,
         nome:        escolhido.apelido || escolhido.nome,
         semFoto:     !fotoPath,
+        distancia:   res.distancia,
       })
       setPin('')
       carregar()
     } catch (e) {
       const msg = String(e.message || '')
-      showToast(msg.includes('PIN incorreto') ? 'PIN incorreto.' : 'Erro: ' + msg, 'error')
+      let amigavel = 'Erro: ' + msg
+      if (msg.includes('PIN incorreto'))      amigavel = 'PIN incorreto.'
+      else if (msg.includes('Fora da loja'))  amigavel = 'Você não está na loja. O ponto só pode ser batido aqui.'
+      else if (msg.includes('Localizacao'))   amigavel = 'Libere o acesso à localização no navegador para bater o ponto.'
+      showToast(amigavel, 'error')
       setPin('')
     }
     setEnviando(false)
@@ -171,6 +197,7 @@ export default function PontoQuiosquePage() {
           </div>
           <p className="pt-recibo-dica">
             Guarde ou fotografe este código — ele identifica a sua marcação.
+            {recibo.distancia != null && <><br />Registrada a {recibo.distancia} m da loja.</>}
             {recibo.semFoto && <><br />A foto não pôde ser registrada desta vez.</>}
           </p>
           <button className="pt-btn-grande" onClick={fechar}>Concluir</button>
@@ -203,6 +230,14 @@ export default function PontoQuiosquePage() {
                 {feitas.includes(t) && <span className="pt-tipo-ok">já registrada</span>}
               </button>
             ))}
+          </div>
+
+          <div className={`pt-local${local ? ' ok' : buscandoLocal ? '' : ' erro'}`}>
+            {local
+              ? `Localização confirmada (±${local.precisao} m)`
+              : buscandoLocal
+                ? 'Procurando a localização…'
+                : 'Sem localização — libere o acesso no navegador'}
           </div>
 
           <div className="pt-pin-dots" aria-label={`PIN: ${pin.length} de 4 dígitos`}>

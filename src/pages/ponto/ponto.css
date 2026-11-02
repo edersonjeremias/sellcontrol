@@ -156,3 +156,18 @@
   letter-spacing: 1px;
 }
 .pt-recibo-dica { font-size: 12px; color: var(--muted); margin: 14px 0 22px; line-height: 1.5; }
+
+/* ── Aviso de localização no quiosque ── */
+.pt-local {
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--muted);
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin-bottom: 10px;
+}
+.pt-local.ok   { color: var(--green);  border-color: rgba(129,201,149,0.35); }
+.pt-local.erro { color: var(--yellow); border-color: rgba(251,188,4,0.35); }
