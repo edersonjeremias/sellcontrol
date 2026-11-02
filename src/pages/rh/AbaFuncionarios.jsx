@@ -22,7 +22,7 @@ const FORM_VAZIO = {
   salario: '', tipo_contrato: 'CLT', dia_pagamento: '',
   chave_pix: '', banco: '', endereco: '',
   dias_trabalho: '1,2,3,4,5', vt_valor_ida: '', vt_valor_volta: '',
-  observacoes: '', ativo: true,
+  observacoes: '', ativo: true, bate_ponto: true,
 }
 
 export default function AbaFuncionarios({ tenantId, showToast, funcionarios, recarregarFuncionarios, carregando }) {
@@ -71,6 +71,7 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
       dias_trabalho: f.dias_trabalho || '1,2,3,4,5',
       vt_valor_ida: valorParaInput(f.vt_valor_ida), vt_valor_volta: valorParaInput(f.vt_valor_volta),
       observacoes: f.observacoes || '', ativo: f.ativo !== false,
+      bate_ponto: f.bate_ponto !== false,
     })
     setModal(f)
   }
@@ -120,6 +121,7 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
         vt_valor_volta: parseValor(form.vt_valor_volta),
         observacoes:    form.observacoes.trim() || null,
         ativo:          form.ativo,
+        bate_ponto:     form.bate_ponto,
       })
       showToast(modal === 'novo' ? 'Funcionário cadastrado!' : 'Funcionário atualizado!', 'success')
       setModal(null)
@@ -385,6 +387,16 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
                 onChange={e => setForm(p => ({ ...p, ativo: e.target.checked }))}
                 style={{ width:14, height:14 }} />
               Funcionário ativo
+            </label>
+
+            <label style={{ gridColumn:'span 2', display:'flex', alignItems:'center', gap:8, fontSize:13, fontWeight:700, color:'var(--text-body)', cursor:'pointer' }}>
+              <input type="checkbox" checked={form.bate_ponto}
+                onChange={e => setForm(p => ({ ...p, bate_ponto: e.target.checked }))}
+                style={{ width:14, height:14 }} />
+              Bate ponto
+              <span style={{ fontWeight:400, fontSize:11, color:'var(--muted)' }}>
+                — desmarcado, não aparece no quiosque nem tem espelho apurado
+              </span>
             </label>
           </div>
         </Modal>

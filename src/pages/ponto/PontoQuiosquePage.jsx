@@ -98,7 +98,7 @@ export default function PontoQuiosquePage() {
   function abrir(func) {
     const feitas = batidasDe(func.id)
     if (!func.tem_pin) {
-      return showToast('Essa funcionária ainda não tem PIN. Cadastre em RH → Funcionários.', 'error')
+      return showToast('Essa funcionária ainda não tem PIN. Defina em RH → Ponto.', 'error')
     }
     setEscolhido(func)
     setPin('')

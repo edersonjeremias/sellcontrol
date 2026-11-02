@@ -80,8 +80,15 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
     expurgarFotosAntigas().catch(() => {})
   }, [semEstrutura])
 
+  // Quem não bate ponto fica de fora, mas continua aparecendo se já tiver
+  // marcação no período — histórico não some ao desmarcar a opção.
+  const bateOuTemHistorico = (f) =>
+    f.bate_ponto !== false || marcacoes.some(m => m.funcionario_id === f.id)
+
   const daLista = funcionarios.filter(f =>
-    (filtroFunc ? f.id === filtroFunc : true) && (f.ativo || marcacoes.some(m => m.funcionario_id === f.id))
+    (filtroFunc ? f.id === filtroFunc : true) &&
+    bateOuTemHistorico(f) &&
+    (f.ativo || marcacoes.some(m => m.funcionario_id === f.id))
   )
 
   function espelhoDe(func) {
@@ -259,7 +266,9 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
           <label>Funcionário</label>
           <select value={filtroFunc} onChange={e => setFiltroFunc(e.target.value)} style={S.inpS}>
             <option value="">Todos</option>
-            {funcionarios.map(f => <option key={f.id} value={f.id}>{f.apelido || f.nome}</option>)}
+            {funcionarios.filter(bateOuTemHistorico).map(f => (
+              <option key={f.id} value={f.id}>{f.apelido || f.nome}</option>
+            ))}
           </select>
         </div>
         <div className="rh-acoes">
@@ -271,7 +280,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
         {carregando ? (
           <p style={{ color:'var(--muted)' }}>Carregando…</p>
         ) : !daLista.length ? (
-          <p className="rh-vazio">Nenhum funcionário para mostrar.</p>
+          <p className="rh-vazio">Ninguém com ponto neste mês. Marque "Bate ponto" no cadastro de quem controla jornada.</p>
         ) : (
           <div style={{ display:'grid', gap:14 }}>
             {daLista.map(func => {
