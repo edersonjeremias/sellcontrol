@@ -45,7 +45,10 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
   doc.setFont('helvetica', 'normal')
   doc.text(String(empresa.nome_loja || empresa.nome || '—'), margem + 24, y)
 
-  const docEmpresa = soNumeros(empresa.cnpj || empresa.cpf_cnpj)
+  // Documento do empregador é o CNPJ da empresa. O cpf_cnpj das configurações
+  // é o do remetente das encomendas: só serve aqui se for mesmo um CNPJ.
+  const cnpjConfig = soNumeros(empresa.cpf_cnpj)
+  const docEmpresa = soNumeros(empresa.cnpj) || (cnpjConfig.length === 14 ? cnpjConfig : '')
   if (docEmpresa) {
     doc.setFont('helvetica', 'bold')
     doc.text(docEmpresa.length === 11 ? 'CPF:' : 'CNPJ:', larg / 2 + 10, y)
@@ -72,10 +75,16 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
   doc.setFont('helvetica', 'normal')
   doc.text(formatarCompetencia(competencia), margem + 24, y)
 
+  const jornada = espelho.jornada || {}
   doc.setFont('helvetica', 'bold')
   doc.text('Jornada:', larg / 2 + 10, y)
   doc.setFont('helvetica', 'normal')
-  doc.text(`${fmtHoras(funcionario.carga_horaria_diaria || 8)}/dia`, larg / 2 + 26, y)
+  doc.text(
+    jornada.texto
+      ? `${jornada.texto}  (${fmtHoras(jornada.horas)}/dia)`
+      : `${fmtHoras(jornada.horas || funcionario.carga_horaria_diaria || 8)}/dia`,
+    larg / 2 + 26, y,
+  )
 
   // Uma linha por dia do mês, inclusive os não trabalhados
   const corpo = espelho.dias.map(d => {
@@ -83,6 +92,7 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
     if (d.feriado)     obs.push('Feriado')
     else if (!d.diaUtil) obs.push('Folga')
     if (d.falta)       obs.push('Falta')
+    if (d.atrasoMin)   obs.push(`Atraso ${d.atrasoMin}min`)
     if (d.incompleto)  obs.push('Batida faltando')
     if (Object.keys(d.ajustadas || {}).length) obs.push('Ajuste')
 
@@ -104,11 +114,14 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
       'Totais', '', '', '', '', '',
       fmtHoras(espelho.totais.trabalhadas),
       fmtHoras(espelho.totais.saldo),
-      `${espelho.totais.faltas} ${espelho.totais.faltas === 1 ? 'falta' : 'faltas'}`,
+      [
+        `${espelho.totais.faltas} ${espelho.totais.faltas === 1 ? 'falta' : 'faltas'}`,
+        espelho.totais.atrasos ? `${espelho.totais.atrasos} atraso(s)` : '',
+      ].filter(Boolean).join(' • '),
     ]],
     startY: y + 6,
     margin: { left: margem, right: margem },
-    styles:     { fontSize: 7.5, cellPadding: 1.8, textColor: [40, 40, 40] },
+    styles:     { fontSize: 7, cellPadding: 1.3, textColor: [40, 40, 40] },
     headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
     footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
     columnStyles: {
@@ -124,35 +137,56 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
       if (data.section !== 'body') return
       const dia = espelho.dias[data.row.index]
       if (!dia) return
-      if (!dia.diaUtil) data.cell.styles.textColor = [150, 150, 150]
-      if (dia.falta)    data.cell.styles.textColor = [192, 57, 43]
+      if (!dia.diaUtil || dia.futuro) data.cell.styles.textColor = [150, 150, 150]
+      if (dia.falta)     data.cell.styles.textColor = [192, 57, 43]
+      if (dia.atrasoMin) data.cell.styles.textColor = [176, 122, 0]
     },
   })
 
-  let fim = doc.lastAutoTable.finalY + 10
+  // O bloco de assinatura precisa de ~46mm. Sem esta conta ele era
+  // desenhado fora da página quando a tabela terminava no pé da folha —
+  // e o espelho saía sem lugar para assinar.
+  const alturaPagina = doc.internal.pageSize.getHeight()
+  const PRECISA      = 50
+  let fim = doc.lastAutoTable.finalY + 8
+  if (fim + PRECISA > alturaPagina - margem) {
+    doc.addPage()
+    fim = 20
+  }
 
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
+  doc.setTextColor(40)
   const texto = 'Declaro que as marcações acima correspondem à minha jornada no período, ' +
     'estando corretos os horários, as horas trabalhadas e o saldo apurado.'
   doc.text(doc.splitTextToSize(texto, larg - margem * 2), margem, fim)
 
-  fim += 26
-  const meio = larg / 2
-  doc.setDrawColor(120)
-  doc.line(meio - 55, fim, meio + 55, fim)
-  fim += 5
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  doc.text(String(funcionario.nome || ''), meio, fim, { align: 'center' })
-  fim += 4.5
-  doc.setFont('helvetica', 'normal')
+  // Duas assinaturas lado a lado: quem confere e quem apura
+  fim += 22
+  const colunas = [
+    { centro: margem + (larg - margem * 2) / 4,       nome: String(funcionario.nome || ''),            papel: 'Assinatura do funcionário(a)' },
+    { centro: larg - margem - (larg - margem * 2) / 4, nome: String(empresa.nome_loja || empresa.nome || ''), papel: 'Assinatura do empregador' },
+  ]
+  colunas.forEach(({ centro, nome, papel }) => {
+    doc.setDrawColor(120)
+    doc.line(centro - 38, fim, centro + 38, fim)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(9)
+    doc.setTextColor(40)
+    doc.text(nome, centro, fim + 5, { align: 'center', maxWidth: 76 })
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(120)
+    doc.text(papel, centro, fim + 9.5, { align: 'center' })
+  })
+
+  fim += 18
   doc.setFontSize(8)
   doc.setTextColor(120)
-  doc.text('Assinatura do funcionário(a)', meio, fim, { align: 'center' })
-  fim += 8
+  doc.text('Data: ____/____/________', larg / 2, fim, { align: 'center' })
+  fim += 7
   doc.setFontSize(7.5)
-  doc.text(`Emitido em ${fmtData(isoLocal(new Date()))}`, meio, fim, { align: 'center' })
+  doc.text(`Emitido em ${fmtData(isoLocal(new Date()))}`, larg / 2, fim, { align: 'center' })
 
   const slug = String(funcionario.apelido || funcionario.nome || 'funcionario')
     .toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')

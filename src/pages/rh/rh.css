@@ -490,6 +490,7 @@
 .pt-dia-linha.folga { opacity: 0.45; }
 .pt-dia-linha.falta { color: var(--red); }
 .pt-dia-linha .ajustada { color: var(--blue); font-weight: 700; }
+.pt-dia-linha .atrasada { color: var(--yellow); font-weight: 700; }
 
 /* Batidas no detalhe do dia */
 .pt-batida {

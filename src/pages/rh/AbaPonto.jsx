@@ -345,7 +345,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
                             <small> {diaSemana(d.dia)}</small>
                           </span>
                           {TIPOS_BATIDA.map(t => (
-                            <span key={t} className={d.ajustadas?.[t] ? 'ajustada' : ''}>
+                            <span key={t} className={[d.ajustadas?.[t] ? 'ajustada' : '', t === 'ENTRADA' && d.atrasoMin ? 'atrasada' : ''].filter(Boolean).join(' ')} title={t === 'ENTRADA' && d.atrasoMin ? `${d.atrasoMin} min de atraso` : undefined}>
                               {horaDe(d.horarios[t]) || '—'}
                             </span>
                           ))}

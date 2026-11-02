@@ -5,13 +5,19 @@ import {
   salvarFuncionario, alternarAtivoFuncionario, excluirFuncionario,
   DIAS_SEMANA, diasTrabalhoSet,
 } from '../../services/rhService'
+import { jornadaDe, fmtHoras } from '../../services/pontoService'
 import { S, Campo, Modal, ModalConfirma, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
 
 const TIPOS_CONTRATO = ['CLT', 'PJ', 'Diarista', 'Freelancer', 'Estágio', 'Temporário']
 
+// O banco devolve TIME como '08:00:00'; o input type=time só aceita 'HH:MM'
+const hhmm = (valor, padrao = '') => (valor ? String(valor).slice(0, 5) : padrao)
+
 const FORM_VAZIO = {
   nome: '', apelido: '', cpf: '', rg: '', whatsapp: '', email: '',
-  cargo: '', setor: '', nome_live: '', comissao_percentual: '', carga_horaria_diaria: 8,
+  cargo: '', setor: '', nome_live: '', comissao_percentual: '',
+  hora_entrada: '08:00', hora_saida_almoco: '12:00',
+  hora_volta_almoco: '13:00', hora_saida: '17:00', tolerancia_minutos: 10,
   data_admissao: '', data_demissao: '',
   salario: '', tipo_contrato: 'CLT', dia_pagamento: '',
   chave_pix: '', banco: '', endereco: '',
@@ -26,6 +32,9 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
   const [form,       setForm]       = useState(FORM_VAZIO)
   const [salvando,   setSalvando]   = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
+
+  // Horas do dia saem da jornada, não de um campo digitado à parte
+  const jornadaDoForm = jornadaDe(form)
 
   const lista = funcionarios.filter(f => {
     if (filtroAtivo === 'ativos'   && !f.ativo) return false
@@ -50,7 +59,11 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
       whatsapp: mascaraTelefone(f.whatsapp || ''), email: f.email || '',
       cargo: f.cargo || '', setor: f.setor || '', nome_live: f.nome_live || '',
       comissao_percentual: f.comissao_percentual ?? '',
-      carga_horaria_diaria: f.carga_horaria_diaria ?? 8,
+      hora_entrada:      hhmm(f.hora_entrada,      '08:00'),
+      hora_saida_almoco: hhmm(f.hora_saida_almoco, '12:00'),
+      hora_volta_almoco: hhmm(f.hora_volta_almoco, '13:00'),
+      hora_saida:        hhmm(f.hora_saida,        '17:00'),
+      tolerancia_minutos: f.tolerancia_minutos ?? 10,
       data_admissao: f.data_admissao || '', data_demissao: f.data_demissao || '',
       salario: valorParaInput(f.salario), tipo_contrato: f.tipo_contrato || 'CLT',
       dia_pagamento: f.dia_pagamento ?? '',
@@ -70,6 +83,9 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
 
   async function salvar() {
     if (!form.nome.trim()) return showToast('Informe o nome do funcionário.', 'error')
+    if (jornadaDoForm.horas <= 0) {
+      return showToast('A jornada está invertida: a saída tem que ser depois da entrada.', 'error')
+    }
     setSalvando(true)
     try {
       await salvarFuncionario(tenantId, {
@@ -84,7 +100,13 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
         setor:          form.setor.trim() || null,
         nome_live:      form.nome_live.trim() || null,
         comissao_percentual: form.comissao_percentual === '' ? 0 : Number(form.comissao_percentual) || 0,
-        carga_horaria_diaria: form.carga_horaria_diaria === '' ? 8 : Number(form.carga_horaria_diaria) || 8,
+        hora_entrada:       form.hora_entrada || null,
+        hora_saida_almoco:  form.hora_saida_almoco || null,
+        hora_volta_almoco:  form.hora_volta_almoco || null,
+        hora_saida:         form.hora_saida || null,
+        tolerancia_minutos: form.tolerancia_minutos === '' ? 10 : Number(form.tolerancia_minutos) || 0,
+        // Guardado junto para quem lê só as horas do dia (VT, espelho antigo)
+        carga_horaria_diaria: jornadaDoForm.horas,
         data_admissao:  form.data_admissao || null,
         data_demissao:  form.data_demissao || null,
         salario:        parseValor(form.salario),
@@ -253,10 +275,10 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
               <input value={form.nome_live} onChange={e => setForm(p => ({ ...p, nome_live: e.target.value }))}
                 style={S.inp} placeholder="Como aparece no relatório de comissões" />
             </Campo>
-            <Campo label="Horas por dia">
-              <input type="number" min="0" max="24" step="0.5" value={form.carga_horaria_diaria}
-                onChange={e => setForm(p => ({ ...p, carga_horaria_diaria: e.target.value }))}
-                style={S.inp} placeholder="8" />
+            <Campo label="Tolerância de atraso (min)">
+              <input type="number" min="0" max="60" value={form.tolerancia_minutos}
+                onChange={e => setForm(p => ({ ...p, tolerancia_minutos: e.target.value }))}
+                style={S.inp} placeholder="10" />
             </Campo>
             <Campo label="% de comissão">
               <input type="number" min="0" max="100" step="0.5" value={form.comissao_percentual}
@@ -293,6 +315,33 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
             </Campo>
             <Campo label="Endereço" span={2}>
               <input value={form.endereco} onChange={e => setForm(p => ({ ...p, endereco: e.target.value }))} style={S.inp} />
+            </Campo>
+
+            <Campo label="Jornada de trabalho" span={2}>
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'flex-end' }}>
+                {[
+                  ['hora_entrada',      'Entrada'],
+                  ['hora_saida_almoco', 'Saída almoço'],
+                  ['hora_volta_almoco', 'Volta almoço'],
+                  ['hora_saida',        'Saída'],
+                ].map(([campo, label]) => (
+                  <div key={campo} style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                    <span style={{ fontSize:10, color:'var(--muted)', fontWeight:700, textTransform:'uppercase' }}>
+                      {label}
+                    </span>
+                    <input type="time" value={form[campo]}
+                      onChange={e => setForm(p => ({ ...p, [campo]: e.target.value }))}
+                      style={{ ...S.inp, width:110 }} />
+                  </div>
+                ))}
+                <span style={{ fontSize:12, color:'var(--green)', fontWeight:700, paddingBottom:8 }}>
+                  = {fmtHoras(jornadaDoForm.horas)} por dia
+                </span>
+              </div>
+              <p style={{ fontSize:11, color:'var(--muted)', margin:'6px 0 0' }}>
+                É esta jornada que o espelho de ponto usa para apurar saldo e atraso.
+                Deixe almoço em branco para quem não tem intervalo.
+              </p>
             </Campo>
 
             <Campo label="Dias de trabalho na semana" span={2}>

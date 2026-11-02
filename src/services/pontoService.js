@@ -44,6 +44,48 @@ function horasEntre(a, b) {
   return (new Date(b) - new Date(a)) / 3600000
 }
 
+/** '08:00:00' → 480. Devolve null quando não há horário. */
+export function minutosDeHora(h) {
+  if (!h) return null
+  const [hh, mm] = String(h).split(':').map(Number)
+  if (!Number.isFinite(hh)) return null
+  return hh * 60 + (Number.isFinite(mm) ? mm : 0)
+}
+
+const hhmm = (h) => String(h || '').slice(0, 5)
+
+/**
+ * Jornada contratual do funcionário. As horas por dia saem dos horários
+ * quando eles existem; carga_horaria_diaria fica como reserva para quem
+ * ainda não tem jornada cadastrada.
+ */
+export function jornadaDe(func = {}) {
+  const entrada     = minutosDeHora(func.hora_entrada)
+  const saidaAlmoco = minutosDeHora(func.hora_saida_almoco)
+  const voltaAlmoco = minutosDeHora(func.hora_volta_almoco)
+  const saida       = minutosDeHora(func.hora_saida)
+
+  let horas = Number(func.carga_horaria_diaria) || 8
+  let texto = null
+
+  if (entrada != null && saida != null) {
+    const almoco = (saidaAlmoco != null && voltaAlmoco != null)
+      ? Math.max(0, voltaAlmoco - saidaAlmoco)
+      : 0
+    horas = Number(((saida - entrada - almoco) / 60).toFixed(2))
+    texto = almoco
+      ? `${hhmm(func.hora_entrada)}–${hhmm(func.hora_saida_almoco)} / ${hhmm(func.hora_volta_almoco)}–${hhmm(func.hora_saida)}`
+      : `${hhmm(func.hora_entrada)}–${hhmm(func.hora_saida)}`
+  }
+
+  return {
+    entrada, saidaAlmoco, voltaAlmoco, saida,
+    horas,
+    tolerancia: Number.isFinite(Number(func.tolerancia_minutos)) ? Number(func.tolerancia_minutos) : 10,
+    texto,
+  }
+}
+
 // ── Quiosque ───────────────────────────────────────────────────
 export async function getFuncionariosPonto() {
   const { data, error } = await supabase.rpc('rh_funcionarios_ponto')
@@ -151,9 +193,13 @@ export async function assinarUrlsPonto(caminhos) {
  * ajustes aplicados por cima), horas trabalhadas, intervalo e saldo.
  * O ajuste mais recente de cada dia+tipo é o que vale.
  */
-export function montarEspelho({ funcionario, dataInicio, dataFim, marcacoes = [], ajustes = [], feriados = [] }) {
+export function montarEspelho({
+  funcionario, dataInicio, dataFim, marcacoes = [], ajustes = [], feriados = [],
+  hoje = isoLocal(new Date()),
+}) {
   const escala    = diasTrabalhoSet(funcionario)
-  const carga     = Number(funcionario?.carga_horaria_diaria) || 8
+  const jornada   = jornadaDe(funcionario)
+  const carga     = jornada.horas
   const setFeriado = new Set(feriados.map(f => String(f.data).slice(0, 10)))
 
   const porDia = new Map()
@@ -203,11 +249,23 @@ export function montarEspelho({ funcionario, dataInicio, dataFim, marcacoes = []
     const intervalo   = Number(horasEntre(horarios.SAIDA_ALMOCO, horarios.VOLTA_ALMOCO).toFixed(2))
 
     const semBatida = TIPOS_BATIDA.every(t => !horarios[t])
-    const previstas = diaUtil ? carga : 0
+    // Dia que ainda não chegou não deve horas nem é falta: sem isto o mês
+    // inteiro nasce no vermelho já no dia 1º.
+    const futuro    = dia > hoje
+    const previstas = diaUtil && !futuro ? carga : 0
+
+    // Atraso na entrada, respeitando a tolerância do cadastro
+    let atrasoMin = 0
+    if (diaUtil && horarios.ENTRADA && jornada.entrada != null) {
+      const bateu = new Date(horarios.ENTRADA)
+      const diff  = (bateu.getHours() * 60 + bateu.getMinutes()) - jornada.entrada
+      if (diff > jornada.tolerancia) atrasoMin = diff
+    }
 
     dias.push({
       dia,
       diaUtil,
+      futuro,
       feriado:     setFeriado.has(dia),
       horarios,
       ajustadas:   reg.ajustadas,
@@ -216,8 +274,9 @@ export function montarEspelho({ funcionario, dataInicio, dataFim, marcacoes = []
       trabalhadas,
       intervalo,
       previstas,
+      atrasoMin,
       saldo:       Number((trabalhadas - previstas).toFixed(2)),
-      falta:       diaUtil && semBatida,
+      falta:       diaUtil && semBatida && !futuro,
       incompleto:  !semBatida && TIPOS_BATIDA.some(t => !horarios[t]),
     })
   }
@@ -226,10 +285,13 @@ export function montarEspelho({ funcionario, dataInicio, dataFim, marcacoes = []
     previstas:   acc.previstas   + d.previstas,
     trabalhadas: acc.trabalhadas + d.trabalhadas,
     faltas:      acc.faltas      + (d.falta ? 1 : 0),
-  }), { previstas: 0, trabalhadas: 0, faltas: 0 })
+    atrasos:     acc.atrasos     + (d.atrasoMin ? 1 : 0),
+    atrasoMin:   acc.atrasoMin   + d.atrasoMin,
+  }), { previstas: 0, trabalhadas: 0, faltas: 0, atrasos: 0, atrasoMin: 0 })
 
   return {
     dias,
+    jornada,
     totais: {
       ...totais,
       previstas:   Number(totais.previstas.toFixed(2)),
