@@ -148,7 +148,7 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
   // desenhado fora da página quando a tabela terminava no pé da folha —
   // e o espelho saía sem lugar para assinar.
   const alturaPagina = doc.internal.pageSize.getHeight()
-  const PRECISA      = 64
+  const PRECISA      = 54
   let fim = doc.lastAutoTable.finalY + 8
   if (fim + PRECISA > alturaPagina - margem) {
     doc.addPage()
@@ -175,30 +175,20 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
     'estando corretos os horários, as horas trabalhadas e o saldo apurado.'
   doc.text(doc.splitTextToSize(texto, larg - margem * 2), margem, fim)
 
-  // Duas assinaturas lado a lado: quem confere e quem apura
-  fim += 18
-  const colunas = [
-    { centro: margem + (larg - margem * 2) / 4,       nome: String(funcionario.nome || ''),            papel: 'Assinatura do funcionário(a)' },
-    { centro: larg - margem - (larg - margem * 2) / 4, nome: String(empresa.nome_loja || empresa.nome || ''), papel: 'Assinatura do empregador' },
-  ]
-  colunas.forEach(({ centro, nome, papel }) => {
-    doc.setDrawColor(120)
-    doc.line(centro - 38, fim, centro + 38, fim)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(40)
-    doc.text(nome, centro, fim + 5, { align: 'center', maxWidth: 76 })
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.setTextColor(120)
-    doc.text(papel, centro, fim + 9.5, { align: 'center' })
-  })
-
-  fim += 15
+  // Só a assinatura de quem confere o próprio ponto
+  fim += 20
+  const meio = larg / 2
+  doc.setDrawColor(120)
+  doc.line(meio - 48, fim, meio + 48, fim)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.setTextColor(40)
+  doc.text(String(funcionario.nome || ''), meio, fim + 5, { align: 'center', maxWidth: 96 })
+  doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
   doc.setTextColor(120)
-  doc.text('Data: ____/____/________', larg / 2, fim, { align: 'center' })
-  fim += 7
+  doc.text('Assinatura do funcionário(a)', meio, fim + 9.5, { align: 'center' })
+  fim += 18
   doc.setFontSize(7.5)
   doc.text(`Emitido em ${fmtData(isoLocal(new Date()))}`, larg / 2, fim, { align: 'center' })
 
