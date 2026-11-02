@@ -7,6 +7,7 @@ import { montarLinkFrete } from '../../services/fretePublicoService'
 import { showGlobalToast } from '../../context/AppContext'
 import { pesoEmKg } from '../../lib/peso'
 import { linkRastreio, sincronizarRastreio } from '../../lib/rastreio'
+import ModalPergunta from '../../components/ui/ModalPergunta'
 
 /**
  * Pagamento aprovado mais recente do romaneio, para distinguir o que entrou
@@ -90,6 +91,8 @@ export default function EtiquetasPage() {
   const [whatsPorInstagram, setWhatsPorInstagram] = useState({})
   // Erros da transportadora ficam em modal: o toast some antes de dar tempo de ler
   const [erroModal, setErroModal] = useState(null)
+  // Confirmações em modal, no lugar de window.confirm e prompt
+  const [pergunta, setPergunta] = useState(null)
 
   // Estados para cotação
   const [cotando, setCotando] = useState(false)
@@ -260,17 +263,28 @@ export default function EtiquetasPage() {
   }
 
   // Cliente buscou na loja: não há frete, etiqueta nem rastreio a gerar
-  const handleMarcarRetirado = async (romaneio) => {
-    if (!window.confirm(
-      `Confirmar que a cliente @${romaneio.cliente_instagram} retirou o ${romaneio.numero} na loja?`
-    )) return
+  const handleMarcarRetirado = (romaneio) => {
+    setPergunta({
+      titulo: `Retirada do ${romaneio.numero}`,
+      mensagem: `Confirmar que o pedido de @${romaneio.cliente_instagram} foi retirado na loja? O frete deixa de ser cobrado neste romaneio.`,
+      campo: {
+        label: 'Quem retirou',
+        placeholder: 'Nome de quem buscou o pedido',
+        ajuda: 'Opcional. Útil quando outra pessoa retira no lugar da cliente.',
+      },
+      textoConfirmar: 'Confirmar retirada',
+      aoConfirmar: (quemRetirou) => registrarRetirada(romaneio, quemRetirou),
+    })
+  }
 
+  const registrarRetirada = async (romaneio, quemRetirou) => {
     try {
       const { error } = await supabase
         .from('romaneios')
         .update({
           status: 'retirado',
           retirado_em: new Date().toISOString(),
+          retirado_nome: (quemRetirou || '').trim() || null,
           retirado_por_nome: profile?.nome || profile?.username || null,
         })
         .eq('id', romaneio.id)
@@ -286,7 +300,7 @@ export default function EtiquetasPage() {
     }
   }
 
-  const handleGerarEtiqueta = async (romaneio) => {
+  const handleGerarEtiqueta = async (romaneio, confirmado = false) => {
     setGerando(romaneio.id)
     try {
       let orderId = romaneio.melhor_envio_order_id
@@ -298,7 +312,16 @@ export default function EtiquetasPage() {
           return
         }
 
-        if (!window.confirm('Este romaneio ainda não tem pedido no Melhor Envio. Deseja criar agora e comprar a etiqueta?')) {
+        // A compra da etiqueta debita o saldo do Melhor Envio: confirma antes
+        if (!confirmado) {
+          setGerando(null)
+          setPergunta({
+            titulo: `Comprar etiqueta do ${romaneio.numero}`,
+            mensagem: 'Este romaneio ainda não tem pedido no Melhor Envio. ' +
+                      'Criar o pedido agora compra a etiqueta e debita o saldo da carteira.',
+            textoConfirmar: 'Criar pedido e comprar',
+            aoConfirmar: () => handleGerarEtiqueta(romaneio, true),
+          })
           return
         }
 
@@ -390,9 +413,16 @@ export default function EtiquetasPage() {
     }
   }
 
-  const handleMarcarDespachado = async (romaneio) => {
-    if (!window.confirm(`Marcar romaneio ${romaneio.numero} como despachado?`)) return
+  const handleMarcarDespachado = (romaneio) => {
+    setPergunta({
+      titulo: `Despachar ${romaneio.numero}`,
+      mensagem: 'Confirmar que o pacote já foi postado na transportadora?',
+      textoConfirmar: 'Marcar como despachado',
+      aoConfirmar: () => despachar(romaneio),
+    })
+  }
 
+  const despachar = async (romaneio) => {
     try {
       await supabase
         .from('romaneios')
@@ -409,18 +439,20 @@ export default function EtiquetasPage() {
     }
   }
 
-  const handleMarcarComoPago = async (romaneio) => {
-    const motivo = prompt(
-      `Marcar frete do romaneio ${romaneio.numero} como PAGO?\n\n` +
-      'Informe o motivo (opcional):\n' +
-      '- Crédito do cliente\n' +
-      '- Cortesia\n' +
-      '- Pagamento externo\n' +
-      '- Outro motivo'
-    )
+  const handleMarcarComoPago = (romaneio) => {
+    setPergunta({
+      titulo: `Baixa manual do frete · ${romaneio.numero}`,
+      mensagem: 'O frete será marcado como pago sem passar pelo Mercado Pago. Fica registrado quem deu a baixa.',
+      campo: {
+        label: 'Motivo',
+        placeholder: 'Crédito do cliente, cortesia, pagamento externo...',
+      },
+      textoConfirmar: 'Marcar como pago',
+      aoConfirmar: (motivo) => darBaixaManual(romaneio, motivo),
+    })
+  }
 
-    if (motivo === null) return // Cancelou
-
+  const darBaixaManual = async (romaneio, motivo) => {
     try {
       // O registro vem primeiro: se ele falhar, o romaneio não pode ficar
       // marcado como pago sem nenhum rastro de quem deu a baixa
@@ -621,17 +653,17 @@ export default function EtiquetasPage() {
   const handleSalvarEdicao = async () => {
     if (!editando) return
 
-    if (!window.confirm(
-      `Editar romaneio ${editando.numero}?\n\n` +
-      'Isso irá:\n' +
-      '- Atualizar as dimensões e dados do produto\n' +
-      '- Voltar o status para PRONTO\n' +
-      '- Limpar cotações e pagamentos anteriores\n\n' +
-      'Deseja continuar?'
-    )) {
-      return
-    }
+    setPergunta({
+      titulo: `Editar ${editando.numero}`,
+      mensagem: 'As dimensões e os dados do produto serão atualizados.\n' +
+                'O status volta para PRONTO e as cotações e pagamentos anteriores são apagados.',
+      textoConfirmar: 'Salvar e voltar para PRONTO',
+      perigo: true,
+      aoConfirmar: () => salvarEdicao(),
+    })
+  }
 
+  const salvarEdicao = async () => {
     try {
       // 1. Deletar cotações antigas
       await supabase
@@ -1319,6 +1351,7 @@ export default function EtiquetasPage() {
                     </div>
                     <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.6 }}>
                       A cliente buscou o pedido na loja — sem frete e sem etiqueta.<br />
+                      {modalAberto.retirado_nome && <>Retirado por: <strong>{modalAberto.retirado_nome}</strong><br /></>}
                       {modalAberto.retirado_em && <>Em: {formatarDataHora(modalAberto.retirado_em)}<br /></>}
                       {modalAberto.retirado_por_nome && <>Registrado por: {modalAberto.retirado_por_nome}</>}
                     </div>
@@ -1650,6 +1683,23 @@ export default function EtiquetasPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Confirmações do sistema, no lugar de window.confirm e prompt */}
+        {pergunta && (
+          <ModalPergunta
+            titulo={pergunta.titulo}
+            mensagem={pergunta.mensagem}
+            campo={pergunta.campo}
+            textoConfirmar={pergunta.textoConfirmar}
+            perigo={pergunta.perigo}
+            onCancelar={() => setPergunta(null)}
+            onConfirmar={(valor) => {
+              const acao = pergunta.aoConfirmar
+              setPergunta(null)
+              acao?.(valor)
+            }}
+          />
         )}
 
         {/* Erro da transportadora: fica na tela até a pessoa fechar */}

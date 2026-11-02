@@ -5,6 +5,7 @@ import {
   resetUsuarioSenha,
 } from '../../services/configService'
 import VendasPermissoesModal from './VendasPermissoesModal'
+import ModalPergunta from '../ui/ModalPergunta'
 
 export default function UserActionsMenu({ user, onUpdate, showToast }) {
   const [showMenu, setShowMenu] = useState(false)
@@ -14,6 +15,7 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
   const [editForm, setEditForm] = useState({ nome: user.nome, email: user.email })
   const [novaSenha, setNovaSenha] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pergunta, setPergunta] = useState(null)
 
   async function handleEditar() {
     setLoading(true)
@@ -53,8 +55,16 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
       ? `Reativar usuário ${user.nome}?`
       : `Inativar usuário ${user.nome}? Ele não poderá mais fazer login.`
 
-    if (!window.confirm(confirmMsg)) return
+    setPergunta({
+      titulo: novoStatus ? 'Reativar usuário' : 'Inativar usuário',
+      mensagem: confirmMsg,
+      textoConfirmar: novoStatus ? 'Reativar' : 'Inativar',
+      perigo: !novoStatus,
+      aoConfirmar: () => aplicarToggleAtivo(novoStatus),
+    })
+  }
 
+  async function aplicarToggleAtivo(novoStatus) {
     setLoading(true)
     try {
       await toggleUsuarioAtivo(user.id, novoStatus)
@@ -69,6 +79,21 @@ export default function UserActionsMenu({ user, onUpdate, showToast }) {
 
   return (
     <>
+      {pergunta && (
+        <ModalPergunta
+          titulo={pergunta.titulo}
+          mensagem={pergunta.mensagem}
+          textoConfirmar={pergunta.textoConfirmar}
+          perigo={pergunta.perigo}
+          onCancelar={() => setPergunta(null)}
+          onConfirmar={() => {
+            const acao = pergunta.aoConfirmar
+            setPergunta(null)
+            acao?.()
+          }}
+        />
+      )}
+
       {/* Botão de menu */}
       <div style={{ position: 'relative' }}>
         <button

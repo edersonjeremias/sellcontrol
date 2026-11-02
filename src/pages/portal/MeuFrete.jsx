@@ -6,6 +6,7 @@ import { calcularFrete, salvarCotacoes, buscarCotacoes } from '../../services/me
 import { criarPagamentoPIX, buscarPagamentoRomaneio } from '../../services/mercadoPagoService'
 import { pesoEmKg } from '../../lib/peso'
 import { linkRastreio, sincronizarRastreio } from '../../lib/rastreio'
+import ModalPergunta from '../../components/ui/ModalPergunta'
 
 export default function MeuFrete() {
   const { cliente, tenantId } = usePortalAuth()
@@ -21,6 +22,9 @@ export default function MeuFrete() {
   const [pagamentoPIX, setPagamentoPIX] = useState(null)
   const [showPIX, setShowPIX] = useState(false)
   const [margemFrete, setMargemFrete] = useState(15)
+  // Confirmações em modal, no lugar de window.confirm
+  const [pergunta, setPergunta] = useState(null)
+  const [recibo, setRecibo] = useState(null)
   const [itensAbertos, setItensAbertos] = useState(() => new Set())
 
   const toggleItens = (id) => {
@@ -247,10 +251,16 @@ export default function MeuFrete() {
   const handleEscolherFrete = async (cotacao) => {
     const valorBase = Number(cotacao.valor || cotacao.valor_original || cotacao.custom_price || 0)
     const valorComMargem = valorBase * (1 + margemFrete / 100)
-    if (!window.confirm(`Confirmar frete de R$ ${valorComMargem.toFixed(2)} via ${cotacao.transportadora}?`)) {
-      return
-    }
+    setPergunta({
+      titulo: 'Confirmar frete',
+      mensagem: `Frete de R$ ${valorComMargem.toFixed(2)} via ${cotacao.transportadora}.
+O PIX é gerado em seguida.`,
+      textoConfirmar: 'Gerar PIX',
+      aoConfirmar: () => confirmarFrete(cotacao, valorBase),
+    })
+  }
 
+  const confirmarFrete = async (cotacao, valorBase) => {
     try {
       const romaneio = romaneios.find(r => r.id === romaneioSelecionado)
 
@@ -322,11 +332,17 @@ export default function MeuFrete() {
     }
   }
 
-  const handleCancelarPagamento = async (romaneio) => {
-    if (!window.confirm('Cancelar pagamento e cotar frete novamente?')) {
-      return
-    }
+  const handleCancelarPagamento = (romaneio) => {
+    setPergunta({
+      titulo: 'Cancelar pagamento',
+      mensagem: 'O PIX gerado será descartado e você poderá cotar o frete de novo.',
+      textoConfirmar: 'Cancelar pagamento',
+      perigo: true,
+      aoConfirmar: () => cancelarPagamento(romaneio),
+    })
+  }
 
+  const cancelarPagamento = async (romaneio) => {
     try {
       // Deleta pagamento pendente
       await portalSb
@@ -622,12 +638,13 @@ export default function MeuFrete() {
                         try {
                           const pag = await buscarPagamentoRomaneio(rom.id, portalSb)
                           if (pag) {
-                            alert(`📄 RECIBO DE PAGAMENTO\n\n` +
-                              `Romaneio: ${rom.numero}\n` +
-                              `Valor Frete: R$ ${(rom.valor_frete || 0).toFixed(2)}\n` +
-                              `Status: ${pag.status === 'aprovado' ? '✓ APROVADO' : pag.status}\n` +
-                              `Pago em: ${pag.pago_em ? new Date(pag.pago_em).toLocaleString('pt-BR') : '-'}\n` +
-                              `ID Transação: ${pag.gateway_transaction_id || '-'}`)
+                            setRecibo({
+                              numero: rom.numero,
+                              valor: rom.valor_frete || 0,
+                              status: pag.status,
+                              pago_em: pag.pago_em,
+                              transacao: pag.gateway_transaction_id,
+                            })
                           } else {
                             showToast('Recibo não encontrado', 'error')
                           }
@@ -973,6 +990,37 @@ export default function MeuFrete() {
             </button>
           </div>
         </div>
+      )}
+
+      {pergunta && (
+        <ModalPergunta
+          titulo={pergunta.titulo}
+          mensagem={pergunta.mensagem}
+          textoConfirmar={pergunta.textoConfirmar}
+          perigo={pergunta.perigo}
+          onCancelar={() => setPergunta(null)}
+          onConfirmar={() => {
+            const acao = pergunta.aoConfirmar
+            setPergunta(null)
+            acao?.()
+          }}
+        />
+      )}
+
+      {recibo && (
+        <ModalPergunta
+          titulo={`Recibo do frete · ${recibo.numero}`}
+          mensagem={
+            `Valor do frete: R$ ${Number(recibo.valor).toFixed(2)}\n` +
+            `Status: ${recibo.status === 'aprovado' ? 'Aprovado' : recibo.status}\n` +
+            `Pago em: ${recibo.pago_em ? new Date(recibo.pago_em).toLocaleString('pt-BR') : '-'}\n` +
+            `Transação: ${recibo.transacao || '-'}`
+          }
+          textoConfirmar="Fechar"
+          textoCancelar="Fechar"
+          onConfirmar={() => setRecibo(null)}
+          onCancelar={() => setRecibo(null)}
+        />
       )}
 
       {showPIX && pagamentoPIX && (

@@ -29,9 +29,12 @@ ALTER TABLE romaneios
 
 ALTER TABLE romaneios
   ADD COLUMN IF NOT EXISTS retirado_em TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS retirado_nome TEXT,
   ADD COLUMN IF NOT EXISTS retirado_por_nome TEXT;
 
 COMMENT ON COLUMN romaneios.retirado_em IS
   'Quando a cliente retirou o pedido na loja';
+COMMENT ON COLUMN romaneios.retirado_nome IS
+  'Quem buscou o pedido, informado no momento da retirada';
 COMMENT ON COLUMN romaneios.retirado_por_nome IS
-  'Usuário que registrou a retirada';
+  'Usuário do sistema que registrou a retirada';

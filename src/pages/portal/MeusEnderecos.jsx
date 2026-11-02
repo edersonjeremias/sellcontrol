@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { usePortalAuth } from '../../context/PortalAuthContext'
 import { usePortalToast } from '../../components/portal/PortalToast'
 import { portalSb } from '../../lib/portalSupabase'
+import ModalPergunta from '../../components/ui/ModalPergunta'
 import { sincronizarCliente } from '../../services/portalService'
 import { mensagemErro } from '../../lib/erroPortal'
 
@@ -23,6 +24,7 @@ export default function MeusEnderecos() {
   const showToast = usePortalToast()
 
   const [enderecos, setEnderecos] = useState([])
+  const [pergunta, setPergunta] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -246,9 +248,17 @@ export default function MeusEnderecos() {
   }
 
   // Deletar endereço
-  const handleDeletar = async (id) => {
-    if (!window.confirm('Tem certeza que deseja excluir este endereço?')) return
+  const handleDeletar = (id) => {
+    setPergunta({
+      titulo: 'Excluir endereço',
+      mensagem: 'Este endereço será removido da sua lista.',
+      textoConfirmar: 'Excluir',
+      perigo: true,
+      aoConfirmar: () => deletarEndereco(id),
+    })
+  }
 
+  const deletarEndereco = async (id) => {
     try {
       const { error } = await portalSb
         .from('enderecos_clientes')
@@ -299,6 +309,20 @@ export default function MeusEnderecos() {
 
   return (
     <div style={{ padding: 16, maxWidth: 800, margin: '0 auto' }}>
+{pergunta && (
+        <ModalPergunta
+          titulo={pergunta.titulo}
+          mensagem={pergunta.mensagem}
+          textoConfirmar={pergunta.textoConfirmar}
+          perigo={pergunta.perigo}
+          onCancelar={() => setPergunta(null)}
+          onConfirmar={() => {
+            const acao = pergunta.aoConfirmar
+            setPergunta(null)
+            acao?.()
+          }}
+        />
+      )}
       {/* Header */}
       <div style={{
         display: 'flex',

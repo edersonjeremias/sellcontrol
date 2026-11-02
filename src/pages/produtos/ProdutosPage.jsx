@@ -1495,7 +1495,7 @@ export default function ProdutosPage() {
                 <button
                   onClick={async () => {
                     if (!produtoEditando.produto || !produtoEditando.preco) {
-                      alert('Preencha Produto e Preço')
+                      showGlobalToast('Preencha Produto e Preço', 'error')
                       return
                     }
                     // Atualiza produtosRef PRIMEIRO (síncrono)
