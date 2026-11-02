@@ -1009,7 +1009,7 @@ export default function EtiquetasPage() {
             {/* Header da Tabela - no celular cada romaneio vira um cartão */}
             <div style={{
               display: isMobile ? 'none' : 'grid',
-              gridTemplateColumns: '110px 1fr 100px 100px 120px 250px',
+              gridTemplateColumns: '110px 1fr 100px 100px 120px 250px 44px',
               gap: 16,
               padding: '14px 20px',
               background: 'rgba(255,255,255,0.05)',
@@ -1026,6 +1026,7 @@ export default function EtiquetasPage() {
               <div>Data Despacho</div>
               <div>Status</div>
               <div>Ações</div>
+              <div />
             </div>
 
             {/* Linhas da Tabela */}
@@ -1043,7 +1044,7 @@ export default function EtiquetasPage() {
                   style={{
                     display: isMobile ? 'flex' : 'grid',
                     flexDirection: isMobile ? 'column' : undefined,
-                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 250px',
+                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 250px 44px',
                     gap: isMobile ? 6 : 16,
                     padding: isMobile ? '12px 14px' : '16px 20px',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -1271,24 +1272,6 @@ export default function EtiquetasPage() {
                     </>
                   )}
 
-                  <button
-                    onClick={() => setHistoricoDe(rom)}
-                    title="Ver histórico de status"
-                    style={{
-                      background: 'rgba(255,255,255,0.06)',
-                      color: '#9aa0a6',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      borderRadius: 6,
-                      padding: '6px 10px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Histórico
-                  </button>
-
                   {/* Botão Editar - sempre visível */}
                   <button
                     onClick={() => handleAbrirEdicao(rom)}
@@ -1306,6 +1289,24 @@ export default function EtiquetasPage() {
                     }}
                   >
                     Editar
+                  </button>
+                </div>
+
+                {/* Histórico: mesmo botão da expedição, no canto direito */}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="acoes-wrapper"
+                  style={{ justifyContent: isMobile ? 'flex-start' : 'center' }}
+                >
+                  <button
+                    type="button"
+                    className="btn-action-sm hist"
+                    title="Ver histórico de status"
+                    onClick={(e) => { e.stopPropagation(); setHistoricoDe(rom) }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                    </svg>
                   </button>
                 </div>
               </div>
