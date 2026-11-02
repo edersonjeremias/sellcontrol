@@ -61,7 +61,7 @@ export default async function handler(req, res) {
       nome,
       username,
       email: emailFinal,
-      role: role || 'vendedor'
+      role: role || 'usuario'
     }])
 
   if (profileError) {

@@ -43,7 +43,7 @@ function RecoveryGuard() {
   return null
 }
 import { AppProvider } from './context/AppContext'
-import { AuthProvider, RequireAuth, RequireRole } from './context/AuthContext'
+import { AuthProvider, RequireAuth, RequireRole, RequirePage } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -93,36 +93,36 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
-            <Route path="/vendas" element={<RequireAuth><VendasPage /></RequireAuth>} />
-            <Route path="/editar-vendas" element={<RequireAuth><EditarVendasPage /></RequireAuth>} />
-            <Route path="/produtos" element={<RequireAuth><ProdutosPage /></RequireAuth>} />
-            <Route path="/producao" element={<RequireAuth><ProducaoPage /></RequireAuth>} />
+            <Route path="/dashboard" element={<RequirePage slug="dashboard"><DashboardPage /></RequirePage>} />
+            <Route path="/vendas" element={<RequirePage slug="vendas"><VendasPage /></RequirePage>} />
+            <Route path="/editar-vendas" element={<RequirePage slug="editar-vendas"><EditarVendasPage /></RequirePage>} />
+            <Route path="/produtos" element={<RequirePage slug="produtos"><ProdutosPage /></RequirePage>} />
+            <Route path="/producao" element={<RequirePage slug="producao"><ProducaoPage /></RequirePage>} />
             <Route path="/admin" element={<RequireAuth><RequireRole allowed={['master','admin']}><AdminPage /></RequireRole></RequireAuth>} />
             <Route path="/master/empresas" element={<RequireAuth><RequireRole allowed={['master']}><MasterEmpresasPage /></RequireRole></RequireAuth>} />
             <Route path="/admin/limpar-usuarios" element={<RequireAuth><RequireRole allowed={['master']}><LimparUsuariosPage /></RequireRole></RequireAuth>} />
-            <Route path="/cobrancas" element={<RequireAuth><CobrancasPage /></RequireAuth>} />
+            <Route path="/cobrancas" element={<RequirePage slug="cobrancas"><CobrancasPage /></RequirePage>} />
             <Route path="/recibo/:id" element={<ReciboPage />} />
             <Route path="/rastreio" element={<RastreioPage />} />
-            <Route path="/clientes" element={<RequireAuth><ClientesPage /></RequireAuth>} />
+            <Route path="/clientes" element={<RequirePage slug="clientes"><ClientesPage /></RequirePage>} />
             <Route path="/pedidos" element={<Navigate to="/expedicao" replace />} />
-            <Route path="/expedicao" element={<RequireAuth><PedidosPage /></RequireAuth>} />
+            <Route path="/expedicao" element={<RequirePage slug="expedicao"><PedidosPage /></RequirePage>} />
             <Route path="/configuracoes" element={<RequireAuth><RequireRole allowed={['master','admin']}><ConfiguracoesPage /></RequireRole></RequireAuth>} />
-            <Route path="/impressao-sacolinha" element={<RequireAuth><ImpressaoSacolinhaPage /></RequireAuth>} />
-            <Route path="/impressao-pedidos"          element={<RequireAuth><ImpressaoPedidosPage /></RequireAuth>} />
-            <Route path="/impressao-sacolinha-cliente" element={<RequireAuth><ImpressaoSacolinhaClientePage /></RequireAuth>} />
-            <Route path="/etiquetas" element={<RequireAuth><EtiquetasProdutosPage /></RequireAuth>} />
-            <Route path="/etiquetas-envio" element={<RequireAuth><EtiquetasEnvioPage /></RequireAuth>} />
-            <Route path="/relatorio"              element={<RequireAuth><RelatorioPage /></RequireAuth>} />
-            <Route path="/contatos"              element={<RequireAuth><ContatosPage /></RequireAuth>} />
-            <Route path="/notificacoes"          element={<RequireAuth><NotificacoesPage /></RequireAuth>} />
+            <Route path="/impressao-sacolinha" element={<RequirePage slug="impressao-sacolinha"><ImpressaoSacolinhaPage /></RequirePage>} />
+            <Route path="/impressao-pedidos"          element={<RequirePage slug="impressao-pedidos"><ImpressaoPedidosPage /></RequirePage>} />
+            <Route path="/impressao-sacolinha-cliente" element={<RequirePage slug="impressao-sacolinha-cliente"><ImpressaoSacolinhaClientePage /></RequirePage>} />
+            <Route path="/etiquetas" element={<RequirePage slug="etiquetas"><EtiquetasProdutosPage /></RequirePage>} />
+            <Route path="/etiquetas-envio" element={<RequirePage slug="etiquetas-envio"><EtiquetasEnvioPage /></RequirePage>} />
+            <Route path="/relatorio"              element={<RequirePage slug="relatorio"><RelatorioPage /></RequirePage>} />
+            <Route path="/contatos"              element={<RequirePage slug="contatos"><ContatosPage /></RequirePage>} />
+            <Route path="/notificacoes"          element={<RequirePage slug="notificacoes"><NotificacoesPage /></RequirePage>} />
             <Route path="/debug"                 element={<RequireAuth><DebugPage /></RequireAuth>} />
-            <Route path="/dashboard-financeiro"  element={<RequireAuth><DashboardFinanceiroPage /></RequireAuth>} />
-            <Route path="/contas-pagar"          element={<RequireAuth><ContasPagarPage /></RequireAuth>} />
-            <Route path="/creditos-clientes"     element={<RequireAuth><CreditosPage /></RequireAuth>} />
-            <Route path="/comissoes"             element={<RequireAuth><ComissoesPage /></RequireAuth>} />
+            <Route path="/dashboard-financeiro"  element={<RequirePage slug="dashboard-financeiro"><DashboardFinanceiroPage /></RequirePage>} />
+            <Route path="/contas-pagar"          element={<RequirePage slug="contas-pagar"><ContasPagarPage /></RequirePage>} />
+            <Route path="/creditos-clientes"     element={<RequirePage slug="creditos-clientes"><CreditosPage /></RequirePage>} />
+            <Route path="/comissoes"             element={<RequirePage slug="comissoes"><ComissoesPage /></RequirePage>} />
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
-            <Route path="/compras"               element={<RequireAuth><ComprasPage /></RequireAuth>} />
+            <Route path="/compras"               element={<RequirePage slug="compras"><ComprasPage /></RequirePage>} />
             <Route path="/rh"                    element={<RequireAuth><RequireRole allowed={['master','admin']}><RhPage /></RequireRole></RequireAuth>} />
             <Route path="/ponto"                 element={<RequireAuth><PontoQuiosquePage /></RequireAuth>} />
             {/* /f e /r são as versões curtas: URL longa chega quebrada no WhatsApp */}

@@ -44,10 +44,8 @@ export function invalidateMpTokenCache() {
 // ── Usuários do tenant ─────────────────────────────────────────
 
 export const ROLES = [
-  { value: 'admin',      label: 'Admin',      desc: 'Acesso total à empresa' },
-  { value: 'gerente',    label: 'Gerente',    desc: 'Vendas, Cobranças e Dashboard' },
-  { value: 'vendedor',   label: 'Vendedor',   desc: 'Somente Vendas' },
-  { value: 'financeiro', label: 'Financeiro', desc: 'Somente Cobranças e Dashboard' },
+  { value: 'admin',   label: 'Admin',   desc: 'Administra a empresa (Configurações, Cupons, RH)' },
+  { value: 'usuario', label: 'Usuário', desc: 'Acessa somente as páginas liberadas no botão Páginas' },
 ]
 
 export async function getUsuarios(tenantId) {
@@ -79,7 +77,7 @@ export async function getUsuarios(tenantId) {
 
   // Filtra localmente: apenas quem tem username OU role válido
   const usuariosValidos = (data || []).filter(u =>
-    u.username || ['admin', 'gerente', 'vendedor', 'financeiro', 'master'].includes(u.role)
+    u.username || ['admin', 'usuario', 'master', 'gerente', 'vendedor', 'financeiro'].includes(u.role)
   )
 
   return usuariosValidos

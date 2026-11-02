@@ -641,7 +641,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
   const [salvando,     setSalvando]     = useState(null)
   const [showForm,     setShowForm]     = useState(false)
   const [criando,      setCriando]      = useState(false)
-  const [form,         setForm]         = useState({ nome: '', username: '', email: '', password: '', role: 'vendedor' })
+  const [form,         setForm]         = useState({ nome: '', username: '', email: '', password: '', role: 'usuario' })
   const [formPageIds,  setFormPageIds]  = useState([])   // páginas selecionadas no formulário de criação
   const [tenantPages,  setTenantPages]  = useState([])   // páginas disponíveis na empresa
   const [paginasOpen,  setPaginasOpen]  = useState(null) // userId com painel de páginas aberto
@@ -739,7 +739,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
         email: emailFinal,
         role: form.role
       }])
-      setForm({ nome: '', username: '', email: '', password: '', role: 'vendedor' })
+      setForm({ nome: '', username: '', email: '', password: '', role: 'usuario' })
       setFormPageIds([])
       setShowForm(false)
       showToast(`Usuário ${form.nome} (${form.username}) criado com sucesso!`)
@@ -756,10 +756,14 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
       {/* Legenda de funções */}
       <div style={{ marginBottom: 16, padding: '10px 14px', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--muted)' }}>
         <strong style={{ color: 'var(--blue)' }}>Funções disponíveis:</strong>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px', marginTop: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 6 }}>
           {ROLES.map(r => (
             <span key={r.value}><strong style={{ color: 'var(--text-body)' }}>{r.label}</strong> — {r.desc}</span>
           ))}
+        </div>
+        <div style={{ marginTop: 8, fontSize: 12 }}>
+          O que cada pessoa enxerga é definido no botão <strong style={{ color: 'var(--text-body)' }}>Páginas</strong>,
+          um a um. A função controla apenas quem administra a empresa.
         </div>
       </div>
 
@@ -900,7 +904,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
                 }}>Master</span>
               ) : (
                 <select
-                  value={u.role || 'admin'}
+                  value={ROLES.some(r => r.value === u.role) ? u.role : 'usuario'}
                   onChange={e => mudarRole(u.id, e.target.value)}
                   disabled={salvando === u.id}
                   style={{ ...SI, width: 130, height: 34, padding: '0 8px', fontSize: 13 }}

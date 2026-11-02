@@ -18,12 +18,14 @@ export function AuthProvider({ children }) {
   const [menuItems,  setMenuItems]  = useState([])
   const [isRecovery, setIsRecovery] = useState(_recoveryOnLoad)
   const [authError,  setAuthError]  = useState('')
+  const [menuLoaded, setMenuLoaded] = useState(false)
   const initializedRef              = useRef(false)
 
   const loadProfile = useCallback(async (user) => {
     if (!user) {
       setProfile(null)
       setMenuItems([])
+      setMenuLoaded(false)
       return null
     }
     const { data, error } = await getUserProfile(user.id)
@@ -34,6 +36,7 @@ export function AuthProvider({ children }) {
       setAuthError('Este e-mail não tem acesso ao sistema. Peça ao administrador para criar seu usuário em Configurações → Usuários e Permissões.')
       setProfile(null)
       setMenuItems([])
+      setMenuLoaded(false)
       await supabase.auth.signOut()
       return null
     }
@@ -43,6 +46,7 @@ export function AuthProvider({ children }) {
       await supabase.auth.signOut()
       setProfile(null)
       setMenuItems([])
+      setMenuLoaded(false)
       return null
     }
 
@@ -52,15 +56,17 @@ export function AuthProvider({ children }) {
     if (pagesRes.error) {
       console.error('Erro ao carregar menu', pagesRes.error)
       setMenuItems([])
+      setMenuLoaded(false)
     } else {
       const fetched = pagesRes.data || []
       console.log('🔍 DEBUG - Páginas retornadas do banco:', fetched)
       console.log('🔍 DEBUG - Total de páginas:', fetched.length)
       console.log('🔍 DEBUG - Slugs:', fetched.map(p => p.slug))
 
-      // Todas as roles (master, admin, vendedor) usam apenas as páginas do banco
+      // Menu sempre vem do banco: master recebe tudo, os demais só o que está em pages_access
       setMenuItems(fetched)
     }
+    setMenuLoaded(true)
     return data
   }, [])
 
@@ -90,6 +96,7 @@ export function AuthProvider({ children }) {
         setSession(sess)
         setProfile(null)
         setMenuItems([])
+        setMenuLoaded(false)
         setIsRecovery(true)
         if (isMounted) setLoading(false)
 
@@ -106,6 +113,7 @@ export function AuthProvider({ children }) {
         setSession(null)
         setProfile(null)
         setMenuItems([])
+        setMenuLoaded(false)
         setIsRecovery(false)
         if (isMounted) setLoading(false)
       }
@@ -173,6 +181,7 @@ export function AuthProvider({ children }) {
     const result = await supabase.auth.signOut()
     setProfile(null)
     setMenuItems([])
+    setMenuLoaded(false)
     setSession(null)
     setIsRecovery(false)
     setAuthError('')
@@ -185,12 +194,13 @@ export function AuthProvider({ children }) {
     session,
     profile,
     menuItems,
+    menuLoaded,
     isRecovery,
     authError,
     signIn,
     signInWithGoogle,
     signOut,
-  }), [loading, session, profile, menuItems, isRecovery, authError, signIn, signInWithGoogle, signOut])
+  }), [loading, session, profile, menuItems, menuLoaded, isRecovery, authError, signIn, signInWithGoogle, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
@@ -210,6 +220,39 @@ export function RequireAuth({ children }) {
   if (session && !profile) return <div style={{ padding: 24, color: '#fff' }}>Carregando...</div>
   if (!profile) return <Navigate to="/login" replace />
   return children
+}
+
+// Protege a rota pela página liberada no botão "Páginas" de cada usuário.
+// Sem isso o menu só escondia o item — quem digitasse a URL entrava assim mesmo.
+function PageGuard({ slug, children }) {
+  const { profile, menuItems, menuLoaded } = useAuth()
+
+  // Master enxerga tudo
+  if (profile?.role === 'master') return children
+
+  // Espera o menu carregar para não barrar quem tem acesso
+  if (!menuLoaded) return <div style={{ padding: 24, color: '#fff' }}>Carregando...</div>
+
+  if (menuItems.some((p) => p.slug === slug)) return children
+
+  // Sem acesso: manda para a primeira página que a pessoa pode abrir
+  const primeira = menuItems[0]
+  if (primeira) return <Navigate to={`/${primeira.slug}`} replace />
+
+  return (
+    <div style={{ padding: 24, color: '#fff', lineHeight: 1.6 }}>
+      Você não tem acesso a nenhuma página.<br />
+      Peça ao administrador para liberar em <strong>Configurações → Usuários e Permissões</strong>.
+    </div>
+  )
+}
+
+export function RequirePage({ slug, children }) {
+  return (
+    <RequireAuth>
+      <PageGuard slug={slug}>{children}</PageGuard>
+    </RequireAuth>
+  )
 }
 
 export function RequireRole({ allowed, children }) {
