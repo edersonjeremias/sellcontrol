@@ -89,8 +89,9 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
   // Uma linha por dia do mês, inclusive os não trabalhados
   const corpo = espelho.dias.map(d => {
     const obs = []
-    if (d.feriado)     obs.push('Feriado')
-    else if (!d.diaUtil) obs.push('Folga')
+    // Dia não útil com batida é hora paga de outro jeito: precisa saltar aos olhos
+    if (d.feriado)       obs.push(d.trabalhadas ? 'Feriado trabalhado' : 'Feriado')
+    else if (!d.diaUtil) obs.push(d.trabalhadas ? 'Folga trabalhada' : 'Folga')
     if (d.falta)       obs.push('Falta')
     if (d.atrasoMin)   obs.push(`Atraso ${d.atrasoMin}min`)
     if (d.incompleto)  obs.push('Batida faltando')
@@ -121,7 +122,7 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
     ]],
     startY: y + 6,
     margin: { left: margem, right: margem },
-    styles:     { fontSize: 7, cellPadding: 1.3, textColor: [40, 40, 40] },
+    styles:     { fontSize: 7, cellPadding: 1.0, textColor: [40, 40, 40] },
     headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
     footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
     columnStyles: {
@@ -147,12 +148,25 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
   // desenhado fora da página quando a tabela terminava no pé da folha —
   // e o espelho saía sem lugar para assinar.
   const alturaPagina = doc.internal.pageSize.getHeight()
-  const PRECISA      = 50
+  const PRECISA      = 64
   let fim = doc.lastAutoTable.finalY + 8
   if (fim + PRECISA > alturaPagina - margem) {
     doc.addPage()
     fim = 20
   }
+
+  // Sem esta legenda o saldo de um feriado trabalhado parece erro de conta
+  doc.setFontSize(7)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(120)
+  const legenda = 'Saldo = horas trabalhadas menos as previstas para o dia. Em feriado e folga o previsto é zero, ' +
+    'então as horas trabalhadas entram inteiras como saldo positivo.' +
+    (espelho.totais.horasNaoUteis
+      ? ` No período, ${fmtHoras(espelho.totais.horasNaoUteis)} foram trabalhadas em feriado ou folga.`
+      : '')
+  const linhasLegenda = doc.splitTextToSize(legenda, larg - margem * 2)
+  doc.text(linhasLegenda, margem, fim)
+  fim += linhasLegenda.length * 3.4 + 5
 
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
@@ -162,7 +176,7 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
   doc.text(doc.splitTextToSize(texto, larg - margem * 2), margem, fim)
 
   // Duas assinaturas lado a lado: quem confere e quem apura
-  fim += 22
+  fim += 18
   const colunas = [
     { centro: margem + (larg - margem * 2) / 4,       nome: String(funcionario.nome || ''),            papel: 'Assinatura do funcionário(a)' },
     { centro: larg - margem - (larg - margem * 2) / 4, nome: String(empresa.nome_loja || empresa.nome || ''), papel: 'Assinatura do empregador' },
@@ -180,7 +194,7 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
     doc.text(papel, centro, fim + 9.5, { align: 'center' })
   })
 
-  fim += 18
+  fim += 15
   doc.setFontSize(8)
   doc.setTextColor(120)
   doc.text('Data: ____/____/________', larg / 2, fim, { align: 'center' })

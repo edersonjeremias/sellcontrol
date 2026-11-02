@@ -311,14 +311,17 @@ export function montarEspelho({
     faltas:      acc.faltas      + (d.falta ? 1 : 0),
     atrasos:     acc.atrasos     + (d.atrasoMin ? 1 : 0),
     atrasoMin:   acc.atrasoMin   + d.atrasoMin,
-  }), { previstas: 0, trabalhadas: 0, faltas: 0, atrasos: 0, atrasoMin: 0 })
+    // Hora em feriado ou folga é paga de outro jeito: separada à parte
+    horasNaoUteis: acc.horasNaoUteis + (!d.diaUtil ? d.trabalhadas : 0),
+  }), { previstas: 0, trabalhadas: 0, faltas: 0, atrasos: 0, atrasoMin: 0, horasNaoUteis: 0 })
 
   return {
     dias,
     jornada,
     totais: {
       ...totais,
-      previstas:   Number(totais.previstas.toFixed(2)),
+      previstas:     Number(totais.previstas.toFixed(2)),
+      horasNaoUteis: Number(totais.horasNaoUteis.toFixed(2)),
       trabalhadas: Number(totais.trabalhadas.toFixed(2)),
       saldo:       Number((totais.trabalhadas - totais.previstas).toFixed(2)),
     },

@@ -357,6 +357,11 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
                         {espelho.totais.faltas > 0 && (
                           <span style={{ color:'var(--red)' }}> • {espelho.totais.faltas} falta(s)</span>
                         )}
+                        {espelho.totais.horasNaoUteis > 0 && (
+                          <span style={{ color:'var(--yellow)' }}>
+                            {' • '}{fmtHoras(espelho.totais.horasNaoUteis)} em feriado/folga
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="pt-bloco-acoes" onClick={e => e.stopPropagation()}>
