@@ -619,6 +619,8 @@ export async function getVendasEnviadas(tenantId = null, filtros = {}) {
 // ── updateVendaEnviada ─────────────────────────────────────────
 export async function updateVendaEnviada(tenantId = null, linha) {
   const tid = TENANT_ID(tenantId)
+  // sacolinha e integer no banco: string vazia quebraria o PATCH com 400
+  const sacolinha = String(linha.sacolinha ?? '').trim()
   const { error } = await supabase
     .from('vendas')
     .update({
@@ -633,7 +635,7 @@ export async function updateVendaEnviada(tenantId = null, linha) {
       cliente_nome:      linha.cliente_nome || '',
       data_live:         linha.data_live    || null,
       live_nome:         linha.live_nome    || '',
-      sacolinha:         linha.sacolinha    || '',
+      sacolinha:         sacolinha === '' ? null : sacolinha,
       status:            linha.status       || '',
       fila1:             linha.fila1        || '',
       fila2:             linha.fila2        || '',
