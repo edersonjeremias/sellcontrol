@@ -9,6 +9,7 @@ import {
   moverConversa, marcarLida, encerrarConversa, criarConversaAdmin,
 } from '../../services/conversasService'
 import { getClientes } from '../../services/clientesService'
+import { avisarBadges } from '../../services/badgesService'
 
 function fmtTempo(iso) {
   if (!iso) return ''
@@ -124,7 +125,7 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
         console.error('Erro ao carregar mensagens:', err)
         showToast('Erro ao carregar mensagens: ' + err.message, 'error')
       })
-    marcarLida(conversa.id)
+    Promise.resolve(marcarLida(conversa.id)).then(avisarBadges).catch(() => {})
   }, [conversa.id, showToast])
 
   useEffect(() => {
@@ -147,6 +148,7 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
   async function toggleEncerrar() {
     try {
       await encerrarConversa(conversa.id, !conversa.encerrado)
+      avisarBadges()
       onAtualizar()
       onClose()
     } catch { showToast('Erro.', 'error') }
@@ -532,7 +534,7 @@ export default function ContatosPage() {
     porColuna[col].push(c)
   })
 
-  const totalNaoLidas = conversas.reduce((s, c) => s + (c.nao_lidas || 0), 0)
+  const totalNaoLidas = conversas.filter(c => !c.encerrado).reduce((s, c) => s + (c.nao_lidas || 0), 0)
   const totalEncerrados = conversas.filter(c => c.encerrado).length
 
   return (

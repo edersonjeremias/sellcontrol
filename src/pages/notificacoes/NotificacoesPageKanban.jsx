@@ -8,6 +8,7 @@ import {
   moverNotificacao, marcarNotificacaoLida, encerrarNotificacao, criarNotificacaoManual,
 } from '../../services/notificacoesConversasService'
 import { getUsuarios } from '../../services/configService'
+import { avisarBadges } from '../../services/badgesService'
 
 function fmtTempo(iso) {
   if (!iso) return ''
@@ -124,7 +125,7 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
         console.error('Erro ao carregar mensagens:', err)
         showToast('Erro ao carregar mensagens: ' + err.message, 'error')
       })
-    marcarNotificacaoLida(notif.id)
+    marcarNotificacaoLida(notif.id).then(avisarBadges).catch(() => {})
   }, [notif.id, showToast])
 
   // Preenche remetente automaticamente com nome do usuário logado
@@ -160,6 +161,7 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
         await encerrarNotificacao(notif.id)
         notif.encerrado = true
       }
+      avisarBadges()
       onAtualizar()
       onClose()
     } catch { showToast('Erro.', 'error') }
@@ -601,7 +603,7 @@ export default function NotificacoesPageKanban() {
     porColuna[col].push(n)
   })
 
-  const totalNaoLidas = notificacoes.reduce((s, n) => s + (n.nao_lidas || 0), 0)
+  const totalNaoLidas = notificacoes.filter(n => !n.encerrado).reduce((s, n) => s + (n.nao_lidas || 0), 0)
   const totalEncerrados = notificacoes.filter(n => n.encerrado).length
 
   return (

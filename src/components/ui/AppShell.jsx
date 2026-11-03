@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getConfig } from '../../services/configService'
+import {
+  contarNotificacoesNaoLidas,
+  contarContatosNaoLidos,
+  BADGES_EVENT,
+} from '../../services/badgesService'
 
 const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impressão', 'Cadastro', 'RH', 'Admin', 'Outros']
 
@@ -40,6 +45,8 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   const [config, setConfig] = useState(null)
   // Categorias fechadas por padrão — expanded só quando o usuário clicar
   const [expanded, setExpanded] = useState({})
+  // Mensagens não lidas exibidas no topo e no menu lateral
+  const [naoLidas, setNaoLidas] = useState({ notificacoes: 0, contatos: 0 })
 
   // Carrega configurações para pegar nome da empresa
   useEffect(() => {
@@ -49,6 +56,34 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   }, [profile?.tenant_id])
 
   const nomeEmpresa = config?.nome_loja || 'SellControl'
+
+  // Só conta o que o usuário tem permissão de abrir
+  const temNotificacoes = menuItems.some(i => i.slug === 'notificacoes')
+  const temContatos     = menuItems.some(i => i.slug === 'contatos')
+
+  const carregarNaoLidas = useCallback(async () => {
+    if (!profile?.tenant_id) return
+    const [notifs, contatos] = await Promise.all([
+      temNotificacoes ? contarNotificacoesNaoLidas(profile.tenant_id).catch(() => 0) : 0,
+      temContatos ? contarContatosNaoLidos(profile.tenant_id, profile.id).catch(() => 0) : 0,
+    ])
+    setNaoLidas({ notificacoes: notifs, contatos })
+  }, [profile?.tenant_id, profile?.id, temNotificacoes, temContatos])
+
+  // Atualiza ao entrar, a cada 30s, ao voltar para a aba e quando alguma
+  // página avisa que marcou uma conversa como lida
+  useEffect(() => {
+    carregarNaoLidas()
+    const interval = setInterval(carregarNaoLidas, 30000)
+    const aoVoltar = () => { if (!document.hidden) carregarNaoLidas() }
+    document.addEventListener('visibilitychange', aoVoltar)
+    window.addEventListener(BADGES_EVENT, carregarNaoLidas)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', aoVoltar)
+      window.removeEventListener(BADGES_EVENT, carregarNaoLidas)
+    }
+  }, [carregarNaoLidas])
 
   const handleLogout = async () => {
     setMenuOpen(false)
@@ -98,6 +133,29 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
           <span className="app-logo-text">{nomeEmpresa}</span>
         </div>
 
+        <div className="app-badges">
+          {naoLidas.notificacoes > 0 && (
+            <button
+              className="app-badge app-badge-notificacoes"
+              onClick={() => navigate('/notificacoes')}
+              title={`${naoLidas.notificacoes} nova${naoLidas.notificacoes > 1 ? 's' : ''} em Notificações`}
+            >
+              <span className="app-badge-icone">📩</span>
+              {naoLidas.notificacoes}
+            </button>
+          )}
+          {naoLidas.contatos > 0 && (
+            <button
+              className="app-badge app-badge-contatos"
+              onClick={() => navigate('/contatos')}
+              title={`${naoLidas.contatos} mensage${naoLidas.contatos > 1 ? 'ns' : 'm'} de cliente em Contatos`}
+            >
+              <span className="app-badge-icone">💬</span>
+              {naoLidas.contatos}
+            </button>
+          )}
+        </div>
+
         <button
           className="app-hamburger"
           onClick={() => setMenuOpen(o => !o)}
@@ -139,17 +197,26 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
 
               {expanded[cat] && (
                 <div className="app-drawer-items">
-                  {grouped[cat].map(item => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={`app-drawer-link${location.pathname === item.to ? ' active' : ''}`}
-                      onClick={close}
-                    >
-                      <span className="app-drawer-link-dot" />
-                      {item.label}
-                    </Link>
-                  ))}
+                  {grouped[cat].map(item => {
+                    const badge = item.to === '/notificacoes' ? naoLidas.notificacoes
+                                : item.to === '/contatos'     ? naoLidas.contatos
+                                : 0
+                    const badgeCor = item.to === '/contatos' ? ' app-badge-contatos' : ' app-badge-notificacoes'
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        className={`app-drawer-link${location.pathname === item.to ? ' active' : ''}`}
+                        onClick={close}
+                      >
+                        <span className="app-drawer-link-dot" />
+                        {item.label}
+                        {badge > 0 && (
+                          <span className={`app-badge app-badge-mini${badgeCor}`}>{badge}</span>
+                        )}
+                      </Link>
+                    )
+                  })}
                 </div>
               )}
             </div>
