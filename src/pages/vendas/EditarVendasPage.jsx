@@ -23,6 +23,8 @@ const COLUNAS = [
   { campo: 'status',       label: 'Status',  cls: '' },
 ]
 
+const filaDe = v => [v.fila1, v.fila2, v.fila3].filter(c => c?.trim())
+
 export default function EditarVendasPage() {
   const { showToast } = useApp()
   const { profile } = useAuth()
@@ -256,7 +258,14 @@ export default function EditarVendasPage() {
                         <td>{v.marca}</td>
                         <td className="col-tam">{v.tamanho}</td>
                         <td className="col-preco">{formatMoney(v.preco)}</td>
-                        <td className="col-cliente">{v.cliente_nome}</td>
+                        <td className="col-cliente">
+                          {v.cliente_nome}
+                          {filaDe(v).length > 0 && (
+                            <div className="fila-inline">
+                              {filaDe(v).map((c, i) => <span key={i}>{i + 1}º {c}</span>)}
+                            </div>
+                          )}
+                        </td>
                         <td>{v.status}</td>
                         <td className="col-acoes">
                           <div className="acoes-wrapper">
@@ -292,6 +301,13 @@ export default function EditarVendasPage() {
                         <span className="cliente-destaque">{v.cliente_nome || 'Sem cliente'}</span>
                         <span className="data-destaque">{v.data_live ? new Date(v.data_live + 'T00:00:00').toLocaleDateString('pt-BR') : ''}</span>
                       </div>
+
+                      {/* Fila de espera */}
+                      {filaDe(v).length > 0 && (
+                        <div className="venda-card-fila">
+                          Fila: {filaDe(v).map((c, i) => `${i + 1}º ${c}`).join('  ·  ')}
+                        </div>
+                      )}
 
                       {/* Linha 3: Live, sacola, status e botão excluir */}
                       <div className="venda-card-linha3">
@@ -359,7 +375,10 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
     sacolinha: venda.sacolinha || '',
     status: venda.status || '',
     data_live: venda.data_live || '',
-    live_nome: venda.live_nome || ''
+    live_nome: venda.live_nome || '',
+    fila1: venda.fila1 || '',
+    fila2: venda.fila2 || '',
+    fila3: venda.fila3 || ''
   })
 
   const handleChange = (field, value) => {
@@ -368,6 +387,22 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
 
   const handleSubmit = () => {
     onSalvar(form)
+  }
+
+  // Promove quem esta na fila a cliente principal e faz a fila andar
+  const promoverDaFila = (posicao) => {
+    const novoCliente = form['fila' + posicao]?.trim()
+    if (!novoCliente) return
+    const restante = [form.fila1, form.fila2, form.fila3]
+      .filter((_, i) => i !== posicao - 1)
+      .filter(c => c?.trim())
+    setForm(prev => ({
+      ...prev,
+      cliente_nome: novoCliente,
+      fila1: restante[0] || '',
+      fila2: restante[1] || '',
+      fila3: restante[2] || ''
+    }))
   }
 
   // Lista de clientes como array de strings (instagram)
@@ -455,6 +490,36 @@ function ModalEdicaoVenda({ venda, listas, onSalvar, onFechar }) {
                 showOnFocus
                 className="modal-autocomplete-input"
               />
+            </div>
+
+            {/* Linha 5: Fila de espera */}
+            <div style={{ gridColumn: '1 / -1', marginTop: 8, paddingTop: 10, borderTop: '1px solid var(--border-light)' }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
+                Fila de espera <span style={{ fontWeight: 400, textTransform: 'none' }}>— clique em ⬆ para promover a cliente</span>
+              </label>
+              <div className="fila-espera-grid">
+                {[1, 2, 3].map(n => (
+                  <div key={n} className="fila-espera-item">
+                    <AutocompleteInput
+                      value={form['fila' + n]}
+                      onChange={value => handleChange('fila' + n, value)}
+                      list={clientesList}
+                      placeholder={n + 'º da fila...'}
+                      showOnFocus
+                      className="modal-autocomplete-input"
+                    />
+                    <button
+                      type="button"
+                      className="btn-promover-fila"
+                      onClick={() => promoverDaFila(n)}
+                      disabled={!form['fila' + n]?.trim()}
+                      title="Passar para cliente principal"
+                    >
+                      ⬆
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

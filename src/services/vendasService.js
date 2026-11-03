@@ -635,6 +635,9 @@ export async function updateVendaEnviada(tenantId = null, linha) {
       live_nome:         linha.live_nome    || '',
       sacolinha:         linha.sacolinha    || '',
       status:            linha.status       || '',
+      fila1:             linha.fila1        || '',
+      fila2:             linha.fila2        || '',
+      fila3:             linha.fila3        || '',
     })
     .eq('id', linha.id)
     .eq('tenant_id', tid)
