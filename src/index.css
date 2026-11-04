@@ -1334,12 +1334,15 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 .prod-card-obs-prod { color: #fbbc04; }
 
 .prod-card-acoes {
-  display: flex; flex-direction: column; justify-content: center; gap: 6px;
-  padding: 8px 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px 8px; flex-shrink: 0;
   border-left: 1px solid #3c414b;
 }
-.prod-card-acoes .prod-dup-btn { padding: 6px 8px; }
-.prod-card-acoes .prod-dup-btn + .prod-dup-btn { margin-left: 0; }
+.prod-card-acoes .prod-dup-btn {
+  width: 48px; height: 48px; padding: 0;
+  justify-content: center; border-radius: 6px;
+}
+.prod-card-acoes .prod-dup-btn svg { width: 22px; height: 22px; }
 
 .prod-card-pecas-box {
   background: #15171b;
@@ -1355,6 +1358,8 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .prod-v2-toolbar { flex-direction: column; align-items: stretch; }
   .prod-v2-toolbar-left, .prod-v2-toolbar-right { flex-wrap: wrap; gap: 5px; }
   .prod-v2-toolbar-left  > .prod-v2-input:first-child { flex: 1 1 100%; }
+  .prod-v2-input { height: 38px; font-size: 13px; padding: 4px 10px; }
+  .prod-v2-toolbar-left .prod-btn { height: 38px; font-size: 13px; padding: 3px 16px; }
   .prod-v2-toolbar-right { justify-content: space-between; }
   .prod-v2-tab { flex: 1; text-align: center; }
   .prod-v2-count { flex: 1 1 100%; text-align: center; padding-top: 2px; }

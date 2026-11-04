@@ -158,7 +158,7 @@ function MotivoModal({ value, onChange, onConfirm, onClose }) {
 // ── Card do celular ────────────────────────────────────────────
 // No celular a tabela não cabe: cada pedido vira um card e toda a edição
 // acontece no DetalheModal, que já existia para o duplo clique do desktop.
-function CardProducao({ row, mode, waLink, pecasAberta, onAbrir, onTogglePecas, onDuplicar }) {
+function CardProducao({ row, mode, pecasAberta, onAbrir, onTogglePecas }) {
   const cor = spColor(row.status_prod)
   const entrega = mode !== 'producao'
   const cls = row.bloqueado ? ' prod-card-blocked' : row.atrasado ? ' prod-card-delayed' : ''
@@ -200,25 +200,14 @@ function CardProducao({ row, mode, waLink, pecasAberta, onAbrir, onTogglePecas, 
         {row.obs_prod   && <div className="prod-card-obs prod-card-obs-prod">🛠 {row.obs_prod}</div>}
       </div>
 
-      <div className="prod-card-acoes">
-        {waLink && (
-          <a href={waLink} target="_blank" rel="noreferrer" className="prod-dup-btn"
-            title="Abrir WhatsApp" onClick={(e) => e.stopPropagation()}>
-            <IconWa />
-          </a>
-        )}
-        {mode === 'producao' && (
-          <>
-            <button type="button" className="prod-dup-btn" onClick={onTogglePecas}
-              title={pecasAberta ? 'Ocultar as peças' : 'Ver as peças da cliente'}>
-              <IconChevron aberto={pecasAberta} />
-            </button>
-            <button type="button" className="prod-dup-btn" onClick={onDuplicar} title="Duplicar">
-              <IconDup />
-            </button>
-          </>
-        )}
-      </div>
+      {mode === 'producao' && (
+        <div className="prod-card-acoes">
+          <button type="button" className="prod-dup-btn" onClick={onTogglePecas}
+            title={pecasAberta ? 'Ocultar as peças' : 'Ver as peças da cliente'}>
+            <IconChevron aberto={pecasAberta} />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -697,11 +686,9 @@ export default function ProducaoPage() {
                   <CardProducao
                     row={row}
                     mode={mode}
-                    waLink={buildWaLink(row.whatsapp)}
                     pecasAberta={!!pecasAbertas[row.id]}
                     onAbrir={() => setDetalhe(row)}
                     onTogglePecas={() => togglePecas(row)}
-                    onDuplicar={() => handleDuplicar(row.id)}
                   />
                   {mode === 'producao' && pecasAbertas[row.id] && (
                     <div className="prod-card-pecas-box">
