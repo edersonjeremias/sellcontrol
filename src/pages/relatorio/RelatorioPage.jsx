@@ -45,6 +45,12 @@ export default function RelatorioPage() {
   const [filtroStatusExpedicao, setFiltroStatusExpedicao] = useState('todos') // Filtro de status da expedição
   const [statusExpedicaoList, setStatusExpedicaoList] = useState([]) // Lista de status de expedição
   const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
+  // O que já foi ao servidor. Os estados acima são só o conteúdo dos campos:
+  // sem isso cada tecla numa data dispara uma consulta.
+  const [aplicado, setAplicado] = useState({
+    dataInicio: primeiroDiaMes, dataFim: ultimoDiaMes,
+    filtroStatus: 'todos', filtroStatusExpedicao: 'todos',
+  })
   const [carregando, setCarregando] = useState(false)
 
   // Período e dropdowns vão ao servidor; só a busca livre fica client-side,
@@ -53,13 +59,21 @@ export default function RelatorioPage() {
     if (!tenantId) return
     setCarregando(true)
     try {
-      const rows = await getVendasRelatorio(tenantId, {
-        dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao,
-      })
+      const rows = await getVendasRelatorio(tenantId, aplicado)
       setVendasBase(rows)
     } catch { showToast('Erro ao carregar vendas.', 'error') }
     setCarregando(false)
-  }, [tenantId, dataIni, dataFim, filtroStatus, filtroStatusExpedicao, showToast])
+  }, [tenantId, aplicado, showToast])
+
+  const aplicarFiltros = useCallback(() => {
+    setAplicado({ dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao })
+  }, [dataIni, dataFim, filtroStatus, filtroStatusExpedicao])
+
+  const pendente =
+    aplicado.dataInicio !== dataIni ||
+    aplicado.dataFim !== dataFim ||
+    aplicado.filtroStatus !== filtroStatus ||
+    aplicado.filtroStatusExpedicao !== filtroStatusExpedicao
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -76,20 +90,20 @@ export default function RelatorioPage() {
     let resultado = vendasBase
 
     // ✅ Filtro por STATUS (vendidos/cadastrados/ENVIADO/CANCELADO/DEVOLVIDO)
-    if (filtroStatus === 'vendidos') {
+    if (aplicado.filtroStatus === 'vendidos') {
       resultado = resultado.filter(v => {
         const st = (v.status || '').toUpperCase()
         return v.cliente_nome?.trim() && st !== 'CANCELADO' && st !== 'DEVOLVIDO'
       })
-    } else if (filtroStatus === 'cadastrados') {
+    } else if (aplicado.filtroStatus === 'cadastrados') {
       resultado = resultado.filter(v => !v.cliente_nome?.trim())
-    } else if (['ENVIADO', 'CANCELADO', 'DEVOLVIDO'].includes(filtroStatus)) {
-      resultado = resultado.filter(v => (v.status || '').toUpperCase() === filtroStatus)
+    } else if (['ENVIADO', 'CANCELADO', 'DEVOLVIDO'].includes(aplicado.filtroStatus)) {
+      resultado = resultado.filter(v => (v.status || '').toUpperCase() === aplicado.filtroStatus)
     }
 
     // ✅ Filtro por STATUS DA EXPEDIÇÃO (Comprar, Vendido, Comprar URGENTE, etc)
-    if (filtroStatusExpedicao !== 'todos') {
-      resultado = resultado.filter(v => (v.status || '') === filtroStatusExpedicao)
+    if (aplicado.filtroStatusExpedicao !== 'todos') {
+      resultado = resultado.filter(v => (v.status || '') === aplicado.filtroStatusExpedicao)
     }
 
     // ✅ Filtro por BUSCA
@@ -104,7 +118,7 @@ export default function RelatorioPage() {
     }
 
     return resultado
-  }, [vendasBase, busca, filtroStatus, filtroStatusExpedicao])
+  }, [vendasBase, busca, aplicado])
 
   // Soma TUDO que está na lista filtrada usando preço final (preco_promocional se houver, senão preco)
   const totalLiquido = vendas.reduce((s, v) => {
@@ -157,7 +171,7 @@ export default function RelatorioPage() {
 
     // Período
     doc.setFontSize(10)
-    doc.text(`Período: ${fmtData(dataIni)} até ${fmtData(dataFim)}`, 14, 22)
+    doc.text(`Período: ${fmtData(aplicado.dataInicio)} até ${fmtData(aplicado.dataFim)}`, 14, 22)
     doc.text(`Total de produtos: ${produtosAgrupados.reduce((s, p) => s + p.quantidade, 0)}`, 14, 28)
 
     // Tabela
@@ -190,7 +204,7 @@ export default function RelatorioPage() {
     })
 
     // Salvar
-    const nomeArquivo = `relatorio_${dataIni}_${dataFim}.pdf`
+    const nomeArquivo = `relatorio_${aplicado.dataInicio}_${aplicado.dataFim}.pdf`
     doc.save(nomeArquivo)
   }
 
@@ -247,7 +261,7 @@ export default function RelatorioPage() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `vendas_${dataIni}_${dataFim}.csv`
+      link.download = `vendas_${aplicado.dataInicio}_${aplicado.dataFim}.csv`
       link.click()
       URL.revokeObjectURL(url)
 
@@ -282,7 +296,13 @@ export default function RelatorioPage() {
             <option key={status.id} value={status.nome}>{status.nome}</option>
           ))}
         </select>
-        <button onClick={carregar} style={S.btn}>Filtrar</button>
+        <button
+          onClick={aplicarFiltros}
+          style={{ ...S.btn, ...(pendente ? { background:'var(--green)' } : {}) }}
+          title={pendente ? 'Há filtros alterados — clique para aplicar' : 'Filtros já aplicados'}
+        >
+          {pendente ? 'Filtrar •' : 'Filtrar'}
+        </button>
         <button onClick={gerarPDF} style={{ ...S.btn, background:'var(--green)' }}>Gerar PDF</button>
         <button onClick={exportarExcel} style={{ ...S.btn, background:'#217346' }}>Exportar</button>
       </div>
