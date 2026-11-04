@@ -11,6 +11,7 @@ import {
 } from '../../services/authService'
 import ConfigAssuntos from './ConfigAssuntos'
 import UserActionsMenu from '../../components/config/UserActionsMenu'
+import { emailDeUsername } from '../../lib/emailInterno'
 import AbaStatusExpedicao from './AbaStatusExpedicao'
 import AbaTransportadoras from './AbaTransportadoras'
 import AbaIntegracoes from './AbaIntegracoes'
@@ -706,7 +707,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
     setCriando(true)
     try {
       // Gera email fictício se não fornecido
-      const emailFinal = form.email?.trim() || `${form.username}@vmkids.local`
+      const emailFinal = form.email?.trim() || emailDeUsername(form.username)
 
       const resp = await fetch('/api/criar-usuario', {
         method: 'POST',
@@ -795,7 +796,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
               />
               {form.username && (
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
-                  Email gerado: {form.username}@vmkids.local
+                  Email gerado: {emailDeUsername(form.username)}
                 </div>
               )}
             </div>
@@ -838,7 +839,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
                     }}
                     style={{ cursor: 'pointer' }}
                   />
-                  <span style={{ color: 'var(--text-body)' }}>{p.nome}</span>
+                  <span style={{ color: 'var(--text-body)' }}>{p.label}</span>
                 </label>
               ))}
             </div>

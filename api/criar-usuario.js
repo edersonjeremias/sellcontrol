@@ -23,8 +23,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Username deve conter apenas letras minúsculas e números' })
   }
 
-  // Gera email fictício se não fornecido
-  const emailFinal = email?.trim() || `${username}@vmkids.local`
+  // Gera email fictício se não fornecido. O domínio é configurável porque o
+  // validador do Supabase recusa domínios sem registro MX — foi o que derrubou
+  // o antigo @vmkids.local ('.local' é TLD reservado e não resolve MX).
+  const dominioInterno = process.env.EMAIL_DOMINIO_INTERNO || 'sellcontrol.app'
+  const emailFinal = email?.trim() || `${username}@${dominioInterno}`
 
   const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -50,7 +53,15 @@ export default async function handler(req, res) {
     email_confirm: true,
   })
 
-  if (authError) return res.status(400).json({ error: authError.message })
+  if (authError) {
+    // Mensagem crua do Supabase não diz qual e-mail falhou nem o que fazer.
+    if (/validate email|invalid format|email_address_invalid/i.test(authError.message || '')) {
+      return res.status(400).json({
+        error: `O Supabase recusou o e-mail ${emailFinal}. Preencha o campo E-mail com um endereço real, ou configure a variável EMAIL_DOMINIO_INTERNO com um domínio que tenha registro MX.`,
+      })
+    }
+    return res.status(400).json({ error: authError.message })
+  }
 
   // Cria o perfil vinculado ao tenant
   const { error: profileError } = await supabase

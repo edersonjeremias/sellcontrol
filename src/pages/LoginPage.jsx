@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { emailsPossiveis } from '../lib/emailInterno'
 
 export default function LoginPage() {
   const { profile, loading, signIn, signInWithGoogle, authError } = useAuth()
@@ -37,10 +38,30 @@ export default function LoginPage() {
     setSubmitting(true)
     try {
       const loginValue = email.trim()
-      // Se não tem @, é username - adiciona @vmkids.local
-      const emailToUse = loginValue.includes('@') ? loginValue : `${loginValue}@vmkids.local`
 
-      await signIn(emailToUse, password)
+      if (loginValue.includes('@')) {
+        await signIn(loginValue, password)
+      } else {
+        // Username: tenta o domínio atual e depois os antigos, porque quem foi
+        // criado antes da troca de domínio tem outro e-mail no Auth.
+        const tentativas = emailsPossiveis(loginValue)
+        let ultimoErro = null
+        let entrou = false
+        for (const tentativa of tentativas) {
+          try {
+            await signIn(tentativa, password)
+            entrou = true
+            break
+          } catch (err) {
+            ultimoErro = err
+            // Só vale tentar o próximo domínio quando o e-mail não existe lá.
+            const msg = (err.message || '').toLowerCase()
+            if (!msg.includes('invalid login credentials') && !msg.includes('invalid credentials')) break
+          }
+        }
+        if (!entrou) throw ultimoErro
+      }
+
       navigate('/dashboard', { replace: true })
     } catch (err) {
       const message = (err.message || 'Erro ao efetuar login').toLowerCase()
