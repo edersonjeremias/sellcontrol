@@ -62,7 +62,7 @@ export async function getUsuarios(tenantId) {
   // 3. E não sejam clientes do portal
   let query = supabase
     .from('users_perfil')
-    .select('id, nome, email, username, role, ativo, created_at')
+    .select('id, nome, email, username, role, ativo, assuntos_permitidos, created_at')
     .eq('tenant_id', tenantId)
     .or('username.neq.,role.in.(admin,gerente,vendedor,financeiro,master)')
 

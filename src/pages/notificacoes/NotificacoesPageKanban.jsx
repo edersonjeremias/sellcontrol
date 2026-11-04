@@ -294,7 +294,9 @@ function ModalNovaConversa({ tenantId, profile, onCriada, onClose, showToast }) 
     async function carregarUsuarios() {
       try {
         const users = await getUsuarios(tenantId)
-        setUsuarios(users.filter(u => u.ativo))
+        // Quem não tem assunto configurado não participa das conversas,
+        // então não entra na lista de destinatários.
+        setUsuarios(users.filter(u => u.ativo && (u.assuntos_permitidos || []).length > 0))
       } catch (err) {
         console.error('Erro ao buscar usuários:', err)
       }
