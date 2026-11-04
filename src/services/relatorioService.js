@@ -63,7 +63,7 @@ export async function getClientesRelatorio(tenantId) {
 
 // ── Relatório: vendas ──────────────────────────────────────────
 
-export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {}) {
+export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtroStatus, filtroStatusExpedicao } = {}) {
   const TAMANHO_PAGINA = 1000
 
   // Sem paginação o Supabase corta em 1000 linhas; como a ordem é data_live DESC,
@@ -86,6 +86,20 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {})
     } else if (dataFim) {
       q = q.or(`data_live.lte.${dataFim},and(data_live.is.null,created_at.lte.${dataFim}T23:59:59)`)
     }
+    // Status e expedição no servidor: a tela refina de novo, mas o que trafega
+    // encolhe de milhares de linhas para dezenas.
+    // 'cadastrados' (cliente vazio) fica só na tela — exigiria um segundo or=
+    // na mesma query, junto com o das datas.
+    if (filtroStatus === 'vendidos') {
+      q = q.not('cliente_nome', 'is', null).neq('cliente_nome', '')
+    } else if (filtroStatus && !['todos', 'cadastrados'].includes(filtroStatus)) {
+      q = q.ilike('status', filtroStatus)
+    }
+
+    if (filtroStatusExpedicao && filtroStatusExpedicao !== 'todos') {
+      q = q.eq('status', filtroStatusExpedicao)
+    }
+
     return q
   }
 

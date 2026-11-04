@@ -47,16 +47,19 @@ export default function RelatorioPage() {
   const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
   const [carregando, setCarregando] = useState(false)
 
-  // Carrega do servidor apenas por período (sem busca — busca é client-side)
+  // Período e dropdowns vão ao servidor; só a busca livre fica client-side,
+  // para seguir filtrando a cada tecla sem ida ao banco
   const carregar = useCallback(async () => {
     if (!tenantId) return
     setCarregando(true)
     try {
-      const rows = await getVendasRelatorio(tenantId, { dataInicio: dataIni, dataFim })
+      const rows = await getVendasRelatorio(tenantId, {
+        dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao,
+      })
       setVendasBase(rows)
     } catch { showToast('Erro ao carregar vendas.', 'error') }
     setCarregando(false)
-  }, [tenantId, dataIni, dataFim, showToast])
+  }, [tenantId, dataIni, dataFim, filtroStatus, filtroStatusExpedicao, showToast])
 
   useEffect(() => { carregar() }, [carregar])
 
