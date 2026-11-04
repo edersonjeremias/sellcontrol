@@ -1000,23 +1000,23 @@ export default function EtiquetasPage() {
             </p>
           </div>
         ) : (
+          // Sem overflow hidden: ele impediria o cabeçalho de grudar no topo
           <div style={{
             background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 12,
-            overflow: 'hidden',
           }}>
             {/* Header da Tabela - no celular cada romaneio vira um cartão */}
-            <div style={{
+            <div className="grid-header-fixo" style={{
               display: isMobile ? 'none' : 'grid',
               gridTemplateColumns: '110px 1fr 100px 100px 120px 250px 44px',
               gap: 16,
               padding: '14px 20px',
-              background: 'rgba(255,255,255,0.05)',
+              borderTopLeftRadius: 12,
+              borderTopRightRadius: 12,
               borderBottom: '1px solid rgba(255,255,255,0.1)',
               fontSize: 11,
               fontWeight: 700,
-              color: '#9aa0a6',
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
             }}>
