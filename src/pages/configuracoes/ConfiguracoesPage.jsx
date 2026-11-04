@@ -10,6 +10,7 @@ import {
   getTenantPages, getUserPageIds, saveUserPageAccess,
 } from '../../services/authService'
 import ConfigAssuntos from './ConfigAssuntos'
+import ConfigMenu from './ConfigMenu'
 import UserActionsMenu from '../../components/config/UserActionsMenu'
 import { emailDeUsername } from '../../lib/emailInterno'
 import AbaStatusExpedicao from './AbaStatusExpedicao'
@@ -1011,6 +1012,10 @@ export default function ConfiguracoesPage() {
               <TabBtn label="Integrações" active={aba === 'integracoes'} onClick={() => setAba('integracoes')} />
             </>
           )}
+          {/* Só master: a RLS da tabela pages só aceita escrita de master */}
+          {profile?.role === 'master' && (
+            <TabBtn label="Menu" active={aba === 'menu'} onClick={() => setAba('menu')} />
+          )}
         </div>
 
         {aba === 'config' && (
@@ -1030,6 +1035,9 @@ export default function ConfiguracoesPage() {
         )}
         {aba === 'integracoes' && (
           <AbaIntegracoes tenantId={tenantId} showToast={showToast} />
+        )}
+        {aba === 'menu' && (
+          <ConfigMenu />
         )}
       </div>
     </AppShell>

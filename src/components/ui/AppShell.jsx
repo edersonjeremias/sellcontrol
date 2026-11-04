@@ -8,35 +8,9 @@ import {
   BADGES_EVENT,
 } from '../../services/badgesService'
 
-const CATEGORY_ORDER = ['Principal', 'Vendas', 'Financeiro', 'Produção', 'Impressão', 'Cadastro', 'RH', 'Admin', 'Outros']
-
-const SLUG_TO_CATEGORY = {
-  'dashboard':                   'Principal',
-  'notificacoes':                'Principal',
-  'vendas':                      'Vendas',
-  'editar-vendas':               'Vendas',
-  'produtos':                    'Cadastro',
-  'cobrancas':                   'Financeiro',
-  'cupons':                      'Vendas',
-  'relatorio':                   'Financeiro',
-  'contatos':                    'Vendas',
-  'dashboard-financeiro':        'Financeiro',
-  'contas-pagar':                'Financeiro',
-  'creditos-clientes':           'Financeiro',
-  'frete-pagamentos':            'Financeiro',
-  'compras':                     'Financeiro',
-  'producao':                    'Produção',
-  'expedicao':                   'Produção',
-  'impressao-pedidos':           'Impressão',
-  'impressao-sacolinha':         'Impressão',
-  'impressao-sacolinha-cliente': 'Impressão',
-  'etiquetas':                   'Impressão',
-  'clientes':                    'Cadastro',
-  'rh':                          'RH',
-  'ponto':                       'RH',
-  'configuracoes':               'Admin',
-  'master/empresas':             'Admin',
-}
+// Categoria e ordem do menu vêm da tabela pages (editável em
+// Configurações → Menu). menuItems já chega ordenado por order_index.
+const CATEGORIA_PADRAO = 'Outros'
 
 export default function AppShell({ title, children, hideTitle = false, flush = false }) {
   const { profile, menuItems, signOut } = useAuth()
@@ -97,16 +71,21 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     prev[cat] ? { ...prev, [cat]: false } : { [cat]: true }
   )
 
+  // Empresas não é uma página da tabela pages: acompanha a categoria de
+  // Configurações, para não criar uma categoria solta quando ela é renomeada.
+  const categoriaAdmin =
+    menuItems.find(i => i.slug === 'configuracoes')?.category?.trim() || 'Admin'
+
   // Monta links com categoria - TODAS as páginas vêm de menuItems (pages_access)
   const allLinks = [
     ...menuItems.map(item => ({
       to: `/${item.slug}`,
       label: item.label,
-      category: SLUG_TO_CATEGORY[item.slug] || 'Outros',
+      category: (item.category || '').trim() || CATEGORIA_PADRAO,
     })),
     // Master → Empresas é uma página administrativa especial (apenas para master)
     ...(profile?.role === 'master'
-      ? [{ to: '/master/empresas', label: 'Empresas', category: 'Admin' }]
+      ? [{ to: '/master/empresas', label: 'Empresas', category: categoriaAdmin }]
       : []),
   ]
 
@@ -117,14 +96,18 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     return true
   })
 
+  // A ordem das categorias é a ordem em que elas aparecem nas páginas, que já
+  // vêm ordenadas por order_index — é assim que a tela de Menu as organiza.
   const grouped = {}
+  const categories = []
   navLinks.forEach(link => {
     const cat = link.category
-    if (!grouped[cat]) grouped[cat] = []
+    if (!grouped[cat]) {
+      grouped[cat] = []
+      categories.push(cat)
+    }
     grouped[cat].push(link)
   })
-
-  const categories = CATEGORY_ORDER.filter(c => grouped[c])
 
   return (
     <div className="app-shell">
