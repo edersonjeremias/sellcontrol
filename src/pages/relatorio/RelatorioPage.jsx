@@ -52,24 +52,27 @@ export default function RelatorioPage() {
     filtroStatus: 'todos', filtroStatusExpedicao: 'todos',
   }))
   const [carregando, setCarregando] = useState(false)
+  const [jaFiltrou, setJaFiltrou] = useState(false)  // nenhuma consulta até o primeiro Filtrar
 
   // Período e dropdowns vão ao servidor; só a busca livre fica client-side,
   // para seguir filtrando a cada tecla sem ida ao banco
   const carregar = useCallback(async () => {
-    if (!tenantId) return
+    if (!tenantId || !jaFiltrou) return
     setCarregando(true)
     try {
       const rows = await getVendasRelatorio(tenantId, aplicado)
       setVendasBase(rows)
     } catch { showToast('Erro ao carregar vendas.', 'error') }
     setCarregando(false)
-  }, [tenantId, aplicado, showToast])
+  }, [tenantId, aplicado, jaFiltrou, showToast])
 
   const aplicarFiltros = useCallback(() => {
+    setJaFiltrou(true)
     setAplicado({ dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao })
   }, [dataIni, dataFim, filtroStatus, filtroStatusExpedicao])
 
   const pendente =
+    !jaFiltrou ||
     aplicado.dataInicio !== dataIni ||
     aplicado.dataFim !== dataFim ||
     aplicado.filtroStatus !== filtroStatus ||
@@ -308,7 +311,7 @@ export default function RelatorioPage() {
       </div>
 
       {/* Contador de registros filtrados */}
-      {!carregando && (
+      {!carregando && jaFiltrou && (
         <div style={{ padding:'8px 16px', background:'var(--bg-secondary)', borderBottom:'1px solid var(--border-light)' }}>
           <span style={{ fontSize:13, color:'var(--text-body)', fontWeight:600 }}>
             Total: {vendas.length} registro(s)
@@ -388,9 +391,11 @@ export default function RelatorioPage() {
                   {!vendas.length && (
                     <tr>
                       <td colSpan={12} style={{ textAlign:'center', padding:24, color:'var(--muted)' }}>
-                        {busca.trim()
-                          ? `Nenhum resultado para "${busca.trim()}"`
-                          : 'Nenhum registro encontrado no período.'}
+                        {!jaFiltrou
+                          ? 'Escolha o período e clique em Filtrar.'
+                          : busca.trim()
+                            ? `Nenhum resultado para "${busca.trim()}"`
+                            : 'Nenhum registro encontrado no período.'}
                       </td>
                     </tr>
                   )}
