@@ -47,10 +47,10 @@ export default function RelatorioPage() {
   const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
   // O que já foi ao servidor. Os estados acima são só o conteúdo dos campos:
   // sem isso cada tecla numa data dispara uma consulta.
-  const [aplicado, setAplicado] = useState({
-    dataInicio: primeiroDiaMes, dataFim: ultimoDiaMes,
+  const [aplicado, setAplicado] = useState(() => ({
+    dataInicio: primeiroDiaMes(), dataFim: ultimoDiaMes(),
     filtroStatus: 'todos', filtroStatusExpedicao: 'todos',
-  })
+  }))
   const [carregando, setCarregando] = useState(false)
 
   // Período e dropdowns vão ao servidor; só a busca livre fica client-side,
