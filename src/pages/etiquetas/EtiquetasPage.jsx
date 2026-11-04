@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import AppShell from '../../components/ui/AppShell'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -214,6 +214,23 @@ export default function EtiquetasPage() {
   // Confirmações em modal, no lugar de window.confirm e prompt
   const [pergunta, setPergunta] = useState(null)
   const [historicoDe, setHistoricoDe] = useState(null)
+
+  // O cabeçalho da tabela gruda logo abaixo da barra de filtros, que muda
+  // de altura quando os campos quebram em várias linhas no celular
+  const barraRef = useRef(null)
+  const [alturaBarra, setAlturaBarra] = useState(0)
+
+  useEffect(() => {
+    const el = barraRef.current
+    if (!el) return
+
+    const medir = () => setAlturaBarra(el.offsetHeight)
+    medir()
+
+    const observer = new ResizeObserver(medir)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // Estados para cotação
   const [cotando, setCotando] = useState(false)
@@ -845,7 +862,7 @@ export default function EtiquetasPage() {
     <AppShell page="Etiquetas" hideTitle>
       <div style={{ padding: '4px 12px 16px' }}>
         {/* Título e filtros na mesma linha */}
-        <div style={{
+        <div ref={barraRef} className="filtros-fixos" style={{
           display: 'flex',
           gap: 8,
           marginBottom: 16,
@@ -1008,6 +1025,7 @@ export default function EtiquetasPage() {
           }}>
             {/* Header da Tabela - no celular cada romaneio vira um cartão */}
             <div className="grid-header-fixo" style={{
+              top: alturaBarra,
               display: isMobile ? 'none' : 'grid',
               gridTemplateColumns: '110px 1fr 100px 100px 120px 250px 44px',
               gap: 16,

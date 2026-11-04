@@ -763,6 +763,19 @@ input[type="date"] { color-scheme: dark; }
 #tabela-msg { padding: 50px 20px; text-align: center; color: var(--tabela-msg); font-size: 15px; }
 table { width: 100%; min-width: 1100px; border-collapse: separate; border-spacing: 0; }
 thead th { position: sticky; top: 0; z-index: 90; background: var(--table-header-bg); color: var(--table-header-text); font-weight: 700; font-size: 10px; text-transform: uppercase; padding: 8px 6px; text-align: left; white-space: nowrap; border-bottom: 2px solid var(--border-light); }
+/* Barra de título e filtros: acompanha a rolagem junto do cabeçalho.
+   O fundo precisa ser opaco e as margens negativas cobrem o padding
+   lateral da página, senão o conteúdo aparece rolando ao lado. */
+.filtros-fixos {
+  position: sticky;
+  top: 0;
+  z-index: 95;
+  background: var(--body-bg);
+  margin-left: -12px;
+  margin-right: -12px;
+  padding: 8px 12px;
+}
+
 /* Cabeçalho fixo para listagens montadas com grid em vez de <table>.
    Mesmo comportamento e cor do thead acima; o fundo precisa ser opaco
    porque as linhas rolam por baixo dele. */
