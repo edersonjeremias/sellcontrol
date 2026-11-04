@@ -1289,12 +1289,75 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 .prod-modal-body  { color:#abb1bd; font-size:13px; line-height:1.6; margin-bottom:14px; }
 .prod-modal-footer { display:flex; justify-content:flex-end; gap:8px; }
 
+/* ── Cards do celular ── */
+.prod-card-lista { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+
+.prod-card {
+  background: #26292f;
+  border: 1px solid #3c414b;
+  border-left: 4px solid #3c414b;
+  border-radius: 8px;
+  display: flex; align-items: stretch;
+  overflow: hidden;
+}
+.prod-card-delayed { background: #2b2219; }
+.prod-card-blocked { background: #2b1b1b; }
+
+/* O corpo inteiro é o botão que abre o modal de edição */
+.prod-card-main {
+  flex: 1; min-width: 0;
+  cursor: pointer; color: #f0f0f1;
+  padding: 10px 4px 10px 12px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.prod-card-topo { display: flex; align-items: baseline; gap: 8px; }
+.prod-card-cliente {
+  flex: 1; min-width: 0;
+  font-size: 14px; font-weight: 700; color: #8ab4f8;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.prod-card-pecas { font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+.prod-card-sub { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: #abb1bd; }
+.prod-card-status-linha {
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+  font-size: 12px; font-weight: 700; margin-top: 1px;
+}
+.prod-card-entrega { color: #00bcd4; }
+.prod-card-pronto  { color: #22c55e; font-weight: 400; }
+
+.prod-card-obs {
+  font-size: 12px; color: #d7dae0; line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.prod-card-obs-prod { color: #fbbc04; }
+
+.prod-card-acoes {
+  display: flex; flex-direction: column; justify-content: center; gap: 6px;
+  padding: 8px 10px; flex-shrink: 0;
+  border-left: 1px solid #3c414b;
+}
+.prod-card-acoes .prod-dup-btn { padding: 6px 8px; }
+.prod-card-acoes .prod-dup-btn + .prod-dup-btn { margin-left: 0; }
+
+.prod-card-pecas-box {
+  background: #15171b;
+  border: 1px solid #3c414b;
+  border-radius: 8px;
+  margin: -4px 0 0 10px;
+  padding: 8px 10px;
+}
+
 /* ── Mobile ── */
 @media (max-width: 768px) {
   .prod-v2 { height: auto; min-height: calc(100vh - 56px); }
   .prod-v2-toolbar { flex-direction: column; align-items: stretch; }
   .prod-v2-toolbar-left, .prod-v2-toolbar-right { flex-wrap: wrap; gap: 5px; }
-  .prod-v2-table-wrap { overflow-x: auto; }
+  .prod-v2-toolbar-left  > .prod-v2-input:first-child { flex: 1 1 100%; }
+  .prod-v2-toolbar-right { justify-content: space-between; }
+  .prod-v2-tab { flex: 1; text-align: center; }
+  .prod-v2-count { flex: 1 1 100%; text-align: center; padding-top: 2px; }
   .prod-dash-card { padding: 12px; }
 }
 

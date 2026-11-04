@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { STATUS_PROD_OPTS, STATUS_ENTREGA_OPTS, PACOTE_OPTS } from '../../services/producaoService'
 
-export default function DetalheModal({ row, onSave, onClose }) {
+export default function DetalheModal({ row, onSave, onClose, pacoteOpts = PACOTE_OPTS }) {
   const [local, setLocal] = useState({ ...row })
   const upd = (f, v) => setLocal((p) => ({ ...p, [f]: v }))
 
@@ -56,7 +56,7 @@ export default function DetalheModal({ row, onSave, onClose }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <Field label="Status Produção">{sel('status_prod', STATUS_PROD_OPTS)}</Field>
-          <Field label="Pacote">{sel('pacote', PACOTE_OPTS)}</Field>
+          <Field label="Pacote">{sel('pacote', pacoteOpts)}</Field>
         </div>
 
         <Field label="Obs. Cliente">{inp('obs_cliente')}</Field>
@@ -73,6 +73,8 @@ export default function DetalheModal({ row, onSave, onClose }) {
           <Field label="Frete (R$)">{inp('valor_frete')}</Field>
           <Field label="Dec. (R$)">{inp('valor_dec')}</Field>
         </div>
+
+        <Field label="Romaneio">{inp('romaneio')}</Field>
 
         <Field label="Msg Cobrança">{inp('msg_cobranca')}</Field>
         <Field label="Rastreio">{inp('rastreio')}</Field>

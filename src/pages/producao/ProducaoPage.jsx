@@ -155,6 +155,74 @@ function MotivoModal({ value, onChange, onConfirm, onClose }) {
   )
 }
 
+// ── Card do celular ────────────────────────────────────────────
+// No celular a tabela não cabe: cada pedido vira um card e toda a edição
+// acontece no DetalheModal, que já existia para o duplo clique do desktop.
+function CardProducao({ row, mode, waLink, pecasAberta, onAbrir, onTogglePecas, onDuplicar }) {
+  const cor = spColor(row.status_prod)
+  const entrega = mode !== 'producao'
+  const cls = row.bloqueado ? ' prod-card-blocked' : row.atrasado ? ' prod-card-delayed' : ''
+
+  return (
+    <div className={`prod-card${cls}`} style={{ borderLeftColor: cor }}>
+      <div className="prod-card-main" role="button" tabIndex={0} onClick={onAbrir}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAbrir() } }}>
+        <div className="prod-card-topo">
+          <span className="prod-card-cliente">
+            {row.atrasado && <span title="Atrasado">⏳ </span>}
+            {row.cliente_nome || '—'}
+          </span>
+          {!entrega && row.pecas_pendentes > 0 && (
+            <span className="prod-card-pecas"
+              style={{ color: row.pecas_pendentes <= PECAS_RAPIDO ? '#22c55e' : '#f0f0f1' }}>
+              {row.pecas_pendentes} pç
+            </span>
+          )}
+        </div>
+
+        <div className="prod-card-sub">
+          <span>{row.data_solicitado_fmt}</span>
+          <span style={{ color: row.atrasado ? '#ff9800' : '#abb1bd', fontWeight: row.atrasado ? 700 : 400 }}>
+            {row.dias_u} dia(s)
+          </span>
+          {row.pacote && <span>{row.pacote}</span>}
+          {row.peso && <span>{row.peso}</span>}
+          {entrega && row.romaneio && <span>Rom. {row.romaneio}</span>}
+        </div>
+
+        <div className="prod-card-status-linha">
+          <span style={{ color: cor }}>{row.status_prod || 'Sem status'}</span>
+          {entrega && row.status_entrega && <span className="prod-card-entrega">{row.status_entrega}</span>}
+          {entrega && row.data_pronto_fmt && <span className="prod-card-pronto">✓ {row.data_pronto_fmt}</span>}
+        </div>
+
+        {row.obs_cliente && <div className="prod-card-obs">💬 {row.obs_cliente}</div>}
+        {row.obs_prod   && <div className="prod-card-obs prod-card-obs-prod">🛠 {row.obs_prod}</div>}
+      </div>
+
+      <div className="prod-card-acoes">
+        {waLink && (
+          <a href={waLink} target="_blank" rel="noreferrer" className="prod-dup-btn"
+            title="Abrir WhatsApp" onClick={(e) => e.stopPropagation()}>
+            <IconWa />
+          </a>
+        )}
+        {mode === 'producao' && (
+          <>
+            <button type="button" className="prod-dup-btn" onClick={onTogglePecas}
+              title={pecasAberta ? 'Ocultar as peças' : 'Ver as peças da cliente'}>
+              <IconChevron aberto={pecasAberta} />
+            </button>
+            <button type="button" className="prod-dup-btn" onClick={onDuplicar} title="Duplicar">
+              <IconDup />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Linha expandida: peças da cliente ainda não enviadas ───────
 function PecasExpandidas({ estado, statusCores }) {
   if (!estado || estado.loading) return <div className="prod-pecas-aviso">Carregando as peças…</div>
@@ -292,6 +360,14 @@ export default function ProducaoPage() {
       .then((itens) => gravaCache({ loading: false, erro: null, itens }))
       .catch((e)    => gravaCache({ loading: false, erro: e.message || 'Erro ao carregar as peças.', itens: [] }))
   }, [tenantId])
+
+  // No celular a tabela vira lista de cards (o mesmo caminho da tela de Cobranças)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768)
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const [showSettings, setShowSettings] = useState(false)
   const [colsConfig,   setColsConfig]   = useState({ peso: true, pacote: true })
@@ -474,19 +550,36 @@ export default function ProducaoPage() {
   }, [tenantId, updRow, markSaving, markDone])
 
   // ── DetalheModal save ───────────────────────────────────────
+  // Os dois status ficam de fora do patch cru porque cada um tem regra
+  // própria — trava de inadimplência, data de pronto, montador, data de
+  // envio. Salvá-los direto aqui passava por cima de tudo isso, e no celular
+  // o modal é o único caminho de edição.
   const handleDetalheSave = useCallback(async (updated) => {
+    const original = rowsRef.current.find((r) => r.id === updated.id) || updated
     try {
       const patch = {
-        status_prod: updated.status_prod || '', obs_cliente: updated.obs_cliente || '',
+        obs_cliente: updated.obs_cliente || '',
         obs_prod: updated.obs_prod || '', peso: updated.peso || '', pacote: updated.pacote || '',
-        status_entrega: updated.status_entrega || '', pedido_codigo: updated.pedido_codigo || '',
+        pedido_codigo: updated.pedido_codigo || '',
         valor_frete: updated.valor_frete || '', valor_dec: updated.valor_dec || '',
         msg_cobranca: updated.msg_cobranca || '', rastreio: updated.rastreio || '',
       }
       await saveProducaoField(tenantId, updated.id, patch)
       updRow(updated.id, patch)
+
+      const base = { ...original, ...patch }
+      if ((updated.status_prod || '') !== (original.status_prod || '')) {
+        await handleStatusProd(base, updated.status_prod || '')
+      }
+      if ((updated.status_entrega || '') !== (original.status_entrega || '')) {
+        await handleStatusEntrega(base, updated.status_entrega || '')
+      }
+      // O romaneio também puxa o valor declarado sozinho
+      if (String(updated.romaneio || '') !== String(original.romaneio || '')) {
+        await handleRomaneioBlur(base, String(updated.romaneio || ''))
+      }
     } catch (e) { setModalErr({ titulo: '⚠️ Erro', mensagem: e.message }) }
-  }, [tenantId, updRow])
+  }, [tenantId, updRow, handleStatusProd, handleStatusEntrega, handleRomaneioBlur])
 
   // ── Motivo ──────────────────────────────────────────────────
   const handleMotivoSave = useCallback(async () => {
@@ -575,12 +668,14 @@ export default function ProducaoPage() {
             </select>
           </div>
           <div className="prod-v2-toolbar-right">
+            {!isMobile && (
             <button type="button" className="prod-v2-tab prod-v2-tab-icon"
               onClick={() => setShowSettings(true)} title="Configurações de colunas">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
             </button>
+            )}
             {[{ key:'producao', label:'EM PRODUÇÃO'}, { key:'prontos', label:'PRONTOS'}, { key:'finalizados', label:'ENVIADOS'}].map((t) => (
               <button type="button" key={t.key}
                 className={`prod-v2-tab${mode === t.key ? ' active' : ''}`}
@@ -595,7 +690,31 @@ export default function ProducaoPage() {
         <div className="prod-v2-table-wrap">
           {loading && <div className="prod-v2-empty">Carregando...</div>}
           {!loading && filteredRows.length === 0 && <div className="prod-v2-empty">Nenhum registro encontrado.</div>}
-          {!loading && filteredRows.length > 0 && (
+          {!loading && filteredRows.length > 0 && isMobile && (
+            <div className="prod-card-lista">
+              {filteredRows.map((row) => (
+                <Fragment key={row.id}>
+                  <CardProducao
+                    row={row}
+                    mode={mode}
+                    waLink={buildWaLink(row.whatsapp)}
+                    pecasAberta={!!pecasAbertas[row.id]}
+                    onAbrir={() => setDetalhe(row)}
+                    onTogglePecas={() => togglePecas(row)}
+                    onDuplicar={() => handleDuplicar(row.id)}
+                  />
+                  {mode === 'producao' && pecasAbertas[row.id] && (
+                    <div className="prod-card-pecas-box">
+                      <PecasExpandidas statusCores={statusCores}
+                        estado={pecasCache[slugCliente(row.cliente_nome)]} />
+                    </div>
+                  )}
+                </Fragment>
+              ))}
+            </div>
+          )}
+
+          {!loading && filteredRows.length > 0 && !isMobile && (
             <table className={`prod-v2-table${mode === 'producao' ? ' prod-table-producao' : ''}`}>
               {mode === 'producao' && (
                 <colgroup>
@@ -877,7 +996,10 @@ export default function ProducaoPage() {
           <MotivoModal value={motivoText} onChange={setMotivoText} onConfirm={handleMotivoSave}
             onClose={() => { setModalMotivo(null); setMotivoText('') }} />
         )}
-        {detalhe && <DetalheModal row={detalhe} onSave={handleDetalheSave} onClose={() => setDetalhe(null)} />}
+        {detalhe && (
+          <DetalheModal row={detalhe} pacoteOpts={pacoteOpts}
+            onSave={handleDetalheSave} onClose={() => setDetalhe(null)} />
+        )}
         {showDash && <DashboardModal rows={rows} onClose={() => setShowDash(false)} />}
         {showSettings && (
           <ColunasModal cols={colsConfig} onChange={setColsConfig} onClose={() => setShowSettings(false)} />
