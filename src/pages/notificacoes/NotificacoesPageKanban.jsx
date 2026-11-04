@@ -125,7 +125,8 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
         console.error('Erro ao carregar mensagens:', err)
         showToast('Erro ao carregar mensagens: ' + err.message, 'error')
       })
-    marcarNotificacaoLida(notif.id).then(avisarBadges).catch(() => {})
+    // Só abrir não marca como lida — o contador sai quando a conversa
+    // for respondida ou encerrada
   }, [notif.id, showToast])
 
   // Preenche remetente automaticamente com nome do usuário logado
@@ -147,6 +148,10 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
       setResposta('')
       const msgs = await getMensagensNotificacao(notif.id)
       setMensagens(msgs)
+      // Respondeu → deixa de ser novidade
+      await marcarNotificacaoLida(notif.id).catch(() => {})
+      notif.nao_lidas = 0
+      avisarBadges()
       onAtualizar()
     } catch { showToast('Erro ao enviar.', 'error') }
     setEnviando(false)
@@ -159,7 +164,9 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
         notif.encerrado = false
       } else {
         await encerrarNotificacao(notif.id)
+        await marcarNotificacaoLida(notif.id).catch(() => {})
         notif.encerrado = true
+        notif.nao_lidas = 0
       }
       avisarBadges()
       onAtualizar()

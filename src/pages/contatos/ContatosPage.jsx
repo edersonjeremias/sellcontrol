@@ -125,7 +125,8 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
         console.error('Erro ao carregar mensagens:', err)
         showToast('Erro ao carregar mensagens: ' + err.message, 'error')
       })
-    Promise.resolve(marcarLida(conversa.id)).then(avisarBadges).catch(() => {})
+    // Só abrir não marca como lida — o contador sai quando a conversa
+    // for respondida ou encerrada
   }, [conversa.id, showToast])
 
   useEffect(() => {
@@ -140,6 +141,10 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
       setResposta('')
       const msgs = await getMensagens(conversa.id)
       setMensagens(msgs)
+      // Respondeu → deixa de ser novidade
+      await Promise.resolve(marcarLida(conversa.id)).catch(() => {})
+      conversa.nao_lidas = 0
+      avisarBadges()
       onAtualizar()
     } catch { showToast('Erro ao enviar.', 'error') }
     setEnviando(false)
@@ -148,6 +153,10 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
   async function toggleEncerrar() {
     try {
       await encerrarConversa(conversa.id, !conversa.encerrado)
+      if (!conversa.encerrado) {
+        await Promise.resolve(marcarLida(conversa.id)).catch(() => {})
+        conversa.nao_lidas = 0
+      }
       avisarBadges()
       onAtualizar()
       onClose()
@@ -591,7 +600,7 @@ export default function ContatosPage() {
                   <KanbanCard
                     key={conv.id}
                     conversa={conv}
-                    onAbrir={c => { setSelConversa(c); marcarLida(c.id); setConversas(prev => prev.map(x => x.id===c.id ? {...x,nao_lidas:0} : x)) }}
+                    onAbrir={setSelConversa}
                     onMover={handleMover}
                     colunas={colunas}
                   />
@@ -632,7 +641,7 @@ export default function ContatosPage() {
       {modalEncerrados && (
         <ModalEncerrados
           conversas={conversas}
-          onAbrir={c => { setSelConversa(c); marcarLida(c.id); setConversas(prev => prev.map(x => x.id===c.id ? {...x,nao_lidas:0} : x)) }}
+          onAbrir={setSelConversa}
           onClose={() => setModalEncerrados(false)}
         />
       )}
