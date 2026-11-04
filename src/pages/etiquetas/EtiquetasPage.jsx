@@ -224,7 +224,9 @@ export default function EtiquetasPage() {
     const el = barraRef.current
     if (!el) return
 
-    const medir = () => setAlturaBarra(el.offsetHeight)
+    // getBoundingClientRect dá a altura fracionária: arredondar para cima
+    // evita a fresta de 1px por onde as linhas apareciam
+    const medir = () => setAlturaBarra(Math.ceil(el.getBoundingClientRect().height))
     medir()
 
     const observer = new ResizeObserver(medir)
@@ -865,7 +867,7 @@ export default function EtiquetasPage() {
         <div ref={barraRef} className="filtros-fixos" style={{
           display: 'flex',
           gap: 8,
-          marginBottom: 16,
+          paddingBottom: 14,
           flexWrap: isMobile ? 'wrap' : 'nowrap',
           alignItems: 'center',
         }}>
