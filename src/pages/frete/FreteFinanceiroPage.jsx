@@ -39,25 +39,30 @@ export default function FreteFinanceiroPage() {
 
   const props = { tenantId, showToast, profile, isMobile }
 
+  // A página ocupa a altura da janela e só a lista rola. É o que mantém o
+  // cabeçalho da tabela travado: o sticky gruda no container que rola, e aqui
+  // quem rola é .ff-conteudo, não a janela.
   return (
-    <AppShell title="Frete e Romaneios" hideTitle>
-      <div className="ff-topbar">
-        <span className="ff-titulo">Frete e Romaneios</span>
-        <div className="ff-abas">
-          {ABAS.map(([id, label]) => (
-            <button
-              key={id}
-              className={`ff-aba${aba === id ? ' ativa' : ''}`}
-              onClick={() => setAba(id)}
-            >
-              {label}
-            </button>
-          ))}
+    <AppShell title="Frete e Romaneios" hideTitle flush>
+      <div className="ff-page">
+        <div className="ff-topbar">
+          <span className="ff-titulo">Frete e Romaneios</span>
+          <div className="ff-abas">
+            {ABAS.map(([id, label]) => (
+              <button
+                key={id}
+                className={`ff-aba${aba === id ? ' ativa' : ''}`}
+                onClick={() => setAba(id)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {aba === 'romaneios' && <AbaRomaneiosFinanceiro {...props} />}
-      {aba === 'extrato' && <AbaExtratoMP {...props} />}
+        {aba === 'romaneios' && <AbaRomaneiosFinanceiro {...props} />}
+        {aba === 'extrato' && <AbaExtratoMP {...props} />}
+      </div>
     </AppShell>
   )
 }

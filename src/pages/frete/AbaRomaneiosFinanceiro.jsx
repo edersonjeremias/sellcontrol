@@ -347,7 +347,7 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
             {linhas.length > 0 && visiveis.length === 0 && <p className="ff-vazio">Nenhum resultado para o filtro.</p>}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <>
             <table className="ff-tabela">
               <thead>
                 <tr>
@@ -432,17 +432,17 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
                 )}
               </tbody>
             </table>
+          </>
+        )}
+
+        {jaFiltrou && !carregando && visiveis.length > 0 && (
+          <div className="ff-legenda">
+            <div><strong>Frete</strong> é o valor da cotação escolhida (o que a postagem custa).</div>
+            <div><strong>Recebido</strong> é o que caiu na conta do Mercado Pago já sem a taxa, mais o que foi registrado à mão.</div>
+            <div><strong>Frete − Recebido</strong> em vermelho = faltou dinheiro para cobrir a postagem; em verde = sobrou.</div>
           </div>
         )}
       </div>
-
-      {jaFiltrou && !carregando && visiveis.length > 0 && (
-        <div className="ff-legenda">
-          <div><strong>Frete</strong> é o valor da cotação escolhida (o que a postagem custa).</div>
-          <div><strong>Recebido</strong> é o que caiu na conta do Mercado Pago já sem a taxa, mais o que foi registrado à mão.</div>
-          <div><strong>Frete − Recebido</strong> em vermelho = faltou dinheiro para cobrir a postagem; em verde = sobrou.</div>
-        </div>
-      )}
 
       {/* ── Modal: detalhe ── */}
       {detalhe && (

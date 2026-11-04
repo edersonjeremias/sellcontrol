@@ -213,7 +213,7 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
             {linhas.length > 0 && visiveis.length === 0 && <p className="ff-vazio">Nenhum resultado para o filtro.</p>}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <>
             <table className="ff-tabela">
               <thead>
                 <tr>
@@ -270,17 +270,17 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                 )}
               </tbody>
             </table>
+          </>
+        )}
+
+        {jaFiltrou && !carregando && (
+          <div className="ff-legenda">
+            <div>Frete e vendas caem na mesma conta do Mercado Pago. Aqui cada entrada é separada.</div>
+            <div><strong>Frete</strong> sai do PIX que o sistema gerou para um romaneio. <strong>Venda</strong> sai de uma cobrança.</div>
+            <div>O que não deu match fica como <strong>A definir</strong> — troque na coluna Origem e a escolha não é desfeita na próxima busca.</div>
           </div>
         )}
       </div>
-
-      {jaFiltrou && !carregando && (
-        <div className="ff-legenda">
-          <div>Frete e vendas caem na mesma conta do Mercado Pago. Aqui cada entrada é separada.</div>
-          <div><strong>Frete</strong> sai do PIX que o sistema gerou para um romaneio. <strong>Venda</strong> sai de uma cobrança.</div>
-          <div>O que não deu match fica como <strong>A definir</strong> — troque na coluna Origem e a escolha não é desfeita na próxima busca.</div>
-        </div>
-      )}
     </>
   )
 }

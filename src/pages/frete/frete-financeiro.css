@@ -2,6 +2,20 @@
    FRETE E ROMANEIOS — conciliação do dinheiro do frete
    ══════════════════════════════════════════════════════════ */
 
+/* A janela não rola: a página ocupa a altura toda e quem rola é .ff-conteudo.
+   Sem isso o cabeçalho sticky da tabela grudaria num div que sobe junto com a
+   página — era o que fazia o cabeçalho sumir ao rolar. */
+.ff-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ff-page > .ff-topbar,
+.ff-page > .ff-filtros,
+.ff-page > .ff-resumo,
+.ff-page > .ff-lote { flex-shrink: 0; }
+
 .ff-topbar {
   background: var(--header-bg);
   border-bottom: 1px solid var(--border-light);
@@ -89,11 +103,29 @@
 .ff-card-valor { font-size: 18px; font-weight: 800; color: var(--text-header); }
 .ff-card-obs { font-size: 10px; color: var(--muted); }
 
-.ff-conteudo { padding: 16px; }
+/* O único container que rola — nos dois eixos, para a tabela larga caber */
+.ff-conteudo {
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  overflow: auto;
+  scrollbar-width: none;
+}
+.ff-conteudo::-webkit-scrollbar { display: none; }
 
 /* ── Tabela ── */
-.ff-tabela { width: 100%; border-collapse: collapse; font-size: 12px; }
+/* separate + spacing 0 em vez de collapse: com bordas colapsadas o navegador
+   deixa de pintar a borda do cabeçalho enquanto ele está grudado. */
+.ff-tabela {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
 .ff-tabela th {
+  position: sticky;
+  top: 0; /* topo do .ff-conteudo: o padding de cima rola e some antes */
+  z-index: 90;
   background: var(--table-header-bg);
   color: var(--table-header-text);
   font-size: 11px;
@@ -103,6 +135,7 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
   white-space: nowrap;
+  box-shadow: inset 0 -1px 0 var(--border-light);
 }
 .ff-tabela td {
   padding: 7px 10px;
@@ -183,8 +216,9 @@
   color: var(--muted);
 }
 
+/* Fica dentro do .ff-conteudo, que já tem o respiro das laterais */
 .ff-legenda {
-  padding: 10px 16px 0;
+  padding: 14px 0 0;
   font-size: 11px;
   color: var(--muted);
   line-height: 1.6;
@@ -232,5 +266,5 @@
   .ff-card { flex: 1; min-width: 0; text-align: center; padding: 10px 8px; }
   .ff-card-valor { font-size: 15px; }
   .ff-conteudo { padding: 10px 12px; }
-  .ff-legenda { padding: 8px 12px 0; }
+  .ff-legenda { padding: 12px 0 0; }
 }
