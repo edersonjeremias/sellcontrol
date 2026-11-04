@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import AppShell from '../../components/ui/AppShell'
 import { useAuth } from '../../context/AuthContext'
 import {
   STATUS_ENTREGA_OPTS, STATUS_PROD_OPTS, PACOTE_OPTS,
   createProducaoPedido, duplicateProducaoPedido, getProducaoData,
   checkInadimplencia, saveProducaoField,
+  getPecasPendentesCliente, slugCliente,
 } from '../../services/producaoService'
 // PACOTE_OPTS é usado como fallback quando a empresa não cadastrou embalagens
 import { getConfig } from '../../services/configService'
 import { hojeISO } from '../../lib/datas'
 import { linkRastreio } from '../../lib/rastreio'
-import { calcRomaneioTotal } from '../../services/pedidosService'
+import { calcRomaneioTotal, getStatusPedido } from '../../services/pedidosService'
 import DashboardModal from './DashboardModal'
 import DetalheModal   from './DetalheModal'
 
@@ -29,6 +30,14 @@ const IconCopyLink = () => (
 const IconDup = () => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </svg>
+)
+
+const IconChevron = ({ aberto }) => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+    style={{ transform: aberto ? 'rotate(90deg)' : 'none', transition: 'transform .12s' }}>
+    <path d="M9 18l6-6-6-6"/>
   </svg>
 )
 
@@ -146,6 +155,29 @@ function MotivoModal({ value, onChange, onConfirm, onClose }) {
   )
 }
 
+// ── Linha expandida: peças da cliente ainda não enviadas ───────
+function PecasExpandidas({ estado, statusCores }) {
+  if (!estado || estado.loading) return <div className="prod-pecas-aviso">Carregando as peças…</div>
+  if (estado.erro)              return <div className="prod-pecas-aviso prod-pecas-erro">{estado.erro}</div>
+  if (!estado.itens.length)     return <div className="prod-pecas-aviso">Nenhuma peça pendente para esta cliente.</div>
+
+  return (
+    <div className="prod-pecas-lista">
+      {estado.itens.map((it) => (
+        <div key={it.id} className="prod-pecas-item">
+          <span className="prod-pecas-cod">{it.codigo ? `#${it.codigo}` : '—'}</span>
+          <span className="prod-pecas-desc">{it.descricao || '(sem descrição)'}</span>
+          {it.data_live_fmt && <span className="prod-pecas-data">{it.data_live_fmt}</span>}
+          <span className="prod-pecas-status" style={{ color: statusCores?.[it.status] || '#abb1bd' }}>
+            {it.status || '—'}
+          </span>
+        </div>
+      ))}
+      <div className="prod-pecas-rodape">{estado.itens.length} peça(s) ainda não enviada(s)</div>
+    </div>
+  )
+}
+
 // ── Modal: Colunas opcionais ───────────────────────────────────
 const COLUNAS_OPCIONAIS = [
   { key: 'peso',   label: 'Coluna Peso' },
@@ -204,6 +236,63 @@ export default function ProducaoPage() {
   const [detalhe,     setDetalhe]     = useState(null)
   const [linkFrete,   setLinkFrete]   = useState('')
 
+  // Peças da cliente: abre por linha e só busca no banco quando a seta é clicada
+  const [pecasAbertas, setPecasAbertas] = useState({})   // row.id -> true
+  const [pecasCache,   setPecasCache]   = useState({})   // slug   -> { loading, erro, itens }
+  const pecasAbertasRef = useRef({})
+  const pecasCacheRef   = useRef({})
+  const rowsRef         = useRef([])
+  const [statusCores, setStatusCores] = useState(null)
+  const statusCoresRef = useRef(null)
+
+  const togglePecas = useCallback((row) => {
+    const slug    = slugCliente(row.cliente_nome)
+    const abrindo = !pecasAbertasRef.current[row.id]
+
+    const abertas = { ...pecasAbertasRef.current }
+    if (abrindo) abertas[row.id] = true
+    else         delete abertas[row.id]
+    pecasAbertasRef.current = abertas
+    setPecasAbertas(abertas)
+
+    if (!slug) return
+
+    const gravaCache = (valor) => {
+      pecasCacheRef.current = { ...pecasCacheRef.current, [slug]: valor }
+      setPecasCache(pecasCacheRef.current)
+    }
+
+    if (!abrindo) {
+      // Fechou a última linha desta cliente: descarta o que foi carregado, para
+      // que a próxima abertura traga o status atual da Expedição.
+      const aindaAberta = rowsRef.current.some(
+        (r) => abertas[r.id] && slugCliente(r.cliente_nome) === slug
+      )
+      if (!aindaAberta) {
+        const resto = { ...pecasCacheRef.current }
+        delete resto[slug]
+        pecasCacheRef.current = resto
+        setPecasCache(resto)
+      }
+      return
+    }
+
+    // As cores dos status são do tenant: busca uma vez, na primeira expansão
+    if (!statusCoresRef.current) {
+      statusCoresRef.current = {}
+      getStatusPedido(tenantId)
+        .then(({ cores }) => { statusCoresRef.current = cores || {}; setStatusCores(cores || {}) })
+        .catch(() => {})
+    }
+
+    if (pecasCacheRef.current[slug]) return   // já carregado (ou carregando)
+
+    gravaCache({ loading: true, erro: null, itens: [] })
+    getPecasPendentesCliente(tenantId, row.cliente_nome)
+      .then((itens) => gravaCache({ loading: false, erro: null, itens }))
+      .catch((e)    => gravaCache({ loading: false, erro: e.message || 'Erro ao carregar as peças.', itens: [] }))
+  }, [tenantId])
+
   const [showSettings, setShowSettings] = useState(false)
   const [colsConfig,   setColsConfig]   = useState({ peso: true, pacote: true })
 
@@ -248,6 +337,7 @@ export default function ProducaoPage() {
   // Espelho do estado da tela para o timer consultar sem se reiniciar
   const uiRef = useRef({})
   uiRef.current = { modalErr, modalMotivo, showDash, detalhe, saving }
+  rowsRef.current = rows
 
   // ── Atualização automática (10 min) ─────────────────────────
   // Pula o ciclo se alguém estiver mexendo na tela, para não
@@ -446,11 +536,11 @@ export default function ProducaoPage() {
       { key: 'pecas',       w: 5  },
       { key: 'cliente',     w: 13 },
       { key: 'status',      w: 12 },
-      { key: 'obs_cliente', w: 18 },
-      { key: 'obs_prod',    w: 18 },
+      { key: 'obs_cliente', w: 17 },
+      { key: 'obs_prod',    w: 17 },
       { key: 'peso',        w: 6  },
       { key: 'pacote',      w: 12 },
-      { key: 'mais',        w: 3  },
+      { key: 'mais',        w: 5  },
     ]
     const opcional = (k) => k === 'peso' || k === 'pacote'
     const sobra = base.filter((c) => opcional(c.key) && !colsConfig[c.key])
@@ -543,8 +633,10 @@ export default function ProducaoPage() {
                   const rastreioLink = row.link_rastreio || ''
                   const precisaMotivo = row.atrasado && !(row.obs_prod || '').toUpperCase().includes('ATRASO')
                   const cls = row.bloqueado ? 'prod-row-blocked' : row.atrasado ? 'prod-row-delayed' : ''
+                  const pecasAberta = mode === 'producao' && !!pecasAbertas[row.id]
                   return (
-                    <tr key={row.id} className={cls}>
+                    <Fragment key={row.id}>
+                    <tr className={cls}>
                       {/* Solicitado */}
                       <td className="prod-td-nb">{row.data_solicitado_fmt}</td>
 
@@ -750,15 +842,29 @@ export default function ProducaoPage() {
                         </td>
                       )}
 
-                      {/* Duplicar — só na aba Em Produção */}
+                      {/* Expandir peças + Duplicar — só na aba Em Produção */}
                       {mode === 'producao' && (
-                        <td style={{ textAlign: 'center' }}>
+                        <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <button type="button" className="prod-dup-btn" onClick={() => togglePecas(row)}
+                            title={pecasAbertas[row.id] ? 'Ocultar as peças da cliente' : 'Ver as peças da cliente ainda não enviadas'}>
+                            <IconChevron aberto={!!pecasAbertas[row.id]} />
+                          </button>
                           <button type="button" className="prod-dup-btn" onClick={() => handleDuplicar(row.id)} title="Duplicar">
                             <IconDup />
                           </button>
                         </td>
                       )}
                     </tr>
+
+                    {pecasAberta && (
+                      <tr className="prod-pecas-row">
+                        <td colSpan={colWidths.length}>
+                          <PecasExpandidas statusCores={statusCores}
+                            estado={pecasCache[slugCliente(row.cliente_nome)]} />
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   )
                 })}
               </tbody>

@@ -21,7 +21,7 @@ export const STATUS_ENTREGA_OPTS = [
 const FINAL_ENTREGA = new Set(['Enviado', 'Retirou', 'Voltou estoque', 'Cliente Retira'])
 
 // Instagram é digitado com ou sem @ e com maiúsculas trocadas: compara pelo slug.
-function slugCliente(value) {
+export function slugCliente(value) {
   return (value || '').replace(/^@+/, '').trim().toLowerCase()
 }
 
@@ -80,6 +80,49 @@ async function contarPecasPendentes(tid) {
     return new Map()
   }
   return new Map((data || []).map((r) => [r.cliente_slug, Number(r.pecas) || 0]))
+}
+
+// As peças do cliente que ainda não foram despachadas, para a linha que a seta
+// da coluna "+" abre. Carrega só quando a seta é clicada e traz apenas as
+// colunas que a linha mostra — a tela de Produção não aguenta puxar as vendas
+// de todo mundo de uma vez.
+//
+// A regra é a mesma de producao_pecas_pendentes (a contagem da coluna PEÇAS),
+// para a lista bater com o número mostrado ao lado.
+const STATUS_FORA_DA_SACOLINHA = '("Enviado","Cancelado","Devolução","Gerar Crédito")'
+
+export async function getPecasPendentesCliente(tenantId, clienteNome) {
+  const tid  = TENANT_ID(tenantId)
+  const slug = slugCliente(clienteNome)
+  if (!slug) return []
+
+  const { data, error } = await supabase
+    .from('vendas')
+    .select('id, codigo, produto, modelo, cor, marca, tamanho, data_live, status, cliente_nome')
+    .eq('tenant_id', tid)
+    .or('etapa.is.null,etapa.neq.rascunho')   // rascunho = live ainda em digitação
+    .not('status', 'in', STATUS_FORA_DA_SACOLINHA)
+    .ilike('cliente_nome', `%${slug}%`)
+    .order('data_live', { ascending: true })
+    .order('codigo', { ascending: true })
+
+  if (error) throw error
+
+  return (data || [])
+    // O ilike só estreita a busca no banco; quem decide é o slug, senão
+    // "nique.abreu" arrastaria junto as peças de "nique.abreu2".
+    .filter((v) => slugCliente(v.cliente_nome) === slug)
+    .filter((v) => (v.status || '').toUpperCase() !== 'CANCELADO')
+    .map((v) => ({
+      id: v.id,
+      codigo: v.codigo || '',
+      status: v.status || '',
+      data_live_fmt: formatDateBr(v.data_live),
+      descricao: [v.produto, v.modelo, v.cor, v.marca, v.tamanho]
+        .map((t) => (t || '').trim())
+        .filter(Boolean)
+        .join(' · '),
+    }))
 }
 
 export async function getProducaoData(tenantId = null) {
