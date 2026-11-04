@@ -71,8 +71,10 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
     prev[cat] ? { ...prev, [cat]: false } : { [cat]: true }
   )
 
-  // Empresas não é uma página da tabela pages: acompanha a categoria de
-  // Configurações, para não criar uma categoria solta quando ela é renomeada.
+  // Empresas agora é uma linha da tabela pages, então vem em menuItems e pode
+  // ser organizada em Configurações → Menu. O fallback abaixo cobre o período
+  // entre o deploy e a execução da migration que cria essa linha.
+  const temPaginaEmpresas = menuItems.some(i => i.slug === 'master/empresas')
   const categoriaAdmin =
     menuItems.find(i => i.slug === 'configuracoes')?.category?.trim() || 'Admin'
 
@@ -83,8 +85,7 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
       label: item.label,
       category: (item.category || '').trim() || CATEGORIA_PADRAO,
     })),
-    // Master → Empresas é uma página administrativa especial (apenas para master)
-    ...(profile?.role === 'master'
+    ...(profile?.role === 'master' && !temPaginaEmpresas
       ? [{ to: '/master/empresas', label: 'Empresas', category: categoriaAdmin }]
       : []),
   ]
