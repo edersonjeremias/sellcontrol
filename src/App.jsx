@@ -67,6 +67,7 @@ import EtiquetasProdutosPage         from './pages/impressao/EtiquetasPage'
 import EtiquetasEnvioPage            from './pages/etiquetas/EtiquetasPage'
 import PortalApp                     from './pages/portal/PortalApp'
 import FretePublicoPage              from './pages/frete/FretePublicoPage'
+import FreteFinanceiroPage           from './pages/frete/FreteFinanceiroPage'
 import RelatorioPage                  from './pages/relatorio/RelatorioPage'
 import ContatosPage                   from './pages/contatos/ContatosPage'
 import DashboardFinanceiroPage        from './pages/relatorio/DashboardFinanceiroPage'
@@ -113,6 +114,7 @@ export default function App() {
             <Route path="/impressao-sacolinha-cliente" element={<RequirePage slug="impressao-sacolinha-cliente"><ImpressaoSacolinhaClientePage /></RequirePage>} />
             <Route path="/etiquetas" element={<RequirePage slug="etiquetas"><EtiquetasProdutosPage /></RequirePage>} />
             <Route path="/etiquetas-envio" element={<RequirePage slug="etiquetas-envio"><EtiquetasEnvioPage /></RequirePage>} />
+            <Route path="/frete-pagamentos" element={<RequirePage slug="frete-pagamentos"><FreteFinanceiroPage /></RequirePage>} />
             <Route path="/relatorio"              element={<RequirePage slug="relatorio"><RelatorioPage /></RequirePage>} />
             <Route path="/contatos"              element={<RequirePage slug="contatos"><ContatosPage /></RequirePage>} />
             <Route path="/notificacoes"          element={<RequirePage slug="notificacoes"><NotificacoesPage /></RequirePage>} />

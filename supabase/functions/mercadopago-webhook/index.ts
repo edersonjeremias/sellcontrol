@@ -7,6 +7,23 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 }
 
+// Soma das taxas que o MP cobrou. É o que separa o valor cobrado do valor que
+// de fato caiu na conta — a base do que vai ser transferido para o Melhor Envio.
+function somaTaxas(pagamento: any): number | null {
+  if (!Array.isArray(pagamento?.fee_details)) return null
+  return Number(
+    pagamento.fee_details.reduce((s: number, f: any) => s + (Number(f?.amount) || 0), 0).toFixed(2)
+  )
+}
+
+function valorLiquidoDe(pagamento: any): number {
+  const net = pagamento?.transaction_details?.net_received_amount
+  if (net !== null && net !== undefined && net !== '') return Number(net)
+  const bruto = Number(pagamento?.transaction_amount) || 0
+  const taxa = somaTaxas(pagamento)
+  return taxa === null ? bruto : Number((bruto - taxa).toFixed(2))
+}
+
 serve(async (req) => {
   try {
     const { method } = req
@@ -142,6 +159,8 @@ serve(async (req) => {
               status: 'aprovado',
               pago_em: dataPagamento,
               gateway_response: paymentData,
+              mp_taxa: somaTaxas(paymentData),
+              valor_liquido: valorLiquidoDe(paymentData),
             })
             .eq('id', pagamentoFrete.id)
 
