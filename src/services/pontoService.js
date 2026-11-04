@@ -300,6 +300,18 @@ export function montarEspelho({
       if (diff > jornada.tolerancia) atrasoMin = diff
     }
 
+    // A tolerância vale para os dois lados: se ela não conta o atraso de
+    // 8 minutos, também não pode contar como extra os 8 que ficou a mais.
+    // Regra da CLT (art. 58 §1º): dentro da tolerância do dia nada é
+    // somado nem descontado; passou dela, o tempo todo conta, não só o
+    // excedente.
+    // Comparação em minutos inteiros: em horas decimais, 10 minutos viram
+    // 0,17 contra uma tolerância de 0,1666… e o dia na borda escaparia.
+    const diferenca   = Number((trabalhadas - previstas).toFixed(2))
+    const difMinutos  = Math.round((trabalhadas - previstas) * 60)
+    const dentroTolerancia = !semBatida && difMinutos !== 0 &&
+      Math.abs(difMinutos) <= (jornada.tolerancia || 0)
+
     dias.push({
       dia,
       diaUtil,
@@ -313,7 +325,9 @@ export function montarEspelho({
       intervalo,
       previstas,
       atrasoMin,
-      saldo:       Number((trabalhadas - previstas).toFixed(2)),
+      dentroTolerancia,
+      saldoBruto:  diferenca,
+      saldo:       dentroTolerancia ? 0 : diferenca,
       falta:       diaUtil && semBatida && !futuro,
       incompleto:  !semBatida && TIPOS_BATIDA.some(t => !horarios[t]),
     })
@@ -327,7 +341,15 @@ export function montarEspelho({
     atrasoMin:   acc.atrasoMin   + d.atrasoMin,
     // Hora em feriado ou folga é paga de outro jeito: separada à parte
     horasNaoUteis: acc.horasNaoUteis + (!d.diaUtil ? d.trabalhadas : 0),
-  }), { previstas: 0, trabalhadas: 0, faltas: 0, atrasos: 0, atrasoMin: 0, horasNaoUteis: 0 })
+    // Soma dos saldos do dia, não trabalhadas menos previstas do mês: o que
+    // a tolerância perdoou em cada dia não pode voltar no total.
+    saldo:       acc.saldo       + d.saldo,
+    diasTolerados: acc.diasTolerados + (d.dentroTolerancia ? 1 : 0),
+    minutosTolerados: acc.minutosTolerados + (d.dentroTolerancia ? Math.round(Math.abs(d.saldoBruto) * 60) : 0),
+  }), {
+    previstas: 0, trabalhadas: 0, faltas: 0, atrasos: 0, atrasoMin: 0,
+    horasNaoUteis: 0, saldo: 0, diasTolerados: 0, minutosTolerados: 0,
+  })
 
   return {
     dias,
@@ -336,8 +358,8 @@ export function montarEspelho({
       ...totais,
       previstas:     Number(totais.previstas.toFixed(2)),
       horasNaoUteis: Number(totais.horasNaoUteis.toFixed(2)),
-      trabalhadas: Number(totais.trabalhadas.toFixed(2)),
-      saldo:       Number((totais.trabalhadas - totais.previstas).toFixed(2)),
+      trabalhadas:   Number(totais.trabalhadas.toFixed(2)),
+      saldo:         Number(totais.saldo.toFixed(2)),
     },
   }
 }

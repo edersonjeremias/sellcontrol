@@ -387,8 +387,13 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
                         {fmtHoras(espelho.totais.trabalhadas)} trabalhadas de {fmtHoras(espelho.totais.previstas)}
                         {' • '}
                         <span style={{ color: espelho.totais.saldo < 0 ? 'var(--red)' : 'var(--green)' }}>
-                          saldo {fmtHoras(espelho.totais.saldo)}
+                          saldo do mês {espelho.totais.saldo > 0 ? '+' : ''}{fmtHoras(espelho.totais.saldo)}
                         </span>
+                        {espelho.totais.minutosTolerados > 0 && (
+                          <span title="Diferenças dentro da tolerância diária, que não entram no saldo">
+                            {' • '}{espelho.totais.minutosTolerados} min tolerados
+                          </span>
+                        )}
                         {espelho.totais.faltas > 0 && (
                           <span style={{ color:'var(--red)' }}> • {espelho.totais.faltas} falta(s)</span>
                         )}
@@ -411,6 +416,12 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
                           </span>
                         ))}
                         {hoje.dia.trabalhadas > 0 && <em>{fmtHoras(hoje.dia.trabalhadas)}</em>}
+                        {hoje.dia.saldo !== 0 && (
+                          <em style={{ color: hoje.dia.saldo < 0 ? 'var(--red)' : 'var(--green)', fontWeight:700 }}>
+                            {hoje.dia.saldo > 0 ? '+' : ''}{fmtHoras(hoje.dia.saldo)} no dia
+                          </em>
+                        )}
+                        {hoje.dia.dentroTolerancia && <em title={`${Math.round(Math.abs(hoje.dia.saldoBruto) * 60)} min dentro da tolerância`}>na tolerância</em>}
                         {hoje.dia.atrasoMin > 0 && <em className="atraso">{hoje.dia.atrasoMin} min de atraso</em>}
                       </div>
                     </div>

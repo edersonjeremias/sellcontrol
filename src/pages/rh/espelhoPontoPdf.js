@@ -94,6 +94,7 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
     else if (!d.diaUtil) obs.push(d.trabalhadas ? 'Folga trabalhada' : 'Folga')
     if (d.falta)       obs.push('Falta')
     if (d.atrasoMin)   obs.push(`Atraso ${d.atrasoMin}min`)
+    if (d.dentroTolerancia) obs.push(`Tolerância ${Math.round(Math.abs(d.saldoBruto) * 60)}min`)
     if (d.incompleto)  obs.push('Batida faltando')
     if (Object.keys(d.ajustadas || {}).length) obs.push('Ajuste')
 
@@ -159,8 +160,16 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
   doc.setFontSize(7)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(120)
+  const tol = Math.round(espelho.jornada?.tolerancia || 0)
   const legenda = 'Saldo = horas trabalhadas menos as previstas para o dia. Em feriado e folga o previsto é zero, ' +
     'então as horas trabalhadas entram inteiras como saldo positivo.' +
+    (tol
+      ? ` Diferença de até ${tol} minutos no dia, para mais ou para menos, não é somada nem descontada (CLT, art. 58 §1º); ` +
+        'passando disso, o tempo é computado por inteiro.'
+      : '') +
+    (espelho.totais.minutosTolerados
+      ? ` No período, ${espelho.totais.minutosTolerados} minutos ficaram dentro da tolerância.`
+      : '') +
     (espelho.totais.horasNaoUteis
       ? ` No período, ${fmtHoras(espelho.totais.horasNaoUteis)} foram trabalhadas em feriado ou folga.`
       : '')
