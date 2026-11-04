@@ -170,9 +170,10 @@ input[type="radio"]:focus {
 .app-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  min-width: 24px;
   height: 20px;
-  padding: 0 9px;
+  padding: 0 8px;
   border: none;
   border-radius: 10px;
   font-size: 11px;
@@ -185,8 +186,6 @@ input[type="radio"]:focus {
 }
 .app-badge:hover { filter: brightness(1.12); }
 
-.app-badge-icone { font-size: 10px; }
-
 /* Azul = notificações internas do sistema */
 .app-badge-notificacoes { background: var(--blue); }
 /* Verde = mensagens de clientes (CRM Contatos) */
@@ -195,8 +194,9 @@ input[type="radio"]:focus {
 /* Versão compacta usada dentro dos itens do menu lateral */
 .app-badge-mini {
   margin-left: auto;
+  min-width: 22px;
   height: 18px;
-  padding: 0 7px;
+  padding: 0 6px;
   cursor: inherit;
 }
 

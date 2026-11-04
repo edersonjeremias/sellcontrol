@@ -140,7 +140,6 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
               onClick={() => navigate('/notificacoes')}
               title={`${naoLidas.notificacoes} nova${naoLidas.notificacoes > 1 ? 's' : ''} em Notificações`}
             >
-              <span className="app-badge-icone">📩</span>
               {naoLidas.notificacoes}
             </button>
           )}
@@ -150,7 +149,6 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
               onClick={() => navigate('/contatos')}
               title={`${naoLidas.contatos} mensage${naoLidas.contatos > 1 ? 'ns' : 'm'} de cliente em Contatos`}
             >
-              <span className="app-badge-icone">💬</span>
               {naoLidas.contatos}
             </button>
           )}
