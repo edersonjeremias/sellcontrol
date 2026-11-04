@@ -64,27 +64,40 @@ export async function getClientesRelatorio(tenantId) {
 // ── Relatório: vendas ──────────────────────────────────────────
 
 export async function getVendasRelatorio(tenantId, { dataInicio, dataFim } = {}) {
-  let q = supabase
-    .from('vendas')
-    .select('id, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
-    .eq('tenant_id', tid(tenantId))
-    .eq('etapa', 'fechada')
-    .order('data_live', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
+  const TAMANHO_PAGINA = 1000
 
-  // Filtra por data_live (vendidos) OU created_at (cadastrados)
-  if (dataInicio && dataFim) {
-    // (data_live no período E not null) OU (data_live null E created_at no período)
-    q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
-  } else if (dataInicio) {
-    q = q.or(`data_live.gte.${dataInicio},and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00)`)
-  } else if (dataFim) {
-    q = q.or(`data_live.lte.${dataFim},and(data_live.is.null,created_at.lte.${dataFim}T23:59:59)`)
+  // Sem paginação o Supabase corta em 1000 linhas; como a ordem é data_live DESC,
+  // o trecho mais antigo do período sumia do relatório sem aviso nenhum.
+  function montarQuery(pagina) {
+    let q = supabase
+      .from('vendas')
+      .select('id, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
+      .eq('tenant_id', tid(tenantId))
+      .eq('etapa', 'fechada')
+      .order('data_live', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
+
+    // Filtra por data_live (vendidos) OU created_at (cadastrados)
+    if (dataInicio && dataFim) {
+      q = q.or(`and(data_live.gte.${dataInicio},data_live.lte.${dataFim}),and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00,created_at.lte.${dataFim}T23:59:59)`)
+    } else if (dataInicio) {
+      q = q.or(`data_live.gte.${dataInicio},and(data_live.is.null,created_at.gte.${dataInicio}T00:00:00)`)
+    } else if (dataFim) {
+      q = q.or(`data_live.lte.${dataFim},and(data_live.is.null,created_at.lte.${dataFim}T23:59:59)`)
+    }
+    return q
   }
 
-  const { data, error } = await q
-  if (error) throw error
-  return data || []
+  let todas = []
+  for (let pagina = 0; ; pagina++) {
+    const { data, error } = await montarQuery(pagina)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    todas = todas.concat(data)
+    if (data.length < TAMANHO_PAGINA) break
+  }
+  return todas
 }
 
 // ── Contas a pagar ─────────────────────────────────────────────

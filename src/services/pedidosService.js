@@ -73,27 +73,40 @@ export function filtroPadrao(item) {
 }
 
 export async function buscarItensPedido(tenantId, { clienteNome, dataLive, statusFiltro, numeroPedido }) {
-  let q = supabase
-    .from('vendas')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('etapa', 'fechada')   // live ainda aberta não entra na expedição
-    .order('data_live', { ascending: true })
-    .order('codigo', { ascending: true })
+  const TAMANHO_PAGINA = 1000
 
-  if (clienteNome?.trim()) q = q.ilike('cliente_nome', `%${clienteNome.trim()}%`)
-  if (dataLive)            q = q.eq('data_live', dataLive)
-  if (numeroPedido)        q = q.eq('numero_pedido', Number(numeroPedido))
+  // Sem paginação o Supabase devolve no máximo 1000 itens e o resto some da tela
+  function montarQuery(pagina) {
+    let q = supabase
+      .from('vendas')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('etapa', 'fechada')   // live ainda aberta não entra na expedição
+      .order('data_live', { ascending: true })
+      .order('codigo', { ascending: true })
+      .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
 
-  if (statusFiltro === 'nao_enviados') {
-    q = q.not('status', 'in', '("Enviado","Cancelado","Devolução","Gerar Crédito")')
-  } else if (statusFiltro && statusFiltro !== 'todos') {
-    q = q.eq('status', statusFiltro)
+    if (clienteNome?.trim()) q = q.ilike('cliente_nome', `%${clienteNome.trim()}%`)
+    if (dataLive)            q = q.eq('data_live', dataLive)
+    if (numeroPedido)        q = q.eq('numero_pedido', Number(numeroPedido))
+
+    if (statusFiltro === 'nao_enviados') {
+      q = q.not('status', 'in', '("Enviado","Cancelado","Devolução","Gerar Crédito")')
+    } else if (statusFiltro && statusFiltro !== 'todos') {
+      q = q.eq('status', statusFiltro)
+    }
+    return q
   }
 
-  const { data, error } = await q
-  if (error) throw error
-  return data || []
+  let todos = []
+  for (let pagina = 0; ; pagina++) {
+    const { data, error } = await montarQuery(pagina)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    todos = todos.concat(data)
+    if (data.length < TAMANHO_PAGINA) break
+  }
+  return todos
 }
 
 export async function salvarItens(tenantId, dirty) {
