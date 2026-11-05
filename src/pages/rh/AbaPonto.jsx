@@ -12,10 +12,11 @@ import { saveConfig } from '../../services/configService'
 import { gerarEspelhoPdf } from './espelhoPontoPdf'
 import { S, Campo, Modal, IconCheck, IconEdit, IconRecibo, IconWhats } from './RhUI'
 
-const HOJE = isoLocal(new Date())
+// Recalculado a cada uso: a aba pode ficar aberta de um dia para o outro
+const hojeIso = () => isoLocal(new Date())
 
 function mesAtual() {
-  return HOJE.slice(0, 7)
+  return hojeIso().slice(0, 7)
 }
 
 function primeiroDiaDe(comp) {
@@ -67,7 +68,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
         getAjustes(tenantId,   { dataInicio: dataIni, dataFim, funcionarioId: filtroFunc || undefined }),
         getFeriados(tenantId,  { dataInicio: dataIni, dataFim }),
         getFechamentos(tenantId, { competencia: dataIni }),
-        getMarcacoes(tenantId, { dataInicio: HOJE, dataFim: HOJE }),
+        getMarcacoes(tenantId, { dataInicio: hojeIso(), dataFim: hojeIso() }),
       ])
       setDeHoje(hj.data)
       setMarcacoes(ms.data)
@@ -89,7 +90,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   useEffect(() => {
     if (!tenantId || semEstrutura) return
     const relogio = setInterval(() => {
-      getMarcacoes(tenantId, { dataInicio: HOJE, dataFim: HOJE })
+      getMarcacoes(tenantId, { dataInicio: hojeIso(), dataFim: hojeIso() })
         .then(r => setDeHoje(r.data))
         .catch(() => {})
     }, 60000)
@@ -127,12 +128,12 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   function diaDeHoje(func) {
     const esp = montarEspelho({
       funcionario: func,
-      dataInicio:  HOJE,
-      dataFim:     HOJE,
+      dataInicio:  hojeIso(),
+      dataFim:     hojeIso(),
       marcacoes:   deHoje.filter(m => m.funcionario_id === func.id),
       ajustes:     [],
       feriados,
-      hoje:        HOJE,
+      hoje:        hojeIso(),
     })
     return esp.dias[0]
   }

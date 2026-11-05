@@ -9,11 +9,28 @@ import {
 import { isoLocal } from '../../services/rhService'
 import './ponto.css'
 
-const HOJE = isoLocal(new Date())
+// O quiosque fica com a tela aberta dias a fio no celular da loja. Guardar
+// a data numa constante do módulo congelava o dia do carregamento: no dia
+// seguinte ele consultava as batidas da véspera.
+const diaDeHoje = () => isoLocal(new Date())
 
 // Ordem das batidas do dia: a próxima é sempre a primeira que faltar
 function proximaBatida(feitas) {
   return TIPOS_BATIDA.find(t => !feitas.includes(t)) || null
+}
+
+// Uma batida só faz sentido depois da que vem antes dela
+const EXIGE_ANTES = {
+  SAIDA_ALMOCO: 'ENTRADA',
+  VOLTA_ALMOCO: 'SAIDA_ALMOCO',
+  SAIDA:        'ENTRADA',
+}
+
+function impedimento(tipo, feitas) {
+  if (feitas.includes(tipo)) return 'já registrada'
+  const antes = EXIGE_ANTES[tipo]
+  if (antes && !feitas.includes(antes)) return `falta ${LABEL_BATIDA[antes].toLowerCase()}`
+  return null
 }
 
 export default function PontoQuiosquePage() {
@@ -24,6 +41,7 @@ export default function PontoQuiosquePage() {
   const [funcionarios, setFuncionarios] = useState([])
   const [semEstrutura, setSemEstrutura] = useState(false)
   const [doDia,        setDoDia]        = useState([])   // marcações de hoje
+  const [hoje,         setHoje]         = useState(diaDeHoje)
   const [carregando,   setCarregando]   = useState(true)
 
   const [escolhido, setEscolhido] = useState(null)  // funcionário selecionado
@@ -40,10 +58,12 @@ export default function PontoQuiosquePage() {
 
   const carregar = useCallback(async () => {
     setCarregando(true)
+    const dia = diaDeHoje()
+    setHoje(dia)
     try {
       const [fs, ms] = await Promise.all([
         getFuncionariosPonto(),
-        getMarcacoes(tenantId, { dataInicio: HOJE, dataFim: HOJE }),
+        getMarcacoes(tenantId, { dataInicio: dia, dataFim: dia }),
       ])
       setFuncionarios(fs.data)
       setDoDia(ms.data)
@@ -55,6 +75,15 @@ export default function PontoQuiosquePage() {
   }, [tenantId, showToast])
 
   useEffect(() => { carregar() }, [carregar])
+
+  // A tela fica aberta o dia inteiro: sem esta checagem ela continuaria
+  // mostrando as batidas de ontem depois da virada do dia.
+  useEffect(() => {
+    const relogio = setInterval(() => {
+      if (diaDeHoje() !== hoje) carregar()
+    }, 60000)
+    return () => clearInterval(relogio)
+  }, [hoje, carregar])
 
   // A câmera só liga na tela do PIN, e desliga ao sair dela
   useEffect(() => {
@@ -119,7 +148,9 @@ export default function PontoQuiosquePage() {
     setEscolhido(func)
     setPin('')
     setRecibo(null)
-    setTipo(proximaBatida(feitas) || 'SAIDA')
+    // Dia completo não cai na saída por descuido: fica sem nada escolhido
+    // e ela precisa tocar na batida que quer.
+    setTipo(proximaBatida(feitas))
   }
 
   function fechar() {
@@ -129,6 +160,7 @@ export default function PontoQuiosquePage() {
   }
 
   async function confirmar() {
+    if (!tipo) return showToast('Escolha qual batida você está registrando.', 'error')
     if (pin.length !== 4) return showToast('Digite os 4 dígitos do PIN.', 'error')
     setEnviando(true)
     try {
@@ -164,6 +196,8 @@ export default function PontoQuiosquePage() {
       let amigavel = 'Erro: ' + msg
       if (msg.includes('PIN incorreto'))      amigavel = 'PIN incorreto.'
       else if (msg.includes('Fora da loja'))  amigavel = 'Você não está na loja. O ponto só pode ser batido aqui.'
+      else if (msg.includes('ja foi registrada')) amigavel = 'Essa batida já foi registrada hoje.'
+      else if (msg.includes('Fora de ordem')) amigavel = msg.replace('Fora de ordem: ', 'Fora de ordem — ')
       else if (msg.includes('Localizacao'))   amigavel = 'Libere o acesso à localização no navegador para bater o ponto.'
       showToast(amigavel, 'error')
       setPin('')
@@ -222,14 +256,24 @@ export default function PontoQuiosquePage() {
           </div>
 
           <div className="pt-tipos">
-            {TIPOS_BATIDA.map(t => (
-              <button key={t}
-                className={`pt-tipo${tipo === t ? ' ativo' : ''}${feitas.includes(t) ? ' feito' : ''}`}
-                onClick={() => setTipo(t)}>
-                {LABEL_BATIDA[t]}
-                {feitas.includes(t) && <span className="pt-tipo-ok">já registrada</span>}
-              </button>
-            ))}
+            {TIPOS_BATIDA.map(t => {
+              const bloqueio = impedimento(t, feitas)
+              return (
+                <button key={t}
+                  className={`pt-tipo${tipo === t ? ' ativo' : ''}${bloqueio ? ' feito' : ''}`}
+                  disabled={!!bloqueio}
+                  onClick={() => setTipo(t)}>
+                  {LABEL_BATIDA[t]}
+                  {bloqueio && <span className="pt-tipo-ok">{bloqueio}</span>}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* O que vai ser gravado, em letra grande: o erro de bater a
+              batida errada vem de não reparar no seletor. */}
+          <div className={`pt-alvo${tipo ? '' : ' vazio'}`}>
+            {tipo ? <>Vai registrar <b>{LABEL_BATIDA[tipo]}</b></> : 'Escolha a batida acima'}
           </div>
 
           <div className={`pt-local${local ? ' ok' : buscandoLocal ? '' : ' erro'}`}>
@@ -259,8 +303,8 @@ export default function PontoQuiosquePage() {
             </button>
           </div>
 
-          <button className="pt-btn-grande" onClick={confirmar} disabled={enviando || pin.length !== 4}>
-            {enviando ? 'Registrando…' : `Registrar ${LABEL_BATIDA[tipo]?.toLowerCase()}`}
+          <button className="pt-btn-grande" onClick={confirmar} disabled={enviando || pin.length !== 4 || !tipo}>
+            {enviando ? 'Registrando…' : tipo ? `Registrar ${LABEL_BATIDA[tipo].toLowerCase()}` : 'Escolha a batida acima'}
           </button>
 
           <p className="pt-aviso">

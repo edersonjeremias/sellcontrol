@@ -171,3 +171,22 @@
 }
 .pt-local.ok   { color: var(--green);  border-color: rgba(129,201,149,0.35); }
 .pt-local.erro { color: var(--yellow); border-color: rgba(251,188,4,0.35); }
+
+/* ── O que está prestes a ser gravado ── */
+.pt-alvo {
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.pt-alvo b {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--blue);
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
+.pt-alvo.vazio { color: var(--yellow); font-weight: 700; }
+
+.pt-tipo:disabled { cursor: not-allowed; }
