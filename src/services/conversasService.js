@@ -72,7 +72,7 @@ export async function getConversas(tenantId, userId = null) {
 export async function getMensagens(conversaId) {
   const { data, error } = await supabase
     .from('mensagens_contato')
-    .select('id, remetente, texto, created_at')
+    .select('id, remetente, texto, anexos, created_at')
     .eq('conversa_id', conversaId)
     .order('created_at')
   if (error) {
@@ -83,10 +83,10 @@ export async function getMensagens(conversaId) {
   return data || []
 }
 
-export async function responderAdmin(conversaId, texto) {
+export async function responderAdmin(conversaId, texto, anexos = []) {
   const { error } = await supabase
     .from('mensagens_contato')
-    .insert([{ conversa_id: conversaId, remetente: 'admin', texto }])
+    .insert([{ conversa_id: conversaId, remetente: 'admin', texto: texto || '', anexos }])
   if (error) throw error
   await supabase.from('conversas')
     .update({ updated_at: new Date().toISOString(), nao_lidas: 0 })
@@ -109,7 +109,7 @@ export async function encerrarConversa(id, encerrado = true) {
   if (error) throw error
 }
 
-export async function criarConversaAdmin(tenantId, clienteInstagram, assunto, mensagemInicial) {
+export async function criarConversaAdmin(tenantId, clienteInstagram, assunto, mensagemInicial, anexos = []) {
   // Normaliza instagram (remove @ se tiver)
   const igNormalizado = clienteInstagram?.replace('@', '') || clienteInstagram
 
@@ -128,7 +128,7 @@ export async function criarConversaAdmin(tenantId, clienteInstagram, assunto, me
 
   const { error: e2 } = await supabase
     .from('mensagens_contato')
-    .insert([{ conversa_id: conv.id, remetente: 'admin', texto: mensagemInicial }])
+    .insert([{ conversa_id: conv.id, remetente: 'admin', texto: mensagemInicial || '', anexos }])
   if (e2) throw e2
 
   return conv.id
@@ -136,9 +136,9 @@ export async function criarConversaAdmin(tenantId, clienteInstagram, assunto, me
 
 // ── Portal: RPCs (SECURITY DEFINER) ────────────────────────────
 
-export async function portalCriarConversa(assunto, mensagem) {
+export async function portalCriarConversa(assunto, mensagem, anexos = []) {
   const { data, error } = await portalSb.rpc('portal_criar_conversa', {
-    p_assunto: assunto, p_mensagem: mensagem,
+    p_assunto: assunto, p_mensagem: mensagem || '', p_anexos: anexos,
   })
   if (error) throw error
   return data
@@ -156,9 +156,9 @@ export async function portalGetMensagens(conversaId) {
   return data || []
 }
 
-export async function portalResponder(conversaId, texto) {
+export async function portalResponder(conversaId, texto, anexos = []) {
   const { error } = await portalSb.rpc('portal_responder_conversa', {
-    p_conversa_id: conversaId, p_texto: texto,
+    p_conversa_id: conversaId, p_texto: texto || '', p_anexos: anexos,
   })
   if (error) throw error
 }

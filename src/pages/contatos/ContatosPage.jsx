@@ -10,6 +10,9 @@ import {
 } from '../../services/conversasService'
 import { getClientes } from '../../services/clientesService'
 import { avisarBadges } from '../../services/badgesService'
+import {
+  useAnexos, BotaoAnexo, PreviaAnexos, AnexosMensagem, arquivosDoEvento,
+} from '../../components/ui/Anexos'
 
 function fmtTempo(iso) {
   if (!iso) return ''
@@ -113,7 +116,9 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
   const [resposta, setResposta]     = useState('')
   const [enviando, setEnviando]     = useState(false)
   const [editColuna, setEditColuna] = useState(false)
+  const [arrastando, setArrastando] = useState(false)
   const endRef = useRef(null)
+  const anexos = useAnexos({ pasta:'contatos', onErro: msg => showToast(msg, 'error') })
 
   useEffect(() => {
     getMensagens(conversa.id)
@@ -134,11 +139,13 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
   }, [mensagens])
 
   async function enviar() {
-    if (!resposta.trim()) return
+    if (!resposta.trim() && !anexos.temAnexos) return
     setEnviando(true)
     try {
-      await responderAdmin(conversa.id, resposta.trim())
+      const arquivos = await anexos.subir()
+      await responderAdmin(conversa.id, resposta.trim(), arquivos)
       setResposta('')
+      anexos.limpar()
       const msgs = await getMensagens(conversa.id)
       setMensagens(msgs)
       // Respondeu → deixa de ser novidade
@@ -146,7 +153,7 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
       conversa.nao_lidas = 0
       avisarBadges()
       onAtualizar()
-    } catch { showToast('Erro ao enviar.', 'error') }
+    } catch (err) { showToast(err?.message || 'Erro ao enviar.', 'error') }
     setEnviando(false)
   }
 
@@ -211,8 +218,10 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
                   maxWidth:'80%', padding:'10px 14px', borderRadius: isAdmin ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                   background: isAdmin ? 'rgba(138,180,248,0.2)' : 'var(--header-bg)',
                   color:'var(--text-body)', fontSize:13, lineHeight:1.5,
+                  display:'flex', flexDirection:'column', gap:6,
                 }}>
-                  {m.texto}
+                  {m.texto ? <span style={{ whiteSpace:'pre-wrap' }}>{m.texto}</span> : null}
+                  <AnexosMensagem anexos={m.anexos} tema="admin" />
                 </div>
                 <span style={{ fontSize:10, color:'var(--muted)', marginTop:3 }}>
                   {isAdmin ? 'Você' : (conversa.cliente_instagram||'').replace('@','')} · {fmtHora(m.created_at)}
@@ -226,19 +235,39 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
 
         {/* Resposta */}
         {!conversa.encerrado && (
-          <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border-light)', display:'flex', gap:8 }}>
-            <textarea
-              value={resposta}
-              onChange={e => setResposta(e.target.value)}
-              onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-              placeholder="Digite sua resposta… (Enter para enviar, Shift+Enter nova linha)"
-              rows={2}
-              style={{ flex:1, background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:8, color:'var(--text-body)', padding:'8px 12px', fontSize:13, resize:'none', outline:'none', lineHeight:1.4 }}
-            />
-            <button onClick={enviar} disabled={enviando || !resposta.trim()}
-              style={{ background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:8, padding:'0 16px', fontWeight:700, cursor:'pointer', fontSize:13, alignSelf:'stretch', minWidth:70, opacity: (!resposta.trim()||enviando) ? 0.5 : 1 }}>
-              {enviando ? '…' : 'Enviar'}
-            </button>
+          <div
+            style={{
+              padding:'12px 16px', borderTop:'1px solid var(--border-light)',
+              background: arrastando ? 'rgba(138,180,248,0.08)' : 'transparent',
+            }}
+            onDragOver={e => { e.preventDefault(); setArrastando(true) }}
+            onDragLeave={() => setArrastando(false)}
+            onDrop={e => {
+              e.preventDefault(); setArrastando(false)
+              const files = arquivosDoEvento(e)
+              if (files.length) anexos.adicionar(files)
+            }}
+          >
+            <div style={{ display:'flex', gap:8 }}>
+              <textarea
+                value={resposta}
+                onChange={e => setResposta(e.target.value)}
+                onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
+                onPaste={e => {
+                  const files = arquivosDoEvento(e)
+                  if (files.length) { e.preventDefault(); anexos.adicionar(files) }
+                }}
+                placeholder={arrastando ? 'Solte o arquivo aqui…' : 'Digite sua resposta… (Enter envia, Ctrl+V cola imagem)'}
+                rows={2}
+                style={{ flex:1, background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:8, color:'var(--text-body)', padding:'8px 12px', fontSize:13, resize:'none', outline:'none', lineHeight:1.4 }}
+              />
+              <BotaoAnexo onArquivos={anexos.adicionar} disabled={enviando} tema="admin" />
+              <button onClick={enviar} disabled={enviando || (!resposta.trim() && !anexos.temAnexos)}
+                style={{ background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:8, padding:'0 16px', fontWeight:700, cursor:'pointer', fontSize:13, alignSelf:'stretch', minWidth:70, opacity: ((!resposta.trim() && !anexos.temAnexos)||enviando) ? 0.5 : 1 }}>
+                {enviando ? '…' : 'Enviar'}
+              </button>
+            </div>
+            <PreviaAnexos itens={anexos.itens} onRemover={anexos.remover} tema="admin" subindo={enviando} />
           </div>
         )}
         {conversa.encerrado && (
@@ -259,6 +288,7 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
   const [assunto, setAssunto] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const anexos = useAnexos({ pasta:'contatos', onErro: msg => showToast(msg, 'error') })
 
   useEffect(() => {
     getClientes(tenantId).then(({ data, error }) => {
@@ -279,16 +309,18 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
   }, [tenantId, showToast])
 
   async function criar() {
-    if (!clienteNome.trim() || !assunto.trim() || !mensagem.trim()) {
+    if (!clienteNome.trim() || !assunto.trim() || (!mensagem.trim() && !anexos.temAnexos)) {
       return showToast('Preencha todos os campos', 'error')
     }
     setEnviando(true)
     try {
-      await criarConversaAdmin(tenantId, clienteNome.trim(), assunto.trim(), mensagem.trim())
+      const arquivos = await anexos.subir()
+      await criarConversaAdmin(tenantId, clienteNome.trim(), assunto.trim(), mensagem.trim(), arquivos)
+      anexos.limpar()
       showToast('Conversa criada!', 'success')
       onCriada()
-    } catch {
-      showToast('Erro ao criar conversa', 'error')
+    } catch (err) {
+      showToast(err?.message || 'Erro ao criar conversa', 'error')
     }
     setEnviando(false)
   }
@@ -340,18 +372,40 @@ function ModalNovaConversa({ tenantId, onCriada, onClose, showToast }) {
             <textarea
               value={mensagem}
               onChange={e => setMensagem(e.target.value)}
+              onPaste={e => {
+                const files = arquivosDoEvento(e)
+                if (files.length) { e.preventDefault(); anexos.adicionar(files) }
+              }}
               rows={4}
-              placeholder="Escreva a mensagem inicial…"
+              placeholder="Escreva a mensagem inicial… (Ctrl+V cola imagem)"
               style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--border-light)', borderRadius:6, color:'var(--text-body)', padding:'8px 12px', fontSize:13, resize:'none', outline:'none', boxSizing:'border-box' }}
             />
+          </div>
+
+          {/* Anexos */}
+          <div
+            onDragOver={e => e.preventDefault()}
+            onDrop={e => {
+              e.preventDefault()
+              const files = arquivosDoEvento(e)
+              if (files.length) anexos.adicionar(files)
+            }}
+          >
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <BotaoAnexo onArquivos={anexos.adicionar} disabled={enviando} tema="admin" />
+              <span style={{ fontSize:11, color:'var(--muted)' }}>
+                Imagem ou PDF — até 10MB cada
+              </span>
+            </div>
+            <PreviaAnexos itens={anexos.itens} onRemover={anexos.remover} tema="admin" subindo={enviando} />
           </div>
         </div>
         <div className="modal-footer">
           <button onClick={onClose} style={{ flex:1, background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'10px', fontWeight:600, cursor:'pointer' }}>
             Cancelar
           </button>
-          <button onClick={criar} disabled={enviando || !clienteNome.trim() || !assunto.trim() || !mensagem.trim()}
-            style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer', opacity: (enviando || !clienteNome.trim() || !assunto.trim() || !mensagem.trim()) ? 0.5 : 1 }}>
+          <button onClick={criar} disabled={enviando || !clienteNome.trim() || !assunto.trim() || (!mensagem.trim() && !anexos.temAnexos)}
+            style={{ flex:1, background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'10px', fontWeight:700, cursor:'pointer', opacity: (enviando || !clienteNome.trim() || !assunto.trim() || (!mensagem.trim() && !anexos.temAnexos)) ? 0.5 : 1 }}>
             {enviando ? 'Criando…' : 'Criar Conversa'}
           </button>
         </div>

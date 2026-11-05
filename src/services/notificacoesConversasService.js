@@ -56,7 +56,7 @@ export async function getMensagensNotificacao(notificacaoId) {
   return data || []
 }
 
-export async function responderNotificacao(notificacaoId, tenantId, remetente, mensagem) {
+export async function responderNotificacao(notificacaoId, tenantId, remetente, mensagem, anexos = []) {
   const { data: user } = await supabase.auth.getUser()
 
   const { error } = await supabase
@@ -66,7 +66,8 @@ export async function responderNotificacao(notificacaoId, tenantId, remetente, m
       tenant_id: tenantId,
       user_id: user?.user?.id || null,
       remetente,
-      mensagem,
+      mensagem: mensagem || '',
+      anexos,
     })
 
   if (error) throw error
@@ -105,7 +106,7 @@ export async function encerrarNotificacao(notificacaoId) {
   if (error) throw error
 }
 
-export async function criarNotificacaoManual(tenantId, remetente, destinatario, assunto, mensagem) {
+export async function criarNotificacaoManual(tenantId, remetente, destinatario, assunto, mensagem, anexos = []) {
   const { data: user } = await supabase.auth.getUser()
 
   const { data, error } = await supabase
@@ -115,7 +116,8 @@ export async function criarNotificacaoManual(tenantId, remetente, destinatario, 
       user_id: user?.user?.id || null,
       tipo: 'info',
       titulo: assunto,
-      mensagem,
+      mensagem: mensagem || '',
+      anexos,
       remetente,
       destinatario,
       assunto,

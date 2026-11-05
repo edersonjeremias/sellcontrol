@@ -6,6 +6,10 @@ import {
 } from '../../services/conversasService'
 import { ASSUNTOS_DISPONIVEIS } from '../../services/assuntosService'
 import { mensagemErro } from '../../lib/erroPortal'
+import {
+  useAnexos, BotaoAnexo, PreviaAnexos, AnexosMensagem, arquivosDoEvento,
+} from '../../components/ui/Anexos'
+import { portalSb } from '../../lib/portalSupabase'
 
 function fmtHora(iso) {
   if (!iso) return ''
@@ -33,8 +37,13 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   const [msgs, setMsgs]       = useState([])
   const [texto, setTexto]     = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [arrastando, setArrastando] = useState(false)
   const endRef = useRef(null)
   const containerRef = useRef(null)
+  const anexos = useAnexos({
+    pasta:'contatos', client: portalSb,
+    onErro: msg => toast(msg, 'error', 5000),
+  })
 
   useEffect(() => {
     portalGetMensagens(conversa.id).then(setMsgs).catch(() => {})
@@ -60,11 +69,13 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
   }, [])
 
   async function enviar() {
-    if (!texto.trim() || enviando) return
+    if ((!texto.trim() && !anexos.temAnexos) || enviando) return
     setEnviando(true)
     try {
-      await portalResponder(conversa.id, texto.trim())
+      const arquivos = await anexos.subir()
+      await portalResponder(conversa.id, texto.trim(), arquivos)
       setTexto('')
+      anexos.limpar()
       const novas = await portalGetMensagens(conversa.id)
       setMsgs(novas)
     } catch (err) { console.error(err); toast(mensagemErro(err, 'Erro ao enviar mensagem'), 'error', 7000) }
@@ -100,8 +111,10 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
                 background: isCliente ? 'var(--p-blue)' : 'var(--p-card)',
                 color: isCliente ? '#0f0f0f' : 'var(--p-text)',
                 fontSize:14, lineHeight:1.5,
+                display:'flex', flexDirection:'column', gap:6,
               }}>
-                {m.texto}
+                {m.texto ? <span style={{ whiteSpace:'pre-wrap' }}>{m.texto}</span> : null}
+                <AnexosMensagem anexos={m.anexos} tema="portal" />
               </div>
               <span style={{ fontSize:10, color:'var(--p-muted)', marginTop:3 }}>
                 {isCliente ? 'Você' : 'VM Kids'} · {fmtHora(m.created_at)}
@@ -121,20 +134,41 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
           Esta conversa foi encerrada.
         </div>
       ) : (
-        <div style={{ display:'flex', gap:8, padding:'8px 16px', paddingBottom:'max(8px, env(safe-area-inset-bottom))', borderTop:'1px solid var(--p-border)', flexShrink:0, background:'var(--p-bg)' }}>
-          <textarea
-            value={texto}
-            onChange={e => setTexto(e.target.value)}
-            onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-            placeholder="Responder…"
-            rows={2}
-            style={{ flex:1, background:'var(--p-input)', border:'1px solid var(--p-border)', borderRadius:10, color:'var(--p-text)', padding:'10px 14px', fontSize:14, resize:'none', outline:'none', maxHeight:80 }}
-          />
-          <button onClick={enviar} disabled={enviando || !texto.trim()}
-            className="portal-btn portal-btn-blue"
-            style={{ alignSelf:'stretch', minWidth:60, fontSize:13 }}>
-            {enviando ? '…' : '➤'}
-          </button>
+        <div
+          style={{
+            padding:'8px 16px', paddingBottom:'max(8px, env(safe-area-inset-bottom))',
+            borderTop:'1px solid var(--p-border)', flexShrink:0,
+            background: arrastando ? 'rgba(138,180,248,0.08)' : 'var(--p-bg)',
+          }}
+          onDragOver={e => { e.preventDefault(); setArrastando(true) }}
+          onDragLeave={() => setArrastando(false)}
+          onDrop={e => {
+            e.preventDefault(); setArrastando(false)
+            const files = arquivosDoEvento(e)
+            if (files.length) anexos.adicionar(files)
+          }}
+        >
+          <div style={{ display:'flex', gap:8 }}>
+            <textarea
+              value={texto}
+              onChange={e => setTexto(e.target.value)}
+              onKeyDown={e => { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
+              onPaste={e => {
+                const files = arquivosDoEvento(e)
+                if (files.length) { e.preventDefault(); anexos.adicionar(files) }
+              }}
+              placeholder={arrastando ? 'Solte o arquivo aqui…' : 'Responder…'}
+              rows={2}
+              style={{ flex:1, background:'var(--p-input)', border:'1px solid var(--p-border)', borderRadius:10, color:'var(--p-text)', padding:'10px 14px', fontSize:14, resize:'none', outline:'none', maxHeight:80 }}
+            />
+            <BotaoAnexo onArquivos={anexos.adicionar} disabled={enviando} tema="portal" />
+            <button onClick={enviar} disabled={enviando || (!texto.trim() && !anexos.temAnexos)}
+              className="portal-btn portal-btn-blue"
+              style={{ alignSelf:'stretch', minWidth:60, fontSize:13 }}>
+              {enviando ? '…' : '➤'}
+            </button>
+          </div>
+          <PreviaAnexos itens={anexos.itens} onRemover={anexos.remover} tema="portal" subindo={enviando} />
         </div>
       )}
     </div>
@@ -147,12 +181,20 @@ function NovaConversa({ onEnviada, onCancelar }) {
   const [assunto, setAssunto] = useState('')
   const [mensagem, setMensagem] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const anexos = useAnexos({
+    pasta:'contatos', client: portalSb,
+    onErro: msg => toast(msg, 'error', 5000),
+  })
 
   async function enviar() {
-    if (!assunto.trim() || !mensagem.trim()) return toast('Preencha assunto e mensagem.', 'error')
+    if (!assunto.trim() || (!mensagem.trim() && !anexos.temAnexos)) {
+      return toast('Preencha assunto e mensagem.', 'error')
+    }
     setEnviando(true)
     try {
-      await portalCriarConversa(assunto.trim(), mensagem.trim())
+      const arquivos = await anexos.subir()
+      await portalCriarConversa(assunto.trim(), mensagem.trim(), arquivos)
+      anexos.limpar()
       toast('Mensagem enviada!', 'success')
       onEnviada()
     } catch (err) { console.error(err); toast(mensagemErro(err, 'Erro ao enviar'), 'error', 7000) }
@@ -179,8 +221,30 @@ function NovaConversa({ onEnviada, onCancelar }) {
         <div>
           <label style={{ fontSize:11, fontWeight:700, color:'var(--p-muted)', textTransform:'uppercase', display:'block', marginBottom:6 }}>Mensagem *</label>
           <textarea value={mensagem} onChange={e => setMensagem(e.target.value)} rows={5} placeholder="Escreva sua mensagem aqui…"
+            onPaste={e => {
+              const files = arquivosDoEvento(e)
+              if (files.length) { e.preventDefault(); anexos.adicionar(files) }
+            }}
             style={{ width:'100%', background:'var(--p-input)', border:'1px solid var(--p-border)', borderRadius:10, color:'var(--p-text)', padding:'12px 14px', fontSize:14, resize:'none', outline:'none', boxSizing:'border-box' }} />
         </div>
+
+        {/* Anexos */}
+        <div
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => {
+            e.preventDefault()
+            const files = arquivosDoEvento(e)
+            if (files.length) anexos.adicionar(files)
+          }}
+        >
+          <label style={{ fontSize:11, fontWeight:700, color:'var(--p-muted)', textTransform:'uppercase', display:'block', marginBottom:6 }}>Anexos</label>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <BotaoAnexo onArquivos={anexos.adicionar} disabled={enviando} tema="portal" titulo="Anexar foto ou PDF" />
+            <span style={{ fontSize:11, color:'var(--p-muted)' }}>Foto ou PDF — até 10MB cada</span>
+          </div>
+          <PreviaAnexos itens={anexos.itens} onRemover={anexos.remover} tema="portal" subindo={enviando} />
+        </div>
+
         <div style={{ display:'flex', gap:10 }}>
           <button onClick={onCancelar} className="portal-btn" style={{ flex:1, background:'var(--p-card)', color:'var(--p-muted)' }}>Cancelar</button>
           <button onClick={enviar} disabled={enviando} className="portal-btn portal-btn-green" style={{ flex:2 }}>
