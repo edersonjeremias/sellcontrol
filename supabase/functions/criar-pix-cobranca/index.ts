@@ -74,6 +74,10 @@ serve(async (req) => {
     if (PAGOS.includes(String(cobranca.status))) {
       return json({ error: 'Este pedido já foi pago' }, 409)
     }
+    // A tela do cliente pode estar aberta desde antes do cancelamento
+    if (String(cobranca.status) === 'CANCELADO') {
+      return json({ error: 'Este pedido foi cancelado' }, 409)
+    }
 
     const total = Number(cobranca.total)
     if (!(total > 0)) return json({ error: 'Valor do pedido inválido' }, 422)

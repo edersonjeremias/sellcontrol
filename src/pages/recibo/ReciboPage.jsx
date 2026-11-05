@@ -83,6 +83,10 @@ export default function ReciboPage() {
       const res = await getCobrancaById(id)
       if (!res) { setErro(true); return }
 
+      // Cancelada não pode mais ser paga. Some igual à excluída: o recibo
+      // só checava PAGO/BAIXADO e seguia oferecendo o PIX, que é gerado na hora.
+      if (String(res.status) === 'CANCELADO') { setErro(true); return }
+
       // ✅ Busca status ATUAL dos itens no banco (para detectar cancelamentos posteriores)
       if (res.itens && Array.isArray(res.itens) && res.itens.length > 0 && res.tenant_id) {
         try {
