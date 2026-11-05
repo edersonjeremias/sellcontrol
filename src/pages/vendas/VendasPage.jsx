@@ -8,7 +8,7 @@ import {
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
-import { criarCobranca, gerarPreferenciaMp } from '../../services/cobrancasService'
+import { criarCobranca, gerarPreferenciaMp, atualizarCobranca } from '../../services/cobrancasService'
 import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto } from '../../services/backupService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -1694,20 +1694,87 @@ export default function VendasPage() {
     }
   }, [])
 
-  const handleEstornar = useCallback((rowKey) => {
+  // Estornar derruba a cobrança junto, senão o link continua de pé e o cliente
+  // segue bloqueado por uma dívida que não existe mais. Peça já paga não passa:
+  // cancelar apagaria o registro de dinheiro que entrou.
+  const handleEstornar = useCallback(async (rowKey) => {
+    const l = linhasRef.current.find(r => r._key === rowKey)
+    if (!l?.id) { showToast('Linha não encontrada.', 'error'); return }
+
+    let cobranca = null
+    setBusy(true, 'Conferindo cobranças...')
+    try {
+      const cliente = String(l.cliente_nome || '').trim()
+      const data = l.data_live || dataLiveRef.current
+      if (cliente && data) {
+        const { data: cobs } = await supabase
+          .from('cobrancas')
+          .select('id, status, itens, total')
+          .eq('tenant_id', tenantIdRef.current)
+          .eq('data', data)
+          .neq('status', 'CANCELADO')
+          .ilike('cliente', cliente)
+
+        cobranca = (cobs || []).find(c =>
+          Array.isArray(c.itens) && c.itens.some(i => i.venda_id === l.id)) || null
+      }
+    } catch (err) {
+      setBusy(false)
+      showToast('Não consegui conferir as cobranças: ' + (err?.message || String(err)), 'error')
+      return
+    }
+    setBusy(false)
+
+    if (cobranca && ['PAGO', 'BAIXADO'].includes(String(cobranca.status))) {
+      setAlerta({
+        titulo: 'Esta peça já foi paga',
+        mensagem:
+          'O cliente já pagou esta peça, então ela não pode ser estornada por aqui.<br><br>' +
+          'Cancelar agora apagaria o registro do pagamento.<br><br>' +
+          '<b>Fale com o gestor</b> para resolver pela página de Cobranças.',
+      })
+      return
+    }
+
+    // Itens de peça (o crédito entra como item negativo e não conta aqui)
+    const pecas = Array.isArray(cobranca?.itens) ? cobranca.itens.filter(i => i.venda_id) : []
+
+    if (cobranca && pecas.length > 1) {
+      setAlerta({
+        titulo: 'Peça dentro de uma cobrança maior',
+        mensagem:
+          `Esta peça está numa cobrança com outras ${pecas.length - 1}.<br><br>` +
+          'Cancelar aqui derrubaria a cobrança inteira do cliente.<br><br>' +
+          '<b>Fale com o gestor</b> para ajustar pela página de Cobranças.',
+      })
+      return
+    }
+
     setConfirmacao({
-      titulo: '↩️ Estornar Venda',
-      mensagem: 'Deseja ESTORNAR esta venda?<br><br>Ela voltará a ficar editável.',
+      titulo: 'Estornar Venda',
+      mensagem: cobranca
+        ? 'Deseja ESTORNAR esta venda?<br><br>A cobrança gerada será <b>cancelada</b> e o ' +
+          'link de pagamento deixa de valer.<br>A peça volta a ficar editável.'
+        : 'Deseja ESTORNAR esta venda?<br><br>Ela voltará a ficar editável.',
       onSim: async () => {
         setConfirmacao(null); setBusy(true, 'Estornando...')
         try {
-          const l = linhasRef.current.find(r => r._key === rowKey)
-          if (!l?.id) return
+          if (cobranca) await atualizarCobranca(cobranca.id, { status: 'CANCELADO' })
           await estornarVenda(l.id)
           setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, isSent: false, status: '' } : r)))
-          showToast('Venda estornada!', 'success')
-        } catch { showToast('Erro ao estornar.', 'error') }
-        finally { setBusy(false) }
+
+          if (cobranca) {
+            // Tira o bloqueio do cliente sem esperar o polling de 60s
+            getDadosIniciais(tenantIdRef.current)
+              .then(db => { globalDBRef.current = db; setGlobalDB(db) })
+              .catch(() => {})
+            showToast('Venda estornada e cobrança cancelada.', 'success')
+          } else {
+            showToast('Venda estornada!', 'success')
+          }
+        } catch (err) {
+          showToast('Erro ao estornar: ' + (err?.message || String(err)), 'error')
+        } finally { setBusy(false) }
       },
       onNao: () => setConfirmacao(null),
     })
