@@ -826,6 +826,8 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
 .btn-action-sm.send:hover { background: rgba(129,201,149,0.15); transform: scale(1.05); }
 .btn-action-sm.undo { display: none; color: var(--yellow); border-color: rgba(251,188,4,0.3); }
 .btn-action-sm.undo:hover { background: rgba(251,188,4,0.15); transform: scale(1.05); }
+.btn-action-sm.cobrar { color: var(--purple); border-color: rgba(197,138,249,0.35); }
+.btn-action-sm.cobrar:hover { background: rgba(197,138,249,0.15); transform: scale(1.05); }
 .btn-action-sm.fila { color: var(--muted); border-color: var(--border-light); }
 .btn-action-sm.fila:hover { background: rgba(255,255,255,0.05); transform: scale(1.05); }
 .btn-action-sm.fila.has-fila { color: var(--yellow); border-color: rgba(251,188,4,0.4); background: rgba(251,188,4,0.15); }

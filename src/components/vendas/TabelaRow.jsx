@@ -92,7 +92,7 @@ function TabelaRow({
   linha, listas, tenantId,
   onFieldChange, onClienteBlur, onClienteSelect, onIsBlocked, onEnterNoCliente,
   onAbrirModal, onAbrirFila,
-  onEnviar, onEstornar, onCopiar, onExcluir,
+  onEnviar, onEstornar, onCopiar, onExcluir, onCobrar,
   onStatusChange,
   onPrecoBlur,
   cols = {},
@@ -100,6 +100,7 @@ function TabelaRow({
   modoHistorico = false,
   podeEditarEnviadas = true,
   podeEstornar = true,
+  podeCobrar = true,
 }) {
   const upd = (field, val) => onFieldChange(linha._key, field, val)
 
@@ -345,6 +346,16 @@ function TabelaRow({
               onClick={e => { e.stopPropagation(); onEnviar(linha._key) }}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          )}
+
+          {/* Cobrar peça avulsa — fluxo de cliente novo, que paga a 1ª peça para liberar o cadastro */}
+          {linha.isSent && !modoHistorico && podeCobrar && (
+            <button type="button" className="btn-action-sm cobrar" title="Gerar cobrança desta peça e mandar no WhatsApp"
+              onClick={e => { e.stopPropagation(); onCobrar(linha._key) }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
               </svg>
             </button>
           )}

@@ -8,6 +8,7 @@ import {
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
+import { criarCobranca, gerarPreferenciaMp } from '../../services/cobrancasService'
 import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto } from '../../services/backupService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -560,6 +561,11 @@ export default function VendasPage() {
     proximoCodigoRef.current = config.proximo_codigo
   }, [config.proximo_codigo])
 
+  // Nome da loja para a mensagem do WhatsApp. Em ref porque handleCobrar
+  // roda com deps vazias e pegaria o config de antes do carregamento.
+  const nomeLojaRef = useRef('')
+  useEffect(() => { nomeLojaRef.current = config.nome_loja || '' }, [config.nome_loja])
+
   // ── Total vendido ──
   const totalInfo = useMemo(() => {
     let total = 0, qtd = 0
@@ -615,7 +621,8 @@ export default function VendasPage() {
         setConfig({
           codigo_automatico: cfg?.codigo_automatico || false,
           proximo_codigo: cfg?.proximo_codigo || 100,
-          modo_promocao: cfg?.modo_promocao || false
+          modo_promocao: cfg?.modo_promocao || false,
+          nome_loja: cfg?.nome_loja || ''
         })
         setPermissoes(perms)
         setPronto(true)
@@ -1543,6 +1550,150 @@ export default function VendasPage() {
     }
   }, [])
 
+  // ModalConfirmacao injeta a mensagem com innerHTML, então nome e peça vão escapados
+  const escaparHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+
+  // ── COBRAR PEÇA AVULSA ──
+  // Cliente novo paga a primeira peça para liberar o cadastro. A cobrança
+  // pendente já bloqueia o cliente na tela de vendas (getDadosIniciais), e o
+  // fechamento do fim da live pula esta peça porque compara item a item.
+  const handleCobrar = useCallback(async (rowKey) => {
+    const l = linhasRef.current.find(r => r._key === rowKey)
+    if (!l) { showToast('Linha não encontrada.', 'error'); return }
+    if (!l.isSent || !l.id) { showToast('Envie a venda (aviãozinho) antes de cobrar.', 'error'); return }
+
+    setBusy(true, 'Conferindo a venda...')
+    try {
+      const tid = tenantIdRef.current
+
+      // Lê do banco: na tela o preço é string formatada e pode estar sem salvar
+      const { data: venda, error: eV } = await supabase
+        .from('vendas')
+        .select('id, cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, data_live, status')
+        .eq('id', l.id)
+        .single()
+
+      if (eV || !venda) { showToast('Não encontrei esta venda no banco.', 'error'); return }
+
+      const cliente = String(venda.cliente_nome || '').trim()
+      if (!cliente) { showToast('Preencha o cliente antes de cobrar.', 'error'); return }
+
+      const valor = Number(venda.preco_promocional || venda.preco) || 0
+      if (valor <= 0) { showToast('Esta peça está sem preço.', 'error'); return }
+
+      // Mesma montagem do importador de cobranças — é o que evita cobrar duas vezes
+      const descricao = [venda.codigo, venda.produto, venda.modelo, venda.cor, venda.marca,
+        venda.tamanho ? `(${venda.tamanho})` : ''].filter(Boolean).join(' ')
+
+      const { data: cobsExistentes } = await supabase
+        .from('cobrancas')
+        .select('id, itens')
+        .eq('tenant_id', tid)
+        .eq('data', venda.data_live)
+        .neq('status', 'CANCELADO')
+        .ilike('cliente', cliente)
+
+      const jaCobrada = (cobsExistentes || []).some(c =>
+        Array.isArray(c.itens) && c.itens.some(i =>
+          String(i.descricao || '').toLowerCase().trim() === descricao.toLowerCase().trim()))
+
+      if (jaCobrada) { showToast('Esta peça já está em uma cobrança.', 'info'); return }
+
+      const { data: cli } = await supabase
+        .from('clientes')
+        .select('whatsapp')
+        .eq('tenant_id', tid)
+        .ilike('instagram', cliente)
+        .maybeSingle()
+
+      const zap = String(cli?.whatsapp || '').replace(/\D/g, '')
+      if (!zap) {
+        showToast(`${cliente} está sem WhatsApp no cadastro. Cadastre o número primeiro.`, 'error')
+        return
+      }
+
+      const [ano, mes, dia] = String(venda.data_live).slice(0, 10).split('-')
+      setConfirmacao({
+        titulo: 'Cobrar esta peça',
+        mensagem:
+          `<b>${escaparHtml(cliente)}</b><br>${escaparHtml(descricao)}<br><br>` +
+          `Valor: <b>R$ ${valor.toFixed(2).replace('.', ',')}</b><br>` +
+          `WhatsApp: ${zap}<br><br>` +
+          `Vai gerar o link de pagamento e abrir o WhatsApp.<br>` +
+          `<i>Enquanto não pagar, o cliente fica bloqueado para novas vendas.</i>`,
+        onSim: () => {
+          setConfirmacao(null)
+          // Abre a aba no clique: depois dos await o navegador bloqueia o popup
+          const aba = window.open('', '_blank')
+          executarCobranca({ venda, cliente, valor, descricao, zap, dataBR: `${dia}/${mes}/${ano}` }, aba)
+        },
+        onNao: () => setConfirmacao(null),
+      })
+    } catch (err) {
+      showToast('Erro: ' + (err?.message || String(err)), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }, [])
+
+  const executarCobranca = useCallback(async ({ venda, cliente, valor, descricao, zap, dataBR }, aba) => {
+    setBusy(true, 'Gerando cobrança...')
+    try {
+      const tid = tenantIdRef.current
+      const idCobranca = crypto.randomUUID()
+
+      let link = '', idMp = ''
+      try {
+        const mp = await gerarPreferenciaMp({
+          cliente, total: valor, whatsapp: zap, data: dataBR,
+          live: venda.live_nome || '', idCobranca, tenantId: tid,
+        })
+        link = mp.link; idMp = mp.id_mp
+      } catch (e) {
+        console.warn('Mercado Pago falhou:', e.message)
+      }
+
+      const nova = await criarCobranca(tid, {
+        id: idCobranca,
+        data: venda.data_live,
+        cliente,
+        whatsapp: zap,
+        itens: [{ descricao, valor, cancelado: false, venda_id: venda.id }],
+        total: valor,
+        link_mp: link,
+        status: 'ENVIADO',
+        id_mp: idMp,
+        ext_ref: idCobranca,
+        live: venda.live_nome || '',
+        qt_envios: 1,
+      })
+
+      const recibo = nova?.link_codigo
+        ? `https://sellcontrol.app/r/${nova.link_codigo}`
+        : `https://sellcontrol.app/recibo/${idCobranca}`
+
+      const loja = nomeLojaRef.current || 'SellControl'
+      const msg = `${loja}\n\nOlá ${cliente}! Tudo bem?\n\nSegue sua compra do dia *${dataBR}*.` +
+        `\n\nVocê pode conferir o seu recibo clicando no link abaixo:\n${recibo}`
+
+      const url = `https://wa.me/55${zap}?text=${encodeURIComponent(msg)}`
+
+      if (aba && !aba.closed) aba.location.href = url
+      else window.open(url, '_blank', 'noopener')
+
+      // Reflete o bloqueio sem esperar o polling de 60s
+      getDadosIniciais(tid).then(db => { globalDBRef.current = db; setGlobalDB(db) }).catch(() => {})
+
+      showToast(`Cobrança de ${cliente} gerada e enviada.`, 'success')
+    } catch (err) {
+      if (aba && !aba.closed) aba.close()
+      showToast('Erro ao gerar a cobrança: ' + (err?.message || String(err)), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }, [])
+
   const handleEstornar = useCallback((rowKey) => {
     setConfirmacao({
       titulo: '↩️ Estornar Venda',
@@ -2298,6 +2449,8 @@ export default function VendasPage() {
                         onAbrirModal={() => setModalEdicaoKey(l._key)}
                         onAbrirFila={() => setModalFilaKey(l._key)}
                         onEnviar={handleEnviar}
+                        onCobrar={handleCobrar}
+                        podeCobrar={permissoes.pode_cobrar}
                         onEstornar={handleEstornar}
                         onCopiar={handleCopiar}
                         onExcluir={handleExcluir}

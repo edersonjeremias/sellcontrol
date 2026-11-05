@@ -9,6 +9,7 @@ const PERMISSOES_LABELS = {
   pode_excluir: 'Excluir Linhas',
   pode_estornar: 'Estornar Vendas',
   pode_enviar: 'Enviar para Cobrança',
+  pode_cobrar: 'Cobrar Peça Avulsa (link + WhatsApp)',
   pode_copiar: 'Copiar Linhas',
   pode_editar_enviadas: 'Editar Vendas Enviadas',
 }
