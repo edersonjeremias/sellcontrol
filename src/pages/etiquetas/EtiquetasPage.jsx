@@ -433,7 +433,6 @@ export default function EtiquetasPage() {
 
       showGlobalToast(`${romaneio.numero} marcado como retirado na loja`)
       setModalAberto(null)
-      setStatusFiltro('retirado')
       carregar()
     } catch (err) {
       setErroModal({ titulo: 'Não foi possível registrar a retirada', mensagem: err.message })
@@ -502,10 +501,8 @@ export default function EtiquetasPage() {
 
         showGlobalToast(`Etiqueta gerada! Pedido ${result.order_id}${result.tracking ? ' · Rastreio ' + result.tracking : ''}`)
 
-        // Mantém o romaneio à vista: ele acabou de sair de "Frete Pago"
-        setStatusFiltro('etiqueta_gerada')
-
-        // Recarrega para pegar os dados atualizados
+        // O filtro escolhido não muda: quem está processando uma fila
+        // precisa continuar na mesma lista
         carregar()
         return
       }
@@ -522,7 +519,6 @@ export default function EtiquetasPage() {
         .eq('id', romaneio.id)
 
       showGlobalToast('Etiqueta gerada com sucesso!')
-      setStatusFiltro('etiqueta_gerada')
       carregar()
     } catch (err) {
       setErroModal({ titulo: 'Não foi possível gerar a etiqueta', mensagem: err.message })
