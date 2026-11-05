@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
-import { fmtR, getVendasRelatorio } from '../../services/relatorioService'
+import { fmtR, getVendasRelatorio, getClientesRelatorio } from '../../services/relatorioService'
+import AutocompleteInput from '../../components/ui/AutocompleteInput'
 import { getStatusExpedicao } from '../../services/statusExpedicaoService'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -45,6 +46,7 @@ export default function RelatorioPage() {
   const [filtroStatus, setFiltroStatus] = useState('todos') // 'todos' | 'vendidos' | 'cadastrados' | 'ENVIADO' | 'CANCELADO' | 'DEVOLVIDO'
   const [filtroStatusExpedicao, setFiltroStatusExpedicao] = useState('todos') // Filtro de status da expedição
   const [statusExpedicaoList, setStatusExpedicaoList] = useState([]) // Lista de status de expedição
+  const [clientesList, setClientesList] = useState([])   // sugestões do campo Cliente
   const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
   // O que já foi ao servidor. Os estados acima são só o conteúdo dos campos:
   // sem isso cada tecla numa data dispara uma consulta.
@@ -87,6 +89,14 @@ export default function RelatorioPage() {
     if (!tenantId) return
     getStatusExpedicao(tenantId)
       .then(setStatusExpedicaoList)
+      .catch(() => {})
+  }, [tenantId])
+
+  // Sugestões do campo Cliente
+  useEffect(() => {
+    if (!tenantId) return
+    getClientesRelatorio(tenantId)
+      .then(setClientesList)
       .catch(() => {})
   }, [tenantId])
 
@@ -301,12 +311,14 @@ export default function RelatorioPage() {
             <option key={status.id} value={status.nome}>{status.nome}</option>
           ))}
         </select>
-        <input
-          placeholder="Cliente…"
+        <AutocompleteInput
           value={cliente}
-          onChange={e => setCliente(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') aplicarFiltros() }}
-          style={{ ...S.inp, width:150 }}
+          onChange={setCliente}
+          list={clientesList}
+          placeholder="Cliente…"
+          showOnFocus
+          className="filtro-autocomplete-input"
+          style={{ width:170 }}
         />
         <button
           onClick={aplicarFiltros}

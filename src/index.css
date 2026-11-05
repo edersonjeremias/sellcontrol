@@ -2321,3 +2321,18 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .sacol-cli-card  { margin: 0; box-shadow: none; border-radius: 0; border: none; page-break-after: always; page-break-inside: avoid; max-height: 150mm; overflow: hidden; }
   .sacol-cli-item  { page-break-inside: avoid; }
 }
+
+/* ── Autocomplete na barra de filtros do relatório ──
+   Espelha o estilo inline dos demais campos da barra (S.inp), para o
+   campo Cliente alinhar com as datas e os selects ao lado. */
+.filtro-autocomplete-input {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--input-text);
+  font-size: 13px;
+  outline: none;
+}
+.filtro-autocomplete-input:focus { border-color: var(--blue); }
