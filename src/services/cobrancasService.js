@@ -296,6 +296,27 @@ export async function gerarPixCobranca(cobrancaId) {
   return data
 }
 
+// ── Cancelar cobrança ──────────────────────────────────────────
+// Server-side de propósito: além do status, precisa derrubar o link do
+// Checkout Pro e o PIX pendente no Mercado Pago, que exigem o access token.
+export async function cancelarCobranca(cobrancaId) {
+  const resp = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancelar-cobranca`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ cobranca_id: cobrancaId }),
+    }
+  )
+
+  const data = await resp.json().catch(() => ({}))
+  if (!resp.ok) throw new Error(data.error || 'Não foi possível cancelar a cobrança')
+  return data
+}
+
 // ── Dividir Pagamento ──────────────────────────────────────────
 
 export async function dividirPagamento(cobranca, valorParte1, tenantId) {

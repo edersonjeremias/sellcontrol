@@ -8,7 +8,7 @@ import {
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
-import { criarCobranca, gerarPreferenciaMp, atualizarCobranca } from '../../services/cobrancasService'
+import { criarCobranca, gerarPreferenciaMp, cancelarCobranca } from '../../services/cobrancasService'
 import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto } from '../../services/backupService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
@@ -1759,7 +1759,7 @@ export default function VendasPage() {
       onSim: async () => {
         setConfirmacao(null); setBusy(true, 'Estornando...')
         try {
-          if (cobranca) await atualizarCobranca(cobranca.id, { status: 'CANCELADO' })
+          if (cobranca) await cancelarCobranca(cobranca.id)
           await estornarVenda(l.id)
           setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, isSent: false, status: '' } : r)))
 
