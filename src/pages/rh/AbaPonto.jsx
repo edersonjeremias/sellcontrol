@@ -10,7 +10,7 @@ import {
 } from '../../services/pontoService'
 import { saveConfig } from '../../services/configService'
 import { gerarEspelhoPdf } from './espelhoPontoPdf'
-import { S, Campo, Modal, IconCheck, IconEdit, IconRecibo, IconWhats } from './RhUI'
+import { S, Campo, Modal, ModalConfirma, IconCheck, IconEdit, IconRecibo, IconWhats } from './RhUI'
 
 // Recalculado a cada uso: a aba pode ficar aberta de um dia para o outro
 const hojeIso = () => isoLocal(new Date())
@@ -36,6 +36,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   const [feriados,    setFeriados]    = useState([])
   const [fechamentos, setFechamentos] = useState([])
   const [deHoje,     setDeHoje]     = useState([])   // batidas de hoje, fora do filtro
+  const [ajustesHoje, setAjustesHoje] = useState([])
   const [carregando,  setCarregando]  = useState(false)
   const [semEstrutura, setSemEstrutura] = useState(false)
 
@@ -45,6 +46,7 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   const [formAjuste, setFormAjuste] = useState({ hora: '', motivo: '' })
   const [modalPin,   setModalPin]   = useState(null)   // funcionário
   const [modalCerca, setModalCerca] = useState(false)
+  const [confirmPend, setConfirmPend] = useState(null)
   const [cerca,      setCerca]      = useState({})
   const [formCerca,  setFormCerca]  = useState({ latitude:'', longitude:'', raio:150, exigir:true })
   const [buscandoLocal, setBuscandoLocal] = useState(false)
@@ -63,13 +65,15 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
     try {
       // As batidas de hoje vêm à parte: o painel do dia tem que funcionar
       // mesmo com a competência apontando para outro mês.
-      const [ms, ajs, fes, fechs, hj] = await Promise.all([
+      const [ms, ajs, fes, fechs, hj, ajHj] = await Promise.all([
         getMarcacoes(tenantId, { dataInicio: dataIni, dataFim, funcionarioId: filtroFunc || undefined }),
         getAjustes(tenantId,   { dataInicio: dataIni, dataFim, funcionarioId: filtroFunc || undefined }),
         getFeriados(tenantId,  { dataInicio: dataIni, dataFim }),
         getFechamentos(tenantId, { competencia: dataIni }),
         getMarcacoes(tenantId, { dataInicio: hojeIso(), dataFim: hojeIso() }),
+        getAjustes(tenantId,   { dataInicio: hojeIso(), dataFim: hojeIso() }),
       ])
+      setAjustesHoje(ajHj.data)
       setDeHoje(hj.data)
       setMarcacoes(ms.data)
       setAjustes(ajs.data)
@@ -90,8 +94,11 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
   useEffect(() => {
     if (!tenantId || semEstrutura) return
     const relogio = setInterval(() => {
-      getMarcacoes(tenantId, { dataInicio: hojeIso(), dataFim: hojeIso() })
-        .then(r => setDeHoje(r.data))
+      Promise.all([
+        getMarcacoes(tenantId, { dataInicio: hojeIso(), dataFim: hojeIso() }),
+        getAjustes(tenantId,   { dataInicio: hojeIso(), dataFim: hojeIso() }),
+      ])
+        .then(([m, a]) => { setDeHoje(m.data); setAjustesHoje(a.data) })
         .catch(() => {})
     }, 60000)
     return () => clearInterval(relogio)
@@ -131,7 +138,9 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
       dataInicio:  hojeIso(),
       dataFim:     hojeIso(),
       marcacoes:   deHoje.filter(m => m.funcionario_id === func.id),
-      ajustes:     [],
+      // Sem os ajustes do dia, a linha mostrava a batida errada que já
+      // tinha sido corrigida, com o atraso e o saldo da batida errada.
+      ajustes:     ajustesHoje.filter(a => a.funcionario_id === func.id),
       feriados,
       hoje:        hojeIso(),
     })
@@ -321,6 +330,25 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
     setEnviandoAssinado(null)
   }
 
+  // Gerar o espelho para conferir deixava a pendência presa na tela sem
+  // jeito de tirar, a não ser anexando um assinado que não existe.
+  async function desmarcarPendencia(func) {
+    setSalvando(true)
+    try {
+      await salvarFechamento(tenantId, {
+        funcionario_id: func.id,
+        competencia:    dataIni,
+        gerado_em:      null,
+        enviado_em:     null,
+        pdf_hash:       null,
+      })
+      showToast('Pendência removida. O espelho pode ser gerado de novo quando quiser.', 'success')
+      setConfirmPend(null)
+      carregar()
+    } catch (e) { showToast('Erro: ' + e.message, 'error') }
+    setSalvando(false)
+  }
+
   async function verAssinado(fech) {
     try {
       const mapa = await assinarUrlsPonto([fech.assinado_path])
@@ -424,13 +452,21 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
                         )}
                         {hoje.dia.dentroTolerancia && <em title={`${Math.round(Math.abs(hoje.dia.saldoBruto) * 60)} min dentro da tolerância`}>na tolerância</em>}
                         {hoje.dia.atrasoMin > 0 && <em className="atraso">{hoje.dia.atrasoMin} min de atraso</em>}
+                        {hoje.dia.trocado && <em className="atraso">batidas fora de ordem — confira</em>}
                       </div>
                     </div>
                     <div className="pt-bloco-acoes" onClick={e => e.stopPropagation()}>
                       {fech?.assinado_path ? (
                         <span className="rh-badge ok">Assinado {fmtData(String(fech.assinado_em).slice(0,10))}</span>
                       ) : fech?.gerado_em ? (
-                        <span className="rh-badge pend">Aguardando assinatura</span>
+                        <span
+                          className="rh-badge pend"
+                          style={{ cursor:'pointer' }}
+                          title={`Espelho gerado em ${fmtData(String(fech.gerado_em).slice(0,10))}. Fica assim até você anexar o assinado. Clique para desmarcar.`}
+                          onClick={() => setConfirmPend(func)}
+                        >
+                          Aguardando assinatura
+                        </span>
                       ) : null}
                       <button onClick={() => setModalPin(func)} className="btn-action-sm copy" title="Definir PIN do ponto">
                         <IconEdit />
@@ -595,6 +631,23 @@ export default function AbaPonto({ tenantId, showToast, funcionarios, empresa, p
             A batida original não é apagada: o ajuste entra como correção, com seu nome e a data.
           </p>
         </Modal>
+      )}
+
+      {confirmPend && (
+        <ModalConfirma
+          titulo="Tirar a pendência de assinatura?"
+          texto={
+            <>
+              O espelho de {confirmPend.apelido || confirmPend.nome} deixa de constar como enviado
+              para assinatura. Nenhuma batida é alterada — você pode gerar o espelho de novo
+              quando quiser.
+            </>
+          }
+          textoBotao={salvando ? 'Removendo…' : 'Tirar pendência'}
+          perigo={false}
+          onCancelar={() => setConfirmPend(null)}
+          onConfirmar={() => desmarcarPendencia(confirmPend)}
+        />
       )}
 
       {modalCerca && (

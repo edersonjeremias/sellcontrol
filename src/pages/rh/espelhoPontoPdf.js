@@ -94,6 +94,7 @@ export function gerarEspelhoPdf({ empresa = {}, funcionario = {}, competencia, e
     else if (!d.diaUtil) obs.push(d.trabalhadas ? 'Folga trabalhada' : 'Folga')
     if (d.falta)       obs.push('Falta')
     if (d.atrasoMin)   obs.push(`Atraso ${d.atrasoMin}min`)
+    if (d.trocado)     obs.push('Batidas fora de ordem')
     if (d.dentroTolerancia) obs.push(`Tolerância ${Math.round(Math.abs(d.saldoBruto) * 60)}min`)
     if (d.incompleto)  obs.push('Batida faltando')
     if (Object.keys(d.ajustadas || {}).length) obs.push('Ajuste')

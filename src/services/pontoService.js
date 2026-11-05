@@ -283,7 +283,14 @@ export function montarEspelho({
     const direto = (!horarios.SAIDA_ALMOCO && !horarios.VOLTA_ALMOCO)
       ? horasEntre(horarios.ENTRADA, horarios.SAIDA)
       : 0
-    const trabalhadas = Number((manha + tarde + direto).toFixed(2))
+
+    // Trecho negativo é batida trocada (saída antes da entrada). Somar isso
+    // produzia dias com horas negativas e saldo absurdo, como -12h56 em um
+    // dia de 8 horas. O trecho vira zero e o dia fica marcado para conferir.
+    const trocado = manha < 0 || tarde < 0 || direto < 0
+    const trabalhadas = Number(
+      (Math.max(0, manha) + Math.max(0, tarde) + Math.max(0, direto)).toFixed(2)
+    )
     const intervalo   = Number(horasEntre(horarios.SAIDA_ALMOCO, horarios.VOLTA_ALMOCO).toFixed(2))
 
     const semBatida = TIPOS_BATIDA.every(t => !horarios[t])
@@ -328,6 +335,7 @@ export function montarEspelho({
       dentroTolerancia,
       saldoBruto:  diferenca,
       saldo:       dentroTolerancia ? 0 : diferenca,
+      trocado,
       falta:       diaUtil && semBatida && !futuro,
       incompleto:  !semBatida && TIPOS_BATIDA.some(t => !horarios[t]),
     })
@@ -338,6 +346,7 @@ export function montarEspelho({
     trabalhadas: acc.trabalhadas + d.trabalhadas,
     faltas:      acc.faltas      + (d.falta ? 1 : 0),
     atrasos:     acc.atrasos     + (d.atrasoMin ? 1 : 0),
+    trocados:    acc.trocados    + (d.trocado ? 1 : 0),
     atrasoMin:   acc.atrasoMin   + d.atrasoMin,
     // Hora em feriado ou folga é paga de outro jeito: separada à parte
     horasNaoUteis: acc.horasNaoUteis + (!d.diaUtil ? d.trabalhadas : 0),
@@ -348,7 +357,7 @@ export function montarEspelho({
     minutosTolerados: acc.minutosTolerados + (d.dentroTolerancia ? Math.round(Math.abs(d.saldoBruto) * 60) : 0),
   }), {
     previstas: 0, trabalhadas: 0, faltas: 0, atrasos: 0, atrasoMin: 0,
-    horasNaoUteis: 0, saldo: 0, diasTolerados: 0, minutosTolerados: 0,
+    horasNaoUteis: 0, saldo: 0, diasTolerados: 0, minutosTolerados: 0, trocados: 0,
   })
 
   return {
