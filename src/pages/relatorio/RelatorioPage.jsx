@@ -41,6 +41,7 @@ export default function RelatorioPage() {
   const [dataIni, setDataIni]       = useState(primeiroDiaMes)
   const [dataFim, setDataFim]       = useState(ultimoDiaMes)
   const [busca, setBusca]           = useState('')
+  const [cliente, setCliente]       = useState('')   // vai ao servidor, diferente da busca livre
   const [filtroStatus, setFiltroStatus] = useState('todos') // 'todos' | 'vendidos' | 'cadastrados' | 'ENVIADO' | 'CANCELADO' | 'DEVOLVIDO'
   const [filtroStatusExpedicao, setFiltroStatusExpedicao] = useState('todos') // Filtro de status da expedição
   const [statusExpedicaoList, setStatusExpedicaoList] = useState([]) // Lista de status de expedição
@@ -49,7 +50,7 @@ export default function RelatorioPage() {
   // sem isso cada tecla numa data dispara uma consulta.
   const [aplicado, setAplicado] = useState(() => ({
     dataInicio: primeiroDiaMes(), dataFim: ultimoDiaMes(),
-    filtroStatus: 'todos', filtroStatusExpedicao: 'todos',
+    filtroStatus: 'todos', filtroStatusExpedicao: 'todos', cliente: '',
   }))
   const [carregando, setCarregando] = useState(false)
   const [jaFiltrou, setJaFiltrou] = useState(false)  // nenhuma consulta até o primeiro Filtrar
@@ -68,15 +69,16 @@ export default function RelatorioPage() {
 
   const aplicarFiltros = useCallback(() => {
     setJaFiltrou(true)
-    setAplicado({ dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao })
-  }, [dataIni, dataFim, filtroStatus, filtroStatusExpedicao])
+    setAplicado({ dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente })
+  }, [dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente])
 
   const pendente =
     !jaFiltrou ||
     aplicado.dataInicio !== dataIni ||
     aplicado.dataFim !== dataFim ||
     aplicado.filtroStatus !== filtroStatus ||
-    aplicado.filtroStatusExpedicao !== filtroStatusExpedicao
+    aplicado.filtroStatusExpedicao !== filtroStatusExpedicao ||
+    aplicado.cliente !== cliente
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -299,6 +301,13 @@ export default function RelatorioPage() {
             <option key={status.id} value={status.nome}>{status.nome}</option>
           ))}
         </select>
+        <input
+          placeholder="Cliente…"
+          value={cliente}
+          onChange={e => setCliente(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') aplicarFiltros() }}
+          style={{ ...S.inp, width:150 }}
+        />
         <button
           onClick={aplicarFiltros}
           style={{ ...S.btn, ...(pendente ? { background:'var(--green)' } : {}) }}

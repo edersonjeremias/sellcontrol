@@ -63,7 +63,7 @@ export async function getClientesRelatorio(tenantId) {
 
 // ── Relatório: vendas ──────────────────────────────────────────
 
-export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtroStatus, filtroStatusExpedicao } = {}) {
+export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtroStatus, filtroStatusExpedicao, cliente } = {}) {
   const TAMANHO_PAGINA = 1000
 
   // Sem paginação o Supabase corta em 1000 linhas; como a ordem é data_live DESC,
@@ -98,6 +98,10 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtro
 
     if (filtroStatusExpedicao && filtroStatusExpedicao !== 'todos') {
       q = q.eq('status', filtroStatusExpedicao)
+    }
+
+    if (cliente?.trim()) {
+      q = q.ilike('cliente_nome', `%${cliente.trim()}%`)
     }
 
     return q
