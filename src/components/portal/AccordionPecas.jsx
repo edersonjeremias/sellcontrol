@@ -81,12 +81,41 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
   return (
     <div className="portal-accordion-group">
       <div className="portal-accordion-header" onClick={() => setOpen(o => !o)}>
-        <div>
+        <div className="portal-accordion-info">
           <div className="portal-accordion-data">{dataFmt}</div>
           <div className="portal-accordion-resumo">
             {pecas.length} {pecas.length === 1 ? 'peça' : 'peças'} • {fmtValor(total)}
           </div>
         </div>
+
+        {/* Cobrança no topo: com muitas peças, no rodapé só se chega rolando tudo */}
+        {debito && (
+          <div className="portal-accordion-acoes" onClick={e => e.stopPropagation()}>
+            {!pago && debito.link_mp && (
+              <a
+                href={debito.link_mp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="portal-btn portal-btn-green portal-btn-sm"
+                style={{ textDecoration: 'none' }}
+              >
+                Pagar
+              </a>
+            )}
+            {reciboUrl && (
+              <a
+                href={reciboUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="portal-btn portal-btn-blue portal-btn-sm"
+                style={{ textDecoration: 'none' }}
+              >
+                Recibo
+              </a>
+            )}
+          </div>
+        )}
+
         <div className="portal-accordion-right">
           {debito && !pago && (
             <span style={{
@@ -132,38 +161,13 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
               padding: '14px 16px',
               marginTop: 12,
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--p-muted)' }}>
                   TOTAL
                 </span>
                 <span style={{ fontSize: 20, fontWeight: 900, color: pago ? 'var(--p-green)' : 'var(--p-yellow)' }}>
                   {fmtValor(debito.total)}
                 </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {!pago && debito.link_mp && (
-                  <a
-                    href={debito.link_mp}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="portal-btn portal-btn-green"
-                    style={{ textDecoration: 'none', fontSize: 13, padding: '8px 16px', flex: 1 }}
-                  >
-                    Pagar
-                  </a>
-                )}
-                {reciboUrl && (
-                  <a
-                    href={reciboUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="portal-btn portal-btn-blue"
-                    style={{ textDecoration: 'none', fontSize: 13, padding: '8px 16px', flex: 1 }}
-                  >
-                    Recibo
-                  </a>
-                )}
               </div>
             </div>
           )}

@@ -229,6 +229,20 @@
   align-items: center;
   gap: 12px;
 }
+.portal-accordion-info { min-width: 0; }
+.portal-accordion-acoes {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+/* Em tela estreita os botoes nao cabem ao lado do badge: viram uma linha propria */
+@media (max-width: 600px) {
+  .portal-accordion-header { flex-wrap: wrap; }
+  .portal-accordion-info   { order: 1; flex: 1 1 auto; }
+  .portal-accordion-right  { order: 2; }
+  .portal-accordion-acoes  { order: 3; width: 100%; margin-top: 10px; }
+  .portal-accordion-acoes .portal-btn { flex: 1; }
+}
 .portal-accordion-total {
   font-size: 14px;
   font-weight: 800;
