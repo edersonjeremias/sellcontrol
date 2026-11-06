@@ -84,7 +84,7 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
         <div>
           <div className="portal-accordion-data">{dataFmt}</div>
           <div className="portal-accordion-resumo">
-            {pecas.length} {pecas.length === 1 ? 'peça' : 'peças'}
+            {pecas.length} {pecas.length === 1 ? 'peça' : 'peças'} • {fmtValor(total)}
           </div>
         </div>
         <div className="portal-accordion-right">
