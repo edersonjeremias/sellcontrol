@@ -73,13 +73,32 @@ export default async function handler(req, res) {
     userId = created.user.id
   }
 
-  // Upsert em portal_clientes
-  const { error: profErr } = await supabase
+  // portal_clientes tem unique em user_id E em instagram. Resolver o conflito
+  // apenas por user_id quebrava quando já havia uma linha com esse instagram
+  // apontando para outro usuário do Auth (cliente recadastrado, ou usuário
+  // recriado): o insert batia em portal_clientes_instagram_key.
+  // O instagram é a identidade do cliente no portal, então é por ele que a
+  // linha é localizada; o user_id passa a ser o da conta recém-preparada.
+  const { data: existente } = await supabase
     .from('portal_clientes')
-    .upsert(
-      { user_id: userId, instagram: instaHandle, nome_completo: nome_completo || '' },
-      { onConflict: 'user_id' }
-    )
+    .select('id, nome_completo')
+    .eq('instagram', instaHandle)
+    .maybeSingle()
+
+  const { error: profErr } = existente
+    ? await supabase
+        .from('portal_clientes')
+        .update({
+          user_id: userId,
+          nome_completo: nome_completo || existente.nome_completo || '',
+        })
+        .eq('id', existente.id)
+    : await supabase
+        .from('portal_clientes')
+        .upsert(
+          { user_id: userId, instagram: instaHandle, nome_completo: nome_completo || '' },
+          { onConflict: 'user_id' }
+        )
 
   if (profErr) {
     const tableMissing =
