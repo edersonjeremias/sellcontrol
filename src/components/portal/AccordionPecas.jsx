@@ -88,31 +88,20 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
           </div>
         </div>
 
-        {/* Cobrança no topo: com muitas peças, no rodapé só se chega rolando tudo */}
-        {debito && (
+        {/* Cobrança no topo: com muitas peças, no rodapé só se chega rolando tudo.
+            Leva ao recibo, e não ao link direto do Mercado Pago: é lá que o
+            cliente escolhe PIX ou cartão, aplica cupom e divide o pagamento. */}
+        {reciboUrl && (
           <div className="portal-accordion-acoes" onClick={e => e.stopPropagation()}>
-            {!pago && debito.link_mp && (
-              <a
-                href={debito.link_mp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="portal-btn portal-btn-green portal-btn-sm"
-                style={{ textDecoration: 'none' }}
-              >
-                Pagar
-              </a>
-            )}
-            {reciboUrl && (
-              <a
-                href={reciboUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="portal-btn portal-btn-blue portal-btn-sm"
-                style={{ textDecoration: 'none' }}
-              >
-                Recibo
-              </a>
-            )}
+            <a
+              href={reciboUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`portal-btn portal-btn-sm ${pago ? 'portal-btn-blue' : 'portal-btn-green'}`}
+              style={{ textDecoration: 'none' }}
+            >
+              {pago ? 'Recibo' : 'Pagar'}
+            </a>
           </div>
         )}
 
