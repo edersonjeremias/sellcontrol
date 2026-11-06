@@ -89,7 +89,28 @@ async function contarPecasPendentes(tid) {
 //
 // A regra é a mesma de producao_pecas_pendentes (a contagem da coluna PEÇAS),
 // para a lista bater com o número mostrado ao lado.
-const STATUS_FORA_DA_SACOLINHA = '("Enviado","Cancelado","Devolução","Gerar Crédito")'
+
+// Status de peça que não vai ser enviada: ou já saiu, ou virou crédito, ou
+// caiu. Cada loja cadastra os próprios nomes em status_expedicao — por isso a
+// comparação é feita em maiúsculas e sem acento, e não contra um literal.
+const STATUS_FORA_DA_SACOLINHA = [
+  'ENVIADO', 'CANCELADO', 'DEVOLUCAO', 'GERAR CREDITO', 'CREDITO GERADO',
+]
+
+function normalizaStatus(valor) {
+  return (valor || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+}
+
+export function pecaNaSacolinha(status) {
+  return !STATUS_FORA_DA_SACOLINHA.includes(normalizaStatus(status))
+}
+
+// Lista literal só para o banco já devolver menos linhas; quem decide de
+// verdade é pecaNaSacolinha, aplicada no resultado.
+const STATUS_FORA_SQL = '("Enviado","Cancelado","Devolução","Gerar Crédito","Crédito gerado")'
 
 export async function getPecasPendentesCliente(tenantId, clienteNome) {
   const tid  = TENANT_ID(tenantId)
@@ -101,7 +122,7 @@ export async function getPecasPendentesCliente(tenantId, clienteNome) {
     .select('id, codigo, produto, modelo, cor, marca, tamanho, data_live, status, cliente_nome')
     .eq('tenant_id', tid)
     .or('etapa.is.null,etapa.neq.rascunho')   // rascunho = live ainda em digitação
-    .not('status', 'in', STATUS_FORA_DA_SACOLINHA)
+    .not('status', 'in', STATUS_FORA_SQL)
     .ilike('cliente_nome', `%${slug}%`)
     .order('data_live', { ascending: true })
     .order('codigo', { ascending: true })
@@ -112,7 +133,7 @@ export async function getPecasPendentesCliente(tenantId, clienteNome) {
     // O ilike só estreita a busca no banco; quem decide é o slug, senão
     // "nique.abreu" arrastaria junto as peças de "nique.abreu2".
     .filter((v) => slugCliente(v.cliente_nome) === slug)
-    .filter((v) => (v.status || '').toUpperCase() !== 'CANCELADO')
+    .filter((v) => pecaNaSacolinha(v.status))
     .map((v) => ({
       id: v.id,
       codigo: v.codigo || '',
