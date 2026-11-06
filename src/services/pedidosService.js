@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { hojeISO } from '../lib/datas'
+import { pecaNaSacolinha, STATUS_FORA_SQL } from '../lib/statusVenda'
 
 export const STATUS_PEDIDO_OPTS = [
   '', 'Separado', 'Enviado', 'Comprar', 'Comprado',
@@ -61,15 +62,14 @@ export async function getStatusPedido(tenantId) {
   }
 }
 
-const EXCLUIR_DO_TOTAL   = new Set(['Cancelado', 'Pendente', 'Devolução'])
-const EXCLUIR_DO_PADRAO  = new Set(['Enviado', 'Cancelado', 'Devolução', 'Gerar Crédito'])
+const EXCLUIR_DO_TOTAL = new Set(['Cancelado', 'Pendente', 'Devolução'])
 
 export function calcTotal(itens) {
   return itens.reduce((s, i) => EXCLUIR_DO_TOTAL.has(i.status) ? s : s + (Number(i.preco) || 0), 0)
 }
 
 export function filtroPadrao(item) {
-  return !EXCLUIR_DO_PADRAO.has(item.status)
+  return pecaNaSacolinha(item.status)
 }
 
 export async function buscarItensPedido(tenantId, { clienteNome, dataLive, statusFiltro, numeroPedido }) {
@@ -91,7 +91,7 @@ export async function buscarItensPedido(tenantId, { clienteNome, dataLive, statu
     if (numeroPedido)        q = q.eq('numero_pedido', Number(numeroPedido))
 
     if (statusFiltro === 'nao_enviados') {
-      q = q.not('status', 'in', '("Enviado","Cancelado","Devolução","Gerar Crédito")')
+      q = q.not('status', 'in', STATUS_FORA_SQL)
     } else if (statusFiltro && statusFiltro !== 'todos') {
       q = q.eq('status', statusFiltro)
     }
@@ -106,6 +106,10 @@ export async function buscarItensPedido(tenantId, { clienteNome, dataLive, statu
     todos = todos.concat(data)
     if (data.length < TAMANHO_PAGINA) break
   }
+
+  // O filtro do banco compara texto exato e deixava passar status que a loja
+  // criou depois, como "Crédito gerado" — peça que virou crédito e não sai.
+  if (statusFiltro === 'nao_enviados') return todos.filter((i) => pecaNaSacolinha(i.status))
   return todos
 }
 

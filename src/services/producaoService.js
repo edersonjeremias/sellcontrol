@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import { parseDateLocal, toDateOnly, formatDateBr } from '../lib/datas'
 import { linkRastreio } from '../lib/rastreio'
 import { getClientes } from './clientesService'
+import { pecaNaSacolinha, STATUS_FORA_SQL } from '../lib/statusVenda'
 
 const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -89,29 +90,6 @@ async function contarPecasPendentes(tid) {
 //
 // A regra é a mesma de producao_pecas_pendentes (a contagem da coluna PEÇAS),
 // para a lista bater com o número mostrado ao lado.
-
-// Status de peça que não vai ser enviada: ou já saiu, ou virou crédito, ou
-// caiu. Cada loja cadastra os próprios nomes em status_expedicao — por isso a
-// comparação é feita em maiúsculas e sem acento, e não contra um literal.
-const STATUS_FORA_DA_SACOLINHA = [
-  'ENVIADO', 'CANCELADO', 'DEVOLUCAO', 'GERAR CREDITO', 'CREDITO GERADO',
-]
-
-function normalizaStatus(valor) {
-  return (valor || '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toUpperCase()
-}
-
-export function pecaNaSacolinha(status) {
-  return !STATUS_FORA_DA_SACOLINHA.includes(normalizaStatus(status))
-}
-
-// Lista literal só para o banco já devolver menos linhas; quem decide de
-// verdade é pecaNaSacolinha, aplicada no resultado.
-const STATUS_FORA_SQL = '("Enviado","Cancelado","Devolução","Gerar Crédito","Crédito gerado")'
-
 export async function getPecasPendentesCliente(tenantId, clienteNome) {
   const tid  = TENANT_ID(tenantId)
   const slug = slugCliente(clienteNome)
