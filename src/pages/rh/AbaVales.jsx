@@ -8,6 +8,7 @@ import {
   competenciaDe, formatarCompetencia, competenciaCurta, moverParaCompetencia,
   TIPOS_LANCAMENTO, LABEL_TIPO, FREQUENCIAS, MAX_PARCELAS,
 } from '../../services/rhService'
+import { consumirAvisoConta } from '../../services/rhContasPagar'
 import { S, Campo, Modal, ModalConfirma, IconCheck, IconClip, IconEdit, IconRecibo, IconTrash, IconUndo, IconWhats } from './RhUI'
 import { gerarReciboPdf } from './reciboPdf'
 import ModalComprovantes from './ModalComprovantes'
@@ -53,6 +54,13 @@ function mensagemExtrato(resumo, lancs, periodoTexto) {
 }
 
 export default function AbaVales({ tenantId, showToast, funcionarios, empresa }) {
+  // O espelho no Contas a Pagar falha calado de propósito, para não derrubar
+  // o lançamento. Calado demais esconde o problema: aqui ele aparece.
+  const avisarConta = () => {
+    const aviso = consumirAvisoConta()
+    if (aviso) showToast(aviso, 'error')
+  }
+
   const [lancs,      setLancs]      = useState([])
   const [carregando, setCarregando] = useState(false)
   const [dataIni,    setDataIni]    = useState(primeiroDiaMes)
@@ -145,6 +153,7 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
         competencia:    competencia ? `${competencia}-01` : competenciaDe(qa.data_prevista || HOJE),
       }, { freq: qa.freq, parcelas })
       showToast(parcelas > 1 ? `${parcelas} parcelas lançadas!` : 'Lançamento salvo!', 'success')
+      avisarConta()
       setAbertos(prev => new Set([...prev, qa.funcionario_id]))
       if (filtroSt !== 'Todos' && filtroSt !== (qa.pago ? 'PAGO' : 'PENDENTE')) setFiltroSt('Todos')
       setQa(p => ({ ...p, descricao:'', valor:'', pago:false, parcelas:1 }))
@@ -208,6 +217,7 @@ export default function AbaVales({ tenantId, showToast, funcionarios, empresa })
           : novo ? 'Lançamento salvo!' : 'Lançamento atualizado!',
         'success',
       )
+      avisarConta()
       setAbertos(prev => new Set([...prev, form.funcionario_id]))
       setModal(null)
       carregar()

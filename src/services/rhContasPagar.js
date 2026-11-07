@@ -39,6 +39,26 @@ export function geraContaPagar(tipo) {
   return TIPOS_DESPESA_RH.has(tipo)
 }
 
+// A conta a pagar é espelho: se falhar, o lançamento do RH não pode ser
+// perdido junto. Mas falhar calado também não serve — foi assim que o
+// espelho ficou quebrado sem ninguém perceber. O aviso fica guardado aqui
+// e a tela mostra depois de salvar.
+let aviso = null
+
+/** Lê e limpa o último aviso de espelho. Chamado pelas abas após salvar. */
+export function consumirAvisoConta() {
+  const a = aviso
+  aviso = null
+  return a
+}
+
+function registrarFalha(error) {
+  console.error('Conta a pagar do RH', error)
+  aviso = semColunaOrigem(error)
+    ? 'Lançamento salvo, mas o Contas a Pagar não foi atualizado: falta rodar a migração 20261107_contas_pagar_origem.'
+    : 'Lançamento salvo, mas o Contas a Pagar não foi atualizado: ' + (error?.message || 'erro desconhecido')
+}
+
 /** Erro de coluna ausente: a migração da origem ainda não rodou */
 function semColunaOrigem(error) {
   const msg = String(error?.message || '')
@@ -67,16 +87,40 @@ async function gravar(tenantId, { origem, origemId, descricao, valor, vencimento
   const { error } = await supabase
     .from('contas_pagar')
     .upsert(linha, { onConflict: 'tenant_id,origem,origem_id' })
-  // A conta a pagar é um espelho: se falhar, o lançamento do RH não pode
-  // ser perdido junto. O erro vai para o console e a vida segue.
-  if (error && !semColunaOrigem(error)) console.error('Conta a pagar do RH', error)
+
+  if (!error) return
+
+  // 42P10: o banco não tem o índice único que o ON CONFLICT precisa casar —
+  // é o que acontece quando o índice está como parcial. Em vez de perder a
+  // conta, procura e grava em dois passos.
+  if (error.code === '42P10') return gravarEmDoisPassos(linha)
+
+  registrarFalha(error)
+}
+
+async function gravarEmDoisPassos(linha) {
+  const { data, error: errBusca } = await supabase
+    .from('contas_pagar')
+    .select('id')
+    .eq('tenant_id', linha.tenant_id)
+    .eq('origem', linha.origem)
+    .eq('origem_id', linha.origem_id)
+    .maybeSingle()
+
+  if (errBusca) return registrarFalha(errBusca)
+
+  const { error } = data?.id
+    ? await supabase.from('contas_pagar').update(linha).eq('id', data.id)
+    : await supabase.from('contas_pagar').insert([linha])
+
+  if (error) registrarFalha(error)
 }
 
 async function remover(origem, origemId) {
   if (!origemId) return
   const { error } = await supabase.from('contas_pagar')
     .delete().eq('origem', origem).eq('origem_id', origemId)
-  if (error && !semColunaOrigem(error)) console.error('Conta a pagar do RH', error)
+  if (error) registrarFalha(error)
 }
 
 // ── Lançamentos de Vales e Pagamentos ──────────────────────────

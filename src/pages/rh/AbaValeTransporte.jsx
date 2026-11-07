@@ -7,6 +7,7 @@ import {
   excluirPeriodoVT, lancarVTComoPagamento,
   montarDiasVT, calcularTotaisVT, mensagemVT, LABEL_MOTIVO_VT, urlWhatsApp,
 } from '../../services/rhService'
+import { consumirAvisoConta } from '../../services/rhContasPagar'
 import { S, Campo, Modal, ModalConfirma, IconCheck, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
 
 const HOJE = isoLocal(new Date())
@@ -49,6 +50,13 @@ const EDITOR_VAZIO = {
 }
 
 export default function AbaValeTransporte({ tenantId, showToast, funcionarios }) {
+  // Falha ao espelhar no Contas a Pagar não derruba o período, mas precisa
+  // aparecer: espelho quebrado em silêncio é pior que espelho nenhum.
+  const avisarConta = () => {
+    const aviso = consumirAvisoConta()
+    if (aviso) showToast(aviso, 'error')
+  }
+
   const [periodos,   setPeriodos]   = useState([])
   const [carregando, setCarregando] = useState(false)
 
@@ -270,6 +278,7 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
         showToast('Período de vale transporte salvo!', 'success')
       }
 
+      avisarConta()
       setEditor(null)
       carregar()
     } catch (e) { showToast('Erro ao salvar: ' + e.message, 'error') }
