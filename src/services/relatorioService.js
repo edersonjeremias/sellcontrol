@@ -131,9 +131,34 @@ export async function getCategoriasContasPagar(tenantId) {
 }
 
 export async function pagarContaPagar(id, dataPagamento) {
-  const { error } = await supabase.from('contas_pagar')
-    .update({ status: 'PAGO', data_pagamento: dataPagamento }).eq('id', id)
+  const { data, error } = await supabase.from('contas_pagar')
+    .update({ status: 'PAGO', data_pagamento: dataPagamento })
+    .eq('id', id)
+    .select('origem, origem_id')
+    .maybeSingle()
   if (error) throw error
+  await refletirNoRH(data, dataPagamento)
+}
+
+/**
+ * Conta nascida no RH: quitar aqui tem que quitar lá também, senão o vale
+ * aparece pago no financeiro e pendente no acerto da funcionária.
+ * Feito com supabase direto, sem importar o rhService, para não criar um
+ * ciclo entre os dois serviços.
+ */
+async function refletirNoRH(conta, dataPagamento) {
+  if (!conta?.origem || !conta?.origem_id) return
+  const campos = { status: 'PAGO', data_pagamento: dataPagamento }
+  try {
+    if (conta.origem === 'RH_LANC') {
+      await supabase.from('rh_lancamentos').update(campos).eq('id', conta.origem_id)
+    } else if (conta.origem === 'RH_VT') {
+      await supabase.from('rh_vt_periodos').update(campos).eq('id', conta.origem_id)
+      await supabase.from('rh_lancamentos').update(campos).eq('vt_periodo_id', conta.origem_id)
+    }
+  } catch (e) {
+    console.error('Baixa no RH a partir do contas a pagar', e)
+  }
 }
 
 export async function inserirContasPagarLote(tenantId, linhas) {

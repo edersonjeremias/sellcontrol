@@ -576,6 +576,14 @@ export default function ContasPagarPage() {
                               </div>
                               <div style={{ fontSize:12, color:'var(--muted)', marginTop:1 }}>
                                 {c.categoria}{c.tipo_despesa ? ` • ${c.tipo_despesa}` : ''}
+                                {String(c.origem || '').startsWith('RH') && (
+                                  <span
+                                    style={{ color:'var(--blue)', marginLeft:6, fontWeight:700 }}
+                                    title="Conta gerada pelo RH. Dar baixa aqui também quita o lançamento lá."
+                                  >
+                                    • RH
+                                  </span>
+                                )}
                                 {c.status==='PAGO' && c.data_pagamento && <span style={{ color:'var(--green)', marginLeft:6 }}>✓ pago {fmtData(c.data_pagamento)}</span>}
                               </div>
                             </div>

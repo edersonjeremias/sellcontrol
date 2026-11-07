@@ -1,4 +1,8 @@
 import { supabase } from '../lib/supabase'
+import {
+  sincronizarContaPorLancamentoId, removerContaDoLancamento, removerContasDoGrupo,
+  sincronizarContaPorPeriodoVT, removerContaDoPeriodoVT,
+} from './rhContasPagar'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -329,6 +333,7 @@ export async function moverParaCompetencia(ids, competencia) {
 }
 
 export async function excluirGrupoLancamentos(grupoId) {
+  await removerContasDoGrupo(grupoId)
   const { error } = await supabase.from('rh_lancamentos').delete().eq('grupo_id', grupoId)
   if (error) throw error
 }
@@ -364,10 +369,12 @@ export async function salvarLancamento(tenantId, lanc) {
   if (id) {
     const { error } = await supabase.from('rh_lancamentos').update(fields).eq('id', id)
     if (error) throw error
+    await sincronizarContaPorLancamentoId(tid(tenantId), id)
     return id
   }
   const { data, error } = await supabase.from('rh_lancamentos').insert([fields]).select('id').single()
   if (error) throw error
+  await sincronizarContaPorLancamentoId(tid(tenantId), data?.id)
   return data?.id
 }
 
@@ -377,8 +384,10 @@ export async function inserirLancamentosLote(tenantId, linhas) {
     competencia: l.competencia || competenciaDe(l.data_prevista),
     tenant_id:   tid(tenantId),
   }))
-  const { error } = await supabase.from('rh_lancamentos').insert(rows)
+  const { data, error } = await supabase.from('rh_lancamentos').insert(rows).select('id')
   if (error) throw error
+  for (const l of data || []) await sincronizarContaPorLancamentoId(tid(tenantId), l.id)
+  return data || []
 }
 
 export async function pagarLancamento(id, dataPagamento, formaPagamento) {
@@ -386,15 +395,19 @@ export async function pagarLancamento(id, dataPagamento, formaPagamento) {
   if (formaPagamento) fields.forma_pagamento = formaPagamento
   const { error } = await supabase.from('rh_lancamentos').update(fields).eq('id', id)
   if (error) throw error
+  await sincronizarContaPorLancamentoId(null, id)
 }
 
 export async function reabrirLancamento(id) {
   const { error } = await supabase.from('rh_lancamentos')
     .update({ status: 'PENDENTE', data_pagamento: null }).eq('id', id)
   if (error) throw error
+  await sincronizarContaPorLancamentoId(null, id)
 }
 
 export async function excluirLancamento(id) {
+  // Antes do delete: depois não dá mais para ler o vínculo com o VT
+  await removerContaDoLancamento(id)
   const { error } = await supabase.from('rh_lancamentos').delete().eq('id', id)
   if (error) throw error
 }
@@ -790,6 +803,7 @@ export async function salvarPeriodoVT(tenantId, periodo, dias) {
     if (error) throw error
   }
 
+  await sincronizarContaPorPeriodoVT(tenant, periodoId)
   return periodoId
 }
 
@@ -797,15 +811,18 @@ export async function pagarPeriodoVT(id, dataPagamento) {
   const { error } = await supabase.from('rh_vt_periodos')
     .update({ status: 'PAGO', data_pagamento: dataPagamento }).eq('id', id)
   if (error) throw error
+  await sincronizarContaPorPeriodoVT(null, id)
 }
 
 export async function reabrirPeriodoVT(id) {
   const { error } = await supabase.from('rh_vt_periodos')
     .update({ status: 'PENDENTE', data_pagamento: null }).eq('id', id)
   if (error) throw error
+  await sincronizarContaPorPeriodoVT(null, id)
 }
 
 export async function excluirPeriodoVT(id) {
+  await removerContaDoPeriodoVT(id)
   // rh_vt_dias tem ON DELETE CASCADE
   const { error } = await supabase.from('rh_vt_periodos').delete().eq('id', id)
   if (error) throw error
