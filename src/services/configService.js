@@ -117,9 +117,9 @@ export async function toggleUsuarioAtivo(userId, ativo) {
 
 // Reseta senha do usuário (via serverless function)
 export async function resetUsuarioSenha(userId, novaSenha) {
-  const API_URL = import.meta.env.VITE_API_URL || 'https://sellcontrol.vercel.app'
-
-  const response = await fetch(`${API_URL}/api/reset-senha-usuario`, {
+  // Caminho relativo: a serverless roda no mesmo host da aplicação, então não
+  // há domínio para errar nem variável para manter
+  const response = await fetch('/api/reset-senha-usuario', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId, novaSenha }),
