@@ -31,40 +31,33 @@ export async function salvarColunas(tenantId, colunas) {
 // ── Admin: Conversas ────────────────────────────────────────────
 
 export async function getConversas(tenantId, userId = null) {
-  // Se userId fornecido, busca apenas conversas dos assuntos permitidos
+  const CAMPOS = 'id, cliente_instagram, assunto, coluna, nao_lidas, encerrado, created_at, updated_at'
+
+  let query = supabase
+    .from('conversas')
+    .select(CAMPOS)
+    .eq('tenant_id', tid(tenantId))
+
   if (userId) {
-    // Busca assuntos permitidos do usuário
-    const { data: userProfile } = await supabase
+    const { data: perfil } = await supabase
       .from('users_perfil')
-      .select('assuntos_permitidos')
+      .select('role, assuntos_permitidos')
       .eq('id', userId)
       .single()
 
-    const assuntosPermitidos = userProfile?.assuntos_permitidos || []
+    // Admin e master respondem por tudo. Para os demais, a caixa é recortada
+    // pelos assuntos liberados — sem essa exceção, uma mensagem que chega com
+    // assunto fora da lista de todo mundo não aparece para ninguém.
+    const veTudo = ['admin', 'master'].includes(perfil?.role)
 
-    // Se não tem nenhum assunto configurado, retorna vazio
-    if (assuntosPermitidos.length === 0) {
-      return []
+    if (!veTudo) {
+      const permitidos = perfil?.assuntos_permitidos || []
+      if (permitidos.length === 0) return []
+      query = query.in('assunto', permitidos)
     }
-
-    // Busca conversas apenas dos assuntos permitidos
-    const { data, error } = await supabase
-      .from('conversas')
-      .select('id, cliente_instagram, assunto, coluna, nao_lidas, encerrado, created_at, updated_at')
-      .eq('tenant_id', tid(tenantId))
-      .in('assunto', assuntosPermitidos)
-      .order('updated_at', { ascending: false })
-
-    if (error) throw error
-    return data || []
   }
 
-  // Se não tem userId (admin/master), retorna todas
-  const { data, error } = await supabase
-    .from('conversas')
-    .select('id, cliente_instagram, assunto, coluna, nao_lidas, encerrado, created_at, updated_at')
-    .eq('tenant_id', tid(tenantId))
-    .order('updated_at', { ascending: false })
+  const { data, error } = await query.order('updated_at', { ascending: false })
   if (error) throw error
   return data || []
 }

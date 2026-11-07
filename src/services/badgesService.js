@@ -41,16 +41,19 @@ export async function contarContatosNaoLidos(tenantId, userId = null) {
     .gt('nao_lidas', 0)
 
   if (userId) {
-    const { data: userProfile } = await supabase
+    const { data: perfil } = await supabase
       .from('users_perfil')
-      .select('assuntos_permitidos')
+      .select('role, assuntos_permitidos')
       .eq('id', userId)
       .single()
 
-    const assuntosPermitidos = userProfile?.assuntos_permitidos || []
-    if (assuntosPermitidos.length === 0) return 0
-
-    query = query.in('assunto', assuntosPermitidos)
+    // Admin e master contam tudo, igual à ContatosPage: sem isso, mensagem com
+    // assunto fora da lista de todo mundo não gera badge para ninguém.
+    if (!['admin', 'master'].includes(perfil?.role)) {
+      const permitidos = perfil?.assuntos_permitidos || []
+      if (permitidos.length === 0) return 0
+      query = query.in('assunto', permitidos)
+    }
   }
 
   const { data, error } = await query
