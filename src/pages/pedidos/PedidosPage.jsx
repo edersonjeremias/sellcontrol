@@ -726,16 +726,16 @@ export default function PedidosPage() {
   }, [])
 
   return (
-    <AppShell>
+    <AppShell hideTitle flush>
       <div style={{
-        padding: isMobile ? '8px' : '12px',
+        padding: isMobile ? '6px 8px 8px' : '6px 12px 12px',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
       }}>
         {/* ── FILTROS ── */}
-        <div style={{
+        <div className="expedicao-bar" style={{
           display: 'flex',
           gap: 6,
           flexWrap: 'wrap',
@@ -800,7 +800,7 @@ export default function PedidosPage() {
         </div>
 
         {/* ── AÇÕES ── */}
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="expedicao-bar" style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="btn-acao btn-blue" disabled={loading} onClick={handleBuscar}
             style={{ flex: 'none', minWidth: isMobile ? 70 : 80, fontSize: isMobile ? 13 : 12 }}>
             Buscar

@@ -841,6 +841,14 @@ tbody td { padding: 5px 5px; border-bottom: 1px solid var(--table-border); verti
 .btn-action-sm.hist:hover { background: rgba(255,255,255,0.05); transform: scale(1.05); }
 .btn-action-sm.del:hover { background: rgba(242,139,130,0.15); transform: scale(1.05); }
 
+/* ── EXPEDIÇÃO: campos na mesma altura dos botões de ação ── */
+.expedicao-bar input,
+.expedicao-bar select { height: 36px; }
+@media (max-width: 960px) {
+  .expedicao-bar input,
+  .expedicao-bar select { height: 48px; }
+}
+
 /* ── SCROLL TO TOP ── */
 #btnScrollTop { position: fixed; bottom: 80px; right: 30px; z-index: 9999; background: var(--blue); color: #171717; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; transition: transform 0.2s, opacity 0.3s; opacity: 0; pointer-events: none; }
 #btnScrollTop.show { opacity: 1; pointer-events: auto; }
