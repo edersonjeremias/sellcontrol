@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import AppShell from '../../components/ui/AppShell'
 import { useAuth } from '../../context/AuthContext'
+import { siteUrl } from '../../lib/siteUrl'
 import {
   STATUS_ENTREGA_OPTS, STATUS_PROD_OPTS, PACOTE_OPTS,
   createProducaoPedido, duplicateProducaoPedido, getProducaoData,
@@ -101,7 +102,7 @@ function buildWaRastreio(phone, clienteNome, rastreio, romaneio, tenantId) {
   const cod = (rastreio || '').trim()
 
   if (romaneio && tenantId) {
-    const pageUrl = `${window.location.origin}/rastreio?r=${romaneio}&t=${tenantId}&cod=${encodeURIComponent(cod)}`
+    const pageUrl = siteUrl(`/rastreio?r=${romaneio}&t=${tenantId}&cod=${encodeURIComponent(cod)}`)
     const msg = `${saudacao()} ${clienteNome || ''}, seu pedido está a caminho! Acompanhe aqui: ${pageUrl}`
     return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`
   }

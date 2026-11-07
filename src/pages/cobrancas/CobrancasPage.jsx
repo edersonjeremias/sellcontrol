@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
+import { siteUrl } from '../../lib/siteUrl'
 import AppShell from '../../components/ui/AppShell'
 import {
   formatMoeda, parseMoeda,
@@ -396,8 +397,8 @@ export default function CobrancasPage() {
 
   function copiarLink(cobranca) {
     const url = cobranca.link_codigo
-      ? `${window.location.origin}/r/${cobranca.link_codigo}`
-      : `${window.location.origin}/recibo/${cobranca.id}`
+      ? siteUrl(`/r/${cobranca.link_codigo}`)
+      : siteUrl(`/recibo/${cobranca.id}`)
     navigator.clipboard?.writeText(url)
       .then(() => { showToast('Link copiado!'); setSel(null) })
       .catch(() => showToast('Não foi possível copiar', 'error'))

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-
-const SITE_URL = 'https://sellcontrol.vercel.app'
+import { siteUrl } from '../../lib/siteUrl'
 
 const STATUS_LABEL = {
   PENDENTE:  'Pendente',
@@ -76,7 +75,7 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
   })()
 
   const pago = debito?.status_pagamento === 'PAGO'
-  const reciboUrl = debito ? `${SITE_URL}/recibo/${debito.id}` : null
+  const reciboUrl = debito ? siteUrl(`/recibo/${debito.id}`) : null
 
   return (
     <div className="portal-accordion-group">

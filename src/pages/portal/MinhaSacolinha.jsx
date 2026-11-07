@@ -11,8 +11,7 @@ import AlertaFrete       from '../../components/portal/AlertaFrete'
 import AvisoFrete        from '../../components/portal/AvisoFrete'
 import AccordionPecas    from '../../components/portal/AccordionPecas'
 import ModalEncerramento from '../../components/portal/ModalEncerramento'
-
-const SITE_URL = 'https://sellcontrol.vercel.app'
+import { siteUrl } from '../../lib/siteUrl'
 
 function fmtData(iso) {
   if (!iso) return ''
@@ -195,7 +194,7 @@ export default function MinhaSacolinha({ onIrParaFrete }) {
               {/* Lista de débitos */}
               {debitos.map(d => {
                 const cor = STATUS_COR[d.status] || STATUS_COR.PENDENTE
-                const reciboUrl = `${SITE_URL}/recibo/${d.id}`
+                const reciboUrl = siteUrl(`/recibo/${d.id}`)
                 return (
                   <div key={d.id} style={{
                     background:'var(--p-card)', border:'1px solid var(--p-border)',

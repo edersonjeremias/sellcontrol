@@ -5,6 +5,8 @@
 // que valida o token e devolve só os dados daquele romaneio.
 // ============================================================================
 
+import { siteUrl } from '../lib/siteUrl'
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -47,7 +49,7 @@ export const consultarStatus = (token) => chamar('status', token)
  * WhatsApp deixa de reconhecê-la inteira, então o toque não abre nada.
  */
 export const montarLinkFrete = (romaneio) => {
-  const base = window.location.origin
+  const base = siteUrl()
   if (typeof romaneio === 'string') return `${base}/frete/${romaneio}`
   return romaneio?.link_codigo
     ? `${base}/f/${romaneio.link_codigo}`

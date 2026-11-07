@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { siteUrl } from '../lib/siteUrl'
 import { getUserProfile, getPagesForUser } from '../services/authService'
 
 const AuthContext = createContext(null)
@@ -168,7 +169,7 @@ export function AuthProvider({ children }) {
   }, [loadProfile])
 
   const signInWithGoogle = useCallback(async () => {
-    const base = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') || window.location.origin
+    const base = siteUrl()
     const result = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${base}/dashboard` },

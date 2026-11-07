@@ -1,5 +1,6 @@
 import { supabase, supabasePublic } from '../lib/supabase'
 import { toDateOnly } from '../lib/datas'
+import { siteUrl } from '../lib/siteUrl'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
 
@@ -266,9 +267,9 @@ export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live,
     external_reference: String(idCobranca),
     notification_url: WEBHOOK_URL,
     back_urls: {
-      success: 'https://sellcontrol.vercel.app/cobrancas',
-      failure: 'https://sellcontrol.vercel.app/cobrancas',
-      pending: 'https://sellcontrol.vercel.app/cobrancas',
+      success: siteUrl('/cobrancas'),
+      failure: siteUrl('/cobrancas'),
+      pending: siteUrl('/cobrancas'),
     },
     auto_return: 'approved',
   }
@@ -342,9 +343,9 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
       external_reference: `${cobranca.id}-P${parte}`,
       notification_url: WEBHOOK_URL,
       back_urls: {
-        success: `https://sellcontrol.vercel.app/recibo/${cobranca.id}`,
-        failure:  `https://sellcontrol.vercel.app/recibo/${cobranca.id}`,
-        pending:  `https://sellcontrol.vercel.app/recibo/${cobranca.id}`,
+        success: siteUrl(`/recibo/${cobranca.id}`),
+        failure: siteUrl(`/recibo/${cobranca.id}`),
+        pending: siteUrl(`/recibo/${cobranca.id}`),
       },
       auto_return: 'approved',
     }

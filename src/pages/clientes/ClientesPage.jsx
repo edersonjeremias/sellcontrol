@@ -9,6 +9,7 @@ import {
   searchClientesAvancada, countClientesAvancada,
 } from '../../services/clientesService'
 import { supabase } from '../../lib/supabase'
+import { siteUrl } from '../../lib/siteUrl'
 import { formatDateBr } from '../../lib/datas'
 
 const LABEL = {
@@ -268,8 +269,8 @@ export default function ClientesPage() {
       const login        = json.login
       const senha        = json.senha
       const urlPortal    = slug
-        ? `${window.location.origin}/portal/${slug}`
-        : `${window.location.origin}/portal`
+        ? siteUrl(`/portal/${slug}`)
+        : siteUrl('/portal')
       let   phoneWa      = phone
       if (!phoneWa.startsWith('55')) phoneWa = '55' + phoneWa
 

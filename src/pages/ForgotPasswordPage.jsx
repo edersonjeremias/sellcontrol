@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { siteUrl } from '../lib/siteUrl'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -20,7 +21,7 @@ export default function ForgotPasswordPage() {
 
     setLoading(true)
     try {
-      const base = import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') || window.location.origin
+      const base = siteUrl()
       const redirectTo = `${base}/reset-password`
       const { error: resendError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
       if (resendError) throw resendError
