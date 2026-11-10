@@ -144,7 +144,7 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
     setEnviando(true)
     try {
       const arquivos = await anexos.subir()
-      await responderAdmin(conversa.id, resposta.trim(), arquivos, profile?.nome)
+      await responderAdmin(conversa.id, resposta.trim(), arquivos, profile?.nome?.trim() || profile?.username)
       setResposta('')
       anexos.limpar()
       const msgs = await getMensagens(conversa.id)

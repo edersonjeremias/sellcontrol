@@ -47,7 +47,7 @@ function normalizePages(data) {
 export async function getUserProfile(userId) {
   return supabase
     .from('users_perfil')
-    .select('id, nome, role, tenant_id')
+    .select('id, nome, username, role, tenant_id')
     .eq('id', userId)
     .single()
 }
