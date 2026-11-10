@@ -1491,12 +1491,30 @@ export default function EtiquetasPage() {
                       {modalAberto.servico || '-'}
                     </div>
                   </div>
-                  <div>
-                    <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>Valor Frete</div>
-                    <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
-                      {modalAberto.valor_frete ? `R$ ${Number(modalAberto.valor_frete).toFixed(2)}` : '-'}
-                    </div>
-                  </div>
+                  {/* O que a cliente pagou (com a margem) em primeiro plano;
+                      o custo da postagem fica como referência embaixo */}
+                  {(() => {
+                    const pag = pagamentoDoRomaneio(modalAberto)
+                    const custo = modalAberto.valor_frete
+                      ? `R$ ${Number(modalAberto.valor_frete).toFixed(2)}`
+                      : '-'
+
+                    return (
+                      <div>
+                        <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>
+                          {pag ? 'Pago pela cliente' : 'Valor Frete'}
+                        </div>
+                        <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
+                          {pag ? `R$ ${Number(pag.valor).toFixed(2)}` : custo}
+                        </div>
+                        {pag && (
+                          <div style={{ color: '#9aa0a6', fontSize: 11, marginTop: 2 }}>
+                            custo da postagem: {custo}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
                   <div>
                     <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>Prazo</div>
                     <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
