@@ -309,6 +309,28 @@ export async function toggleBloqueio(tenantId, instagram, bloqueado) {
   return { data, error }
 }
 
+// O bloqueio do portal mora em portal_clientes, tabela que o login consulta.
+// É separado de clientes.bloqueado, que vale só para as vendas.
+const slugPortal = (instagram) => String(instagram || '').replace('@', '').toLowerCase()
+
+// null = cliente ainda não tem acesso ao portal criado
+export async function getPortalBloqueado(instagram) {
+  const { data } = await supabase
+    .from('portal_clientes')
+    .select('bloqueado')
+    .eq('instagram', slugPortal(instagram))
+    .maybeSingle()
+  return data ? !!data.bloqueado : null
+}
+
+export async function togglePortalBloqueado(instagram, bloqueado) {
+  const { error } = await supabase
+    .from('portal_clientes')
+    .update({ bloqueado })
+    .eq('instagram', slugPortal(instagram))
+  return { error }
+}
+
 export async function deleteCliente(tenantId, instagram) {
   const { error } = await supabase
     .from('clientes')

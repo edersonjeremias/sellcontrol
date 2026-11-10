@@ -6,6 +6,7 @@ const Ctx = createContext(null)
 export function PortalAuthProvider({ children, tenantId }) {
   const [cliente, setCliente] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [bloqueado, setBloqueado] = useState(false)
 
   async function loadCliente(uid) {
     const { data } = await portalSb
@@ -13,6 +14,18 @@ export function PortalAuthProvider({ children, tenantId }) {
       .select('*')
       .eq('user_id', uid)
       .single()
+
+    // Encerra a sessão em vez de deixar entrar: as RPCs do portal também não
+    // respondem para quem está bloqueado, então ele veria um portal vazio sem
+    // entender o motivo.
+    if (data?.bloqueado) {
+      await portalSb.auth.signOut()
+      setCliente(null)
+      setBloqueado(true)
+      setLoading(false)
+      return
+    }
+
     setCliente(data || null)
     setLoading(false)
   }
@@ -32,6 +45,7 @@ export function PortalAuthProvider({ children, tenantId }) {
   }, [])
 
   async function login(instagram, senha) {
+    setBloqueado(false)
     const insta = instagram.trim().replace(/^@/, '').toLowerCase()
     const email = `${insta}@portal.vmkids.com.br`
     const { error } = await portalSb.auth.signInWithPassword({ email, password: senha })
@@ -49,7 +63,7 @@ export function PortalAuthProvider({ children, tenantId }) {
   }
 
   return (
-    <Ctx.Provider value={{ cliente, loading, login, logout, refreshCliente, tenantId }}>
+    <Ctx.Provider value={{ cliente, loading, bloqueado, login, logout, refreshCliente, tenantId }}>
       {children}
     </Ctx.Provider>
   )

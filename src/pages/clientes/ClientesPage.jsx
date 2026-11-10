@@ -5,7 +5,7 @@ import AppShell from '../../components/ui/AppShell'
 import ModalConfirmacao from '../../components/ui/ModalConfirmacao'
 import {
   getClientes, saveCliente, toggleBloqueio,
-  deleteCliente, saveDetalhes, searchClientes,
+  deleteCliente, saveDetalhes, getPortalBloqueado, togglePortalBloqueado, searchClientes,
   searchClientesAvancada, countClientesAvancada,
 } from '../../services/clientesService'
 import { supabase } from '../../lib/supabase'
@@ -46,6 +46,7 @@ export default function ClientesPage() {
   const [saving,        setSaving]        = useState(false)
   const [confirmacao,   setConfirmacao]   = useState(null)
   const [showDados,     setShowDados]     = useState(false)
+  const [portalBloq,    setPortalBloq]    = useState(null)
   const [showDrop,      setShowDrop]      = useState(false)
   const [needsMigration, setNeedsMigration] = useState(false)
   const [searchResults, setSearchResults] = useState([])
@@ -159,6 +160,31 @@ export default function ClientesPage() {
       // NÃO limpar form - mantém campos para permitir múltiplas edições
     } catch (e) {
       showToast('Erro: ' + (e.message || String(e)), 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // null enquanto carrega ou quando o cliente não tem acesso ao portal
+  useEffect(() => {
+    if (!current) { setPortalBloq(null); return }
+    let valido = true
+    getPortalBloqueado(current)
+      .then(v => { if (valido) setPortalBloq(v) })
+      .catch(() => { if (valido) setPortalBloq(null) })
+    return () => { valido = false }
+  }, [current])
+
+  const handleTogglePortal = async (bloquear) => {
+    if (!current) return
+    setSaving(true)
+    try {
+      const { error } = await togglePortalBloqueado(current, bloquear)
+      if (error) throw error
+      setPortalBloq(bloquear)
+      showToast(bloquear ? 'Acesso ao portal BLOQUEADO!' : 'Acesso ao portal LIBERADO!', bloquear ? 'error' : 'success')
+    } catch (e) {
+      showToast('Erro: ' + e.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -738,6 +764,20 @@ Qualquer dúvida, estamos à disposição! 😊`
                     </button>
                   )
                 }
+                {portalBloq !== null && (
+                  portalBloq
+                    ? (
+                      <button onClick={() => handleTogglePortal(false)} disabled={saving} className="btn-acao btn-green" style={{ flex: '1 1 110px', minWidth: 0 }} title="Liberar o acesso do cliente ao portal">
+                        <span className="material-icons" style={{ fontSize: 16 }}>lock_open</span>
+                        LIB. PORTAL
+                      </button>
+                    ) : (
+                      <button onClick={() => handleTogglePortal(true)} disabled={saving} className="btn-acao" style={{ flex: '1 1 110px', minWidth: 0, background: 'transparent', border: '1px solid #fbbc04', color: '#fbbc04' }} title="Bloquear o acesso do cliente ao portal">
+                        <span className="material-icons" style={{ fontSize: 16 }}>lock</span>
+                        BLOQ. PORTAL
+                      </button>
+                    )
+                )}
                 <button onClick={handleExcluir} disabled={saving} className="btn-acao" style={{ flex: '1 1 80px', minWidth: 0, background: 'rgba(242,139,130,0.1)', border: '1px solid var(--red)', color: 'var(--red)' }}>
                   <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
                   EXCLUIR

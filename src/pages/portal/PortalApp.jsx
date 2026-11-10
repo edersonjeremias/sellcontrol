@@ -8,7 +8,35 @@ import { supabase } from '../../lib/supabase'
 import '../../styles/portal.css'
 
 function PortalGate({ tenantId, nomeEmpresa }) {
-  const { cliente, loading } = usePortalAuth()
+  const { cliente, loading, bloqueado } = usePortalAuth()
+
+  if (bloqueado) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 16,
+        padding: 20,
+        textAlign: 'center',
+      }}>
+        <div style={{ fontSize: 48 }}>🔒</div>
+        <h2 style={{ color: '#e8eaed', margin: 0 }}>Acesso indisponível</h2>
+        <p style={{ color: '#9aa0a6', margin: 0, lineHeight: 1.6 }}>
+          Seu acesso ao portal está temporariamente suspenso.<br />
+          Fale com a loja para liberar.
+        </p>
+        <button
+          className="portal-btn portal-btn-gray"
+          onClick={() => window.location.reload()}
+        >
+          Tentar de novo
+        </button>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
