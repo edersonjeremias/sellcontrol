@@ -82,6 +82,20 @@ export default function MeuFrete() {
 
       if (endsError) throw endsError
 
+      // romaneios.valor_frete guarda o custo da transportadora, sem a margem
+      // da loja. O que o cliente pagou está em pagamentos_frete e não muda se
+      // a margem for alterada depois — é esse valor que ele espera rever.
+      if (romsComItens.length > 0) {
+        const { data: pagos } = await portalSb
+          .from('pagamentos_frete')
+          .select('romaneio_id, valor')
+          .in('romaneio_id', romsComItens.map(r => r.id))
+          .eq('status', 'aprovado')
+
+        const porRomaneio = new Map((pagos || []).map(p => [p.romaneio_id, Number(p.valor)]))
+        romsComItens.forEach(r => { r.valor_pago = porRomaneio.get(r.id) ?? null })
+      }
+
       setRomaneios(romsComItens)
       setEnderecos(endsData || [])
 
@@ -119,6 +133,10 @@ export default function MeuFrete() {
     carregar()
     carregarMargem()
   }, [carregar, carregarMargem])
+
+  // Já pago: mostra o que foi cobrado. Ainda em aberto: custo + margem atual.
+  const valorFrete = (rom) =>
+    rom.valor_pago ?? Number(rom.valor_frete || 0) * (1 + margemFrete / 100)
 
   const handleCotarFrete = async (romaneio) => {
     console.log('🚚 Iniciando cotação de frete', { romaneio, enderecoSelecionado })
@@ -539,7 +557,7 @@ O PIX é gerado em seguida.`,
                       {rom.transportadora} - {rom.servico}
                     </div>
                     <div style={{ color: '#9aa0a6', fontSize: 13 }}>
-                      Valor: R$ {(rom.valor_frete || 0).toFixed(2)} • Prazo: {rom.prazo_entrega || 0} dia(s) útil(is)
+                      Valor: R$ {valorFrete(rom).toFixed(2)} • Prazo: {rom.prazo_entrega || 0} dia(s) útil(is)
                     </div>
                     <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                       <button
@@ -594,7 +612,7 @@ O PIX é gerado em seguida.`,
                     {rom.transportadora && (
                       <div style={{ color: '#e8eaed', fontSize: 13, marginBottom: 10 }}>
                         📦 {rom.transportadora} - {rom.servico}<br />
-                        💰 Frete: R$ {(rom.valor_frete || 0).toFixed(2)} • ⏱️ {rom.prazo_entrega || 0} dia(s)
+                        💰 Frete: R$ {valorFrete(rom).toFixed(2)} • ⏱️ {rom.prazo_entrega || 0} dia(s)
                       </div>
                     )}
                     {rom.codigo_rastreio && (
@@ -640,7 +658,7 @@ O PIX é gerado em seguida.`,
                           if (pag) {
                             setRecibo({
                               numero: rom.numero,
-                              valor: rom.valor_frete || 0,
+                              valor: valorFrete(rom),
                               status: pag.status,
                               pago_em: pag.pago_em,
                               transacao: pag.gateway_transaction_id,
