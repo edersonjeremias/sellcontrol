@@ -318,7 +318,7 @@ export async function getPortalBloqueado(instagram) {
   const { data } = await supabase
     .from('portal_clientes')
     .select('bloqueado')
-    .eq('instagram', slugPortal(instagram))
+    .ilike('instagram', slugPortal(instagram))
     .maybeSingle()
   return data ? !!data.bloqueado : null
 }
@@ -327,7 +327,7 @@ export async function togglePortalBloqueado(instagram, bloqueado) {
   const { error } = await supabase
     .from('portal_clientes')
     .update({ bloqueado })
-    .eq('instagram', slugPortal(instagram))
+    .ilike('instagram', slugPortal(instagram))
   return { error }
 }
 
