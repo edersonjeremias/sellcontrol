@@ -214,6 +214,8 @@ export default function EtiquetasPage() {
   // Confirmações em modal, no lugar de window.confirm e prompt
   const [pergunta, setPergunta] = useState(null)
   const [historicoDe, setHistoricoDe] = useState(null)
+  // Margem da loja: o modal mostra o valor que a cliente paga, nunca o custo
+  const [margemFrete, setMargemFrete] = useState(0)
 
   // O cabeçalho da tabela gruda logo abaixo da barra de filtros, que muda
   // de altura quando os campos quebram em várias linhas no celular
@@ -264,6 +266,14 @@ export default function EtiquetasPage() {
       // O Melhor Envio só devolve o código depois que a transportadora
       // registra o objeto, então buscamos os que ainda estão sem rastreio
       await sincronizarRastreio({ tenant_id: tenantId })
+
+      const { data: cfg } = await supabase
+        .from('configuracoes')
+        .select('margem_frete')
+        .eq('tenant_id', tenantId)
+        .maybeSingle()
+
+      setMargemFrete(Number(cfg?.margem_frete ?? 0))
 
       const { data, error } = await supabase
         .from('romaneios')
@@ -1491,27 +1501,23 @@ export default function EtiquetasPage() {
                       {modalAberto.servico || '-'}
                     </div>
                   </div>
-                  {/* O que a cliente pagou (com a margem) em primeiro plano;
-                      o custo da postagem fica como referência embaixo */}
+                  {/* Só o valor pago pela cliente: o custo da postagem é
+                      informação financeira da loja e não aparece aqui */}
                   {(() => {
                     const pag = pagamentoDoRomaneio(modalAberto)
-                    const custo = modalAberto.valor_frete
-                      ? `R$ ${Number(modalAberto.valor_frete).toFixed(2)}`
-                      : '-'
 
                     return (
                       <div>
                         <div style={{ color: '#9aa0a6', fontSize: 11, marginBottom: 4 }}>
-                          {pag ? 'Pago pela cliente' : 'Valor Frete'}
+                          {pag ? 'Pago pela cliente' : 'Valor do Frete'}
                         </div>
                         <div style={{ color: '#e8eaed', fontWeight: 600, fontSize: 14 }}>
-                          {pag ? `R$ ${Number(pag.valor).toFixed(2)}` : custo}
+                          {pag
+                            ? `R$ ${Number(pag.valor).toFixed(2)}`
+                            : (modalAberto.valor_frete
+                                ? `R$ ${(Number(modalAberto.valor_frete) * (1 + margemFrete / 100)).toFixed(2)}`
+                                : '-')}
                         </div>
-                        {pag && (
-                          <div style={{ color: '#9aa0a6', fontSize: 11, marginTop: 2 }}>
-                            custo da postagem: {custo}
-                          </div>
-                        )}
                       </div>
                     )
                   })()}
