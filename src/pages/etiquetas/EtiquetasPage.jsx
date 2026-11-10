@@ -352,29 +352,50 @@ export default function EtiquetasPage() {
     setRomaneiosFiltrados(filtrados)
   }, [romaneios, busca, statusFiltro, dataInicio, dataFim])
 
+  /** Link público do romaneio, criando token e código se ainda não existirem */
+  const garantirLink = async (rom) => {
+    let { link_token: linkToken, link_codigo: linkCodigo } = rom
+
+    // Romaneio antigo que ficou sem token/código: gera na hora
+    if (!linkToken || !linkCodigo) {
+      linkToken = linkToken || crypto.randomUUID()
+      linkCodigo = linkCodigo || crypto.randomUUID().replace(/-/g, '').slice(0, 10)
+
+      const { error } = await supabase
+        .from('romaneios')
+        .update({ link_token: linkToken, link_codigo: linkCodigo })
+        .eq('id', rom.id)
+
+      if (error) throw error
+
+      const novos = { link_token: linkToken, link_codigo: linkCodigo }
+      setRomaneios(prev => prev.map(r => r.id === rom.id ? { ...r, ...novos } : r))
+      setModalAberto(m => (m && m.id === rom.id ? { ...m, ...novos } : m))
+    }
+
+    return montarLinkFrete({ link_token: linkToken, link_codigo: linkCodigo })
+  }
+
+  // Copia o link do romaneio: serve em qualquer status, inclusive depois de
+  // gerada a etiqueta, quando a cliente ainda quer acompanhar o pedido
+  const handleCopiarLinkFrete = async (rom) => {
+    try {
+      const link = await garantirLink(rom)
+      await navigator.clipboard.writeText(link)
+      showGlobalToast(`Link do ${rom.numero} copiado`)
+    } catch (err) {
+      console.error('Erro ao copiar link:', err)
+      setErroModal({
+        titulo: 'Não foi possível copiar o link',
+        mensagem: err.message || 'Tente novamente.',
+      })
+    }
+  }
+
   // Abre o WhatsApp do cliente com o link onde ele mesmo cota e paga o frete
   const handleEnviarLinkFrete = async (rom) => {
     try {
-      let { link_token: linkToken, link_codigo: linkCodigo } = rom
-
-      // Romaneio antigo que ficou sem token/código: gera na hora
-      if (!linkToken || !linkCodigo) {
-        linkToken = linkToken || crypto.randomUUID()
-        linkCodigo = linkCodigo || crypto.randomUUID().replace(/-/g, '').slice(0, 10)
-
-        const { error } = await supabase
-          .from('romaneios')
-          .update({ link_token: linkToken, link_codigo: linkCodigo })
-          .eq('id', rom.id)
-
-        if (error) throw error
-
-        const novos = { link_token: linkToken, link_codigo: linkCodigo }
-        setRomaneios(prev => prev.map(r => r.id === rom.id ? { ...r, ...novos } : r))
-        setModalAberto(m => (m && m.id === rom.id ? { ...m, ...novos } : m))
-      }
-
-      const link = montarLinkFrete({ link_token: linkToken, link_codigo: linkCodigo })
+      const link = await garantirLink(rom)
       const insta = String(rom.cliente_instagram || '').replace('@', '')
       const fone = String(whatsPorInstagram[insta.toLowerCase()] || '').replace(/\D/g, '')
 
@@ -1025,7 +1046,7 @@ export default function EtiquetasPage() {
             <div className="grid-header-fixo" style={{
               top: alturaBarra,
               display: isMobile ? 'none' : 'grid',
-              gridTemplateColumns: '110px 1fr 100px 100px 120px 250px 44px',
+              gridTemplateColumns: '110px 1fr 100px 100px 120px 250px 82px',
               gap: 16,
               padding: '14px 20px',
               borderTopLeftRadius: 12,
@@ -1060,7 +1081,7 @@ export default function EtiquetasPage() {
                   style={{
                     display: isMobile ? 'flex' : 'grid',
                     flexDirection: isMobile ? 'column' : undefined,
-                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 250px 44px',
+                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 250px 82px',
                     gap: isMobile ? 6 : 16,
                     padding: isMobile ? '12px 14px' : '16px 20px',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -1308,12 +1329,24 @@ export default function EtiquetasPage() {
                   </button>
                 </div>
 
-                {/* Histórico: mesmo botão da expedição, no canto direito */}
+                {/* Link e histórico: disponíveis em qualquer status */}
                 <div
                   onClick={(e) => e.stopPropagation()}
                   className="acoes-wrapper"
                   style={{ justifyContent: isMobile ? 'flex-start' : 'center' }}
                 >
+                  <button
+                    type="button"
+                    className="btn-action-sm copy"
+                    title="Copiar link do romaneio"
+                    onClick={(e) => { e.stopPropagation(); handleCopiarLinkFrete(rom) }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                  </button>
+
                   <button
                     type="button"
                     className="btn-action-sm hist"
