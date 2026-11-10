@@ -32,7 +32,7 @@ const STATUS_COR = {
 }
 
 // ── Thread de mensagens ────────────────────────────────────────
-function ThreadConversa({ conversa, instagram, onVoltar }) {
+function ThreadConversa({ conversa, instagram, onVoltar, nomeEmpresa }) {
   const toast = usePortalToast()
   const [msgs, setMsgs]       = useState([])
   const [texto, setTexto]     = useState('')
@@ -117,7 +117,7 @@ function ThreadConversa({ conversa, instagram, onVoltar }) {
                 <AnexosMensagem anexos={m.anexos} tema="portal" />
               </div>
               <span style={{ fontSize:10, color:'var(--p-muted)', marginTop:3 }}>
-                {isCliente ? 'Você' : 'VM Kids'} · {fmtHora(m.created_at)}
+                {isCliente ? 'Você' : (m.autor_nome || nomeEmpresa || 'Loja')} · {fmtHora(m.created_at)}
               </span>
             </div>
           )
@@ -257,7 +257,7 @@ function NovaConversa({ onEnviada, onCancelar }) {
 }
 
 // ════════════════════════════════════════════════════════════════
-export default function MeuContato({ onAtualizar }) {
+export default function MeuContato({ onAtualizar, nomeEmpresa }) {
   const toast = usePortalToast()
   const [conversas,   setConversas]   = useState([])
   const [loading,     setLoading]     = useState(true)
@@ -298,6 +298,7 @@ export default function MeuContato({ onAtualizar }) {
       {tela === 'thread' && selConv && (
         <ThreadConversa
           conversa={selConv}
+          nomeEmpresa={nomeEmpresa}
           onVoltar={() => { setTela('lista'); carregar() }}
         />
       )}

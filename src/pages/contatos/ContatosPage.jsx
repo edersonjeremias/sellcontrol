@@ -112,6 +112,7 @@ function KanbanCard({ conversa, onAbrir, onMover, colunas }) {
 // ── Modal de conversa ──────────────────────────────────────────
 function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
   const { showToast } = useApp()
+  const { profile } = useAuth()
   const [mensagens, setMensagens]   = useState([])
   const [resposta, setResposta]     = useState('')
   const [enviando, setEnviando]     = useState(false)
@@ -143,7 +144,7 @@ function ModalConversa({ conversa, onClose, onAtualizar, colunas, tenantId }) {
     setEnviando(true)
     try {
       const arquivos = await anexos.subir()
-      await responderAdmin(conversa.id, resposta.trim(), arquivos)
+      await responderAdmin(conversa.id, resposta.trim(), arquivos, profile?.nome)
       setResposta('')
       anexos.limpar()
       const msgs = await getMensagens(conversa.id)

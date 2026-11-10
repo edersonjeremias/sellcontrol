@@ -76,10 +76,18 @@ export async function getMensagens(conversaId) {
   return data || []
 }
 
-export async function responderAdmin(conversaId, texto, anexos = []) {
+// autorNome é gravado na mensagem, e não resolvido na leitura: o cliente
+// continua vendo quem o atendeu mesmo que a pessoa saia da equipe depois.
+export async function responderAdmin(conversaId, texto, anexos = [], autorNome = null) {
   const { error } = await supabase
     .from('mensagens_contato')
-    .insert([{ conversa_id: conversaId, remetente: 'admin', texto: texto || '', anexos }])
+    .insert([{
+      conversa_id: conversaId,
+      remetente: 'admin',
+      texto: texto || '',
+      anexos,
+      autor_nome: autorNome || null,
+    }])
   if (error) throw error
   await supabase.from('conversas')
     .update({ updated_at: new Date().toISOString(), nao_lidas: 0 })

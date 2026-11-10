@@ -738,7 +738,6 @@ Qualquer dúvida, estamos à disposição! 😊`
             display: 'flex', flexWrap: 'wrap', gap: 8,
           }}>
             <button onClick={handleSalvar} disabled={saving} className="btn-acao btn-blue" style={{ flex: '2 1 120px', minWidth: 0 }}>
-              <span className="material-icons" style={{ fontSize: 16 }}>save</span>
               SALVAR
             </button>
             {isEditing && (
@@ -748,18 +747,15 @@ Qualquer dúvida, estamos à disposição! 😊`
                   className="btn-acao"
                   style={{ flex: '1 1 80px', minWidth: 0, background: 'transparent', border: '1px solid var(--blue)', color: 'var(--blue)' }}
                 >
-                  <span className="material-icons" style={{ fontSize: 16 }}>edit_document</span>
                   DADOS
                 </button>
                 {bloqueado
                   ? (
                     <button onClick={() => handleToggleBloqueio(false)} disabled={saving} className="btn-acao btn-green" style={{ flex: '1 1 80px', minWidth: 0 }}>
-                      <span className="material-icons" style={{ fontSize: 16 }}>check</span>
                       LIBERAR
                     </button>
                   ) : (
                     <button onClick={() => handleToggleBloqueio(true)} disabled={saving} className="btn-acao" style={{ flex: '1 1 80px', minWidth: 0, background: '#fbbc04', color: '#171717' }}>
-                      <span className="material-icons" style={{ fontSize: 16 }}>block</span>
                       BLOQ
                     </button>
                   )
@@ -768,18 +764,15 @@ Qualquer dúvida, estamos à disposição! 😊`
                   portalBloq
                     ? (
                       <button onClick={() => handleTogglePortal(false)} disabled={saving} className="btn-acao btn-green" style={{ flex: '1 1 110px', minWidth: 0 }} title="Liberar o acesso do cliente ao portal">
-                        <span className="material-icons" style={{ fontSize: 16 }}>lock_open</span>
                         LIB. PORTAL
                       </button>
                     ) : (
                       <button onClick={() => handleTogglePortal(true)} disabled={saving} className="btn-acao" style={{ flex: '1 1 110px', minWidth: 0, background: 'transparent', border: '1px solid #fbbc04', color: '#fbbc04' }} title="Bloquear o acesso do cliente ao portal">
-                        <span className="material-icons" style={{ fontSize: 16 }}>lock</span>
                         BLOQ. PORTAL
                       </button>
                     )
                 )}
                 <button onClick={handleExcluir} disabled={saving} className="btn-acao" style={{ flex: '1 1 80px', minWidth: 0, background: 'rgba(242,139,130,0.1)', border: '1px solid var(--red)', color: 'var(--red)' }}>
-                  <span className="material-icons" style={{ fontSize: 16 }}>delete</span>
                   EXCLUIR
                 </button>
               </>

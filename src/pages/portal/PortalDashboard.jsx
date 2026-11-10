@@ -78,7 +78,7 @@ export default function PortalDashboard({ nomeEmpresa = 'Portal' }) {
         {aba === 'sacola'    && <MinhaSacolinha onIrParaFrete={() => setAba('frete')} />}
         {aba === 'frete'     && <MeuFrete />}
         {aba === 'enderecos' && <MeusEnderecos />}
-        {aba === 'contato'   && <MeuContato onAtualizar={() => setTotalNovas(0)} />}
+        {aba === 'contato'   && <MeuContato onAtualizar={() => setTotalNovas(0)} nomeEmpresa={nomeEmpresa} />}
         {aba === 'cadastro'  && <MeuCadastro />}
       </div>
     </div>
