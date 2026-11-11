@@ -6,7 +6,8 @@ import {
   DIAS_SEMANA, diasTrabalhoSet,
 } from '../../services/rhService'
 import { jornadaDe, fmtHoras } from '../../services/pontoService'
-import { S, Campo, Modal, ModalConfirma, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
+import { S, Campo, Modal, ModalConfirma, IconClip, IconEdit, IconTrash, IconUndo, IconWhats } from './RhUI'
+import ModalDocumentos from './ModalDocumentos'
 
 const TIPOS_CONTRATO = ['CLT', 'PJ', 'Diarista', 'Freelancer', 'Estágio', 'Temporário']
 
@@ -32,6 +33,7 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
   const [form,       setForm]       = useState(FORM_VAZIO)
   const [salvando,   setSalvando]   = useState(false)
   const [confirmDel, setConfirmDel] = useState(null)
+  const [modalDocs,  setModalDocs]  = useState(null)
 
   // Horas do dia saem da jornada, não de um campo digitado à parte
   const jornadaDoForm = jornadaDe(form)
@@ -206,6 +208,14 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
                 </div>
                 {!f.ativo && <span className="rh-badge off">Inativo</span>}
                 <div className="rh-row-acoes">
+                  <button onClick={() => setModalDocs(f)}
+                    className={`btn-action-sm anexo${(f.documentos?.length || 0) ? ' tem' : ''}`}
+                    title="Contrato assinado e outros documentos">
+                    <IconClip />
+                    {(f.documentos?.length || 0) > 0 && (
+                      <span className="rh-anexo-qtd">{f.documentos.length}</span>
+                    )}
+                  </button>
                   <button onClick={() => whats(f)} className="btn-action-sm wpp" title="Abrir WhatsApp">
                     <IconWhats />
                   </button>
@@ -400,6 +410,16 @@ export default function AbaFuncionarios({ tenantId, showToast, funcionarios, rec
             </label>
           </div>
         </Modal>
+      )}
+
+      {modalDocs && (
+        <ModalDocumentos
+          funcionario={modalDocs}
+          tenantId={tenantId}
+          showToast={showToast}
+          onFechar={() => setModalDocs(null)}
+          onAtualizar={recarregarFuncionarios}
+        />
       )}
 
       {confirmDel && (

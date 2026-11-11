@@ -490,6 +490,60 @@ export async function atualizarComprovantes(lancamentoId, comprovantes) {
 }
 
 // ════════════════════════════════════════════════════════════════
+// DOCUMENTOS DO FUNCIONÁRIO (contrato assinado, RG, exames…)
+// ════════════════════════════════════════════════════════════════
+// Mesmo bucket privado dos comprovantes, em pasta própria. Guarda o nome
+// dado por quem anexou junto do caminho: numa lista de papéis, "contrato
+// assinado" e "aditivo 2026" precisam se distinguir.
+const MAX_DOCUMENTOS = 12
+const MAX_TAMANHO_DOC = 10 * 1024 * 1024
+
+export const LIMITE_DOCUMENTOS = MAX_DOCUMENTOS
+
+export async function uploadDocumentoFuncionario(file, funcionarioId, tenantId) {
+  if (!TIPOS_COMPROVANTE.includes(file.type)) {
+    throw new Error('Formato não suportado. Use JPG, PNG, WEBP ou PDF.')
+  }
+  if (file.size > MAX_TAMANHO_DOC) {
+    throw new Error('Arquivo muito grande. Máximo 10MB.')
+  }
+
+  const extensao = (file.name.split('.').pop() || 'pdf').toLowerCase()
+  const caminho  = `${tid(tenantId)}/funcionarios/${funcionarioId}/${Date.now()}.${extensao}`
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_COMPROVANTES)
+    .upload(caminho, file, { cacheControl: '3600', upsert: false })
+
+  if (error) {
+    if (error.message?.toLowerCase().includes('bucket')) {
+      throw new Error('Bucket "rh-comprovantes" não existe no Storage do Supabase.')
+    }
+    if (error.message?.toLowerCase().includes('size')) {
+      throw new Error('O arquivo passou do limite do bucket. Rode a migration 20261111_rh_documentos.sql.')
+    }
+    throw new Error('Erro ao enviar o arquivo: ' + error.message)
+  }
+
+  return {
+    caminho:    data.path,
+    // Nome original sem a extensão: é o que a pessoa reconhece na lista
+    nome:       file.name.replace(/\.[^.]+$/, '').slice(0, 80),
+    enviado_em: new Date().toISOString(),
+  }
+}
+
+export async function atualizarDocumentos(funcionarioId, documentos) {
+  const { error } = await supabase.from('funcionarios')
+    .update({ documentos }).eq('id', funcionarioId)
+  if (!error) return
+  if (error.message?.includes('documentos')) {
+    throw new Error('Rode a migration 20261111_rh_documentos.sql no Supabase.')
+  }
+  throw error
+}
+
+// ════════════════════════════════════════════════════════════════
 // FALTAS, ATRASOS E OCORRÊNCIAS
 // ════════════════════════════════════════════════════════════════
 export const TIPOS_OCORRENCIA = ['FALTA', 'ATRASO', 'SAIDA_ANTECIPADA', 'ATESTADO', 'FOLGA']
