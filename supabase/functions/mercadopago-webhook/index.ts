@@ -124,6 +124,23 @@ serve(async (req) => {
           // Pagamento normal de cobrança
           const cobrancaId = extRef
 
+          // PIX com desconto cobra menos que o total. Sem corrigir o total aqui,
+          // o relatório (que soma cobrancas.total) mostraria mais do que entrou.
+          const { data: cob } = await supabase
+            .from('cobrancas')
+            .select('pix_payment_id, pix_valor, pix_desconto_valor')
+            .eq('id', cobrancaId)
+            .maybeSingle()
+
+          const pagouPixComDesconto =
+            cob?.pix_payment_id === String(paymentId) &&
+            Number(cob?.pix_desconto_valor || 0) > 0 &&
+            Number(cob?.pix_valor || 0) > 0
+
+          if (pagouPixComDesconto) {
+            console.log(`Cobrança ${cobrancaId}: desconto PIX de ${cob!.pix_desconto_valor}, total vai para ${cob!.pix_valor}`)
+          }
+
           const { error } = await supabase
             .from('cobrancas')
             .update({
@@ -131,6 +148,7 @@ serve(async (req) => {
               data_pagamento: dataPagamento,
               id_mp: String(paymentId),
               valor_liquido: valorLiquido,
+              ...(pagouPixComDesconto ? { total: Number(cob!.pix_valor) } : {}),
             })
             .eq('id', cobrancaId)
             .neq('status', 'PAGO')

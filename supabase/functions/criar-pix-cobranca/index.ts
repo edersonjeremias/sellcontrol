@@ -82,13 +82,32 @@ serve(async (req) => {
     const total = Number(cobranca.total)
     if (!(total > 0)) return json({ error: 'Valor do pedido inválido' }, 422)
 
+    const { data: config } = await supabase
+      .from('configuracoes')
+      .select('mp_access_token, nome_loja, desconto_pix_percentual')
+      .eq('tenant_id', cobranca.tenant_id)
+      .maybeSingle()
+
+    const token = String(config?.mp_access_token || '').trim()
+    if (!token) {
+      return json({ error: 'A loja ainda não configurou o pagamento. Fale com a loja.' }, 422)
+    }
+
+    // Desconto do PIX. Quem já usou cupom não acumula: vale só o cupom.
+    const temCupom = Boolean(cobranca.cupom_codigo)
+    const percentual = temCupom ? 0 : Number(config?.desconto_pix_percentual || 0)
+    const desconto = percentual > 0 ? Number((total * percentual / 100).toFixed(2)) : 0
+    const valorPix = Number((total - desconto).toFixed(2))
+
+    if (!(valorPix > 0)) return json({ error: 'Valor do pedido inválido' }, 422)
+
     // PIX anterior ainda válido e do mesmo valor: devolve o mesmo QR Code em vez
     // de encher a conta do MP de pagamentos pendentes a cada abertura da tela
     const aindaVale =
       cobranca.pix_qr_code &&
       cobranca.pix_expiracao &&
       new Date(cobranca.pix_expiracao) > new Date() &&
-      Number(cobranca.pix_valor) === Number(total.toFixed(2))
+      Number(cobranca.pix_valor) === valorPix
 
     if (aindaVale) {
       return json({
@@ -96,20 +115,12 @@ serve(async (req) => {
         qr_code_base64: cobranca.pix_qr_code_base64,
         expiracao: cobranca.pix_expiracao,
         valor: Number(cobranca.pix_valor),
+        total_sem_desconto: total,
+        desconto: Number(cobranca.pix_desconto_valor || 0),
+        desconto_percentual: Number(cobranca.pix_desconto_percentual || 0),
         payment_id: cobranca.pix_payment_id,
         reaproveitado: true,
       })
-    }
-
-    const { data: config } = await supabase
-      .from('configuracoes')
-      .select('mp_access_token, nome_loja')
-      .eq('tenant_id', cobranca.tenant_id)
-      .maybeSingle()
-
-    const token = String(config?.mp_access_token || '').trim()
-    if (!token) {
-      return json({ error: 'A loja ainda não configurou o pagamento. Fale com a loja.' }, 422)
     }
 
     // PIX antigo (valor mudou por cupom, ou expirado): cancela no MP para o
@@ -129,7 +140,7 @@ serve(async (req) => {
     const pagador = await dadosPagador(supabase, cobranca)
 
     const payload: Record<string, unknown> = {
-      transaction_amount: Number(total.toFixed(2)),
+      transaction_amount: valorPix,
       description: `Pedido #${String(cobranca.id).slice(0, 8).toUpperCase()} — ${config?.nome_loja || 'Loja'}`,
       payment_method_id: 'pix',
       external_reference: String(cobranca.id),
@@ -172,7 +183,9 @@ serve(async (req) => {
         pix_qr_code_base64: dados.qr_code_base64 || null,
         pix_expiracao: expiracao,
         pix_payment_id: String(pagamento.id),
-        pix_valor: Number(total.toFixed(2)),
+        pix_valor: valorPix,
+        pix_desconto_valor: desconto || null,
+        pix_desconto_percentual: percentual || null,
       })
       .eq('id', cobranca.id)
 
@@ -182,7 +195,10 @@ serve(async (req) => {
       qr_code: dados.qr_code,
       qr_code_base64: dados.qr_code_base64 || null,
       expiracao,
-      valor: Number(total.toFixed(2)),
+      valor: valorPix,
+      total_sem_desconto: total,
+      desconto,
+      desconto_percentual: percentual,
       payment_id: String(pagamento.id),
     })
   } catch (error) {

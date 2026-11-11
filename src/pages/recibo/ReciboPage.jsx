@@ -45,6 +45,7 @@ export default function ReciboPage() {
 
   // Estados para PIX
   const [pix, setPix] = useState(null)
+  const [descontoPix, setDescontoPix] = useState(0)
   const [gerandoPix, setGerandoPix] = useState(false)
   const [erroPix, setErroPix] = useState('')
   const [pixCopiado, setPixCopiado] = useState(false)
@@ -275,9 +276,12 @@ export default function ReciboPage() {
         // Tentar 1: Buscar de configuracoes.nome_loja
         const { data: config } = await supabase
           .from('configuracoes_public')
-          .select('nome_loja')
+          .select('nome_loja, desconto_pix_percentual')
           .eq('tenant_id', cob.tenant_id)
           .maybeSingle()
+
+        // Fora do if: o return abaixo sai cedo quando a loja tem nome
+        setDescontoPix(Number(config?.desconto_pix_percentual || 0))
 
         if (config?.nome_loja?.trim()) {
           setNomeEmpresa(config.nome_loja)
@@ -803,6 +807,24 @@ export default function ReciboPage() {
               {gerandoPix ? 'Gerando PIX...' : 'Pagar com PIX'}
             </button>
 
+            {descontoPix > 0 && !cupomAplicado && (
+              <div style={{
+                marginTop: -4,
+                marginBottom: 12,
+                padding: '8px 12px',
+                background: 'rgba(50,188,173,0.1)',
+                border: '1px solid rgba(50,188,173,0.3)',
+                borderRadius: 8,
+                color: '#32bcad',
+                fontSize: 13,
+                textAlign: 'center',
+                fontWeight: 600,
+              }}>
+                No PIX você paga {formatMoeda(Number(cob.total) * (1 - descontoPix / 100))}
+                <span style={{ color: '#9aa0a6', fontWeight: 400 }}> ({descontoPix}% de desconto)</span>
+              </div>
+            )}
+
             {erroPix && (
               <div style={{
                 marginBottom: 12,
@@ -871,9 +893,18 @@ export default function ReciboPage() {
             <div style={{ fontSize: 18, fontWeight: 700, color: '#e8eaed', marginBottom: 2 }}>
               ⚡ Pague com PIX
             </div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: '#81c995', marginBottom: 16 }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#81c995', marginBottom: pix.desconto > 0 ? 4 : 16 }}>
               {formatMoeda(pix.valor)}
             </div>
+
+            {pix.desconto > 0 && (
+              <div style={{ fontSize: 12, color: '#9aa0a6', marginBottom: 16 }}>
+                <s>{formatMoeda(pix.total_sem_desconto)}</s>{' '}
+                <span style={{ color: '#32bcad', fontWeight: 600 }}>
+                  menos {formatMoeda(pix.desconto)} ({pix.desconto_percentual}% no PIX)
+                </span>
+              </div>
+            )}
 
             {pix.qr_code_base64 && (
               <div style={{ background: '#fff', padding: 12, borderRadius: 12, marginBottom: 14 }}>

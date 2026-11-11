@@ -44,6 +44,7 @@ function TabBtn({ label, active, onClick }) {
 function AbaConfiguracoes({ tenantId, showToast }) {
   const [form, setForm]         = useState({
     mp_access_token: '',
+    desconto_pix_percentual: 0,
     nome_loja: '',
     cnpj: '',
     whatsapp: '',
@@ -78,6 +79,7 @@ function AbaConfiguracoes({ tenantId, showToast }) {
       if (cfg) {
         setForm({
           mp_access_token: cfg.mp_access_token || '',
+          desconto_pix_percentual: cfg.desconto_pix_percentual || 0,
           nome_loja: cfg.nome_loja || '',
           cnpj: cfg.cnpj || '',
           whatsapp: cfg.whatsapp || '',
@@ -521,6 +523,40 @@ function AbaConfiguracoes({ tenantId, showToast }) {
         </div>
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
           Encontre em mercadopago.com.br → Seu negócio → Configurações → Credenciais de produção
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 28 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+          Desconto para pagamento no PIX (%)
+        </label>
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.1"
+          value={form.desconto_pix_percentual}
+          onChange={e => setForm(p => ({ ...p, desconto_pix_percentual: parseFloat(e.target.value) || 0 }))}
+          style={{ ...SI, maxWidth: 150 }}
+        />
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 5 }}>
+          {Number(form.desconto_pix_percentual) > 0 ? (
+            <>
+              O cliente vê o desconto no recibo e paga menos ao escolher PIX.
+              <br />
+              <strong>Exemplo:</strong> Pedido de R$ 100,00 sai por{' '}
+              <span style={{ color: 'var(--green)' }}>
+                R$ {(100 * (1 - Number(form.desconto_pix_percentual) / 100)).toFixed(2).replace('.', ',')}
+              </span>{' '}
+              no PIX.
+              <br />
+              Quem usou cupom não acumula: nesse caso vale só o cupom.
+              <br />
+              Deixe 0 para desligar.
+            </>
+          ) : (
+            <>Desligado. Coloque um valor acima de 0 para oferecer desconto no PIX.</>
+          )}
         </div>
       </div>
 
