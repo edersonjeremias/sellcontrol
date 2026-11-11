@@ -52,7 +52,7 @@ export async function getProdutos(tenantId, filtros = {}) {
 
       // Para cada termo, busca em múltiplos campos
       termos.forEach(termo => {
-        const orCondition = `produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%`
+        const orCondition = `produto.ilike.%${termo}%,modelo.ilike.%${termo}%,cor.ilike.%${termo}%,marca.ilike.%${termo}%,codigo.ilike.%${termo}%,tamanho.ilike.%${termo}%`
         query = query.or(orCondition)
         if (countQuery) countQuery = countQuery.or(orCondition)
       })

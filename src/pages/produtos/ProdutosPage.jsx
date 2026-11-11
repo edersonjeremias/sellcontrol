@@ -1665,6 +1665,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           data-key={p._key}
           data-field="produto"
           data-alterado={p._alterados?.produto ? "true" : undefined}
+          title={p.produto || undefined}
         />
       </td>
 
@@ -1679,6 +1680,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           data-key={p._key}
           data-field="modelo"
           data-alterado={p._alterados?.modelo ? "true" : undefined}
+          title={p.modelo || undefined}
         />
       </td>
 
@@ -1714,6 +1716,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           data-key={p._key}
           data-field="cor"
           data-alterado={p._alterados?.cor ? "true" : undefined}
+          title={p.cor || undefined}
         />
       </td>
 
@@ -1728,6 +1731,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           data-key={p._key}
           data-field="marca"
           data-alterado={p._alterados?.marca ? "true" : undefined}
+          title={p.marca || undefined}
         />
       </td>
 
@@ -1742,6 +1746,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           data-key={p._key}
           data-field="tamanho"
           data-alterado={p._alterados?.tamanho ? "true" : undefined}
+          title={p.tamanho || undefined}
         />
       </td>
 
@@ -1896,7 +1901,10 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
               onClick={() => onAbrirImagens(p._key)}
               disabled={desabilitado}
             >
-              📷
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
               {p.imagens?.length > 0 && (
                 <span className="badge-imagens">{p.imagens.length}</span>
               )}

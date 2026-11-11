@@ -274,7 +274,12 @@
 /* Botão de imagens com badge */
 .vendas-container .btn-action-sm.imagens {
   position: relative;
-  font-size: 16px;
+  color: var(--muted);
+}
+
+.vendas-container .btn-action-sm.imagens:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: scale(1.05);
 }
 
 .vendas-container .badge-imagens {

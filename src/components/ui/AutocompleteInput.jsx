@@ -36,6 +36,7 @@ export default function AutocompleteInput({
   'data-key': dataKey,     // Para preservar foco durante salvamento
   'data-field': dataField, // Para preservar foco durante salvamento
   'data-alterado': dataAlterado, // Marca campo editado e ainda nao salvo
+  title, // Texto completo ao passar o mouse, quando nao cabe no campo
 }) {
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -190,6 +191,7 @@ export default function AutocompleteInput({
         data-key={dataKey}
         data-field={dataField}
         data-alterado={dataAlterado}
+        title={title}
       />
       {visible && (
         <ul className="autocomplete-list" ref={listRef}>
