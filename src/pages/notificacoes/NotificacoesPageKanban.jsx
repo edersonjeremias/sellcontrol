@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import {
-  getColunas, salvarColunas, COLUNAS_DEFAULT,
+  getColunas, salvarColunas, migrarConversasDeColuna, COLUNAS_DEFAULT,
   getNotificacoesConversas, getMensagensNotificacao, responderNotificacao,
   moverNotificacao, marcarNotificacaoLida, encerrarNotificacao, criarNotificacaoManual,
 } from '../../services/notificacoesConversasService'
@@ -517,10 +517,12 @@ function ModalEncerrados({ notificacoes, onAbrir, onClose }) {
 
 // ── Modal configurar colunas ───────────────────────────────────
 function ModalColunas({ colunas, onSalvar, onClose }) {
-  const [cols, setCols] = useState(colunas.map(c => ({ ...c })))
+  // _orig guarda o título que a coluna tinha ao abrir o modal. É o que
+  // permite detectar renomeações e levar as conversas junto.
+  const [cols, setCols] = useState(colunas.map(c => ({ ...c, _orig: c.titulo })))
 
   function add() {
-    setCols(prev => [...prev, { titulo: 'Nova Coluna', cor: '#9aa0a6' }])
+    setCols(prev => [...prev, { titulo: 'Nova Coluna', cor: '#9aa0a6', _orig: null }])
   }
   function remove(i) {
     setCols(prev => prev.filter((_, idx) => idx !== i))
@@ -551,6 +553,10 @@ function ModalColunas({ colunas, onSalvar, onClose }) {
           <button onClick={add} style={{ background:'none', border:'1px dashed var(--border-light)', borderRadius:6, color:'var(--muted)', padding:'8px', cursor:'pointer', fontSize:13 }}>
             + Adicionar coluna
           </button>
+          <p style={{ margin:0, fontSize:11, color:'var(--muted)', lineHeight:1.5 }}>
+            Ao renomear uma coluna, as conversas dela acompanham o novo nome.
+            Ao excluir, as conversas voltam para a primeira coluna.
+          </p>
         </div>
         <div className="modal-footer">
           <button onClick={onClose} style={{ flex:1, background:'var(--btn-cancel-bg)', color:'var(--btn-cancel-text)', border:'none', borderRadius:6, padding:'10px', fontWeight:600, cursor:'pointer' }}>Cancelar</button>
@@ -643,11 +649,43 @@ export default function NotificacoesPageKanban() {
 
   async function handleSalvarColunas(novasCols) {
     try {
-      await salvarColunas(tenantId, novasCols)
-      setColunas(novasCols)
+      // Limpa títulos vazios e remove o campo de controle _orig
+      const limpas = novasCols
+        .map(c => ({ ...c, titulo: (c.titulo || '').trim() }))
+        .filter(c => c.titulo)
+      if (!limpas.length) { showToast('Deixe ao menos uma coluna.', 'error'); return }
+
+      const titulosFinais = limpas.map(c => c.titulo)
+      const primeira = titulosFinais[0]
+
+      // 1) Renomeações: coluna que mudou de nome leva as conversas junto
+      for (const c of limpas) {
+        if (c._orig && c._orig !== c.titulo) {
+          await migrarConversasDeColuna(tenantId, c._orig, c.titulo)
+        }
+      }
+
+      // 2) Exclusões: conversas de colunas que deixaram de existir
+      //    (e as já órfãs de edições anteriores) vão para a primeira coluna
+      const orfas = [...new Set(
+        notificacoes
+          .map(n => n.coluna || 'Novo')
+          .filter(col => !titulosFinais.includes(col))
+      )]
+      for (const col of orfas) {
+        await migrarConversasDeColuna(tenantId, col, primeira)
+      }
+
+      const paraSalvar = limpas.map(({ _orig, ...c }) => c) // eslint-disable-line no-unused-vars
+      await salvarColunas(tenantId, paraSalvar)
+      setColunas(paraSalvar)
       setModalColunas(false)
+      await carregar()
       showToast('Colunas salvas!', 'success')
-    } catch { showToast('Erro ao salvar colunas.', 'error') }
+    } catch (err) {
+      console.error('Erro ao salvar colunas:', err)
+      showToast('Erro ao salvar colunas.', 'error')
+    }
   }
 
   // Filtro de busca + Remove encerrados do Kanban
@@ -658,13 +696,17 @@ export default function NotificacoesPageKanban() {
       })
     : notificacoes.filter(n => !n.encerrado)
 
-  // Agrupar por coluna
+  // Agrupar por coluna.
+  // Conversa apontando para coluna inexistente (renomeada/excluída fora daqui)
+  // cai na primeira coluna em vez de desaparecer do quadro.
   const porColuna = {}
   colunas.forEach(col => { porColuna[col.titulo] = [] })
+  const primeiraColuna = colunas[0]?.titulo
   notifsFiltradas.forEach(n => {
     const col = n.coluna || 'Novo'
-    if (!porColuna[col]) porColuna[col] = []
-    porColuna[col].push(n)
+    const destino = porColuna[col] ? col : primeiraColuna
+    if (!destino) return
+    porColuna[destino].push(n)
   })
 
   const totalNaoLidas = notificacoes.filter(n => !n.encerrado).reduce((s, n) => s + (n.nao_lidas || 0), 0)

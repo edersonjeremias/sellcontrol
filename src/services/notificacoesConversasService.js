@@ -30,6 +30,21 @@ export async function salvarColunas(tenantId, colunas) {
   if (error) throw error
 }
 
+// Renomeia/move em massa as conversas de uma coluna para outra.
+// Usado quando uma coluna é renomeada ou excluída, para que nenhuma
+// conversa fique "órfã" (apontando para uma coluna que não existe mais).
+export async function migrarConversasDeColuna(tenantId, colunaAntiga, colunaNova) {
+  if (!colunaAntiga || colunaAntiga === colunaNova) return
+
+  const { error } = await supabase
+    .from('notificacoes')
+    .update({ coluna: colunaNova })
+    .eq('tenant_id', tenantId)
+    .eq('coluna', colunaAntiga)
+
+  if (error) throw error
+}
+
 // ══════════════════════════════════════════════════════════════
 // NOTIFICAÇÕES/CONVERSAS
 // ══════════════════════════════════════════════════════════════
