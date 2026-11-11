@@ -25,7 +25,7 @@ SELECT
   'Vale transporte — ' || COALESCE(f.apelido, f.nome) || ' — ' ||
     to_char(p.data_inicio, 'DD/MM/YYYY') || ' a ' || to_char(p.data_fim, 'DD/MM/YYYY'),
   'Funcionario', 'Fixa',
-  p.total_liquido, p.data_fim,
+  p.total_liquido, COALESCE(p.data_vencimento, p.data_fim),
   CASE WHEN p.status = 'PAGO' THEN 'PAGO' ELSE 'A PAGAR' END,
   CASE WHEN p.status = 'PAGO' THEN COALESCE(p.data_pagamento, p.data_fim) END
 FROM rh_vt_periodos p

@@ -206,7 +206,8 @@ export async function sincronizarContaVT(tenantId, periodo, nome) {
     descricao:     ['Vale transporte', nome, `${fmtData(periodo.data_inicio)} a ${fmtData(periodo.data_fim)}`]
                      .filter(Boolean).join(' — '),
     valor:         total,
-    vencimento:    periodo.data_fim,
+    // Vencimento escolhido na tela; sem ele, o fim do periodo
+    vencimento:    periodo.data_vencimento || periodo.data_fim,
     pago:          periodo.status === 'PAGO',
     dataPagamento: periodo.data_pagamento,
   })

@@ -45,6 +45,7 @@ function montarCalendario(dias) {
 
 const EDITOR_VAZIO = {
   id: null, funcionario_id: '', data_inicio: primeiroDiaMes(), data_fim: ultimoDiaMes(),
+  data_vencimento: ultimoDiaMes(),
   valor_ida: '', valor_volta: '', status: 'PENDENTE', data_pagamento: '', observacao: '',
   dias: [],
 }
@@ -154,6 +155,7 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
         funcionario_id: p.funcionario_id,
         data_inicio:    p.data_inicio,
         data_fim:       p.data_fim,
+        data_vencimento: p.data_vencimento || p.data_fim,
         valor_ida:      valorParaInput(p.valor_ida),
         valor_volta:    valorParaInput(p.valor_volta),
         status:         p.status,
@@ -259,6 +261,7 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
         funcionario_id:  editor.funcionario_id,
         data_inicio:     editor.data_inicio,
         data_fim:        editor.data_fim,
+        data_vencimento: editor.data_vencimento || editor.data_fim,
         valor_ida:       vIda,
         valor_volta:     vVolta,
         dias_uteis:      totais.diasUteis,
@@ -381,7 +384,18 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
           <div className="rh-f">
             <label>Data final *</label>
             <input type="date" value={editor.data_fim}
-              onChange={e => setEditor(p => ({ ...p, data_fim: e.target.value }))} style={S.inpS} />
+              onChange={e => setEditor(p => ({
+                ...p,
+                data_fim: e.target.value,
+                // O vencimento segue a data final até alguém mexer nele de propósito
+                data_vencimento: (!p.data_vencimento || p.data_vencimento === p.data_fim)
+                  ? e.target.value : p.data_vencimento,
+              }))} style={S.inpS} />
+          </div>
+          <div className="rh-f">
+            <label title="Vencimento no Contas a Pagar. Em branco, usa a data final.">Pagar em</label>
+            <input type="date" value={editor.data_vencimento}
+              onChange={e => setEditor(p => ({ ...p, data_vencimento: e.target.value }))} style={S.inpS} />
           </div>
           <div className="rh-f" style={{ minWidth:100 }}>
             <label>Valor ida</label>
@@ -698,6 +712,11 @@ export default function AbaValeTransporte({ tenantId, showToast, funcionarios })
                     <div className="rh-linha-sub">
                       {p.dias_uteis} dias • cheio {fmtR(p.total_bruto)} •
                       <span style={{ color:'var(--red)' }}> desconto {fmtR(p.total_descontos)}</span>
+                      {p.status !== 'PAGO' && p.data_vencimento && p.data_vencimento !== p.data_fim && (
+                        <span style={{ color:'var(--blue)', marginLeft:6 }}>
+                          pagar em {fmtData(p.data_vencimento)}
+                        </span>
+                      )}
                       {p.status === 'PAGO' && p.data_pagamento && (
                         <span style={{ color:'var(--green)', marginLeft:6 }}>✓ pago {fmtData(p.data_pagamento)}</span>
                       )}

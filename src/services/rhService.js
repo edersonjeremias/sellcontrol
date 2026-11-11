@@ -890,7 +890,7 @@ export async function lancarVTComoPagamento(tenantId, periodo, funcionarioNome) 
     descricao:      `VT ${fmtData(periodo.data_inicio)} a ${fmtData(periodo.data_fim)}` +
                     (funcionarioNome ? ` — ${funcionarioNome}` : ''),
     valor:          Number(periodo.total_liquido) || 0,
-    data_prevista:  periodo.data_fim,
+    data_prevista:  periodo.data_vencimento || periodo.data_fim,
     status:         periodo.status === 'PAGO' ? 'PAGO' : 'PENDENTE',
     data_pagamento: periodo.status === 'PAGO' ? (periodo.data_pagamento || periodo.data_fim) : null,
     vt_periodo_id:  periodo.id || null,
