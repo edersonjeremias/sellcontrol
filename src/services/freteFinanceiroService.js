@@ -156,7 +156,9 @@ export async function getExtratoMP(tenantId, { dataIni, dataFim }) {
     .from('mp_extrato')
     .select(`
       id, mp_payment_id, data_aprovacao, valor, taxa, liquido, metodo,
-      descricao, payer_email, status, origem, origem_auto, romaneio_id,
+      tipo_pagamento, parcelas, valor_parcela, cartao_final,
+      descricao, payer_email, pagador_nome, pagador_doc,
+      status, origem, origem_auto, romaneio_id,
       romaneios ( numero, cliente_instagram )
     `)
     .eq('tenant_id', tenantId)

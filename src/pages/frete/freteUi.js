@@ -43,6 +43,29 @@ export const COR_STATUS = {
   cancelado: '#f44336',
 }
 
+// payment_type_id do Mercado Pago — é o que diz se foi cartão, PIX ou saldo
+export const LABEL_TIPO = {
+  credit_card: 'Crédito',
+  debit_card: 'Débito',
+  bank_transfer: 'PIX',
+  ticket: 'Boleto',
+  atm: 'Caixa eletrônico',
+  account_money: 'Saldo MP',
+  digital_wallet: 'Carteira digital',
+  digital_currency: 'Saldo MP',
+  prepaid_card: 'Pré-pago',
+  voucher_card: 'Vale',
+  crypto_transfer: 'Cripto',
+}
+
+// payment_method_id vira bandeira só quando faz sentido mostrar
+export const BANDEIRA = {
+  visa: 'Visa', master: 'Mastercard', amex: 'Amex', elo: 'Elo',
+  hipercard: 'Hipercard', hiper: 'Hiper', diners: 'Diners',
+  discover: 'Discover', cabal: 'Cabal', maestro: 'Maestro',
+  debvisa: 'Visa', debmaster: 'Mastercard', debelo: 'Elo',
+}
+
 export const LABEL_METODO = {
   pix: 'PIX',
   cartao: 'Cartão',
@@ -100,6 +123,29 @@ export function mascaraValor(s) {
   if (!v) return ''
   v = (parseInt(v, 10) / 100).toFixed(2)
   return v.replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')
+}
+
+// ── Forma de pagamento ──────────────────────────────────────────────────────
+
+/** "Crédito Visa •1234", "PIX", "Saldo MP" */
+export function descreveMetodo(l) {
+  const tipo = LABEL_TIPO[l.tipo_pagamento]
+  // Linha baixada antes de existir tipo_pagamento: mostra o método cru
+  if (!tipo) return LABEL_METODO[l.metodo] || l.metodo || '—'
+
+  const partes = [tipo]
+  const bandeira = BANDEIRA[l.metodo]
+  if (bandeira) partes.push(bandeira)
+  if (l.cartao_final) partes.push('•' + l.cartao_final)
+  return partes.join(' ')
+}
+
+/** "3x", "à vista" — vazio quando não é cartão (no PIX o MP manda sempre 1) */
+export function descreveParcelas(l) {
+  const ehCartao = l.tipo_pagamento === 'credit_card' || l.tipo_pagamento === 'debit_card'
+  const n = Number(l.parcelas) || 0
+  if (!ehCartao || n <= 0) return ''
+  return n === 1 ? 'à vista' : `${n}x`
 }
 
 /** Busca multi-termo por vírgula: todos os termos precisam aparecer na linha */

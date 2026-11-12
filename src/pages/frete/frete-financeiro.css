@@ -103,6 +103,9 @@
 .ff-card-valor { font-size: 18px; font-weight: 800; color: var(--text-header); }
 .ff-card-obs { font-size: 10px; color: var(--muted); }
 
+/* Separa os cartões de origem dos totais gerais */
+.ff-card-sep { margin-left: 10px; border-left: 2px solid var(--blue); }
+
 /* O único container que rola — nos dois eixos, para a tabela larga caber */
 .ff-conteudo {
   flex: 1;
@@ -145,6 +148,20 @@
   border-bottom: 1px solid var(--border-light);
 }
 .ff-tabela tbody tr:hover { background: var(--table-row-hover); }
+
+/* Totais colados no rodapé, do mesmo jeito que o cabeçalho fica no topo */
+.ff-tabela tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 90;
+  background: var(--table-header-bg);
+  color: var(--text-header);
+  font-weight: 800;
+  font-size: 12px;
+  padding: 9px 10px;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 var(--border-light);
+}
 .ff-num { text-align: right; font-variant-numeric: tabular-nums; }
 .ff-vazio { text-align: center; padding: 28px; color: var(--muted); }
 

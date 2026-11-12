@@ -5,6 +5,7 @@ import {
 } from '../../services/freteFinanceiroService'
 import {
   S, LABEL_METODO, primeiroDiaMes, ultimoDiaMes, fmtDataHora, casaBusca,
+  descreveMetodo, descreveParcelas,
 } from './freteUi'
 
 const ORIGENS = [
@@ -15,6 +16,12 @@ const ORIGENS = [
 ]
 
 const LABEL_ORIGEM = { frete: 'Frete', venda: 'Venda', outro: 'A definir' }
+
+/** Peso da taxa do MP sobre o bruto, para saber se está caro */
+function pctTaxa(g) {
+  if (!g.bruto) return '0%'
+  return (g.taxa / g.bruto * 100).toFixed(1).replace('.', ',') + '%'
+}
 
 export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
   const [dataIni, setDataIni] = useState(primeiroDiaMes)
@@ -89,8 +96,8 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
     return linhas.filter(l => {
       if (origem !== 'todos' && l.origem !== origem) return false
       const texto = [
-        l.mp_payment_id, l.descricao, l.payer_email,
-        LABEL_METODO[l.metodo] || l.metodo,
+        l.mp_payment_id, l.descricao, l.payer_email, l.pagador_nome, l.pagador_doc,
+        LABEL_METODO[l.metodo] || l.metodo, descreveMetodo(l), descreveParcelas(l),
         LABEL_ORIGEM[l.origem], l.romaneios?.numero, l.romaneios?.cliente_instagram,
       ].join(' ')
       return casaBusca(texto, busca)
@@ -147,22 +154,32 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
           <div className="ff-card">
             <div className="ff-card-label">Entrou de frete</div>
             <div className="ff-card-valor" style={{ color: 'var(--blue)' }}>{fmtR(totais.frete.liquido)}</div>
-            <div className="ff-card-obs">{totais.frete.qtd} pagamento(s)</div>
+            <div className="ff-card-obs">{totais.frete.qtd} pagamento(s) · bruto {fmtR(totais.frete.bruto)}</div>
           </div>
           <div className="ff-card">
             <div className="ff-card-label">Entrou de venda</div>
             <div className="ff-card-valor" style={{ color: 'var(--green)' }}>{fmtR(totais.venda.liquido)}</div>
-            <div className="ff-card-obs">{totais.venda.qtd} pagamento(s)</div>
+            <div className="ff-card-obs">{totais.venda.qtd} pagamento(s) · bruto {fmtR(totais.venda.bruto)}</div>
           </div>
           <div className="ff-card">
             <div className="ff-card-label">A classificar</div>
             <div className="ff-card-valor" style={{ color: 'var(--yellow)' }}>{fmtR(totais.outro.liquido)}</div>
-            <div className="ff-card-obs">{totais.outro.qtd} pagamento(s)</div>
+            <div className="ff-card-obs">{totais.outro.qtd} pagamento(s) · bruto {fmtR(totais.outro.bruto)}</div>
+          </div>
+          <div className="ff-card ff-card-sep">
+            <div className="ff-card-label">Total bruto</div>
+            <div className="ff-card-valor">{fmtR(totais.geral.bruto)}</div>
+            <div className="ff-card-obs">{totais.geral.qtd} pagamento(s)</div>
+          </div>
+          <div className="ff-card">
+            <div className="ff-card-label">Total de taxas</div>
+            <div className="ff-card-valor" style={{ color: 'var(--red)' }}>− {fmtR(totais.geral.taxa)}</div>
+            <div className="ff-card-obs">{pctTaxa(totais.geral)} do bruto</div>
           </div>
           <div className="ff-card">
             <div className="ff-card-label">Total líquido</div>
-            <div className="ff-card-valor">{fmtR(totais.geral.liquido)}</div>
-            <div className="ff-card-obs">taxa do MP: {fmtR(totais.geral.taxa)}</div>
+            <div className="ff-card-valor" style={{ color: 'var(--blue)' }}>{fmtR(totais.geral.liquido)}</div>
+            <div className="ff-card-obs">foi o que caiu na conta</div>
           </div>
         </div>
       )}
@@ -187,8 +204,18 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                 </div>
                 <div className="ff-mcard-linha">
                   <span>{fmtDataHora(l.data_aprovacao)}</span>
-                  <span>{LABEL_METODO[l.metodo] || l.metodo}</span>
+                  <span>{descreveMetodo(l)}</span>
+                  {descreveParcelas(l) && (
+                    <span style={{ color: Number(l.parcelas) > 1 ? 'var(--yellow)' : 'var(--muted)' }}>
+                      {descreveParcelas(l)}
+                      {Number(l.parcelas) > 1 && l.valor_parcela ? ` de ${fmtR(l.valor_parcela)}` : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="ff-mcard-linha">
                   <span>bruto {fmtR(l.valor)}</span>
+                  <span>taxa <strong style={{ color: 'var(--red)' }}>{fmtR(l.taxa)}</strong></span>
+                  {(l.pagador_nome || l.payer_email) && <span>{l.pagador_nome || l.payer_email}</span>}
                 </div>
                 {l.romaneios?.numero && (
                   <div className="ff-mcard-linha">
@@ -219,7 +246,8 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                 <tr>
                   <th>Data</th>
                   <th>Descrição</th>
-                  <th>Método</th>
+                  <th>Forma</th>
+                  <th>Parcelas</th>
                   <th>Pagador</th>
                   <th className="ff-num">Bruto</th>
                   <th className="ff-num">Taxa</th>
@@ -236,9 +264,16 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                       {l.descricao || '—'}
                       <span style={{ color: 'var(--muted)', fontSize: 10, marginLeft: 6 }}>#{l.mp_payment_id}</span>
                     </td>
-                    <td>{LABEL_METODO[l.metodo] || l.metodo || '—'}</td>
-                    <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.payer_email || ''}>
-                      {l.payer_email || '—'}
+                    <td>{descreveMetodo(l)}</td>
+                    <td style={{ color: Number(l.parcelas) > 1 ? 'var(--yellow)' : 'var(--muted)' }}>
+                      {descreveParcelas(l) || '—'}
+                      {Number(l.parcelas) > 1 && l.valor_parcela
+                        ? <span style={{ color: 'var(--muted)', marginLeft: 6 }}>de {fmtR(l.valor_parcela)}</span>
+                        : null}
+                    </td>
+                    <td style={{ maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                      title={[l.pagador_nome, l.payer_email, l.pagador_doc].filter(Boolean).join(' · ')}>
+                      {l.pagador_nome || l.payer_email || <span style={{ color: 'var(--muted)' }}>não informado</span>}
                     </td>
                     <td className="ff-num">{fmtR(l.valor)}</td>
                     <td className="ff-num" style={{ color: 'var(--red)' }}>{fmtR(l.taxa)}</td>
@@ -263,12 +298,23 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                   </tr>
                 ))}
                 {linhas.length === 0 && (
-                  <tr><td colSpan={9} className="ff-vazio">Nada baixado para este período.</td></tr>
+                  <tr><td colSpan={10} className="ff-vazio">Nada baixado para este período.</td></tr>
                 )}
                 {linhas.length > 0 && visiveis.length === 0 && (
-                  <tr><td colSpan={9} className="ff-vazio">Nenhum resultado para o filtro.</td></tr>
+                  <tr><td colSpan={10} className="ff-vazio">Nenhum resultado para o filtro.</td></tr>
                 )}
               </tbody>
+              {visiveis.length > 0 && (
+                <tfoot>
+                  <tr>
+                    <td colSpan={4}>Total de {totais.geral.qtd} pagamento(s)</td>
+                    <td className="ff-num">{fmtR(totais.geral.bruto)}</td>
+                    <td className="ff-num" style={{ color: 'var(--red)' }}>{fmtR(totais.geral.taxa)}</td>
+                    <td className="ff-num" style={{ color: 'var(--blue)' }}>{fmtR(totais.geral.liquido)}</td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </>
         )}

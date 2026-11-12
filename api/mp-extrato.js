@@ -38,6 +38,48 @@ function liquido(pag) {
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
 
+// O MP devolve campos mascarados ("XXXXXXXXXXX") quando quem pagou não é
+// cliente da conta. Isso não é nome nem e-mail: vale menos que vazio, porque a
+// tela mostraria o lixo como se fosse dado. Serve quem tem alguma letra fora de
+// X/x ou algum dígito.
+function semMascara(valor) {
+  const s = typeof valor === 'string' ? valor.trim() : ''
+  if (!s) return null
+  return /[A-WYZa-wyz0-9]/.test(s) ? s : null
+}
+
+// Quem pagou, na ordem em que o MP costuma trazer a informação boa:
+// titular do cartão, titular da conta no PIX, nome do payer.
+function nomeDoPagador(p) {
+  const bank = p?.point_of_interaction?.transaction_data?.bank_info?.payer
+  const nomePayer = [p?.payer?.first_name, p?.payer?.last_name].filter(Boolean).join(' ')
+  return semMascara(p?.card?.cardholder?.name)
+    || semMascara(bank?.long_name)
+    || semMascara(bank?.account_holder_name)
+    || semMascara(nomePayer)
+}
+
+function docDoPagador(p) {
+  const bank = p?.point_of_interaction?.transaction_data?.bank_info?.payer
+  const docPix = typeof bank?.identification === 'string'
+    ? bank.identification
+    : bank?.identification?.number
+  return semMascara(p?.card?.cardholder?.identification?.number)
+    || semMascara(docPix)
+    || semMascara(p?.payer?.identification?.number)
+}
+
+function inteiro(v) {
+  const n = parseInt(v, 10)
+  return isNaN(n) ? null : n
+}
+
+function decimal(v) {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return isNaN(n) ? null : n
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -211,8 +253,14 @@ export default async function handler(req, res) {
       taxa: taxa === null ? null : Number(taxa.toFixed(2)),
       liquido: liquido(p),
       metodo: p.payment_method_id || null,
+      tipo_pagamento: p.payment_type_id || null,
+      parcelas: inteiro(p.installments),
+      valor_parcela: decimal(p.transaction_details?.installment_amount),
+      cartao_final: p.card?.last_four_digits || null,
       descricao: p.description || null,
-      payer_email: p.payer?.email || null,
+      payer_email: semMascara(p.payer?.email),
+      pagador_nome: nomeDoPagador(p),
+      pagador_doc: docDoPagador(p),
       status: p.status || null,
       raw: p,
       updated_at: agora,

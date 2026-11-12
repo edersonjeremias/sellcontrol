@@ -55,6 +55,29 @@ cada um:
 Depois da primeira busca, **Filtrar** só lê o que já está espelhado em
 `mp_extrato` — não bate no Mercado Pago de novo.
 
+Cada linha mostra a **forma** (Crédito Visa •1234, Débito, PIX, Saldo MP), as
+**parcelas** (`3x de R$ 73,00`; cartão à vista aparece como *à vista*, e PIX
+fica vazio porque o MP manda sempre `installments: 1`) e o **pagador**.
+
+Os totais aparecem em três cartões — **bruto**, **taxas** (com o peso em % sobre
+o bruto) e **líquido** — e também no rodapé fixo da tabela, sempre sobre o que
+está filtrado na tela.
+
+### Por que o pagador do PIX vinha como "XXXXXXXXXXX"
+
+É o próprio Mercado Pago que mascara `payer.email` quando quem pagou não é
+cliente da conta — e o sistema gravava esse campo cru. O nome de verdade está em
+outro lugar do mesmo JSON, e agora é lido nesta ordem:
+
+1. `card.cardholder.name` (cartão);
+2. `point_of_interaction.transaction_data.bank_info.payer.long_name` (PIX);
+3. `...bank_info.payer.account_holder_name`;
+4. `payer.first_name` + `payer.last_name`.
+
+Qualquer valor que não tenha nenhuma letra fora de X/x nem dígito é descartado:
+guardar a máscara é pior que deixar vazio, porque a tela mostraria o lixo como
+se fosse dado.
+
 O token do MP nunca vai para o navegador: a busca passa por
 `api/mp-extrato.js`, que roda no servidor com service role, confere o JWT de
 quem chamou e só aceita o tenant do próprio usuário (master pode consultar
@@ -71,6 +94,12 @@ Migration: `supabase/migrations/20261104_conciliacao_frete.sql`
   partir do `gateway_response` que já estava gravado)
 - `mp_extrato`: espelho do extrato do MP, com `origem` (frete/venda/outro),
   `origem_auto` e `romaneio_id`
+
+Migration: `supabase/migrations/20261112_mp_extrato_detalhes.sql`
+
+- `mp_extrato`: `tipo_pagamento`, `parcelas`, `valor_parcela`, `cartao_final`,
+  `pagador_nome`, `pagador_doc` — preenchidos retroativamente a partir do
+  `mp_extrato.raw`, que já guardava o JSON inteiro do pagamento
 - `pages`: entrada `frete-pagamentos` na categoria Financeiro
 
 ## Para colocar no ar
