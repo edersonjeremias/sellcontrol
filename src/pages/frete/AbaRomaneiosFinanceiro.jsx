@@ -29,7 +29,7 @@ function corDiferenca(d) {
   return 'var(--muted)'
 }
 
-export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, isMobile }) {
+export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, isMobile, abas }) {
   const [dataIni, setDataIni] = useState(primeiroDiaMes)
   const [dataFim, setDataFim] = useState(ultimoDiaMes)
   const [situacao, setSituacao] = useState('todos')
@@ -227,8 +227,9 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
 
   return (
     <>
-      {/* ── Filtros ── */}
+      {/* ── Título, filtros e abas na mesma linha ── */}
       <div className="ff-filtros">
+        <span className="ff-titulo">Frete e Romaneios</span>
         <div className="ff-f ff-f-busca">
           <label>Buscar</label>
           <input
@@ -263,6 +264,7 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
           </button>
           <button onClick={exportarCsv} style={S.sec}>Exportar</button>
         </div>
+        {abas}
       </div>
 
       {/* ── Resumo ── */}

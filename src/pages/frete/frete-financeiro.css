@@ -11,28 +11,24 @@
   flex-direction: column;
   overflow: hidden;
 }
-.ff-page > .ff-topbar,
 .ff-page > .ff-filtros,
 .ff-page > .ff-resumo,
 .ff-page > .ff-lote { flex-shrink: 0; }
 
-.ff-topbar {
-  background: var(--header-bg);
-  border-bottom: 1px solid var(--border-light);
-  padding: 10px 16px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
+/* Título, campos e abas dividem uma faixa só: duas faixas comiam altura da
+   lista sem precisar. Os campos têm rótulo em cima, então o título e as abas
+   se alinham pelo centro da linha, não pela base como os inputs. */
 .ff-titulo {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-header);
-  margin-right: auto;
+  align-self: center;
+  white-space: nowrap;
 }
 
 .ff-abas {
+  align-self: center;
+  margin-left: auto;
   display: flex;
   gap: 4px;
   background: rgba(0, 0, 0, 0.2);
@@ -75,8 +71,12 @@
   letter-spacing: 0.4px;
 }
 .ff-f input, .ff-f select { width: 100%; min-width: 0; }
-.ff-f-busca { width: 260px; }
-.ff-acoes { display: flex; align-items: flex-end; gap: 8px; margin-left: auto; }
+/* Elástica: encolhe quando a faixa aperta (a aba Romaneios tem mais campos)
+   e cresce quando sobra espaço, em vez de empurrar as abas para outra linha */
+.ff-f-busca { flex: 1 1 200px; min-width: 150px; max-width: 320px; }
+/* Sem margin-left:auto: os botões ficam colados nos campos e quem é jogado
+   para a direita da faixa são as abas */
+.ff-acoes { display: flex; align-items: flex-end; gap: 8px; }
 
 /* ── Cartões de resumo ── */
 .ff-resumo {
@@ -252,14 +252,19 @@
 }
 
 @media (max-width: 768px) {
-  .ff-topbar, .ff-filtros, .ff-resumo { padding: 10px 12px; }
-  .ff-titulo { width: 100%; margin-right: 0; }
-  .ff-abas { width: 100%; }
+  .ff-filtros, .ff-resumo { padding: 10px 12px; }
   .ff-aba { flex: 1; min-width: 0; padding: 8px 4px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
 
+  /* No celular a faixa única vira grade: cada item ocupa a linha toda, e as
+     abas sobem para o topo, onde estavam antes */
   .ff-filtros { display: grid; grid-template-columns: 1fr 1fr; }
-  .ff-f-busca, .ff-acoes { grid-column: 1 / -1; }
-  .ff-acoes { margin-left: 0; gap: 6px; }
+  .ff-titulo, .ff-f-busca, .ff-acoes { grid-column: 1 / -1; }
+  .ff-f-busca { max-width: none; }
+  /* order muda a ordem de colocação na grade: as abas sobem para o topo sem
+     posicionamento explícito, que brigaria com o resto dos campos */
+  .ff-abas { order: -2; grid-column: 1 / -1; width: 100%; margin-left: 0; }
+  .ff-titulo { order: -1; }
+  .ff-acoes { gap: 6px; }
   .ff-acoes > button {
     flex: 1;
     min-width: 0;

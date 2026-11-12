@@ -31,7 +31,7 @@ function descontoMp(l) {
   return (Number(l.taxa) / bruto * 100).toFixed(2).replace('.', ',') + '%'
 }
 
-export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
+export default function AbaExtratoMP({ tenantId, showToast, isMobile, abas }) {
   const [dataIni, setDataIni] = useState(primeiroDiaMes)
   const [dataFim, setDataFim] = useState(ultimoDiaMes)
   const [origem, setOrigem] = useState('todos')
@@ -116,8 +116,9 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
 
   return (
     <>
-      {/* ── Filtros ── */}
+      {/* ── Título, filtros e abas na mesma linha ── */}
       <div className="ff-filtros">
+        <span className="ff-titulo">Frete e Romaneios</span>
         <div className="ff-f ff-f-busca">
           <label>Buscar</label>
           <input
@@ -154,6 +155,7 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
             {sincronizando ? 'Buscando…' : 'Buscar no Mercado Pago'}
           </button>
         </div>
+        {abas}
       </div>
 
       {/* ── Resumo ── */}

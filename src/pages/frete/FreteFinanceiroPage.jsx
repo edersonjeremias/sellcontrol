@@ -37,7 +37,24 @@ export default function FreteFinanceiroPage() {
     return () => window.removeEventListener('resize', aoRedimensionar)
   }, [])
 
-  const props = { tenantId, showToast, profile, isMobile }
+  // As abas vão para dentro da barra de filtros de cada aba: título, campos e
+  // abas numa linha só, em vez de duas faixas. Quem monta a barra é a aba,
+  // porque os campos são dela — aqui só viajam os botões prontos.
+  const abas = (
+    <div className="ff-abas">
+      {ABAS.map(([id, label]) => (
+        <button
+          key={id}
+          className={`ff-aba${aba === id ? ' ativa' : ''}`}
+          onClick={() => setAba(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+
+  const props = { tenantId, showToast, profile, isMobile, abas }
 
   // A página ocupa a altura da janela e só a lista rola. É o que mantém o
   // cabeçalho da tabela travado: o sticky gruda no container que rola, e aqui
@@ -45,21 +62,6 @@ export default function FreteFinanceiroPage() {
   return (
     <AppShell title="Frete e Romaneios" hideTitle flush>
       <div className="ff-page">
-        <div className="ff-topbar">
-          <span className="ff-titulo">Frete e Romaneios</span>
-          <div className="ff-abas">
-            {ABAS.map(([id, label]) => (
-              <button
-                key={id}
-                className={`ff-aba${aba === id ? ' ativa' : ''}`}
-                onClick={() => setAba(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {aba === 'romaneios' && <AbaRomaneiosFinanceiro {...props} />}
         {aba === 'extrato' && <AbaExtratoMP {...props} />}
       </div>
