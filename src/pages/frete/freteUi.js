@@ -112,6 +112,18 @@ export function fmtDataHora(iso) {
   return `${data} ${hora}`
 }
 
+/** { data: '11/11/2026', hora: '23:38' } — para a célula ocupar duas linhas
+ *  estreitas em vez de uma larga, sobrando largura para a descrição */
+export function partesDataHora(iso) {
+  if (!iso) return { data: '', hora: '' }
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return { data: '', hora: '' }
+  return {
+    data: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`,
+    hora: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+  }
+}
+
 // ── Valores ─────────────────────────────────────────────────────────────────
 export function parseValor(s) {
   if (s === null || s === undefined || s === '') return ''

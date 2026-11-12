@@ -431,20 +431,6 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
                   <tr><td colSpan={11} className="ff-vazio">Nenhum resultado para o filtro.</td></tr>
                 )}
               </tbody>
-              {visiveis.length > 0 && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={5}>Total de {totais.qtd} romaneio(s)</td>
-                    <td className="ff-num" style={{ color: 'var(--yellow)' }}>{fmtR(totais.frete)}</td>
-                    <td className="ff-num" style={{ color: 'var(--blue)' }}>{fmtR(totais.recebido)}</td>
-                    <td className="ff-num">{fmtR(totais.taxa)}</td>
-                    <td className="ff-num" style={{ color: corDiferenca(totais.frete - totais.recebido) }}>
-                      {fmtR(totais.frete - totais.recebido)}
-                    </td>
-                    <td colSpan={2} />
-                  </tr>
-                </tfoot>
-              )}
             </table>
           </>
         )}

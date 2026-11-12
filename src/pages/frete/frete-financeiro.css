@@ -149,18 +149,16 @@
 }
 .ff-tabela tbody tr:hover { background: var(--table-row-hover); }
 
-/* Totais colados no rodapé, do mesmo jeito que o cabeçalho fica no topo */
-.ff-tabela tfoot td {
-  position: sticky;
-  bottom: 0;
-  z-index: 90;
-  background: var(--table-header-bg);
-  color: var(--text-header);
-  font-weight: 800;
-  font-size: 12px;
-  padding: 9px 10px;
-  white-space: nowrap;
-  box-shadow: inset 0 1px 0 var(--border-light);
+/* Data em duas linhas: a coluna fica estreita e sobra largura para a descrição */
+.ff-tabela td.ff-data { font-size: 11px; line-height: 1.35; }
+
+/* A única célula que quebra linha — o resto da tabela continua nowrap, senão
+   as colunas de valor se partiriam no meio. */
+.ff-tabela td.ff-desc {
+  white-space: normal;
+  line-height: 1.35;
+  min-width: 240px;
+  max-width: 420px;
 }
 .ff-num { text-align: right; font-variant-numeric: tabular-nums; }
 .ff-vazio { text-align: center; padding: 28px; color: var(--muted); }

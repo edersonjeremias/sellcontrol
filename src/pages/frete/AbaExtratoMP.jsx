@@ -4,8 +4,8 @@ import {
   getExtratoMP, sincronizarExtratoMP, classificarExtrato, totaisExtrato,
 } from '../../services/freteFinanceiroService'
 import {
-  S, LABEL_METODO, primeiroDiaMes, ultimoDiaMes, fmtDataHora, casaBusca,
-  descreveMetodo, descreveParcelas,
+  S, LABEL_METODO, primeiroDiaMes, ultimoDiaMes, fmtDataHora, partesDataHora,
+  casaBusca, descreveMetodo, descreveParcelas,
 } from './freteUi'
 
 const ORIGENS = [
@@ -21,6 +21,14 @@ const LABEL_ORIGEM = { frete: 'Frete', venda: 'Venda', outro: 'A definir' }
 function pctTaxa(g) {
   if (!g.bruto) return '0%'
   return (g.taxa / g.bruto * 100).toFixed(1).replace('.', ',') + '%'
+}
+
+/** Quanto o Mercado Pago ficou da linha, em percentual do bruto */
+function descontoMp(l) {
+  const bruto = Number(l.valor) || 0
+  // Taxa ausente não é taxa zero: sem o dado, melhor não afirmar nada
+  if (!bruto || l.taxa === null || l.taxa === undefined) return ''
+  return (Number(l.taxa) / bruto * 100).toFixed(2).replace('.', ',') + '%'
 }
 
 export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
@@ -214,7 +222,7 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                 </div>
                 <div className="ff-mcard-linha">
                   <span>bruto {fmtR(l.valor)}</span>
-                  <span>taxa <strong style={{ color: 'var(--red)' }}>{fmtR(l.taxa)}</strong></span>
+                  <span>taxa <strong style={{ color: 'var(--red)' }}>{fmtR(l.taxa)}</strong> ({descontoMp(l)})</span>
                   {(l.pagador_nome || l.payer_email) && <span>{l.pagador_nome || l.payer_email}</span>}
                 </div>
                 {l.romaneios?.numero && (
@@ -251,6 +259,7 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                   <th>Pagador</th>
                   <th className="ff-num">Bruto</th>
                   <th className="ff-num">Taxa</th>
+                  <th className="ff-num">% MP</th>
                   <th className="ff-num">Líquido</th>
                   <th>Romaneio</th>
                   <th style={{ textAlign: 'center' }}>Origem</th>
@@ -259,10 +268,13 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
               <tbody>
                 {visiveis.map(l => (
                   <tr key={l.id}>
-                    <td>{fmtDataHora(l.data_aprovacao)}</td>
-                    <td style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis' }} title={l.descricao || ''}>
-                      {l.descricao || '—'}
-                      <span style={{ color: 'var(--muted)', fontSize: 10, marginLeft: 6 }}>#{l.mp_payment_id}</span>
+                    <td className="ff-data">
+                      <div>{partesDataHora(l.data_aprovacao).data}</div>
+                      <div style={{ color: 'var(--muted)' }}>{partesDataHora(l.data_aprovacao).hora}</div>
+                    </td>
+                    <td className="ff-desc">
+                      <div>{l.descricao || '—'}</div>
+                      <div style={{ color: 'var(--muted)', fontSize: 10 }}>#{l.mp_payment_id}</div>
                     </td>
                     <td>{descreveMetodo(l)}</td>
                     <td style={{ color: Number(l.parcelas) > 1 ? 'var(--yellow)' : 'var(--muted)' }}>
@@ -277,6 +289,7 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                     </td>
                     <td className="ff-num">{fmtR(l.valor)}</td>
                     <td className="ff-num" style={{ color: 'var(--red)' }}>{fmtR(l.taxa)}</td>
+                    <td className="ff-num" style={{ color: 'var(--red)' }}>{descontoMp(l) || '—'}</td>
                     <td className="ff-num" style={{ color: 'var(--blue)', fontWeight: 600 }}>{fmtR(l.liquido)}</td>
                     <td>
                       {l.romaneios?.numero
@@ -298,23 +311,12 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
                   </tr>
                 ))}
                 {linhas.length === 0 && (
-                  <tr><td colSpan={10} className="ff-vazio">Nada baixado para este período.</td></tr>
+                  <tr><td colSpan={11} className="ff-vazio">Nada baixado para este período.</td></tr>
                 )}
                 {linhas.length > 0 && visiveis.length === 0 && (
-                  <tr><td colSpan={10} className="ff-vazio">Nenhum resultado para o filtro.</td></tr>
+                  <tr><td colSpan={11} className="ff-vazio">Nenhum resultado para o filtro.</td></tr>
                 )}
               </tbody>
-              {visiveis.length > 0 && (
-                <tfoot>
-                  <tr>
-                    <td colSpan={4}>Total de {totais.geral.qtd} pagamento(s)</td>
-                    <td className="ff-num">{fmtR(totais.geral.bruto)}</td>
-                    <td className="ff-num" style={{ color: 'var(--red)' }}>{fmtR(totais.geral.taxa)}</td>
-                    <td className="ff-num" style={{ color: 'var(--blue)' }}>{fmtR(totais.geral.liquido)}</td>
-                    <td colSpan={2} />
-                  </tr>
-                </tfoot>
-              )}
             </table>
           </>
         )}
@@ -322,6 +324,7 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile }) {
         {jaFiltrou && !carregando && (
           <div className="ff-legenda">
             <div>Frete e vendas caem na mesma conta do Mercado Pago. Aqui cada entrada é separada.</div>
+            <div><strong>% MP</strong> é quanto o Mercado Pago ficou daquele pagamento: taxa dividida pelo bruto. No PIX fica perto de 1%; no crédito parcelado sobe conforme o número de parcelas.</div>
             <div><strong>Frete</strong> sai do PIX que o sistema gerou para um romaneio. <strong>Venda</strong> sai de uma cobrança.</div>
             <div>O que não deu match fica como <strong>A definir</strong> — troque na coluna Origem e a escolha não é desfeita na próxima busca.</div>
           </div>
