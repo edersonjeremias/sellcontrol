@@ -1,8 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { uploadImagemProduto, deleteImagemProduto, atualizarImagensProduto } from '../../services/imagensService'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import './ModalImagensProduto.css'
+
+const MAX_IMAGENS = 3
 
 export default function ModalImagensProduto({ produto, onClose, onUpdate }) {
   const { profile } = useAuth()
@@ -14,16 +16,18 @@ export default function ModalImagensProduto({ produto, onClose, onUpdate }) {
   const [imagemGrande, setImagemGrande] = useState(null)
   const fileInputRef = useRef(null)
 
-  const podeAdicionarMais = imagens.length < 3
+  const restantes = MAX_IMAGENS - imagens.length
+  const podeAdicionarMais = restantes > 0
 
-  // Upload de arquivo
-  const handleFileChange = async (e) => {
-    const files = Array.from(e.target.files)
+  // Caminho único de envio: usado pelo botão, pelo arrastar e pelo colar
+  const enviarArquivos = useCallback(async (files) => {
+    if (uploading || files.length === 0) return
 
-    if (files.length === 0) return
-
-    // Verifica quantas imagens pode adicionar
-    const espacoDisponivel = 3 - imagens.length
+    const espacoDisponivel = MAX_IMAGENS - imagens.length
+    if (espacoDisponivel === 0) {
+      showToast(`Limite de ${MAX_IMAGENS} imagens atingido`, 'error')
+      return
+    }
     if (files.length > espacoDisponivel) {
       showToast(`Você pode adicionar no máximo ${espacoDisponivel} ${espacoDisponivel === 1 ? 'imagem' : 'imagens'}`, 'error')
       return
@@ -33,30 +37,62 @@ export default function ModalImagensProduto({ produto, onClose, onUpdate }) {
 
     try {
       const urlsNovas = []
-
       for (const file of files) {
-        const url = await uploadImagemProduto(file, produto.id, tenantId)
-        urlsNovas.push(url)
+        urlsNovas.push(await uploadImagemProduto(file, produto.id, tenantId))
       }
 
       const novasImagens = [...imagens, ...urlsNovas]
       setImagens(novasImagens)
-
-      // Salva no banco
       await atualizarImagensProduto(produto.id, novasImagens)
 
       showToast(`${urlsNovas.length} ${urlsNovas.length === 1 ? 'imagem adicionada' : 'imagens adicionadas'}!`, 'success')
-
-      // Atualiza lista de produtos
       onUpdate?.()
     } catch (err) {
       showToast(err.message || 'Erro ao fazer upload', 'error')
     } finally {
       setUploading(false)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }, [imagens, uploading, produto.id, tenantId, showToast, onUpdate])
+
+  // Colar com Ctrl+V. O listener fica no documento porque o modal não
+  // tem campo de texto onde o cursor pudesse estar
+  useEffect(() => {
+    const handlePaste = (e) => {
+      const arquivos = Array.from(e.clipboardData?.items || [])
+        .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+        .map(item => item.getAsFile())
+        .filter(Boolean)
+
+      if (arquivos.length === 0) return
+
+      e.preventDefault()
+      enviarArquivos(arquivos)
+    }
+
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [enviarArquivos])
+
+  const handleFileChange = (e) => {
+    enviarArquivos(Array.from(e.target.files))
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const imageFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'))
+    if (imageFiles.length === 0) {
+      showToast('Nenhum arquivo de imagem detectado', 'error')
+      return
+    }
+    enviarArquivos(imageFiles)
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
   }
 
   // Remove imagem
@@ -66,50 +102,19 @@ export default function ModalImagensProduto({ produto, onClose, onUpdate }) {
     setUploading(true)
 
     try {
-      // Remove do storage
       await deleteImagemProduto(url)
 
-      // Remove do array
       const novasImagens = imagens.filter((_, i) => i !== index)
       setImagens(novasImagens)
-
-      // Salva no banco
       await atualizarImagensProduto(produto.id, novasImagens)
 
       showToast('Imagem removida!', 'success')
-
-      // Atualiza lista de produtos
       onUpdate?.()
     } catch (err) {
       showToast('Erro ao remover imagem', 'error')
     } finally {
       setUploading(false)
     }
-  }
-
-  // Drag & Drop
-  const handleDrop = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    const files = Array.from(e.dataTransfer.files)
-    const imageFiles = files.filter(f => f.type.startsWith('image/'))
-
-    if (imageFiles.length === 0) {
-      showToast('Nenhum arquivo de imagem detectado', 'error')
-      return
-    }
-
-    // Simula seleção de arquivo
-    const dataTransfer = new DataTransfer()
-    imageFiles.forEach(file => dataTransfer.items.add(file))
-    fileInputRef.current.files = dataTransfer.files
-    handleFileChange({ target: fileInputRef.current })
-  }
-
-  const handleDragOver = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
   }
 
   return (
@@ -179,9 +184,9 @@ export default function ModalImagensProduto({ produto, onClose, onUpdate }) {
                 </button>
 
                 <p className="upload-info">
-                  Arraste imagens aqui ou clique para selecionar
+                  Arraste, cole com <kbd>Ctrl</kbd>+<kbd>V</kbd> ou clique para selecionar
                   <br />
-                  <small>JPG, PNG ou WEBP • Máximo 5MB • {3 - imagens.length} {3 - imagens.length === 1 ? 'restante' : 'restantes'}</small>
+                  <small>JPG, PNG ou WEBP • Máximo 5MB • {restantes} {restantes === 1 ? 'restante' : 'restantes'}</small>
                 </p>
               </div>
             )}

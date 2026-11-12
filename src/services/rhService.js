@@ -525,10 +525,15 @@ export async function uploadDocumentoFuncionario(file, funcionarioId, tenantId) 
     throw new Error('Erro ao enviar o arquivo: ' + error.message)
   }
 
+  // Nome original sem a extensão: é o que a pessoa reconhece na lista. Print
+  // colado da área de transferência chega como "image.png", que não diz nada
+  // — nesse caso vale mais a data, e o lápis permite renomear depois.
+  const base = file.name.replace(/\.[^.]+$/, '').trim()
+  const generico = !base || /^(image|imagem|captura|screenshot|colad)/i.test(base)
+
   return {
     caminho:    data.path,
-    // Nome original sem a extensão: é o que a pessoa reconhece na lista
-    nome:       file.name.replace(/\.[^.]+$/, '').slice(0, 80),
+    nome:       generico ? `Documento ${fmtData(isoLocal(new Date()))}` : base.slice(0, 80),
     enviado_em: new Date().toISOString(),
   }
 }

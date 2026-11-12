@@ -24,7 +24,9 @@ export async function uploadImagemProduto(file, produtoId, tenantId) {
 
   // Gera nome único para o arquivo
   const timestamp = Date.now()
-  const extensao = file.name.split('.').pop()
+  // Extensao vem do tipo, nao do nome: imagem colada da area de transferencia
+  // chega sem nome utilizavel
+  const extensao = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp'
   const fileName = `${tenantId}/${produtoId}/${timestamp}.${extensao}`
 
   // Upload para o Supabase Storage

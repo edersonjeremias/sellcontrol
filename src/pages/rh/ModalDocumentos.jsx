@@ -71,6 +71,26 @@ export default function ModalDocumentos({ funcionario, tenantId, showToast, onFe
     if (inputRef.current) inputRef.current.value = ''
   }
 
+
+  // Colar direto no modal: print do comprovante do banco vai para a área de
+  // transferência, e salvar em arquivo só para anexar é passo perdido.
+  // Sem lista de dependências de propósito: o efeito é refeito a cada
+  // render para a função de envio enxergar os anexos atuais.
+  useEffect(() => {
+    function colar(e) {
+      const itens = Array.from(e.clipboardData?.items || [])
+      const arquivos = itens
+        .filter(i => i.kind === 'file')
+        .map(i => i.getAsFile())
+        .filter(f => f && (f.type.startsWith('image/') || f.type === 'application/pdf'))
+      if (!arquivos.length) return
+      e.preventDefault()
+      enviar(arquivos)
+    }
+    window.addEventListener('paste', colar)
+    return () => window.removeEventListener('paste', colar)
+  })
+
   async function remover() {
     const { doc, index } = confirm
     setConfirm(null)
@@ -178,6 +198,7 @@ export default function ModalDocumentos({ funcionario, tenantId, showToast, onFe
                 </button>
                 <p style={{ color:'var(--muted)', fontSize:12, margin:'10px 0 0', textAlign:'center' }}>
                   Contrato assinado, RG, CPF, exame admissional…<br />
+                  Arraste aqui ou cole com Ctrl+V<br />
                   JPG, PNG, WEBP ou PDF • até 10MB • {restantes} {restantes === 1 ? 'vaga restante' : 'vagas restantes'}
                 </p>
               </div>
