@@ -18,9 +18,11 @@ import './frete-financeiro.css'
 //   Extrato MP — o extrato do Mercado Pago separado em frete x venda
 // ============================================================================
 
+// "Extrato MP" em vez de "Extrato Mercado Pago": o nome inteiro empurrava as
+// abas para a linha de baixo quando a faixa ficava cheia
 const ABAS = [
   ['romaneios', 'Romaneios'],
-  ['extrato',   'Extrato Mercado Pago'],
+  ['extrato',   'Extrato MP'],
 ]
 
 export default function FreteFinanceiroPage() {

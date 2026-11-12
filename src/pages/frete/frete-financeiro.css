@@ -16,23 +16,25 @@
 .ff-page > .ff-lote { flex-shrink: 0; }
 
 /* Título, campos e abas dividem uma faixa só: duas faixas comiam altura da
-   lista sem precisar. Os campos têm rótulo em cima, então o título e as abas
-   se alinham pelo centro da linha, não pela base como os inputs. */
+   lista sem precisar. Tudo se alinha pela base, que é onde ficam os campos —
+   o rótulo deles fica por cima e não conta para o alinhamento. O padding do
+   título acerta a base do texto com a dos inputs. */
 .ff-titulo {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-header);
-  align-self: center;
+  align-self: flex-end;
+  padding-bottom: 7px;
   white-space: nowrap;
 }
 
 .ff-abas {
-  align-self: center;
+  align-self: flex-end;
   margin-left: auto;
   display: flex;
   gap: 4px;
   background: rgba(0, 0, 0, 0.2);
-  padding: 5px;
+  padding: 3px;
   border-radius: 8px;
 }
 .ff-aba {
@@ -40,9 +42,9 @@
   color: var(--muted);
   border: none;
   border-radius: 6px;
-  padding: 7px 16px;
+  padding: 6px 12px;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -77,6 +79,21 @@
 /* Sem margin-left:auto: os botões ficam colados nos campos e quem é jogado
    para a direita da faixa são as abas */
 .ff-acoes { display: flex; align-items: flex-end; gap: 8px; }
+
+/* A faixa divide a linha com as abas, então campos e botões são compactos.
+   Precisa de !important porque eles levam estilo inline (S.inp, S.btn, S.sec).
+   O seletor passa por .ff-f e .ff-acoes de propósito: sem isso pegaria também
+   os botões das abas, que moram na mesma faixa e têm altura própria. */
+.ff-filtros .ff-f label { font-size: 10px; }
+.ff-filtros .ff-f input,
+.ff-filtros .ff-f select {
+  font-size: 12px !important;
+  padding: 6px 8px !important;
+}
+.ff-acoes > button {
+  font-size: 12px !important;
+  padding: 7px 14px !important;
+}
 
 /* ── Cartões de resumo ── */
 .ff-resumo {

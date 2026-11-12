@@ -40,9 +40,9 @@ dinheiro, junto com o pagamento da venda ou abatido de crédito. Grava em
 cortesia) aparece sinalizada mas **não** entra no valor recebido — não é
 dinheiro no Mercado Pago.
 
-### Aba Extrato Mercado Pago
+### Aba Extrato MP
 
-**Buscar no Mercado Pago** baixa os pagamentos aprovados do período e classifica
+**Buscar no MP** baixa os pagamentos aprovados do período e classifica
 cada um:
 
 - **frete** — o id do pagamento está em `pagamentos_frete.gateway_transaction_id`
@@ -115,7 +115,7 @@ Migration: `supabase/migrations/20261112_mp_extrato_detalhes.sql`
    supabase functions deploy webhook-mercadopago-frete
    ```
 
-   Sem esse deploy nada quebra: o botão **Buscar no Mercado Pago** preenche taxa
+   Sem esse deploy nada quebra: o botão **Buscar no MP** preenche taxa
    e líquido dos pagamentos de frete que encontrar.
 4. **Permissão** — em `/admin`, liberar a página *Frete e Romaneios* para quem
    precisa (master já vê tudo).

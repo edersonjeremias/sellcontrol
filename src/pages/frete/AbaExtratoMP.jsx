@@ -151,8 +151,9 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile, abas }) {
           >
             {pendente ? 'Filtrar •' : 'Filtrar'}
           </button>
-          <button disabled={sincronizando} onClick={sincronizar} style={S.sec}>
-            {sincronizando ? 'Buscando…' : 'Buscar no Mercado Pago'}
+          <button disabled={sincronizando} onClick={sincronizar} style={S.sec}
+            title="Baixa do Mercado Pago os pagamentos aprovados do período">
+            {sincronizando ? 'Buscando…' : 'Buscar no MP'}
           </button>
         </div>
         {abas}
@@ -198,7 +199,7 @@ export default function AbaExtratoMP({ tenantId, showToast, isMobile, abas }) {
       <div className="ff-conteudo">
         {!jaFiltrou ? (
           <p className="ff-vazio">
-            Escolha o período e clique em Buscar no Mercado Pago. Depois disso, Filtrar só lê o que já foi baixado.
+            Escolha o período e clique em Buscar no MP. Depois disso, Filtrar só lê o que já foi baixado.
           </p>
         ) : carregando ? (
           <p className="ff-vazio">Carregando…</p>
