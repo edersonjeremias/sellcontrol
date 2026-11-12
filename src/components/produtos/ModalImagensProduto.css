@@ -197,6 +197,18 @@
   font-size: 12px;
 }
 
+.upload-info kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .sem-imagens {
   text-align: center;
   padding: 60px 20px;
