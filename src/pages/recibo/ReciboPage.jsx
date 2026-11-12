@@ -572,6 +572,15 @@ export default function ReciboPage() {
   const statusCor   = STATUS_COR[cob.status]   || '#9aa0a6'
   const statusLabel = STATUS_LABEL[cob.status] || cob.status
   const pago        = cob.status === 'PAGO' || cob.status === 'BAIXADO'
+  const descontoPixPago = pago &&
+    Number(cob.pix_desconto_valor) > 0 &&
+    Number(cob.total) === Number(cob.pix_valor)
+      ? {
+          valor: Number(cob.pix_desconto_valor),
+          percentual: Number(cob.pix_desconto_percentual || 0),
+          original: Number((Number(cob.total) + Number(cob.pix_desconto_valor)).toFixed(2)),
+        }
+      : null
   const div         = cob.dados_divisao || null
   const div_p1_pago = div?.status_p1 === 'PAGO'
   const div_p2_pago = div?.status_p2 === 'PAGO'
@@ -638,12 +647,44 @@ export default function ReciboPage() {
         {/* Total */}
         <div style={estilos.totalBox}>
           <span style={{ color: '#9aa0a6', fontSize: 14 }}>
-            {cupomAplicado ? 'Subtotal' : 'Total'}
+            {cupomAplicado || descontoPixPago ? 'Subtotal' : 'Total'}
           </span>
           <span style={{ fontSize: 28, fontWeight: 800, color: '#81c995' }}>
-            {formatMoeda(cupomAplicado ? cupomAplicado.totalOriginal : cob.total)}
+            {formatMoeda(
+              cupomAplicado ? cupomAplicado.totalOriginal
+                : descontoPixPago ? descontoPixPago.original
+                : cob.total
+            )}
           </span>
         </div>
+
+        {/* Desconto do PIX, quando o pagamento saiu por ele */}
+        {descontoPixPago && (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', marginBottom: 8 }}>
+              <span style={{ color: '#32bcad', fontSize: 14, fontWeight: 600 }}>
+                Desconto PIX{descontoPixPago.percentual > 0 ? ` (${descontoPixPago.percentual}%)` : ''}
+              </span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#32bcad' }}>
+                - {formatMoeda(descontoPixPago.valor)}
+              </span>
+            </div>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '12px 0',
+              marginBottom: 16,
+              borderTop: '2px solid #81c995',
+              borderBottom: '1px solid #3c4043',
+            }}>
+              <span style={{ color: '#e8eaed', fontSize: 16, fontWeight: 700 }}>Valor pago</span>
+              <span style={{ fontSize: 32, fontWeight: 800, color: '#81c995' }}>
+                {formatMoeda(cob.total)}
+              </span>
+            </div>
+          </>
+        )}
 
         {/* Cupom aplicado */}
         {cupomAplicado && (
