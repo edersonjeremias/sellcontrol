@@ -7,6 +7,7 @@ import {
   getContasPagar, salvarContaPagar, excluirContaPagar,
   pagarContaPagar, inserirContasPagarLote, getCategoriasContasPagar,
 } from '../../services/relatorioService'
+import { avisarBadges } from '../../services/badgesService'
 
 // ── Helpers ────────────────────────────────────────────────────
 // yyyy-mm-dd no fuso local. toISOString() converte para UTC e, como o Brasil
@@ -193,6 +194,9 @@ export default function ContasPagarPage() {
     try {
       const dados = await getContasPagar(tenantId, { dataInicio: dataIni, dataFim })
       setContas(dados)
+      // Pagar, excluir ou lançar passa por aqui: reconta o aviso do topo na
+      // hora, em vez de deixar o número velho até o refresh automático.
+      avisarBadges()
     } catch { showToast('Erro ao carregar contas.', 'error') }
     setCarregando(false)
   }, [tenantId, dataIni, dataFim, showToast])

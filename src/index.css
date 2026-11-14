@@ -190,6 +190,9 @@ input[type="radio"]:focus {
 .app-badge-notificacoes { background: var(--blue); }
 /* Verde = mensagens de clientes (CRM Contatos) */
 .app-badge-contatos { background: var(--green); }
+/* Vermelho = conta a pagar atrasada / Amarelo = vence hoje */
+.app-badge-contas-vencidas { background: var(--red); }
+.app-badge-contas-hoje { background: var(--yellow); }
 
 /* Versão compacta usada dentro dos itens do menu lateral */
 .app-badge-mini {

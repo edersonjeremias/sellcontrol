@@ -29,6 +29,33 @@ export async function contarNotificacoesNaoLidas(tenantId) {
     .reduce((s, n) => s + (n.nao_lidas || 0), 0)
 }
 
+// ── Contas a pagar (vencidas + vencendo hoje) ───────────────────
+// Separa as duas contagens para o header poder avisar em vermelho quando já
+// existe conta atrasada e só em amarelo quando é coisa do dia.
+export const SEM_CONTAS_A_VENCER = { vencidas: 0, hoje: 0, total: 0 }
+
+export async function contarContasPagarVencendo(tenantId) {
+  if (!tenantId) return SEM_CONTAS_A_VENCER
+
+  // Data local: toISOString() devolveria o dia seguinte à noite, porque o
+  // Brasil fica atrás do UTC, e as contas de hoje apareceriam como vencidas.
+  const d = new Date()
+  const hoje = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+
+  const { data, error } = await supabase
+    .from('contas_pagar')
+    .select('data_vencimento')
+    .eq('tenant_id', tid(tenantId))
+    .or('status.is.null,status.neq.PAGO')
+    .lte('data_vencimento', hoje)
+
+  if (error) throw error
+
+  const linhas = data || []
+  const vencidas = linhas.filter(c => c.data_vencimento < hoje).length
+  return { vencidas, hoje: linhas.length - vencidas, total: linhas.length }
+}
+
 // ── CRM Contatos (mensagens de clientes) ────────────────────────
 // Respeita os assuntos permitidos do usuário, igual à ContatosPage.
 export async function contarContatosNaoLidos(tenantId, userId = null) {

@@ -5,12 +5,25 @@ import { getConfig } from '../../services/configService'
 import {
   contarNotificacoesNaoLidas,
   contarContatosNaoLidos,
+  contarContasPagarVencendo,
+  SEM_CONTAS_A_VENCER,
   BADGES_EVENT,
 } from '../../services/badgesService'
 
 // Categoria e ordem do menu vêm da tabela pages (editável em
 // Configurações → Menu). menuItems já chega ordenado por order_index.
 const CATEGORIA_PADRAO = 'Outros'
+
+// Vermelho quando já existe conta atrasada, amarelo quando é só do dia
+const corContas = (contas) =>
+  contas.vencidas > 0 ? 'app-badge-contas-vencidas' : 'app-badge-contas-hoje'
+
+function textoContas({ vencidas, hoje }) {
+  const partes = []
+  if (vencidas) partes.push(`${vencidas} vencida${vencidas > 1 ? 's' : ''}`)
+  if (hoje) partes.push(`${hoje} vence${hoje > 1 ? 'm' : ''} hoje`)
+  return `Contas a pagar: ${partes.join(' e ')}`
+}
 
 export default function AppShell({ title, children, hideTitle = false, flush = false }) {
   const { profile, menuItems, signOut } = useAuth()
@@ -20,8 +33,8 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   const [config, setConfig] = useState(null)
   // Categorias fechadas por padrão — expanded só quando o usuário clicar
   const [expanded, setExpanded] = useState({})
-  // Mensagens não lidas exibidas no topo e no menu lateral
-  const [naoLidas, setNaoLidas] = useState({ notificacoes: 0, contatos: 0 })
+  // Avisos exibidos no topo e no menu lateral
+  const [naoLidas, setNaoLidas] = useState({ notificacoes: 0, contatos: 0, contas: SEM_CONTAS_A_VENCER })
 
   // Carrega configurações para pegar nome da empresa
   useEffect(() => {
@@ -35,15 +48,17 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
   // Só conta o que o usuário tem permissão de abrir
   const temNotificacoes = menuItems.some(i => i.slug === 'notificacoes')
   const temContatos     = menuItems.some(i => i.slug === 'contatos')
+  const temContasPagar  = menuItems.some(i => i.slug === 'contas-pagar')
 
   const carregarNaoLidas = useCallback(async () => {
     if (!profile?.tenant_id) return
-    const [notifs, contatos] = await Promise.all([
+    const [notifs, contatos, contas] = await Promise.all([
       temNotificacoes ? contarNotificacoesNaoLidas(profile.tenant_id).catch(() => 0) : 0,
       temContatos ? contarContatosNaoLidos(profile.tenant_id, profile.id).catch(() => 0) : 0,
+      temContasPagar ? contarContasPagarVencendo(profile.tenant_id).catch(() => SEM_CONTAS_A_VENCER) : SEM_CONTAS_A_VENCER,
     ])
-    setNaoLidas({ notificacoes: notifs, contatos })
-  }, [profile?.tenant_id, profile?.id, temNotificacoes, temContatos])
+    setNaoLidas({ notificacoes: notifs, contatos, contas })
+  }, [profile?.tenant_id, profile?.id, temNotificacoes, temContatos, temContasPagar])
 
   // Atualiza ao entrar, a cada 30s, ao voltar para a aba e quando alguma
   // página avisa que marcou uma conversa como lida
@@ -137,6 +152,15 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
               {naoLidas.contatos}
             </button>
           )}
+          {naoLidas.contas.total > 0 && (
+            <button
+              className={`app-badge ${corContas(naoLidas.contas)}`}
+              onClick={() => navigate('/contas-pagar')}
+              title={textoContas(naoLidas.contas)}
+            >
+              {naoLidas.contas.total}
+            </button>
+          )}
         </div>
 
         <button
@@ -183,8 +207,11 @@ export default function AppShell({ title, children, hideTitle = false, flush = f
                   {grouped[cat].map(item => {
                     const badge = item.to === '/notificacoes' ? naoLidas.notificacoes
                                 : item.to === '/contatos'     ? naoLidas.contatos
+                                : item.to === '/contas-pagar' ? naoLidas.contas.total
                                 : 0
-                    const badgeCor = item.to === '/contatos' ? ' app-badge-contatos' : ' app-badge-notificacoes'
+                    const badgeCor = item.to === '/contatos'     ? ' app-badge-contatos'
+                                   : item.to === '/contas-pagar' ? ` ${corContas(naoLidas.contas)}`
+                                   : ' app-badge-notificacoes'
                     return (
                       <Link
                         key={item.to}
