@@ -9,10 +9,10 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 const S = {
-  inp: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'7px 10px', fontSize:13, outline:'none' },
+  inp: { background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:6, color:'var(--input-text)', padding:'6px 8px', fontSize:12, outline:'none' },
   th:  { background:'var(--table-header-bg)', color:'var(--table-header-text)', fontSize:11, fontWeight:700, textAlign:'left', padding:'6px 8px', textTransform:'uppercase', letterSpacing:'0.3px', whiteSpace:'nowrap' },
   td:  { padding:'5px 8px', color:'var(--text-body)', fontSize:12, whiteSpace:'normal', wordWrap:'break-word', maxWidth:'150px' },
-  btn: { background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer', fontSize:13 },
+  btn: { background:'var(--blue)', color:'#0f0f0f', border:'none', borderRadius:6, padding:'7px 11px', fontWeight:700, cursor:'pointer', fontSize:12, whiteSpace:'nowrap' },
 }
 
 const STATUS_COR = { CANCELADO:'var(--red)', DEVOLVIDO:'var(--yellow)', ENVIADO:'var(--green)' }
@@ -293,14 +293,14 @@ export default function RelatorioPage() {
   return (
     <AppShell title="Relatório" hideTitle>
       {/* Filtros de período */}
-      <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8, padding:'12px 16px', borderBottom:'1px solid var(--border-light)', background:'var(--header-bg)' }}>
+      <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:6, padding:'10px 12px', borderBottom:'1px solid var(--border-light)', background:'var(--header-bg)' }}>
         <span style={{ fontSize:14, fontWeight:700, color:'var(--text-header)' }}>Relatório de Vendas</span>
         <div style={{ flex:1 }} />
         <label style={{ fontSize:12, color:'var(--muted)' }}>De</label>
         <input type="date" value={dataIni} onChange={e => setDataIni(e.target.value)} style={S.inp} />
         <label style={{ fontSize:12, color:'var(--muted)' }}>Até</label>
         <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} style={S.inp} />
-        <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ ...S.inp, minWidth:160 }}>
+        <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)} style={{ ...S.inp, minWidth:132 }}>
           <option value="todos">Todos</option>
           <option value="vendidos">✅ Vendidos</option>
           <option value="cadastrados">📦 Cadastrados</option>
@@ -309,8 +309,8 @@ export default function RelatorioPage() {
           <option value="DEVOLVIDO">↩️ Devolvido</option>
           <option value="nao_salvos">⏳ Nao salvos em Vendas</option>
         </select>
-        <select value={filtroStatusExpedicao} onChange={e => setFiltroStatusExpedicao(e.target.value)} style={{ ...S.inp, minWidth:160 }}>
-          <option value="todos">📦 Status Expedição: Todos</option>
+        <select value={filtroStatusExpedicao} onChange={e => setFiltroStatusExpedicao(e.target.value)} style={{ ...S.inp, minWidth:132 }}>
+          <option value="todos">📦 Expedição: Todos</option>
           {statusExpedicaoList.map(status => (
             <option key={status.id} value={status.nome}>{status.nome}</option>
           ))}
@@ -322,7 +322,7 @@ export default function RelatorioPage() {
           placeholder="Cliente…"
           showOnFocus
           className="filtro-autocomplete-input"
-          style={{ width:170 }}
+          style={{ width:132 }}
         />
         <button
           onClick={aplicarFiltros}
