@@ -29,22 +29,24 @@
   max-width: 1200px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 18px;
 }
 
 @media (max-width: 1100px) { .mural-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 680px)  { .mural-grid { grid-template-columns: 1fr; } }
 
+/* Card de revista: foto sangrando até a borda, texto embaixo. O recorte de
+   cor some da lateral e vira um fio no topo, para a foto encostar na borda. */
 .mural-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   text-align: left;
   background: var(--card-bg);
   border: 1px solid var(--border-light);
-  border-left: 4px solid var(--blue);
+  border-top: 3px solid var(--blue);
   border-radius: 8px;
-  padding: 14px;
+  padding: 0;
+  overflow: hidden;
   cursor: pointer;
   font: inherit;
   color: var(--text-body);
@@ -53,32 +55,69 @@
 
 .mural-card:hover {
   background: var(--table-row-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
 }
 
 /* Quem ainda não leu precisa enxergar o card de longe. */
 .mural-card.nao-lido { box-shadow: inset 0 0 0 1px rgba(138, 180, 248, 0.35); }
 
 .mural-card-foto {
-  height: 120px;
-  border-radius: 6px;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
   background: #1b1c1e;
+  flex-shrink: 0;
 }
 
-.mural-card-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mural-card-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.35s ease;
+}
 
-.mural-card-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.mural-card:hover .mural-card-foto img { transform: scale(1.04); }
 
-.mural-card-topo h3 {
+.mural-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  padding: 14px;
+}
+
+/* Sem foto o card seria um retângulo de texto perdido ao lado dos
+   ilustrados: a chamada cresce e assume o lugar da imagem. */
+.mural-card.sem-foto .mural-card-info { padding: 18px; }
+.mural-card.sem-foto h3 { font-size: 19px; }
+.mural-card.sem-foto .mural-card-texto { -webkit-line-clamp: 5; }
+
+.mural-card h3 {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
-  line-height: 1.3;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
-.mural-pin { font-size: 13px; flex-shrink: 0; }
+.mural-pin { font-size: 13px; }
+
+/* Manchete: o aviso fixado ocupa duas colunas, foto de um lado e texto do
+   outro, como a matéria de capa. */
+.mural-card.destaque { grid-column: span 2; flex-direction: row; }
+.mural-card.destaque .mural-card-foto { width: 52%; aspect-ratio: auto; min-height: 220px; }
+.mural-card.destaque .mural-card-info { justify-content: center; padding: 20px; }
+.mural-card.destaque h3 { font-size: 24px; }
+.mural-card.destaque .mural-card-texto { font-size: 14px; -webkit-line-clamp: 4; }
+
+@media (max-width: 680px) {
+  .mural-card.destaque { grid-column: auto; flex-direction: column; }
+  .mural-card.destaque .mural-card-foto { width: 100%; aspect-ratio: 16 / 10; min-height: 0; }
+  .mural-card.destaque h3 { font-size: 19px; }
+}
 
 /* Prévia em três linhas: o texto inteiro fica no modal. */
 .mural-card-texto {
@@ -113,7 +152,15 @@
   letter-spacing: 0.5px;
 }
 
-.mural-modal { max-width: 640px; }
+/* Com foto o selo sai do rodapé e vai para cima da imagem, onde é visto. */
+.mural-badge.sobre-foto {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.mural-modal { max-width: 720px; }
 .mural-modal .modal-header { display: flex; flex-direction: column; gap: 4px; }
 .mural-modal-autor { font-size: 12px; color: var(--muted); }
 /* O padding-bottom de 120px do .modal-body deixaria um vão embaixo do texto. */

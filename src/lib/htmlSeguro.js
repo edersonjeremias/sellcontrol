@@ -123,3 +123,14 @@ export function htmlParaTexto(html) {
   )
   return (doc.body.textContent || '').replace(/\s+/g, ' ').trim()
 }
+
+// Foto do card quando o aviso não tem capa: quase todo aviso com imagem é
+// escrito colando a foto no meio do texto, e sem isto o card ficava só com
+// letra enquanto a imagem existia dentro do aviso.
+export function primeiraImagem(html) {
+  if (!html) return ''
+  const doc = new DOMParser().parseFromString(String(html), 'text/html')
+  const img = doc.querySelector('img')
+  const src = img?.getAttribute('src') || ''
+  return /^https?:\/\//i.test(src) ? src : ''
+}

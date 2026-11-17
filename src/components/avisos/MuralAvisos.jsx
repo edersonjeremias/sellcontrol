@@ -6,7 +6,7 @@ import {
   marcarAvisoLido,
   corDoAviso,
 } from '../../services/avisosService'
-import { sanitizarHtml, htmlParaTexto } from '../../lib/htmlSeguro'
+import { sanitizarHtml, htmlParaTexto, primeiraImagem } from '../../lib/htmlSeguro'
 import '../../styles/avisos.css'
 
 function dataCurta(iso) {
@@ -80,30 +80,44 @@ export default function MuralAvisos({ onTemAvisos }) {
       <div className="mural-grid">
         {avisos.map(aviso => {
           const naoLido = !lidos.includes(aviso.id)
+          // Capa escolhida na página ou, na falta dela, a primeira foto do
+          // próprio texto do aviso.
+          const foto = aviso.imagem_url || primeiraImagem(aviso.corpo)
+          // O aviso fixado é a manchete: ocupa duas colunas com a foto grande.
+          const classes = [
+            'mural-card',
+            naoLido ? 'nao-lido' : '',
+            aviso.fixado ? 'destaque' : '',
+            foto ? 'com-foto' : 'sem-foto',
+          ].filter(Boolean).join(' ')
+
           return (
             <button
               key={aviso.id}
               type="button"
-              className={`mural-card${naoLido ? ' nao-lido' : ''}`}
-              style={{ borderLeftColor: corDoAviso(aviso.cor) }}
+              className={classes}
+              style={{ borderTopColor: corDoAviso(aviso.cor) }}
               onClick={() => abrir(aviso)}
             >
-              {aviso.imagem_url && (
+              {foto && (
                 <div className="mural-card-foto">
-                  <img src={aviso.imagem_url} alt="" />
+                  <img src={foto} alt="" loading="lazy" />
+                  {naoLido && <span className="mural-badge sobre-foto">NOVO</span>}
                 </div>
               )}
 
-              <div className="mural-card-topo">
-                <h3 style={{ color: corDoAviso(aviso.cor) }}>{aviso.titulo}</h3>
-                {aviso.fixado && <span className="mural-pin" title="Fixado">📌</span>}
-              </div>
+              <div className="mural-card-info">
+                <h3 style={{ color: corDoAviso(aviso.cor) }}>
+                  {aviso.fixado && <span className="mural-pin" title="Fixado">📌 </span>}
+                  {aviso.titulo}
+                </h3>
 
-              <p className="mural-card-texto">{htmlParaTexto(aviso.corpo)}</p>
+                <p className="mural-card-texto">{htmlParaTexto(aviso.corpo)}</p>
 
-              <div className="mural-card-rodape">
-                <span>{aviso.criado_por_nome || 'Equipe'} · {dataCurta(aviso.created_at)}</span>
-                {naoLido && <span className="mural-badge">NOVO</span>}
+                <div className="mural-card-rodape">
+                  <span>{aviso.criado_por_nome || 'Equipe'} · {dataCurta(aviso.created_at)}</span>
+                  {naoLido && !foto && <span className="mural-badge">NOVO</span>}
+                </div>
               </div>
             </button>
           )

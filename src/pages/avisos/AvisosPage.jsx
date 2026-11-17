@@ -5,7 +5,7 @@ import EditorTexto from '../../components/avisos/EditorTexto'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import { getUsuarios } from '../../services/configService'
-import { sanitizarHtml, htmlParaTexto } from '../../lib/htmlSeguro'
+import { sanitizarHtml, htmlParaTexto, primeiraImagem } from '../../lib/htmlSeguro'
 import '../../styles/avisos.css'
 import {
   getAvisos,
@@ -237,14 +237,16 @@ export default function AvisosPage() {
           <div className="avisos-lista">
             {avisos.map(aviso => {
               const leram = (leitoresPorAviso[aviso.id] || []).length
+              // Mesma regra do mural: sem capa, mostra a primeira foto do texto.
+              const foto = aviso.imagem_url || primeiraImagem(aviso.corpo)
               return (
                 <div
                   key={aviso.id}
                   className={`avisos-item${aviso.ativo ? '' : ' inativo'}`}
                   style={{ borderLeftColor: corDoAviso(aviso.cor) }}
                 >
-                  {aviso.imagem_url && (
-                    <img className="avisos-item-thumb" src={aviso.imagem_url} alt="" />
+                  {foto && (
+                    <img className="avisos-item-thumb" src={foto} alt="" loading="lazy" />
                   )}
 
                   <div className="avisos-item-corpo">
