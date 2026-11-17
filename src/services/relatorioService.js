@@ -73,7 +73,9 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtro
       .from('vendas')
       .select('id, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, sacolinha, cliente_nome, data_live, live_nome, status, created_at')
       .eq('tenant_id', tid(tenantId))
-      .eq('etapa', 'fechada')
+      // 'nao_salvos' e o unico filtro que olha para rascunho; os demais
+      // continuam vendo apenas o que ja foi fechado, como sempre.
+      .eq('etapa', filtroStatus === 'nao_salvos' ? 'rascunho' : 'fechada')
       .order('data_live', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
       .range(pagina * TAMANHO_PAGINA, (pagina + 1) * TAMANHO_PAGINA - 1)
@@ -90,9 +92,11 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtro
     // encolhe de milhares de linhas para dezenas.
     // 'cadastrados' (cliente vazio) fica só na tela — exigiria um segundo or=
     // na mesma query, junto com o das datas.
-    if (filtroStatus === 'vendidos') {
+    if (filtroStatus === 'nao_salvos') {
       q = q.not('cliente_nome', 'is', null).neq('cliente_nome', '')
-    } else if (filtroStatus && !['todos', 'cadastrados'].includes(filtroStatus)) {
+    } else if (filtroStatus === 'vendidos') {
+      q = q.not('cliente_nome', 'is', null).neq('cliente_nome', '')
+    } else if (filtroStatus && !['todos', 'cadastrados', 'nao_salvos'].includes(filtroStatus)) {
       q = q.ilike('status', filtroStatus)
     }
 

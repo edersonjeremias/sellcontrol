@@ -112,6 +112,9 @@ export default function RelatorioPage() {
       })
     } else if (aplicado.filtroStatus === 'cadastrados') {
       resultado = resultado.filter(v => !v.cliente_nome?.trim())
+    } else if (aplicado.filtroStatus === 'nao_salvos') {
+      // o servidor ja trouxe so rascunho; aqui sobra o que tem dono
+      resultado = resultado.filter(v => v.cliente_nome?.trim())
     } else if (['ENVIADO', 'CANCELADO', 'DEVOLVIDO'].includes(aplicado.filtroStatus)) {
       resultado = resultado.filter(v => (v.status || '').toUpperCase() === aplicado.filtroStatus)
     }
@@ -304,6 +307,7 @@ export default function RelatorioPage() {
           <option value="ENVIADO">📤 Enviado</option>
           <option value="CANCELADO">❌ Cancelado</option>
           <option value="DEVOLVIDO">↩️ Devolvido</option>
+          <option value="nao_salvos">⏳ Nao salvos em Vendas</option>
         </select>
         <select value={filtroStatusExpedicao} onChange={e => setFiltroStatusExpedicao(e.target.value)} style={{ ...S.inp, minWidth:160 }}>
           <option value="todos">📦 Status Expedição: Todos</option>
