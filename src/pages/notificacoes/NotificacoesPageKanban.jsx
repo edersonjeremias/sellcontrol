@@ -142,7 +142,10 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
   }, [profile])
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior:'smooth' })
+    // So desce ate a ultima resposta quando existe alguma. Sem respostas o
+    // conteudo rolavel comeca na mensagem inicial, e descer esconderia o topo.
+    if (!mensagens.length) return
+    endRef.current?.scrollIntoView({ behavior:'smooth', block:'nearest' })
   }, [mensagens])
 
   async function enviar() {
@@ -185,7 +188,7 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
     <div className="modal-overlay">
       <div className="modal-card" style={{ maxWidth:560, width:'95vw', maxHeight:'90vh', display:'flex', flexDirection:'column' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8 }}>
+        <div className="modal-header" style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8, flexShrink:0 }}>
           <div style={{ minWidth:0 }}>
             <div style={{ fontSize:15, fontWeight:700, color:'var(--blue)' }}>
               {notif.remetente || 'SISTEMA'}
@@ -219,8 +222,14 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
           </div>
         </div>
 
+        {/* Area rolavel: mensagem inicial + respostas juntas.
+            minHeight:0 e obrigatorio - sem ele o filho de um flex nao encolhe
+            abaixo do proprio conteudo, entao texto grande estoura o modal
+            (maxHeight 90vh) e fica cortado sem rolagem nenhuma. */}
+        <div style={{ flex:1, minHeight:0, overflowY:'auto', display:'flex', flexDirection:'column' }}>
+
         {/* Mensagem inicial */}
-        <div style={{ padding:'16px', borderBottom:'1px solid var(--border-light)' }}>
+        <div style={{ padding:'16px', borderBottom:'1px solid var(--border-light)', flexShrink:0 }}>
           <div style={{ fontSize:12, color:'var(--muted)', marginBottom:8 }}>
             <strong>De:</strong> {notif.remetente || 'SISTEMA'} · <strong>Para:</strong> {notif.destinatario || 'TODOS'}
           </div>
@@ -231,7 +240,7 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
         </div>
 
         {/* Mensagens */}
-        <div style={{ flex:1, overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:10 }}>
+        <div style={{ padding:'16px', display:'flex', flexDirection:'column', gap:10, flexShrink:0 }}>
           {mensagens.map(m => {
             const isAdmin = m.remetente !== (notif.remetente || 'SISTEMA')
             return (
@@ -253,6 +262,8 @@ function ModalNotificacao({ notif, onClose, onAtualizar, colunas, tenantId, prof
           })}
           {mensagens.length === 0 && <p style={{ color:'var(--muted)', textAlign:'center', fontSize:13 }}>Nenhuma resposta ainda.</p>}
           <div ref={endRef} />
+        </div>
+
         </div>
 
         {/* Resposta */}
