@@ -9,7 +9,7 @@ import {
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
 import { criarCobranca, gerarPreferenciaMp, cancelarCobranca } from '../../services/cobrancasService'
-import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto } from '../../services/backupService'
+import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto, listarBackupsDoTenant, getBackupDeUsuario } from '../../services/backupService'
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -190,6 +190,9 @@ export default function VendasPage() {
   const [lastSaveTime, setLastSaveTime] = useState(null)
   const [showRecoverModal, setShowRecoverModal] = useState(false)
   const [backupRemoto, setBackupRemoto] = useState(false) // backup veio de outra máquina
+  const [modalBackupsLoja, setModalBackupsLoja] = useState(false)
+  const [listaBackupsLoja, setListaBackupsLoja] = useState([])
+  const [carregandoBackupsLoja, setCarregandoBackupsLoja] = useState(false)
 
   // ── Modo Histórico ── (REMOVIDO)
 
@@ -509,6 +512,34 @@ export default function VendasPage() {
       console.error('❌ Erro ao descartar backup:', err)
     }
   }, [tenantId])
+
+  // ── Backups da loja (admin) ──
+  // Se o vendedor vai embora sem salvar, a live fica presa no login dele.
+  // Admin e master leem o backup de qualquer vendedor do tenant (a policy no
+  // banco e quem autoriza) e trazem a live para a propria tela.
+  const ehAdmin = profile?.role === 'admin' || profile?.role === 'master'
+
+  const abrirBackupsDaLoja = useCallback(async () => {
+    setModalBackupsLoja(true)
+    setCarregandoBackupsLoja(true)
+    const lista = await listarBackupsDoTenant(tenantId)
+    setListaBackupsLoja(lista)
+    setCarregandoBackupsLoja(false)
+  }, [tenantId])
+
+  const carregarBackupDeVendedor = useCallback(async (item) => {
+    const payload = await getBackupDeUsuario(tenantId, item.usuarioId)
+    if (!payload?.linhas?.length) {
+      showToast('Esse backup esta vazio', 'error')
+      return
+    }
+    // Passa pelo mesmo caminho do backup proprio, que restaura o cache de
+    // sacolinhas antes das linhas e evita renumerar as sacolas.
+    backupEncontradoRef.current = payload
+    setModalBackupsLoja(false)
+    recuperarBackup()
+    showToast('Live de ' + item.usuarioNome + ' carregada', 'success')
+  }, [tenantId, recuperarBackup, showToast])
 
   // ══════════════════════════════════════════════════════════
 
@@ -2394,6 +2425,14 @@ export default function VendasPage() {
                   <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                 </svg>
               </button>
+              {ehAdmin && (
+                <button className="btn-acao btn-ghost" onClick={abrirBackupsDaLoja} disabled={busy}
+                  style={{ minWidth:44, padding:'0 10px' }} title="Backups de live dos vendedores">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/>
+                  </svg>
+                </button>
+              )}
               <button className="btn-acao btn-ghost" onClick={() => setShowModalCadastro(true)} disabled={busy}>+ Cadastro</button>
               <button className="btn-acao btn-ghost" onClick={novo} disabled={busy}>+ Novo</button>
 
@@ -2837,6 +2876,58 @@ export default function VendasPage() {
             ))}
             <button onClick={() => setShowSettings(false)}
               style={{ marginTop:18, width:'100%', padding:'9px 0', background:'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.12)', borderRadius:7, color:'#e6edf3', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL BACKUPS DA LOJA (admin) */}
+      {modalBackupsLoja && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.75)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setModalBackupsLoja(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:'#1a2232', border:'1px solid rgba(255,255,255,.12)', borderRadius:12, padding:'24px 28px', width:620, maxWidth:'100%', maxHeight:'85vh', overflow:'auto', boxShadow:'0 12px 40px rgba(0,0,0,.6)' }}>
+            <div style={{ fontSize:17, fontWeight:800, color:'#e6edf3', marginBottom:6 }}>Lives em aberto dos vendedores</div>
+            <div style={{ fontSize:13, color:'#8b949e', marginBottom:18, lineHeight:1.5 }}>
+              O que cada vendedor tem na tela e ainda nao salvou. Carregar traz a live para a sua tela
+              e <strong style={{ color:'#f59e0b' }}>substitui o que estiver aberto aqui</strong>.
+            </div>
+
+            {carregandoBackupsLoja && (
+              <div style={{ padding:'24px 0', textAlign:'center', color:'#8b949e', fontSize:14 }}>Carregando...</div>
+            )}
+
+            {!carregandoBackupsLoja && listaBackupsLoja.length === 0 && (
+              <div style={{ padding:'24px 0', textAlign:'center', color:'#8b949e', fontSize:14 }}>
+                Nenhum vendedor tem live em aberto no momento.
+              </div>
+            )}
+
+            {!carregandoBackupsLoja && listaBackupsLoja.map(item => (
+              <div key={item.usuarioId}
+                style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', marginBottom:8, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:8 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#e6edf3' }}>{item.usuarioNome}</div>
+                  <div style={{ fontSize:13, color:'#8b949e', marginTop:3 }}>
+                    Live {item.liveNome || '—'}
+                    {item.dataLive ? ' · ' + formatarData(item.dataLive) : ''}
+                    {' · '}<strong style={{ color:'#81c995' }}>{item.totalVendas}</strong> com cliente
+                    {' de '}{item.totalLinhas} linha(s)
+                  </div>
+                  <div style={{ fontSize:12, color:'#6e7681', marginTop:2 }}>
+                    Salvo em {new Date(item.atualizadoEm).toLocaleString('pt-BR')}
+                  </div>
+                </div>
+                <button onClick={() => carregarBackupDeVendedor(item)}
+                  style={{ padding:'9px 16px', background:'#1d6f42', border:'1px solid rgba(34,197,94,.3)', borderRadius:7, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', whiteSpace:'nowrap' }}>
+                  Carregar
+                </button>
+              </div>
+            ))}
+
+            <button onClick={() => setModalBackupsLoja(false)}
+              style={{ width:'100%', marginTop:14, padding:'11px 0', background:'transparent', border:'1px solid rgba(255,255,255,.15)', borderRadius:7, color:'#8b949e', fontWeight:700, fontSize:14, cursor:'pointer' }}>
               Fechar
             </button>
           </div>
