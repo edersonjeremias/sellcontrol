@@ -249,6 +249,32 @@ O segundo rewrite serve `index.html` para todas as rotas React (SPA). O primeiro
 
 ---
 
+## Mural de Avisos (`/avisos` + dashboard)
+
+Comunicado interno escrito à mão, para a equipe inteira. É diferente da tabela
+`notificacoes`, que serve para evento do sistema (peça cancelada).
+
+- **Escrita:** `/avisos`, só `admin` e `master`. Título, corpo em HTML (editor
+  próprio em `components/avisos/EditorTexto.jsx`, contentEditable +
+  `execCommand`), imagem de capa e imagens no meio do texto.
+- **Leitura:** `components/avisos/MuralAvisos.jsx` monta os cards de três
+  colunas no `DashboardPage`. Clicar abre o modal com o texto inteiro.
+- **Tabelas:** `avisos` e `avisos_leituras` (migration
+  `20261117_mural_avisos.sql`). A segunda registra quem abriu cada aviso — é
+  o que alimenta o "5 de 8 leram" na página.
+- **Imagens:** sobem para o bucket `produtos-imagens`, pasta
+  `<tenant_id>/avisos/`. Reaproveita a política por pasta do tenant que já
+  existia; bucket novo seria repetir a configuração inteira.
+- **HTML:** `lib/htmlSeguro.js` limpa o conteúdo ao salvar **e** ao exibir.
+  O corpo é renderizado com `dangerouslySetInnerHTML`, e o texto chega colado
+  de WhatsApp e do Word; sanitizar nas duas pontas cobre também o que foi
+  gravado antes da regra existir.
+- **Abrir sozinho:** a opção `abrir_automatico` mostra o aviso em modal para
+  quem ainda não leu. A leitura é registrada ao fechar, senão o mesmo modal
+  voltaria em toda entrada.
+
+---
+
 ## Página de Recibo (`/recibo/:id`)
 
 Página **pública** (sem autenticação). Usa `supabasePublic` (cliente sem `persistSession`) para evitar conflito de lock com o `supabase` autenticado.

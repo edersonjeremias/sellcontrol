@@ -736,6 +736,12 @@ input[type="date"] { color-scheme: dark; }
 .btn-acao { min-height: 36px; padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; justify-content: center; white-space: nowrap; flex: 1; min-width: 80px; border: none; flex-shrink: 0; transition: transform 0.1s, filter 0.2s; }
 .btn-acao:active { transform: scale(0.97); }
 .btn-acao:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Botoes da pagina de vendas mais compactos: sao muitos numa linha so e,
+   com o aviso de live presente, quebravam para uma segunda linha.
+   .actions so existe em Vendas, entao isso nao afeta as outras paginas. */
+.vendas-page .actions { gap: 6px; }
+.vendas-page .actions .btn-acao { padding: 8px 10px; min-width: 64px; font-size: 0.85rem; gap: 6px; }
 .btn-green  { background: var(--green);  color: #171717; }
 .btn-blue   { background: var(--blue);   color: #171717; }
 .btn-ghost  { background: transparent;   color: var(--blue); border: 1px solid var(--border-light); }

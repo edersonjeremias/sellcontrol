@@ -77,6 +77,7 @@ import CreditosPage                   from './pages/relatorio/CreditosPage'
 import ComissoesPage                  from './pages/relatorio/ComissoesPage'
 import NotificacoesPage               from './pages/notificacoes/NotificacoesPageKanban'
 import CuponsPage                     from './pages/cupons/CuponsPage'
+import AvisosPage                     from './pages/avisos/AvisosPage'
 import DebugPage                      from './pages/DebugPage'
 import LimparUsuariosPage             from './pages/admin/LimparUsuariosPage'
 import ComprasPage                    from './pages/compras/ComprasPage'
@@ -126,6 +127,7 @@ export default function App() {
             <Route path="/creditos-clientes"     element={<RequirePage slug="creditos-clientes"><CreditosPage /></RequirePage>} />
             <Route path="/comissoes"             element={<RequirePage slug="comissoes"><ComissoesPage /></RequirePage>} />
             <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
+            <Route path="/avisos"                element={<RequireAuth><RequireRole allowed={['master','admin']}><AvisosPage /></RequireRole></RequireAuth>} />
             <Route path="/compras"               element={<RequirePage slug="compras"><ComprasPage /></RequirePage>} />
             <Route path="/rh"                    element={<RequireAuth><RequireRole allowed={['master','admin']}><RhPage /></RequireRole></RequireAuth>} />
             <Route path="/ponto"                 element={<RequireAuth><PontoQuiosquePage /></RequireAuth>} />

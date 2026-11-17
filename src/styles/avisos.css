@@ -1,0 +1,407 @@
+/* ════════════════════════════════════════════════════════════════
+   MURAL DE AVISOS
+   Cards na tela inicial, modal de leitura e editor da página /avisos.
+   Importado por MuralAvisos.jsx (dashboard) e por AvisosPage.jsx.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Nome da empresa no dashboard. Sem aviso nenhum ele ocupa a tela como
+   sempre ocupou; com avisos encolhe e vira cabeçalho do mural. */
+.dash-marca {
+  font-size: clamp(2.5rem, 9vw, 6rem);
+  font-weight: 700;
+  color: var(--blue);
+  text-align: center;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: font-size 0.25s ease;
+}
+
+.dash-marca.compacta {
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  letter-spacing: 0.08em;
+  margin-bottom: 18px;
+}
+
+/* Três colunas no desktop; o que não couber cai na linha de baixo. */
+.mural-grid {
+  width: 100%;
+  max-width: 1200px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1100px) { .mural-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 680px)  { .mural-grid { grid-template-columns: 1fr; } }
+
+.mural-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-body);
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+}
+
+.mural-card:hover {
+  background: var(--table-row-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Quem ainda não leu precisa enxergar o card de longe. */
+.mural-card.nao-lido { box-shadow: inset 0 0 0 1px rgba(138, 180, 248, 0.35); }
+
+.mural-card-foto {
+  height: 120px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #1b1c1e;
+}
+
+.mural-card-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.mural-card-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+
+.mural-card-topo h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.mural-pin { font-size: 13px; flex-shrink: 0; }
+
+/* Prévia em três linhas: o texto inteiro fica no modal. */
+.mural-card-texto {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mural-card-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.mural-badge {
+  background: var(--blue);
+  color: #171717;
+  font-weight: 700;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+
+.mural-modal { max-width: 640px; }
+.mural-modal .modal-header { display: flex; flex-direction: column; gap: 4px; }
+.mural-modal-autor { font-size: 12px; color: var(--muted); }
+/* O padding-bottom de 120px do .modal-body deixaria um vão embaixo do texto. */
+.mural-modal-body { padding-bottom: 20px; }
+.mural-modal-foto { width: 100%; border-radius: 8px; margin-bottom: 14px; display: block; }
+
+/* Texto formatado pelo editor, tanto no modal quanto na prévia. */
+.mural-conteudo { font-size: 14px; line-height: 1.65; color: var(--text-body); word-break: break-word; }
+.mural-conteudo p { margin: 0 0 10px; }
+.mural-conteudo h1,
+.mural-conteudo h2,
+.mural-conteudo h3,
+.mural-conteudo h4 { margin: 0 0 10px; color: var(--text-header); }
+.mural-conteudo ul, .mural-conteudo ol { margin: 0 0 10px; padding-left: 22px; }
+.mural-conteudo li { margin-bottom: 4px; }
+.mural-conteudo a { color: var(--blue); }
+.mural-conteudo img { max-width: 100%; border-radius: 6px; margin: 6px 0; }
+.mural-conteudo blockquote {
+  margin: 0 0 10px;
+  padding-left: 12px;
+  border-left: 3px solid var(--border-light);
+  color: var(--muted);
+}
+
+/* ── Página de avisos ──────────────────────────────────────────── */
+
+.avisos-page { padding: 16px; max-width: 1100px; margin: 0 auto; }
+
+.avisos-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.avisos-topo h2 { margin: 0; font-size: 20px; color: var(--text-header); }
+.avisos-topo p  { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.avisos-novo { width: auto; flex: none; min-width: auto; white-space: nowrap; }
+
+.avisos-vazio { text-align: center; padding: 50px 20px; color: var(--muted); }
+
+.avisos-lista { display: grid; gap: 12px; }
+
+.avisos-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.avisos-item.inativo { opacity: 0.55; }
+
+.avisos-item-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+
+.avisos-item-corpo { flex: 1; min-width: 0; }
+.avisos-item-titulo { font-size: 15px; font-weight: 700; }
+
+.avisos-item-texto {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.avisos-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.avisos-tag {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(138, 180, 248, 0.15);
+  color: var(--blue);
+  font-weight: 600;
+}
+.avisos-tag.off { background: rgba(242, 139, 130, 0.15); color: var(--red); }
+
+.avisos-leram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.avisos-leram:hover { border-color: var(--blue); }
+.avisos-leram strong { font-size: 18px; color: var(--green); }
+
+.avisos-item-acoes { display: flex; gap: 6px; flex-shrink: 0; }
+.avisos-item-acoes .btn-acao { flex: none; min-width: auto; padding: 6px 12px; font-size: 12px; }
+.avisos-excluir { background: rgba(242, 139, 130, 0.1); color: var(--red); border: 1px solid var(--red); }
+
+@media (max-width: 860px) {
+  .avisos-item { flex-wrap: wrap; }
+  .avisos-item-corpo { flex-basis: 100%; order: 1; }
+  .avisos-item-thumb { order: 0; }
+  .avisos-leram { order: 2; }
+  .avisos-item-acoes { order: 3; flex: 1; justify-content: flex-end; }
+}
+
+/* ── Formulário do aviso ───────────────────────────────────────── */
+
+.avisos-form-card { max-width: 700px; }
+.avisos-form-body { padding-bottom: 20px; text-align: left; }
+
+.avisos-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  margin: 16px 0 6px;
+}
+.avisos-form-body > .avisos-label:first-child { margin-top: 0; }
+
+.avisos-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  font-size: 14px;
+  outline: none;
+}
+
+.avisos-datas { display: flex; gap: 12px; }
+.avisos-datas > div { flex: 1; }
+
+.avisos-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-body);
+  cursor: pointer;
+}
+.avisos-check input { width: 16px; height: 16px; accent-color: var(--blue); }
+
+.avisos-capa { display: flex; align-items: center; gap: 12px; }
+.avisos-capa img { width: 120px; height: 80px; object-fit: cover; border-radius: 6px; }
+.avisos-capa .btn-acao { flex: none; min-width: auto; }
+.avisos-capa-btn { width: auto; flex: none; min-width: auto; }
+
+.avisos-cores { display: flex; gap: 8px; }
+.avisos-cor {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.avisos-cor.ativa { border-color: var(--text-header); transform: scale(1.1); }
+
+.avisos-previa {
+  background: var(--card-bg);
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  padding: 14px;
+}
+.avisos-previa img { width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+.avisos-previa strong { display: block; font-size: 15px; margin-bottom: 6px; }
+
+.avisos-leitores { list-style: none; margin: 0; padding: 0; text-align: left; }
+.avisos-leitores li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+}
+.avisos-leitores li:last-child { border-bottom: none; }
+.avisos-leitores li span:last-child { color: var(--muted); font-size: 12px; }
+
+/* ── Editor de texto formatado ─────────────────────────────────── */
+
+.editor-wrap {
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--input-bg);
+}
+
+.editor-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background: var(--table-header-bg);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.editor-btn {
+  min-width: 32px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+.editor-btn:hover { background: var(--card-bg); border-color: var(--border-light); }
+.editor-btn.ativo { background: var(--blue); color: #171717; }
+
+.editor-sep { width: 1px; height: 20px; background: var(--border-light); margin: 0 4px; }
+
+.editor-select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--text-body);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.editor-cores { display: flex; gap: 4px; align-items: center; }
+.editor-cor {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  cursor: pointer;
+  padding: 0;
+}
+
+.editor-link-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-light);
+}
+.editor-link-bar input {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  font-size: 13px;
+  outline: none;
+}
+.editor-link-bar .btn-acao { flex: none; min-width: auto; min-height: 34px; padding: 0 14px; }
+
+.editor-area {
+  min-height: 180px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 14px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-body);
+  outline: none;
+}
+.editor-area:empty::before {
+  content: 'Escreva o aviso aqui. Dá para formatar o texto e inserir imagens pela barra acima.';
+  color: var(--muted);
+}
+.editor-area img { max-width: 100%; border-radius: 6px; }
+.editor-area ul, .editor-area ol { padding-left: 22px; }
+.editor-area a { color: var(--blue); }

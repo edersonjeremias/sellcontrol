@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../components/ui/AppShell'
+import MuralAvisos from '../components/avisos/MuralAvisos'
 import { useAuth } from '../context/AuthContext'
 import { getConfig } from '../services/configService'
 
 export default function DashboardPage() {
   const { profile } = useAuth()
   const [nomeEmpresa, setNomeEmpresa] = useState('SellControl')
+  // Sem aviso nenhum o nome da empresa continua tomando a tela inteira, como
+  // sempre foi. Com avisos ele encolhe e vira cabeçalho do mural.
+  const [temAvisos, setTemAvisos] = useState(false)
 
   useEffect(() => {
     if (profile?.tenant_id) {
@@ -23,21 +27,17 @@ export default function DashboardPage() {
     <AppShell title="Dashboard" hideTitle>
       <div style={{
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '70vh',
+        justifyContent: temAvisos ? 'flex-start' : 'center',
+        minHeight: temAvisos ? 0 : '70vh',
+        padding: temAvisos ? '8px 16px 32px' : 0,
       }}>
-        <h1 style={{
-          fontSize: '6rem',
-          fontWeight: 700,
-          color: 'var(--blue)',
-          textAlign: 'center',
-          margin: 0,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-        }}>
+        <h1 className={temAvisos ? 'dash-marca compacta' : 'dash-marca'}>
           {nomeEmpresa}
         </h1>
+
+        <MuralAvisos onTemAvisos={setTemAvisos} />
       </div>
     </AppShell>
   )
