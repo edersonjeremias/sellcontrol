@@ -1,5 +1,6 @@
 import { supabase, supabasePublic } from '../lib/supabase'
 import { toDateOnly } from '../lib/datas'
+import { COBRANCA_ENVIADA } from '../lib/statusVenda'
 import { siteUrl } from '../lib/siteUrl'
 
 const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
@@ -574,7 +575,7 @@ export async function getHistoricoCreditos(tenantId, cliente = null) {
 // ── Importação ───────────────────────────────────────────────
 export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   console.log('🔍 Buscando vendas para cobrança:', { dataISO, live, tenantId: tid(tenantId) })
-  let qV = supabase.from('vendas').select('id, cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).neq('etapa', 'rascunho').eq('data_live', dataISO).in('status', ['ENVIADO', 'Vendido', 'VENDIDO'])
+  let qV = supabase.from('vendas').select('id, cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).neq('etapa', 'rascunho').eq('data_live', dataISO).in('status', [COBRANCA_ENVIADA, 'ENVIADO', 'Vendido', 'VENDIDO'])
   if (live) qV = qV.eq('live_nome', live)
   const { data: vendas } = await qV
   console.log('📦 Vendas encontradas:', vendas?.length || 0, vendas)

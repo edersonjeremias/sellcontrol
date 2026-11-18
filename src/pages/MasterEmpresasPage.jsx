@@ -10,6 +10,7 @@ import {
   updateTenantInfo, deleteTenant, getTenantAdmin, updateTenantAdmin,
 } from '../services/authService'
 import { supabase } from '../lib/supabase'
+import { COBRANCA_ENVIADA } from '../lib/statusVenda'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -1566,7 +1567,7 @@ function AbaImportarDados({ showToast }) {
           data_live,
           live_nome,
           sacolinha,
-          status: 'ENVIADO',
+          status: COBRANCA_ENVIADA,
           tipo_envio: 'lote'
         }
 

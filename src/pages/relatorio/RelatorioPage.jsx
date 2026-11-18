@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
+import { cobrancaFoiEnviada } from '../../lib/statusVenda'
 import { fmtR, getVendasRelatorio, getClientesRelatorio } from '../../services/relatorioService'
 import AutocompleteInput from '../../components/ui/AutocompleteInput'
 import { getStatusExpedicao } from '../../services/statusExpedicaoService'
@@ -116,7 +117,10 @@ export default function RelatorioPage() {
       // o servidor ja trouxe so rascunho; aqui sobra o que tem dono
       resultado = resultado.filter(v => v.cliente_nome?.trim())
     } else if (['ENVIADO', 'CANCELADO', 'DEVOLVIDO'].includes(aplicado.filtroStatus)) {
-      resultado = resultado.filter(v => (v.status || '').toUpperCase() === aplicado.filtroStatus)
+      // "Enviado" aqui é a cobrança disparada: cobre o valor novo e o legado
+      resultado = aplicado.filtroStatus === 'ENVIADO'
+        ? resultado.filter(v => cobrancaFoiEnviada(v.status))
+        : resultado.filter(v => (v.status || '').toUpperCase() === aplicado.filtroStatus)
     }
 
     // ✅ Filtro por STATUS DA EXPEDIÇÃO (Comprar, Vendido, Comprar URGENTE, etc)

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { COBRANCA_ENVIADA, cobrancaFoiEnviada } from '../lib/statusVenda'
 
 // tenantId enviado pelo app, com fallback para .env para compatibilidade
 const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
@@ -262,7 +263,7 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
   rows = rows.filter(row => !row.deleted)
 
   if (somentePendentes) {
-    rows = rows.filter(row => String(row.status || '').trim().toUpperCase() !== 'ENVIADO')
+    rows = rows.filter(row => !cobrancaFoiEnviada(row.status))
   }
   // semCliente: retorna apenas itens sem cliente (produto cadastrado, ainda não vendido)
   if (opts?.semCliente) {
@@ -293,7 +294,7 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
     fila2:        row.fila2        || '',
     fila3:        row.fila3        || '',
     isNew: false, deleted: false,
-    isSent: (row.status || '').toUpperCase() === 'ENVIADO',
+    isSent: cobrancaFoiEnviada(row.status),
     liberado: false,
   }))
 }
@@ -517,7 +518,7 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
   if (linha.id) {
     const { error } = await supabase.from('vendas')
       .update({
-        status: 'ENVIADO',
+        status: COBRANCA_ENVIADA,
         tipo_envio: 'individual',
         etapa,
         data_live: dataLive,
@@ -553,7 +554,7 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
     cliente_nome: linha.cliente_nome || '',
     data_live: dataLive || null, live_nome: liveNome || '',
     sacolinha: linha.sacolinha ?? null,
-    status: 'ENVIADO', tipo_envio: 'individual', etapa,
+    status: COBRANCA_ENVIADA, tipo_envio: 'individual', etapa,
     fila1: linha.fila1 || '', fila2: linha.fila2 || '', fila3: linha.fila3 || '',
   }).select('id').single()
   if (error) throw error
@@ -591,7 +592,7 @@ export async function getVendasEnviadas(tenantId = null, filtros = {}) {
     .from('vendas')
     .select('*')
     .eq('tenant_id', tid)
-    .eq('status', 'ENVIADO')
+    .in('status', [COBRANCA_ENVIADA, 'ENVIADO'])
     .order('data_live', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(300)
@@ -672,7 +673,7 @@ export async function finalizarLive(tenantId = null, linhas, dataLive, liveNome)
   // 3) Marca todas como ENVIADO em lote
   const { data, error } = await supabase
     .from('vendas')
-    .update({ status: 'ENVIADO', tipo_envio: 'lote' })
+    .update({ status: COBRANCA_ENVIADA, tipo_envio: 'lote' })
     .in('id', ids)
     .eq('tenant_id', tid)
     .select('id')

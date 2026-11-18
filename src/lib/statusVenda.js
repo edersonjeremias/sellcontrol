@@ -21,12 +21,28 @@ export function normalizaStatus(valor) {
 // comparação acima é feita em maiúsculas, os dois caíam na mesma regra: a peça
 // que só teve a cobrança enviada sumia da fila de separação e aparecia como
 // enviada no portal da cliente.
-const COBRANCA_ENVIADA = 'ENVIADO'
+// Valor gravado pelo envio de cobrança a partir de nov/2026. Antes era
+// 'ENVIADO', nome que a Expedição também usa e que por isso tirava a peça da
+// fila de separação. As leituras aceitam os dois: o histórico não foi migrado.
+export const COBRANCA_ENVIADA = 'COBRANCA_ENVIADA'
+const COBRANCA_ENVIADA_LEGADO = 'ENVIADO'
+
+// A cobrança desta peça já foi disparada ao cliente?
+export function cobrancaFoiEnviada(status) {
+  const bruto = String(status || '').trim()
+  return bruto === COBRANCA_ENVIADA || bruto === COBRANCA_ENVIADA_LEGADO
+}
+
+// A linha saiu da digitação da live: a cobrança foi disparada ou a venda
+// foi concluída. É o que acende o cadeado da tela de Vendas.
+export function linhaJaEnviada(status) {
+  return cobrancaFoiEnviada(status) || normalizaStatus(status) === 'VENDIDO'
+}
 
 // A peça ainda está na sacolinha da cliente, esperando envio?
 export function pecaNaSacolinha(status) {
   const bruto = String(status || '').trim()
-  if (bruto === COBRANCA_ENVIADA) return true
+  if (cobrancaFoiEnviada(bruto)) return true
   return !FORA_DA_SACOLINHA.includes(normalizaStatus(bruto))
 }
 

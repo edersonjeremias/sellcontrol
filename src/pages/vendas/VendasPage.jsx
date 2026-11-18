@@ -13,6 +13,7 @@ import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto, listarBackupsD
 import { supabase } from '../../lib/supabase'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { COBRANCA_ENVIADA, cobrancaFoiEnviada, linhaJaEnviada } from '../../lib/statusVenda'
 import AppShell from '../../components/ui/AppShell'
 import TabelaRow      from '../../components/vendas/TabelaRow'
 import { formatarAoDigitar } from '../../utils/moeda'
@@ -80,7 +81,7 @@ function mapRow(row) {
     qtde:         row.qtde         || '',
     condicao:     row.condicao     || '',
     genero:       row.genero       || '',
-    isSent: ['ENVIADO', 'VENDIDO'].includes((row.status || '').toUpperCase()) && row.cliente_nome?.trim(),
+    isSent: linhaJaEnviada(row.status) && row.cliente_nome?.trim(),
     liberado: false,
   }
 }
@@ -978,7 +979,7 @@ export default function VendasPage() {
                 fila2: payload.new?.fila2 || next[idx].fila2,
                 fila3: payload.new?.fila3 || next[idx].fila3,
                 sacolinha: payload.new?.sacolinha ?? next[idx].sacolinha,
-                isSent: (payload.new?.status || next[idx].status || '').toUpperCase() === 'ENVIADO',
+                isSent: cobrancaFoiEnviada(payload.new?.status || next[idx].status),
               }
               return ordenarLinhas(calcSacolas(next))
             })
@@ -1282,7 +1283,7 @@ export default function VendasPage() {
         linhaAtualizada.liberado = false
         linhaAtualizada.sacolinha = null  // ✅ Limpa sacolinha (será recalculada no onBlur)
         // Recalcula isSent: só deve ser true se tiver status ENVIADO/VENDIDO E cliente
-        linhaAtualizada.isSent = ['ENVIADO', 'VENDIDO'].includes((linhaAtualizada.status || '').toUpperCase()) && value?.trim()
+        linhaAtualizada.isSent = linhaJaEnviada(linhaAtualizada.status) && value?.trim()
         const novasLinhas = [...prev]
         novasLinhas[idx] = linhaAtualizada
         // ❌ NÃO recalcula sacolinhas aqui (espera onBlur)
@@ -1291,7 +1292,7 @@ export default function VendasPage() {
 
       if (field === 'status') {
         // Recalcula isSent quando status muda
-        linhaAtualizada.isSent = ['ENVIADO', 'VENDIDO'].includes((value || '').toUpperCase()) && linhaAtualizada.cliente_nome?.trim()
+        linhaAtualizada.isSent = linhaJaEnviada(value) && linhaAtualizada.cliente_nome?.trim()
       }
 
       // Formata preços automaticamente ao digitar (0,07 → 0,79 → 7,99 → 79,90)
@@ -1567,8 +1568,8 @@ export default function VendasPage() {
       if (l.cliente_nome?.trim()) {
         res = await enviarVenda(tid, l, dl || null, ln || '')
         // ✅ NÃO recalcula sacolinhas ao enviar - apenas marca como enviada
-        // ENVIADO é o que enviarVenda grava no banco; divergir daqui fazia o auto-save sobrescrever
-        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: 'ENVIADO' } : r))
+        // Espelha o que enviarVenda grava no banco; divergir daqui fazia o auto-save sobrescrever
+        setLinhas(prev => prev.map(r => r._key === rowKey ? { ...r, id: res.id, isNew: false, isSent: true, status: COBRANCA_ENVIADA } : r))
       } else {
         res = await salvarVendas(tid, [l], { data_live: dl || null, live_nome: ln || '' })
         if (!l.id && res.novosIds?.length > 0) {

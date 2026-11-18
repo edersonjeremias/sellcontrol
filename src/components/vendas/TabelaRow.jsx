@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { COBRANCA_ENVIADA, cobrancaFoiEnviada } from '../../lib/statusVenda'
 import AutocompleteInput, { navigateNext, navigatePrevious } from '../ui/AutocompleteInput'
 import ClienteAutocomplete from './ClienteAutocomplete'
 
@@ -294,7 +295,7 @@ function TabelaRow({
       {modoHistorico && (
         <td className="col-status">
           <select
-            value={linha.status || 'ENVIADO'}
+            value={cobrancaFoiEnviada(linha.status) ? COBRANCA_ENVIADA : (linha.status || COBRANCA_ENVIADA)}
             onChange={e => onStatusChange && onStatusChange(idx, e.target.value)}
             style={{
               background: isCancelado ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.1)',
@@ -304,7 +305,7 @@ function TabelaRow({
               padding: '2px 4px', width: '100%', cursor: 'pointer',
             }}
           >
-            <option value="ENVIADO">Enviado</option>
+            <option value={COBRANCA_ENVIADA}>Enviado</option>
             <option value="CANCELADO">Cancelado</option>
           </select>
         </td>
