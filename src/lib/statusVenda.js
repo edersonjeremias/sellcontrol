@@ -16,9 +16,18 @@ export function normalizaStatus(valor) {
     .toUpperCase()
 }
 
+// A tela de Vendas grava 'ENVIADO', em maiúsculas, ao disparar a cobrança da
+// peça; a Expedição grava 'Enviado' junto com a data do despacho. Como a
+// comparação acima é feita em maiúsculas, os dois caíam na mesma regra: a peça
+// que só teve a cobrança enviada sumia da fila de separação e aparecia como
+// enviada no portal da cliente.
+const COBRANCA_ENVIADA = 'ENVIADO'
+
 // A peça ainda está na sacolinha da cliente, esperando envio?
 export function pecaNaSacolinha(status) {
-  return !FORA_DA_SACOLINHA.includes(normalizaStatus(status))
+  const bruto = String(status || '').trim()
+  if (bruto === COBRANCA_ENVIADA) return true
+  return !FORA_DA_SACOLINHA.includes(normalizaStatus(bruto))
 }
 
 // Lista literal para o PostgREST já devolver menos linhas. Não substitui
