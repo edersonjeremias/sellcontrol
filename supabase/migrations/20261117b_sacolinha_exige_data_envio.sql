@@ -1,19 +1,19 @@
 -- ============================================================
--- CORREÇÃO: "Enviadas" só depois do despacho de verdade
+-- CORREÇÃO: 'ENVIADO' de cobrança não é envio de peça
 -- ============================================================
--- A Expedição marca vendas.status = 'Enviado' no momento em que o romaneio
--- é GERADO (pedidosService: "Marca itens Separados como Enviado"), muito
--- antes de o pacote ser postado. A função tratava esse status como envio,
--- então a peça aparecia em "Enviadas" assim que entrava num romaneio — ou
--- até antes dele sair da loja.
+-- A loja usa o status ENVIADO em dois sentidos: a Expedição grava
+-- 'Enviado' ao gerar o romaneio, e o envio da cobrança grava 'ENVIADO'
+-- na mesma coluna. O portal lia os dois como peça despachada, então a
+-- cliente via como enviada uma peça que só tinha recebido a cobrança.
 --
--- Agora o sinal de envio é o romaneio despachado. vendas.status = 'Enviado'
--- só conta quando não há romaneio vinculado, caso das peças antigas, do
--- fluxo anterior aos romaneios, que de outra forma voltariam para a
--- sacolinha das clientes.
+-- O que separa os casos é a data: a Expedição grava data_envio junto com
+-- o status; a cobrança não grava nada. Então vendas.status só vale como
+-- envio quando vem acompanhado de data_envio.
 --
--- Mantém a correção anterior: o romaneio precisa ser DO MESMO cliente, já
--- que o número sozinho se repete entre pessoas diferentes.
+-- Regras, em ordem:
+--   1. romaneio despachado / em trânsito / entregue  -> enviada
+--   2. sem romaneio, status de envio COM data_envio  -> enviada (fluxo antigo)
+--   3. caso contrário                                 -> na sacolinha
 -- ============================================================
 
 DROP FUNCTION IF EXISTS portal_get_minha_sacolinha();
@@ -68,7 +68,10 @@ BEGIN
       -- Despacho do romaneio: o único sinal de que o pacote saiu
       WHEN r.status IN ('despachado', 'em_transito', 'entregue') THEN 'Enviado'
       -- Sem romaneio: peça do fluxo antigo, onde 'Enviado' era o envio real
-      WHEN r.id IS NULL AND UPPER(TRIM(COALESCE(v.status, ''))) = 'ENVIADO' THEN 'Enviado'
+      -- data_envio distingue o envio real do 'ENVIADO' da cobrança
+      WHEN r.id IS NULL
+           AND UPPER(TRIM(COALESCE(v.status, ''))) = 'ENVIADO'
+           AND v.data_envio IS NOT NULL THEN 'Enviado'
       ELSE COALESCE(p.status_entrega, '')
     END                                                     AS status_peca,
     COALESCE(
@@ -79,8 +82,10 @@ BEGIN
     CASE
       WHEN r.status IN ('despachado', 'em_transito', 'entregue')
         THEN COALESCE(r.despachado_em, r.entregue_em)::date
-      WHEN r.id IS NULL AND UPPER(TRIM(COALESCE(v.status, ''))) = 'ENVIADO'
-        THEN COALESCE(v.data_envio, v.data_live)
+      WHEN r.id IS NULL
+           AND UPPER(TRIM(COALESCE(v.status, ''))) = 'ENVIADO'
+           AND v.data_envio IS NOT NULL
+        THEN v.data_envio
       ELSE p.data_enviado
     END                                                     AS data_envio,
     COALESCE(NULLIF(r.codigo_rastreio, ''), p.rastreio, '') AS rastreio
