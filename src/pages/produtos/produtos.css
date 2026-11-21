@@ -250,6 +250,60 @@
   font-size: 13px;
 }
 
+/* Peso em gramas (cabe 5 dígitos) */
+.vendas-container .th-peso,
+.vendas-container .col-peso {
+  width: 70px !important;
+  min-width: 70px !important;
+  text-align: center;
+}
+
+.vendas-container .col-peso .cell-input {
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Loja pública: a peça está no ar ou não */
+.vendas-container .th-loja,
+.vendas-container .col-loja {
+  width: 54px !important;
+  min-width: 54px !important;
+  text-align: center;
+}
+
+/* Mesmo glassmorphism dos botões inline das tabelas */
+.vendas-container .btn-loja {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  cursor: pointer;
+  transition: 0.15s;
+}
+
+.vendas-container .btn-loja:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.vendas-container .btn-loja.no-ar {
+  color: var(--green);
+  border-color: rgba(129, 201, 149, 0.35);
+  background: rgba(129, 201, 149, 0.12);
+}
+
+.vendas-container .btn-loja:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Outras colunas */
 .vendas-container .col-produto { min-width: 150px; }
 .vendas-container .col-modelo { min-width: 130px; }
@@ -260,7 +314,7 @@
 /* Ações */
 .vendas-container .th-acoes,
 .vendas-container .col-acoes {
-  min-width: 140px;
+  min-width: 165px; /* o link da peça na loja entra aqui quando ela está no ar */
   text-align: center;
 }
 

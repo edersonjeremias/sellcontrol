@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   getProdutos, criarProduto, atualizarProduto, desativarProduto, reativarProduto,
-  getProximoCodigo, verificarCodigoExiste, formatMoney, parseMoney
+  getProximoCodigo, verificarCodigoExiste, formatMoney, parseMoney,
+  definirPublicadoLoja, motivoNaoPublicavel, linkPecaLoja
 } from '../../services/produtosService'
 import { getListas } from '../../services/vendasService'
 import { getConfig } from '../../services/configService'
@@ -35,8 +36,10 @@ function novoProduto(codigo = '') {
     preco: '',
     preco_promocional: '',
     quantidade: '', // Vazio por padrão
+    peso_gramas: '', // Peso próprio da peça, em gramas (vazio = usa o da categoria)
     imagens: [], // Array de URLs das imagens
     ativo: true,
+    publicado_loja: false, // Peça nova nunca nasce no ar
     isNew: true,
     deleted: false,
   }
@@ -59,8 +62,10 @@ function mapProduto(p) {
     preco: p.preco ? formatarAoDigitar(String(Math.round(p.preco * 100))) : '',
     preco_promocional: p.preco_promocional ? formatarAoDigitar(String(Math.round(p.preco_promocional * 100))) : '',
     quantidade: p.quantidade === null || p.quantidade === undefined ? '' : String(p.quantidade),
+    peso_gramas: p.peso_gramas === null || p.peso_gramas === undefined ? '' : String(p.peso_gramas),
     imagens: p.imagens || [], // Array de URLs das imagens
     ativo: p.ativo !== false,
+    publicado_loja: p.publicado_loja === true,
     isNew: false,
     deleted: false,
   }
@@ -80,6 +85,7 @@ export default function ProdutosPage() {
   const [dataFim, setDataFim] = useState('')
   const [mostrarInativos, setMostrarInativos] = useState(false)
   const [mostrarSemEstoque, setMostrarSemEstoque] = useState(false)
+  const [soLoja, setSoLoja] = useState(false) // mostra só as peças no ar na loja
   const [busy, setBusy] = useState(false)
   const [pronto, setPronto] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -89,13 +95,17 @@ export default function ProdutosPage() {
   const [config, setConfig] = useState({
     produtos_codigo_automatico: false,
     produtos_proximo_codigo: 100,
-    produtos_permitir_duplicado: false
+    produtos_permitir_duplicado: false,
+    slug: '',
+    loja_ativa: false
   })
   const [cols, setCols] = useState({
     genero: true,
     condicao: true,
     custo: true,
     preco_promocional: true,
+    loja: true,
+    peso: false,
   })
 
   // Estados de paginação
@@ -120,7 +130,9 @@ export default function ProdutosPage() {
     if (!tenantId) return
     try {
       const saved = localStorage.getItem(`sc_cols_produtos_${tenantId}`)
-      if (saved) setCols(JSON.parse(saved))
+      // Mescla com o padrão: quem já usava a tela tem um localStorage antigo,
+      // sem as colunas novas, e elas sumiriam sem aparecer nem uma vez
+      if (saved) setCols(c => ({ ...c, ...JSON.parse(saved) }))
     } catch {}
   }, [tenantId])
 
@@ -138,7 +150,9 @@ export default function ProdutosPage() {
         const novaConfig = {
           produtos_codigo_automatico: cfg.produtos_codigo_automatico || false,
           produtos_proximo_codigo: cfg.produtos_proximo_codigo || 100,
-          produtos_permitir_duplicado: cfg.produtos_permitir_duplicado || false
+          produtos_permitir_duplicado: cfg.produtos_permitir_duplicado || false,
+          slug: cfg.slug || '',
+          loja_ativa: cfg.loja_ativa === true
         }
         console.log('🔧 Config de produtos carregada:', novaConfig)
         setConfig(novaConfig)
@@ -165,6 +179,7 @@ export default function ProdutosPage() {
             ativo: !mostrarInativos,
             busca: filtroBusca.trim() || undefined,
             comEstoque: !mostrarSemEstoque,
+            publicadosLoja: soLoja || undefined,
             dataInicio: dataInicio || undefined,
             dataFim: dataFim || undefined,
             page: paginaAtual,
@@ -190,7 +205,7 @@ export default function ProdutosPage() {
     carregar()
 
     return () => controller.abort()
-  }, [tenantId, mostrarInativos, mostrarSemEstoque, filtroBusca, dataInicio, dataFim, paginaAtual, showToast])
+  }, [tenantId, mostrarInativos, mostrarSemEstoque, soLoja, filtroBusca, dataInicio, dataFim, paginaAtual, showToast])
 
   // Filtro de busca (apenas remove deletados localmente)
   const produtosFiltrados = useMemo(() => {
@@ -481,6 +496,11 @@ export default function ProdutosPage() {
         value = formatarAoDigitar(value)
       }
 
+      // Peso em gramas: só dígitos, até 5 (99999 g = 99,9 kg, acima de qualquer encomenda)
+      if (field === 'peso_gramas') {
+        value = value.replace(/\D/g, '').slice(0, 5)
+      }
+
       // Quantidade: até 3 dígitos, aceita negativo para registrar uso além do estoque
       if (field === 'quantidade') {
         const negativo = value.startsWith('-')
@@ -548,24 +568,31 @@ export default function ProdutosPage() {
         preco_promocional: parseInt(promoEmCentavos || 0) / 100,
       }
 
+      // Devolve a linha já como o banco a gravou: quem publica na loja em
+      // seguida precisa validar o que está salvo, não o que está na tela
       if (p.isNew) {
         // Criar
         const novo = await criarProduto(tenantId, dados)
+        const mapeado = mapProduto(novo)
         setProdutos(prev => prev.map(pr =>
-          pr._key === key ? mapProduto(novo) : pr
+          pr._key === key ? mapeado : pr
         ))
         showToast('Produto cadastrado!', 'success')
+        return mapeado
       } else {
         // Atualizar
         const atualizado = await atualizarProduto(p.id, dados)
+        const mapeado = mapProduto(atualizado)
         setProdutos(prev => prev.map(pr =>
-          pr._key === key ? mapProduto(atualizado) : pr
+          pr._key === key ? mapeado : pr
         ))
         showToast('Produto atualizado!', 'success')
+        return mapeado
       }
     } catch (err) {
       console.error('Erro ao salvar:', err)
       showToast('Erro ao salvar produto', 'error')
+      return null
     } finally {
       setBusy(false)
     }
@@ -695,6 +722,76 @@ export default function ProdutosPage() {
     }
   }, [produtos, showToast])
 
+  // ── Loja pública ─────────────────────────────────────────────
+  // Liga e desliga a peça no catálogo. Despublicar nunca é barrado: se a
+  // peça saiu de linha, a loja tem de poder tirá-la do ar na hora.
+  const alternarLoja = useCallback(async (key) => {
+    const p = produtosRef.current.find(pr => pr._key === key)
+    if (!p) return
+
+    if (p.publicado_loja) {
+      setBusy(true)
+      try {
+        await definirPublicadoLoja(p.id, false)
+        setProdutos(prev => prev.map(pr =>
+          pr._key === key ? { ...pr, publicado_loja: false } : pr
+        ))
+        showToast('Peça saiu da loja', 'success')
+        return false
+      } catch (err) {
+        showToast(err.message || 'Erro ao tirar a peça da loja', 'error')
+        return null
+      } finally {
+        setBusy(false)
+      }
+    }
+
+    // O catálogo lê o banco, não a tela: o que estiver digitado e não salvo
+    // precisa ir para o banco antes, senão a peça entra sem preço ou sem foto
+    let atual = p
+    if (p.isNew || Object.keys(p._alterados || {}).length > 0) {
+      const salvo = await salvar(key)
+      if (!salvo) return null // o erro já foi avisado
+      atual = salvo
+    }
+
+    const motivo = motivoNaoPublicavel(atual)
+    if (motivo) {
+      showToast(motivo, 'error')
+      return null
+    }
+
+    setBusy(true)
+    try {
+      await definirPublicadoLoja(atual.id, true)
+      setProdutos(prev => prev.map(pr =>
+        pr._key === key ? { ...pr, publicado_loja: true } : pr
+      ))
+      showToast('Peça publicada na loja', 'success')
+      return true
+    } catch (err) {
+      showToast(err.message || 'Erro ao publicar a peça', 'error')
+      return null
+    } finally {
+      setBusy(false)
+    }
+  }, [salvar, showToast])
+
+  // Link da peça, para divulgar uma peça específica no Instagram
+  const copiarLinkLoja = useCallback((key) => {
+    const p = produtosRef.current.find(pr => pr._key === key)
+    if (!p) return
+
+    const link = linkPecaLoja(config.slug, p.codigo)
+    if (!link) {
+      showToast('A loja ainda não tem endereço. Defina o slug em Configurações.', 'error')
+      return
+    }
+    copyToClipboard(link)
+      .then(() => showToast('Link da peça copiado', 'success'))
+      .catch(() => showToast('Não foi possível copiar o link', 'error'))
+  }, [config.slug, showToast])
+
   return (
     <AppShell>
       <div className="vendas-container">
@@ -748,6 +845,18 @@ export default function ProdutosPage() {
                     }}
                   />
                   Inativos
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={soLoja}
+                    onChange={e => {
+                      setSoLoja(e.target.checked)
+                      setPaginaAtual(1)
+                    }}
+                  />
+                  Na loja
                 </label>
 
                 <button onClick={() => setShowSettings(!showSettings)} title="Configurações" style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
@@ -890,6 +999,18 @@ export default function ProdutosPage() {
               </label>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
+                <input
+                  type="checkbox"
+                  checked={soLoja}
+                  onChange={e => {
+                    setSoLoja(e.target.checked)
+                    setPaginaAtual(1)
+                  }}
+                />
+                Na loja
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
                 Dt in:
                 <input
                   type="date"
@@ -976,6 +1097,14 @@ export default function ProdutosPage() {
                 <input type="checkbox" checked={cols.preco_promocional} onChange={e => setCols(c => ({ ...c, preco_promocional: e.target.checked }))} />
                 Preço Promoção
               </label>
+              <label>
+                <input type="checkbox" checked={cols.peso} onChange={e => setCols(c => ({ ...c, peso: e.target.checked }))} />
+                Peso (g)
+              </label>
+              <label>
+                <input type="checkbox" checked={cols.loja} onChange={e => setCols(c => ({ ...c, loja: e.target.checked }))} />
+                Loja
+              </label>
               <button onClick={() => setShowSettings(false)} className="btn-primary" style={{ marginTop: '16px' }}>
                 Fechar
               </button>
@@ -1019,6 +1148,8 @@ export default function ProdutosPage() {
                   >
                     Qtd. {ordenarPor === 'quantidade' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
                   </th>
+                  {cols.peso && <th className="th-peso" title="Peso da peça em gramas. Vazio usa o peso da categoria.">Peso g</th>}
+                  {cols.loja && <th className="th-loja" title="Peça publicada no catálogo público">Loja</th>}
                   <th className="th-acoes">Ações</th>
                 </tr>
               </thead>
@@ -1053,6 +1184,8 @@ export default function ProdutosPage() {
                   onAbrirImagens={abrirImagens}
                   onExcluir={excluir}
                   onReativar={reativar}
+                  onAlternarLoja={alternarLoja}
+                  onCopiarLinkLoja={copiarLinkLoja}
                 />
               ))}
               </tbody>
@@ -1264,6 +1397,7 @@ export default function ProdutosPage() {
                   {p.tamanho && <span>({p.tamanho})</span>}
                   <span style={{ fontWeight: 700, color: 'var(--green)' }}>R$ {p.preco || '0,00'}</span>
                   <span style={{ color: 'var(--muted)' }}>Estoque: {p.quantidade || 0}</span>
+                  {p.publicado_loja && <span style={{ color: 'var(--green)', fontWeight: 600 }}>· NA LOJA</span>}
                   {!p.ativo && <span style={{ color: 'var(--red)', fontWeight: 600 }}>· INATIVO</span>}
                 </div>
               </div>
@@ -1452,6 +1586,58 @@ export default function ProdutosPage() {
                 </div>
               </div>
 
+              {/* Peso e loja pública */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Peso (g)</label>
+                  <input
+                    type="number"
+                    value={produtoEditando.peso_gramas}
+                    onChange={e => setProdutoEditando({...produtoEditando, peso_gramas: e.target.value.replace(/\D/g, '').slice(0, 5)})}
+                    style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
+                    placeholder="auto"
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--muted)' }}>Vazio usa o peso da categoria</span>
+                </div>
+                {!produtoEditando.isNew && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Loja pública</label>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        // A tela pode ter edição pendente: joga no estado antes
+                        produtosRef.current = produtosRef.current.map(pr =>
+                          pr._key === produtoEditando._key ? produtoEditando : pr
+                        )
+                        setProdutos(produtosRef.current)
+                        const publicado = await alternarLoja(produtoEditando._key)
+                        if (publicado !== null) {
+                          setProdutoEditando(atual => ({ ...atual, publicado_loja: publicado }))
+                        }
+                      }}
+                      style={{
+                        width: '100%', padding: '10px 12px', borderRadius: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                        border: `1px solid ${produtoEditando.publicado_loja ? 'var(--green)' : 'var(--border-light)'}`,
+                        background: produtoEditando.publicado_loja ? 'rgba(129,201,149,0.12)' : '#2a2a2a',
+                        color: produtoEditando.publicado_loja ? 'var(--green)' : 'var(--muted)',
+                      }}
+                    >
+                      {produtoEditando.publicado_loja ? 'No ar — tirar' : 'Publicar na loja'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {produtoEditando.publicado_loja && (
+                <button
+                  type="button"
+                  onClick={() => copiarLinkLoja(produtoEditando._key)}
+                  style={{ width: '100%', padding: 10, marginBottom: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Copiar link da peça
+                </button>
+              )}
+
               {/* Botões */}
               <div style={{ display: 'flex', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
                 {!produtoEditando.isNew && (
@@ -1581,7 +1767,7 @@ function copyToClipboard(text) {
   })
 }
 
-function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onAbrirImagens, onExcluir, onReativar }) {
+function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onAbrirImagens, onExcluir, onReativar, onAlternarLoja, onCopiarLinkLoja }) {
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
   const [txtCopiado, setTxtCopiado] = useState(false)
@@ -1859,6 +2045,46 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
         />
       </td>
 
+      {/* PESO (g) — vazio usa o peso da categoria no cálculo do frete */}
+      {cols.peso && (
+        <td className="col-peso">
+          <input
+            type="text"
+            className="cell-input"
+            value={p.peso_gramas}
+            onChange={e => onChange(p._key, 'peso_gramas', e.target.value)}
+            onKeyDown={navegarProximo}
+            disabled={desabilitado}
+            placeholder="auto"
+            maxLength={5}
+            style={{ textAlign: 'center' }}
+            title="Peso só desta peça, em gramas. Vazio: usa o peso da categoria."
+            data-key={p._key}
+            data-field="peso_gramas"
+            data-alterado={p._alterados?.peso_gramas ? "true" : undefined}
+          />
+        </td>
+      )}
+
+      {/* LOJA — publica ou tira a peça do catálogo público */}
+      {cols.loja && (
+        <td className="col-loja">
+          <button
+            type="button"
+            className={`btn-loja ${p.publicado_loja ? 'no-ar' : ''}`}
+            title={p.publicado_loja ? 'No ar na loja. Clique para tirar.' : 'Publicar na loja'}
+            onClick={() => onAlternarLoja(p._key)}
+            disabled={p.isNew}
+          >
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+          </button>
+        </td>
+      )}
+
       {/* AÇÕES */}
       <td className="col-acoes">
         <div className="acoes-wrapper">
@@ -1908,6 +2134,21 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
               {p.imagens?.length > 0 && (
                 <span className="badge-imagens">{p.imagens.length}</span>
               )}
+            </button>
+          )}
+
+          {/* Copiar o link da peça na loja — só faz sentido com ela no ar */}
+          {p.publicado_loja && (
+            <button
+              type="button"
+              className="btn-action-sm copy"
+              title="Copiar o link desta peça na loja"
+              onClick={() => onCopiarLinkLoja(p._key)}
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
             </button>
           )}
 

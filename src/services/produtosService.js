@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { siteUrl } from '../lib/siteUrl'
 
 // ═══════════════════════════════════════════════════════════════
 // FORMATAÇÃO DE VALORES
@@ -15,6 +16,17 @@ export function parseMoney(str) {
   if (!str) return null
   const num = parseFloat(String(str).replace(/\./g, '').replace(',', '.'))
   return isNaN(num) ? null : num
+}
+
+/**
+ * Peso da peça em gramas, como o campo da planilha devolve.
+ * Vazio volta null (e não 0): null é "não informado", e o frete cai para o
+ * peso da categoria; 0 seria um peso de verdade, zerado.
+ */
+function parsePeso(valor) {
+  if (valor === null || valor === undefined || String(valor).trim() === '') return null
+  const num = parseInt(String(valor).replace(/\D/g, ''), 10)
+  return Number.isNaN(num) || num <= 0 ? null : num
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -62,6 +74,12 @@ export async function getProdutos(tenantId, filtros = {}) {
     if (filtros.comEstoque) {
       query = query.gte('quantidade', 1)
       if (countQuery) countQuery = countQuery.gte('quantidade', 1)
+    }
+
+    // Só as peças que estão no ar na loja pública
+    if (filtros.publicadosLoja) {
+      query = query.eq('publicado_loja', true)
+      if (countQuery) countQuery = countQuery.eq('publicado_loja', true)
     }
 
     // Filtro por data de cadastro
@@ -135,6 +153,7 @@ export async function criarProduto(tenantId, produto) {
       preco: parseFloat(produto.preco) || 0,
       preco_promocional: parseFloat(produto.preco_promocional) || 0,
       quantidade: parseInt(produto.quantidade) || 0,
+      peso_gramas: parsePeso(produto.peso_gramas),
       ativo: true,
     }
 
@@ -171,8 +190,13 @@ export async function atualizarProduto(id, produto) {
       preco: parseFloat(produto.preco) || 0,
       preco_promocional: parseFloat(produto.preco_promocional) || 0,
       quantidade: parseInt(produto.quantidade) || 0,
+      peso_gramas: parsePeso(produto.peso_gramas),
       ativo: produto.ativo !== undefined ? produto.ativo : true,
     }
+    // publicado_loja NÃO entra aqui de propósito: quem liga e desliga é
+    // definirPublicadoLoja, que valida foto, preço e estoque antes. Se
+    // entrasse, o auto-save da planilha despublicaria a peça sem querer
+    // sempre que a linha em memória estivesse sem o campo.
 
     const { data, error } = await supabase
       .from('produtos')
@@ -296,6 +320,67 @@ export async function verificarCodigoExiste(tenantId, codigo, excluirId = null) 
     console.error('❌ Erro ao verificar código:', err)
     throw err
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOJA PÚBLICA — publicar e despublicar peça
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Por que esta peça não pode ir ao ar. Devolve null quando ela pode.
+ *
+ * As mesmas cinco condições do plano da loja. Elas são conferidas de novo no
+ * banco na hora de reservar (loja_reservar_peca): aqui é para a tela avisar
+ * antes, com o motivo em texto.
+ */
+export function motivoNaoPublicavel(produto) {
+  if (!produto?.id)                                  return 'Salve a peça antes de publicar'
+  if (produto.ativo === false)                       return 'Peça inativa não vai para a loja'
+  if (!(parseInt(produto.quantidade) > 0))           return 'Sem estoque: a peça já foi vendida'
+  if (!(numeroDe(produto.preco) > 0))                return 'Defina o preço antes de publicar'
+  if (!(produto.imagens?.length > 0))                return 'Peça sem foto não vende: adicione ao menos uma'
+  if (!String(produto.codigo || '').trim())          return 'A peça precisa de código: é o link dela na loja'
+  return null
+}
+
+// O preço chega da planilha como "139,90" e do banco como 139.9
+function numeroDe(valor) {
+  if (typeof valor === 'number') return valor
+  return parseMoney(valor) || 0
+}
+
+/**
+ * Liga ou desliga a peça no catálogo público.
+ *
+ * Update isolado, fora do auto-save: a flag é uma decisão de uma clique, e
+ * não pode depender do debounce da planilha nem arrastar outros campos.
+ */
+export async function definirPublicadoLoja(id, publicar) {
+  const { data, error } = await supabase
+    .from('produtos')
+    .update({ publicado_loja: !!publicar })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    // idx_produtos_codigo_publicado: o link da peça é o código, então duas
+    // peças publicadas com o mesmo código apontariam para a mesma página
+    if (error.code === '23505') {
+      throw new Error('Já existe outra peça publicada com este código. Troque o código de uma delas.')
+    }
+    console.error('❌ Erro ao publicar na loja:', error)
+    throw error
+  }
+  return data
+}
+
+/** Link da peça para divulgar: sellcontrol.app/loja/<slug>/p/<codigo> */
+export function linkPecaLoja(slug, codigo) {
+  const s = String(slug || '').trim()
+  const c = String(codigo || '').trim()
+  if (!s || !c) return ''
+  return siteUrl(`/loja/${s}/p/${encodeURIComponent(c)}`)
 }
 
 // ═══════════════════════════════════════════════════════════════

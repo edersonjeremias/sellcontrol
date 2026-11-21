@@ -16,6 +16,7 @@ import { emailDeUsername } from '../../lib/emailInterno'
 import AbaStatusExpedicao from './AbaStatusExpedicao'
 import AbaTransportadoras from './AbaTransportadoras'
 import AbaIntegracoes from './AbaIntegracoes'
+import AbaLoja from './AbaLoja'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -1043,6 +1044,7 @@ export default function ConfiguracoesPage() {
             <>
               <TabBtn label="Usuários e Permissões" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
               <TabBtn label="Transportadoras" active={aba === 'transportadoras'} onClick={() => setAba('transportadoras')} />
+              <TabBtn label="Loja" active={aba === 'loja'} onClick={() => setAba('loja')} />
               <TabBtn label="Status Expedição" active={aba === 'status'} onClick={() => setAba('status')} />
               <TabBtn label="Assuntos" active={aba === 'assuntos'} onClick={() => setAba('assuntos')} />
               <TabBtn label="Integrações" active={aba === 'integracoes'} onClick={() => setAba('integracoes')} />
@@ -1062,6 +1064,9 @@ export default function ConfiguracoesPage() {
         )}
         {aba === 'transportadoras' && (
           <AbaTransportadoras tenantId={tenantId} showToast={showToast} />
+        )}
+        {aba === 'loja' && (
+          <AbaLoja tenantId={tenantId} showToast={showToast} />
         )}
         {aba === 'status' && (
           <AbaStatusExpedicao tenantId={tenantId} showToast={showToast} />
