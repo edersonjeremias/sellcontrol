@@ -583,3 +583,160 @@
   color: var(--p-muted);
   line-height: 1.5;
 }
+
+/* ── Checkout e acompanhamento do pedido ── */
+.loja-checkout {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 14px 16px 30px;
+}
+
+.loja-bloco {
+  background: var(--p-card);
+  border: 1px solid var(--p-border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.loja-bloco.destaque {
+  border-color: rgba(129, 201, 149, .4);
+  background: rgba(129, 201, 149, .08);
+}
+
+.loja-bloco h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--p-text);
+}
+
+.loja-prazo {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--p-muted);
+  text-align: center;
+}
+
+.loja-nota {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--p-muted);
+  line-height: 1.5;
+}
+
+/* Formulário em duas colunas: no celular cada campo ocupa a largura toda */
+.loja-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.loja-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.loja-campo span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--p-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.loja-campo input {
+  width: 100%;
+  padding: 11px 12px;
+  background: var(--p-input);
+  border: 1px solid var(--p-border);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 15px; /* abaixo de 16px o iOS dá zoom ao focar */
+  outline: none;
+}
+
+.loja-campo input:focus {
+  border-color: var(--p-blue);
+  background: var(--p-card2);
+}
+
+/* Opção de frete */
+.loja-opcao {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--p-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .02);
+  cursor: pointer;
+}
+
+.loja-opcao.ativa {
+  border-color: var(--p-green);
+  background: rgba(129, 201, 149, .1);
+}
+
+.loja-opcao input { accent-color: var(--p-green); flex: 0 0 auto; }
+
+.loja-opcao-texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.loja-opcao-texto span { color: var(--p-muted); font-size: 12px; }
+
+.loja-opcao-valor {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--p-green);
+}
+
+/* Resumo de valores */
+.loja-resumo {
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.loja-resumo div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  color: var(--p-muted);
+}
+
+.loja-resumo .total {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--p-border);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--p-text);
+}
+
+.loja-resumo .total span:last-child { color: var(--p-green); }
+
+/* QR Code do PIX: fundo branco porque leitor não enxerga QR invertido */
+.loja-qr {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 14px;
+}
+
+.loja-qr img {
+  width: 230px;
+  max-width: 100%;
+  padding: 10px;
+  background: #fff;
+  border-radius: 10px;
+}

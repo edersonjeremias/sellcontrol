@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { tituloPeca, legendaPeca } from './CardPeca'
 
 const moeda = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -27,7 +28,7 @@ export function BarraCarrinho({ quantidade, valor, restante, onAbrir }) {
   )
 }
 
-export default function CarrinhoPainel({ itens, valor, restante, ocupado, onFechar, onRemover }) {
+export default function CarrinhoPainel({ itens, valor, restante, ocupado, slug, onFechar, onRemover }) {
   return (
     <div className="loja-painel-fundo" onClick={onFechar}>
       <div className="loja-painel" onClick={e => e.stopPropagation()}>
@@ -75,7 +76,10 @@ export default function CarrinhoPainel({ itens, valor, restante, ocupado, onFech
               <span>Total das peças</span>
               <b>{moeda(valor)}</b>
             </div>
-            <p className="loja-painel-nota">O frete é calculado pelo seu CEP na hora de fechar o pedido.</p>
+            <Link to={`/loja/${slug}/checkout`} className="loja-btn largo" onClick={onFechar}>
+              Fechar pedido
+            </Link>
+            <p className="loja-painel-nota">O frete é calculado pelo seu CEP no passo seguinte.</p>
           </>
         )}
       </div>

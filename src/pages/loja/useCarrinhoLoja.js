@@ -29,6 +29,16 @@ function salvarPedido(slug, id) {
   } catch {}
 }
 
+/**
+ * Esquece o carrinho desta loja.
+ *
+ * Chamado quando o pedido é pago: sem isso a sacola continuaria "cheia" com
+ * peças que já foram compradas, e a cliente voltaria para um carrinho fantasma.
+ */
+export function limparPedidoSalvo(slug) {
+  salvarPedido(slug, null)
+}
+
 export default function useCarrinhoLoja(slug, avisar) {
   const [carrinho, setCarrinho] = useState(null)
   const [ocupado, setOcupado] = useState(false)

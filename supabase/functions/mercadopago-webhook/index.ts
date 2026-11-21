@@ -100,6 +100,33 @@ serve(async (req) => {
         const extRef = paymentData.external_reference
         const valorLiquido = paymentData.transaction_details?.net_received_amount ?? 0
 
+        // Pedido da loja pública: external_reference = LOJA:<uuid do pedido>.
+        // A confirmação mora em função própria porque faz mais que dar baixa —
+        // cria a venda, o romaneio e põe a peça na Produção.
+        const daLoja = String(extRef).match(/^LOJA:([0-9a-f-]{36})$/i)
+        if (daLoja) {
+          const pedidoId = daLoja[1]
+          console.log(`Pedido da loja ${pedidoId} pago — confirmando`)
+
+          const r = await fetch(`${supabaseUrl}/functions/v1/loja-confirmar-pedido`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ pedido_id: pedidoId, payment_id: String(paymentId) }),
+          })
+
+          const resposta = await r.json().catch(() => ({}))
+          if (!r.ok || !resposta.ok) console.error('Falha ao confirmar pedido da loja:', resposta)
+          else console.log('Pedido da loja confirmado, romaneio', resposta.numero_pedido)
+
+          return new Response(JSON.stringify({ received: true }), {
+            status: 200,
+            headers: { ...CORS, "Content-Type": "application/json" },
+          })
+        }
+
         // Detecta pagamento dividido: external_reference termina em -P1 ou -P2
         const splitMatch = String(extRef).match(/^(.+)-(P[12])$/)
 

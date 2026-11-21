@@ -179,6 +179,7 @@ function Peca() {
           valor={carrinho.valorItens}
           restante={carrinho.restante}
           ocupado={carrinho.ocupado}
+          slug={slug}
           onFechar={() => setPainelAberto(false)}
           onRemover={carrinho.remover}
         />
