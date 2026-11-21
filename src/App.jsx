@@ -66,6 +66,8 @@ import ImpressaoSacolinhaClientePage from './pages/impressao/ImpressaoSacolinhaC
 import EtiquetasProdutosPage         from './pages/impressao/EtiquetasPage'
 import EtiquetasEnvioPage            from './pages/etiquetas/EtiquetasPage'
 import PortalApp                     from './pages/portal/PortalApp'
+import LojaPage                      from './pages/loja/LojaPage'
+import PecaPage                      from './pages/loja/PecaPage'
 import FretePublicoPage              from './pages/frete/FretePublicoPage'
 import FreteFinanceiroPage           from './pages/frete/FreteFinanceiroPage'
 import RelatorioPage                  from './pages/relatorio/RelatorioPage'
@@ -137,6 +139,10 @@ export default function App() {
             <Route path="/r/:codigo" element={<ReciboPage />} />
             <Route path="/portal/:slug" element={<PortalApp />} />
             <Route path="/portal" element={<PortalApp />} />
+            {/* Loja pública: sem login, é o link que vai no Instagram.
+                A rota da peça vem primeiro para o /p/ não cair no catálogo. */}
+            <Route path="/loja/:slug/p/:codigo" element={<PecaPage />} />
+            <Route path="/loja/:slug" element={<LojaPage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
