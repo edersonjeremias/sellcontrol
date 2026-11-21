@@ -5,6 +5,7 @@ import {
   finalizarLive, formatMoney, parseMoney,
   getVendasEnviadas, updateVendaEnviada,
   enviarVenda, fecharLive,
+  getLiveParaRestaurar, listarLivesSalvas,
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
 import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
@@ -191,6 +192,11 @@ export default function VendasPage() {
   const [lastSaveTime, setLastSaveTime] = useState(null)
   const [showRecoverModal, setShowRecoverModal] = useState(false)
   const [backupRemoto, setBackupRemoto] = useState(false) // backup veio de outra máquina
+  const [modalRestaurarLive, setModalRestaurarLive] = useState(false)
+  const [livesSalvas, setLivesSalvas] = useState([])
+  const [carregandoLives, setCarregandoLives] = useState(false)
+  const [confirmSalvar, setConfirmSalvar] = useState(false)
+  const [textoConfirmSalvar, setTextoConfirmSalvar] = useState('')
   const [modalBackupsLoja, setModalBackupsLoja] = useState(false)
   const [listaBackupsLoja, setListaBackupsLoja] = useState([])
   const [carregandoBackupsLoja, setCarregandoBackupsLoja] = useState(false)
@@ -2076,6 +2082,61 @@ export default function VendasPage() {
     }
   }, [busy, dataLive, liveNome, tenantId])
 
+  // Salvar fecha a live e limpa a mesa — um clique sem querer custava a live
+  // inteira, entao exige digitar a palavra antes de liberar o botao.
+  const confirmarSalvar = useCallback(() => {
+    if (textoConfirmSalvar.trim().toLowerCase() !== 'salvar') return
+    setConfirmSalvar(false)
+    setTextoConfirmSalvar('')
+    iniciarFinalizacao()
+  }, [textoConfirmSalvar, iniciarFinalizacao])
+
+  const cancelarSalvar = useCallback(() => {
+    setConfirmSalvar(false)
+    setTextoConfirmSalvar('')
+  }, [])
+  // ── Restaurar uma live ja salva ──
+  // Salvar fecha a live e limpa a mesa. Quando isso acontece sem querer, ou
+  // quando ha algo a acrescentar depois, isto remonta a mesa a partir do banco.
+  // E so leitura: as pecas mantem os ids, entao salvar de novo atualiza as
+  // existentes em vez de duplicar.
+  const abrirRestaurarLive = useCallback(async () => {
+    setModalRestaurarLive(true)
+    setCarregandoLives(true)
+    try {
+      const lista = await listarLivesSalvas(tenantId)
+      setLivesSalvas(lista)
+    } catch (err) {
+      console.error('Erro ao listar lives:', err)
+      showToast('Nao foi possivel listar as lives', 'error')
+    }
+    setCarregandoLives(false)
+  }, [tenantId, showToast])
+
+  const restaurarLive = useCallback(async (item) => {
+    try {
+      const rows = await getLiveParaRestaurar(tenantId, item.dataLive, item.liveNome)
+      if (!rows.length) {
+        showToast('Essa live nao tem pecas', 'error')
+        return
+      }
+      // Impede o reset do cache de sacolinhas disparado pela troca de data/live:
+      // as sacolas ja vem gravadas nas linhas e devem ser mantidas como estavam.
+      isRecoveringBackupRef.current = true
+      setDataLive(item.dataLive)
+      setLiveNome(item.liveNome)
+      setLinhas(rows.map(mapRow))
+      setModalRestaurarLive(false)
+      setTabelaMsg('')
+      showToast('Live ' + item.liveNome + ' restaurada com ' + rows.length + ' peca(s)', 'success')
+    } catch (err) {
+      console.error('Erro ao restaurar live:', err)
+      showToast('Erro ao restaurar a live', 'error')
+    }
+  }, [tenantId, showToast])
+
+
+
   // ── SINCRONIZAR (Atualizar bloqueios de clientes) ──
   const sincronizar = useCallback(async () => {
     if (busy) return
@@ -2426,6 +2487,12 @@ export default function VendasPage() {
                   <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
                 </svg>
               </button>
+              <button className="btn-acao btn-ghost" onClick={abrirRestaurarLive} disabled={busy}
+                style={{ minWidth:36, padding:'0 8px' }} title="Restaurar uma live ja salva">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/>
+                </svg>
+              </button>
               {ehAdmin && (
                 <button className="btn-acao btn-ghost" onClick={abrirBackupsDaLoja} disabled={busy}
                   style={{ minWidth:36, padding:'0 8px' }} title="Backups de live dos vendedores">
@@ -2445,7 +2512,7 @@ export default function VendasPage() {
               )}
 
               <div className="save-group">
-                <button className="btn-acao btn-blue" onClick={iniciarFinalizacao} disabled={busy}>Salvar</button>
+                <button className="btn-acao btn-blue" onClick={() => { setTextoConfirmSalvar(''); setConfirmSalvar(true) }} disabled={busy}>Salvar</button>
               </div>
             </div>
           </div>
@@ -2879,6 +2946,104 @@ export default function VendasPage() {
               style={{ marginTop:18, width:'100%', padding:'9px 0', background:'rgba(255,255,255,.07)', border:'1px solid rgba(255,255,255,.12)', borderRadius:7, color:'#e6edf3', fontWeight:700, fontSize:14, cursor:'pointer' }}>
               Fechar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RESTAURAR LIVE SALVA */}
+      {modalRestaurarLive && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.8)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={() => setModalRestaurarLive(false)}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:'#1a2232', border:'1px solid rgba(255,255,255,.12)', borderRadius:12, padding:'22px 26px', width:620, maxWidth:'100%', maxHeight:'85vh', overflow:'auto', boxShadow:'0 12px 40px rgba(0,0,0,.6)' }}>
+            <div style={{ fontSize:17, fontWeight:800, color:'#e6edf3', marginBottom:6 }}>Restaurar uma live salva</div>
+            <div style={{ fontSize:13, color:'#8b949e', marginBottom:16, lineHeight:1.5 }}>
+              Traz a live de volta para a mesa para voce continuar de onde parou. As pecas
+              mantem o registro que ja tem, entao salvar de novo <strong style={{ color:'#e6edf3' }}>atualiza</strong> em vez de duplicar.
+              <div style={{ marginTop:8, color:'#f59e0b' }}>Isso substitui o que estiver aberto na tela agora.</div>
+            </div>
+
+            {carregandoLives && (
+              <div style={{ padding:'24px 0', textAlign:'center', color:'#8b949e', fontSize:14 }}>Carregando...</div>
+            )}
+
+            {!carregandoLives && livesSalvas.length === 0 && (
+              <div style={{ padding:'24px 0', textAlign:'center', color:'#8b949e', fontSize:14 }}>Nenhuma live encontrada.</div>
+            )}
+
+            {!carregandoLives && livesSalvas.map(item => (
+              <div key={item.dataLive + '|' + item.liveNome}
+                style={{ display:'flex', alignItems:'center', gap:12, padding:'11px 13px', marginBottom:7, background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', borderRadius:8 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#e6edf3' }}>
+                    {formatarData(item.dataLive)} · Live {item.liveNome}
+                  </div>
+                  <div style={{ fontSize:13, color:'#8b949e', marginTop:3 }}>
+                    {item.pecas} peca(s) · <strong style={{ color:'#81c995' }}>{item.comCliente}</strong> com cliente
+                  </div>
+                </div>
+                <button onClick={() => restaurarLive(item)}
+                  style={{ padding:'9px 16px', background:'#1d6f42', border:'1px solid rgba(34,197,94,.3)', borderRadius:7, color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer', whiteSpace:'nowrap' }}>
+                  Restaurar
+                </button>
+              </div>
+            ))}
+
+            <button onClick={() => setModalRestaurarLive(false)}
+              style={{ width:'100%', marginTop:14, padding:'11px 0', background:'transparent', border:'1px solid rgba(255,255,255,.15)', borderRadius:7, color:'#8b949e', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR SALVAR (exige digitar a palavra) */}
+      {confirmSalvar && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.8)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div style={{ background:'#1a2232', border:'2px solid #f59e0b', borderRadius:12, padding:'22px 26px', maxWidth:460, width:'100%', maxHeight:'85vh', overflow:'auto', boxShadow:'0 12px 40px rgba(0,0,0,.8)' }}>
+            <div style={{ fontSize:18, fontWeight:800, color:'#f59e0b', marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+              <span style={{ fontSize:24 }}>⚠️</span>
+              Fechar e salvar a live?
+            </div>
+            <div style={{ fontSize:14, color:'#c9d1d9', marginBottom:16, lineHeight:1.6 }}>
+              Isso encerra a live <strong style={{ color:'#e6edf3' }}>{liveNome || '—'}</strong>
+              {dataLive ? <> de <strong style={{ color:'#e6edf3' }}>{formatarData(dataLive)}</strong></> : null}
+              {' '}e limpa a mesa.
+              <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(245,158,11,.1)', borderRadius:6, fontSize:13 }}>
+                <strong style={{ color:'#e6edf3' }}>{totalInfo.qtd}</strong> peça(s) com cliente serao marcadas como vendidas.
+              </div>
+            </div>
+            <label style={{ display:'block', fontSize:13, color:'#8b949e', marginBottom:6 }}>
+              Para confirmar, digite <strong style={{ color:'#f59e0b' }}>salvar</strong>:
+            </label>
+            <input
+              autoFocus
+              value={textoConfirmSalvar}
+              onChange={e => setTextoConfirmSalvar(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && textoConfirmSalvar.trim().toLowerCase() === 'salvar') confirmarSalvar()
+                if (e.key === 'Escape') cancelarSalvar()
+              }}
+              placeholder="salvar"
+              style={{ width:'100%', padding:'10px 12px', background:'#3a3a3a', border:'1px solid #4a4a4a', borderRadius:7, color:'#e6edf3', fontSize:15, outline:'none', marginBottom:16 }}
+            />
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={cancelarSalvar}
+                style={{ flex:1, padding:'11px 0', background:'transparent', border:'1px solid rgba(255,255,255,.2)', borderRadius:7, color:'#8b949e', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+                Cancelar
+              </button>
+              <button onClick={confirmarSalvar}
+                disabled={textoConfirmSalvar.trim().toLowerCase() !== 'salvar'}
+                style={{
+                  flex:2, padding:'11px 0', borderRadius:7, fontWeight:800, fontSize:14,
+                  background: textoConfirmSalvar.trim().toLowerCase() === 'salvar' ? '#1d6f42' : 'rgba(255,255,255,.06)',
+                  color:      textoConfirmSalvar.trim().toLowerCase() === 'salvar' ? '#fff' : '#6e7681',
+                  border:     '1px solid ' + (textoConfirmSalvar.trim().toLowerCase() === 'salvar' ? 'rgba(34,197,94,.3)' : 'rgba(255,255,255,.08)'),
+                  cursor:     textoConfirmSalvar.trim().toLowerCase() === 'salvar' ? 'pointer' : 'not-allowed',
+                }}>
+                Salvar e fechar a live
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -680,3 +680,54 @@ export async function finalizarLive(tenantId = null, linhas, dataLive, liveNome)
   if (error) throw error
   return { ok: true, movidos: (data || []).length }
 }
+
+// ── getLiveParaRestaurar ───────────────────────────────────────
+// Devolve as linhas cruas de uma live (inclusive as ja fechadas), para a
+// pagina de Vendas remontar a mesa com o mapRow dela e continuar de onde
+// parou. Nao altera nada no banco: quem decide o que fazer e a tela.
+export async function getLiveParaRestaurar(tenantId = null, dataLive, liveNome) {
+  if (!dataLive || !liveNome?.trim()) return []
+  const tid = TENANT_ID(tenantId)
+
+  const { data, error } = await supabase
+    .from('vendas')
+    .select('*')
+    .eq('tenant_id', tid)
+    .eq('data_live', dataLive)
+    .eq('live_nome', liveNome.trim())
+    .order('id', { ascending: true })   // mesma ordem de criacao da live
+
+  if (error) throw error
+  return (data || []).filter(row => !row.deleted)
+}
+
+// ── listarLivesSalvas ──────────────────────────────────────────
+// Lives que ja tem venda gravada, da mais recente para a mais antiga.
+export async function listarLivesSalvas(tenantId = null, limite = 60) {
+  const tid = TENANT_ID(tenantId)
+
+  const { data, error } = await supabase
+    .from('vendas')
+    .select('data_live, live_nome, cliente_nome')
+    .eq('tenant_id', tid)
+    .not('data_live', 'is', null)
+    .neq('live_nome', '')
+    .order('data_live', { ascending: false })
+    .limit(4000)
+
+  if (error) throw error
+
+  // Agrupa no cliente: o Supabase nao faz distinct direto no select
+  const mapa = new Map()
+  for (const row of data || []) {
+    const chave = `${row.data_live}|${row.live_nome}`
+    const atual = mapa.get(chave) || { dataLive: row.data_live, liveNome: row.live_nome, pecas: 0, comCliente: 0 }
+    atual.pecas++
+    if (row.cliente_nome?.trim()) atual.comCliente++
+    mapa.set(chave, atual)
+  }
+
+  return [...mapa.values()]
+    .sort((a, b) => String(b.dataLive).localeCompare(String(a.dataLive)))
+    .slice(0, limite)
+}
