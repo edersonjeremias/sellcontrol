@@ -8,7 +8,7 @@ import {
   getLiveParaRestaurar, listarLivesSalvas,
 } from '../../services/vendasService'
 import { getConfig, saveConfig, getVendasPermissoes } from '../../services/configService'
-import { getProdutos, deduzirQuantidade, devolverQuantidade } from '../../services/produtosService'
+import { getProdutos } from '../../services/produtosService'
 import { criarCobranca, gerarPreferenciaMp, cancelarCobranca } from '../../services/cobrancasService'
 import { salvarBackupRemoto, getBackupRemoto, limparBackupRemoto, listarBackupsDoTenant, getBackupDeUsuario } from '../../services/backupService'
 import { supabase } from '../../lib/supabase'
@@ -1237,8 +1237,7 @@ export default function VendasPage() {
       status: '',
       isSent: false,
       liberado: false,
-      _produtoId: produto.id, // Guarda ID do produto para deduzir estoque depois
-      _estoqueDeduzido: false, // Controle de dedução de estoque
+      _produtoId: produto.id, // De qual produto do cadastro a linha veio
     }
 
     if (linhaVaziaExistente) {
@@ -1393,37 +1392,14 @@ export default function VendasPage() {
     salvarAgora()
 
     // ═══════════════════════════════════════════════════════════════
-    // DEDUZIR/DEVOLVER ESTOQUE (só quando usuário TERMINA de digitar)
+    // ESTOQUE: quem baixa e devolve agora é o banco
     // ═══════════════════════════════════════════════════════════════
-    if (l._produtoId) {
-      // Se tem cliente E ainda não deduziu → DEDUZ
-      if (nome && !l._estoqueDeduzido) {
-        console.log('💾 Deduzindo estoque do produto ID:', l._produtoId)
-        deduzirQuantidade(l._produtoId, 1)
-          .then(() => {
-            console.log('✅ Estoque deduzido:', l.codigo || l.produto)
-            // Marca que foi deduzido
-            setLinhas(prev => prev.map(linha =>
-              linha._key === key ? { ...linha, _estoqueDeduzido: true } : linha
-            ))
-          })
-          .catch(err => console.error('❌ Erro ao deduzir estoque:', err))
-      }
-
-      // Se NÃO tem cliente E já tinha deduzido → DEVOLVE
-      if (!nome && l._estoqueDeduzido) {
-        console.log('💾 Devolvendo estoque do produto ID:', l._produtoId)
-        devolverQuantidade(l._produtoId, 1)
-          .then(() => {
-            console.log('✅ Estoque devolvido:', l.codigo || l.produto)
-            // Marca que foi devolvido
-            setLinhas(prev => prev.map(linha =>
-              linha._key === key ? { ...linha, _estoqueDeduzido: false } : linha
-            ))
-          })
-          .catch(err => console.error('❌ Erro ao devolver estoque:', err))
-      }
-    }
+    // O trigger trg_vendas_estoque (migration 20261121b) casa a peça pelo
+    // código e baixa na transição "linha ganhou cliente". Isso cobre também a
+    // peça digitada à mão, que aqui nunca baixava — era por ela que a mesma
+    // peça podia ser vendida na live e continuar à venda na loja.
+    //
+    // Deduzir daqui também deixaria a conta dobrada nas peças vindas da busca.
 
     if (!nome) {
       console.log('⚠️ Nome vazio, recalculando sacolinhas')
@@ -1866,13 +1842,9 @@ export default function VendasPage() {
       onSim: () => {
         setConfirmacao(null)
 
-        // ✅ DEVOLVE ESTOQUE se linha foi adicionada do catálogo
-        const linha = linhas.find(l => l._key === rowKey)
-        if (linha && linha._produtoId && linha.cliente_nome?.trim()) {
-          devolverQuantidade(linha._produtoId, 1)
-            .then(() => console.log('✅ Estoque devolvido ao excluir:', linha.codigo || linha.produto))
-            .catch(err => console.error('❌ Erro ao devolver estoque:', err))
-        }
+        // O estoque volta pelo banco: o trigger trg_vendas_estoque_delete
+        // devolve a peça quando a linha é apagada, inclusive a que foi
+        // digitada à mão (que nunca passou por aqui).
 
         setLinhas(prev => calcSacolas(prev.map(r => r._key === rowKey ? { ...r, deleted: true, cliente_nome: '', sacolinha: null } : r)))
         salvarAgora()
