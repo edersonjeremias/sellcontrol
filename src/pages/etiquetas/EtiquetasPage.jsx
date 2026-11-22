@@ -216,6 +216,8 @@ export default function EtiquetasPage() {
   const [historicoDe, setHistoricoDe] = useState(null)
   // Margem da loja: o modal mostra o valor que a cliente paga, nunca o custo
   const [margemFrete, setMargemFrete] = useState(0)
+  // Endereço do portal do cliente, que vai junto no aviso de pedido da loja
+  const [slugLoja, setSlugLoja] = useState('')
 
   // O cabeçalho da tabela gruda logo abaixo da barra de filtros, que muda
   // de altura quando os campos quebram em várias linhas no celular
@@ -269,11 +271,12 @@ export default function EtiquetasPage() {
 
       const { data: cfg } = await supabase
         .from('configuracoes')
-        .select('margem_frete')
+        .select('margem_frete, slug')
         .eq('tenant_id', tenantId)
         .maybeSingle()
 
       setMargemFrete(Number(cfg?.margem_frete ?? 0))
+      setSlugLoja(cfg?.slug || '')
 
       const { data, error } = await supabase
         .from('romaneios')
@@ -400,6 +403,66 @@ export default function EtiquetasPage() {
         mensagem: err.message || 'Tente novamente.',
       })
     }
+  }
+
+  /**
+   * Avisa a cliente do pedido que já veio pago da loja.
+   *
+   * O botão de frete não serve para esses pedidos: ele manda a cliente cotar e
+   * pagar o envio, e aqui o frete já foi pago junto com as peças. O que falta
+   * é a cliente saber que deu certo — quem compra numa loja aberta e não
+   * recebe nenhuma palavra depois de pagar acha que caiu em golpe.
+   *
+   * A mensagem muda conforme o pedido anda: confirmação enquanto está na
+   * produção, rastreio depois de postado.
+   */
+  const handleAvisarCliente = (rom) => {
+    const insta = String(rom.cliente_instagram || '').replace('@', '')
+    const fone = String(
+      whatsPorInstagram[insta.toLowerCase()] || rom.enderecos_clientes?.telefone || ''
+    ).replace(/\D/g, '')
+
+    const primeiroNome = String(rom.enderecos_clientes?.destinatario || '').split(/\s+/)[0]
+    const saudacao = primeiroNome ? `Oi, ${primeiroNome}!` : 'Oi! Tudo bem?'
+    const rastreio = String(rom.codigo_rastreio || '').trim()
+
+    // Sem emoji: eles chegam corrompidos pelo deep link do WhatsApp.
+    // O link fica sozinho na última linha, que é como o app reconhece melhor.
+    const partes = [`${saudacao}`, '']
+
+    if (rastreio) {
+      partes.push(
+        `Seu pedido ${rom.numero} foi postado!`,
+        `Transportadora: ${rom.transportadora || ''} ${rom.servico || ''}`.trim(),
+        `Código de rastreio: ${rastreio}`,
+        '',
+        'Acompanhe por aqui:',
+        linkRastreio(rastreio, rom.transportadora)
+      )
+    } else {
+      partes.push(
+        `Recebemos seu pagamento e seu pedido ${rom.numero} já entrou na produção.`,
+        'O frete está pago: assim que a peça for separada e embalada, eu te mando o código de rastreio por aqui.',
+      )
+      if (slugLoja) {
+        partes.push(
+          '',
+          `Você também pode acompanhar pelo portal. Entre com ${insta} e, se for a primeira vez, a senha é o número do seu WhatsApp (só os números):`,
+          `${window.location.origin.replace('://www.', '://')}/portal/${slugLoja}`
+        )
+      }
+    }
+
+    const msg = partes.join('\n')
+
+    if (!fone) {
+      showGlobalToast('Cliente sem WhatsApp cadastrado — escolha o contato', 'error')
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+      return
+    }
+
+    const comDDI = fone.length <= 11 ? `55${fone}` : fone
+    window.open(`https://wa.me/${comDDI}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
   // Abre o WhatsApp do cliente com o link onde ele mesmo cota e paga o frete
@@ -1235,6 +1298,28 @@ export default function EtiquetasPage() {
                     </button>
                   )}
 
+                  {/* Pedido com frete já pago: não há o que cobrar, o que
+                      falta é a cliente saber que deu certo */}
+                  {['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito'].includes(rom.status) && (
+                    <button
+                      onClick={() => handleAvisarCliente(rom)}
+                      title={rom.codigo_rastreio ? 'Mandar o rastreio no WhatsApp' : 'Avisar a cliente no WhatsApp'}
+                      style={{
+                        background: 'rgba(37,211,102,0.15)',
+                        color: '#25d366',
+                        border: '1px solid rgba(37,211,102,0.5)',
+                        borderRadius: 6,
+                        padding: '6px 10px',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {rom.codigo_rastreio ? 'Rastreio' : 'Avisar'}
+                    </button>
+                  )}
+
                   {!['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'].includes(rom.status) && (
                     <button
                       onClick={() => handleEnviarLinkFrete(rom)}
@@ -1847,6 +1932,26 @@ export default function EtiquetasPage() {
                       }}
                     >
                       Retirou na loja
+                    </button>
+                  )}
+
+                  {/* Aviso ao cliente do pedido que já veio pago */}
+                  {['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito'].includes(modalAberto.status) && (
+                    <button
+                      onClick={() => handleAvisarCliente(modalAberto)}
+                      style={{
+                        flex: 1,
+                        minWidth: 150,
+                        background: 'rgba(37,211,102,0.15)',
+                        color: '#25d366',
+                        border: '1px solid rgba(37,211,102,0.5)',
+                        borderRadius: 8,
+                        padding: '14px 20px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {modalAberto.codigo_rastreio ? 'Mandar rastreio no WhatsApp' : 'Avisar cliente no WhatsApp'}
                     </button>
                   )}
 

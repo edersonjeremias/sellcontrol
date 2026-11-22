@@ -43,9 +43,19 @@ const checkout = (acao, pedidoId, payload = {}) =>
 /** Pedido inteiro: itens, dados, cotações, frete escolhido e pagamento */
 export const buscarPedido = (pedidoId) => checkout('pedido', pedidoId)
 
+/**
+ * Dados e endereços de quem entrou com a conta do portal.
+ *
+ * Vai o token da sessão, nunca o @: quem diz de quem é a conta é o servidor,
+ * validando o token. Mandar o @ deixaria qualquer um se dizer outra cliente e
+ * ver o endereço dela.
+ */
+export const dadosDoPortal = (pedidoId, portalToken) =>
+  checkout('portal', pedidoId, { portal_token: portalToken })
+
 /** Grava quem compra e para onde vai. Trocar o CEP derruba a cotação antiga. */
-export const identificar = (pedidoId, cliente, endereco) =>
-  checkout('identificar', pedidoId, { cliente, endereco })
+export const identificar = (pedidoId, cliente, endereco, portalToken = null) =>
+  checkout('identificar', pedidoId, { cliente, endereco, portal_token: portalToken })
 
 /** Cota no Melhor Envio, com a caixa escolhida pelo peso das peças */
 export const cotarFrete = (pedidoId) => checkout('cotar', pedidoId)

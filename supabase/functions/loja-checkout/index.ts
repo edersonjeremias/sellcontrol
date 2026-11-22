@@ -93,6 +93,7 @@ serve(async (req) => {
 
     switch (acao) {
       case 'pedido':      return await acaoPedido(supabase, pedido, config)
+      case 'portal':      return await acaoPortal(supabase, pedido, payload)
       case 'identificar': return await acaoIdentificar(supabase, pedido, payload)
       case 'cotar':       return await acaoCotar(supabase, pedido, config)
       case 'pagar':       return await acaoPagar(supabase, pedido, config, payload)
@@ -144,6 +145,9 @@ function paraTela(pedido: any, itens: any[]) {
     cotacoes: pedido.frete_cotacoes || [],
     frete: pedido.frete_escolhido || null,
     forma_pagamento: pedido.forma_pagamento || null,
+    // Como ela acompanha o pedido sozinha depois de pagar
+    acesso_portal: pedido.acesso_portal === true,
+    identificador: pedido.cliente_instagram || '',
     pix: pedido.pix_qr_code
       ? {
           qr_code: pedido.pix_qr_code,
@@ -160,6 +164,75 @@ function emAberto(pedido: any) {
   if (!ABERTOS.includes(pedido.status)) return false
   if (pedido.reserva_expira_em && new Date(pedido.reserva_expira_em) <= new Date()) return false
   return true
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// PORTAL — a cliente que já compra entrou com a conta dela
+// ────────────────────────────────────────────────────────────────────────────
+// O navegador manda o token da sessão do portal, não o @: quem diz de quem é
+// a conta é o Supabase, validando o token. Aceitar um @ vindo da tela deixaria
+// qualquer pessoa se dizer outra cliente e ver o endereço dela.
+async function acaoPortal(supabase: any, pedido: any, payload: any) {
+  const cliente = await clienteDoPortal(supabase, payload.portal_token)
+  if (!cliente) return json({ error: 'Sua sessão expirou. Entre de novo.' }, 401)
+
+  const { data: enderecos } = await supabase
+    .from('enderecos_clientes')
+    .select('*')
+    .eq('tenant_id', pedido.tenant_id)
+    .eq('cliente_instagram', cliente.instagram)
+    .order('padrao', { ascending: false })
+
+  // O cadastro da loja costuma estar mais completo que o do portal (CPF,
+  // e-mail), então ele entra primeiro e o portal preenche o que faltar
+  const { data: naLoja } = await supabase
+    .from('clientes')
+    .select('*')
+    .eq('tenant_id', pedido.tenant_id)
+    .ilike('instagram', cliente.instagram)
+    .maybeSingle()
+
+  const preferido = (...valores: any[]) =>
+    valores.map(v => String(v || '').trim()).find(Boolean) || ''
+
+  return json({
+    instagram: cliente.instagram,
+    cliente: {
+      nome: preferido(naLoja?.nome_completo, cliente.nome_completo),
+      whatsapp: preferido(naLoja?.whatsapp, cliente.celular).replace(/\D/g, ''),
+      cpf: preferido(naLoja?.cpf, cliente.cpf).replace(/\D/g, ''),
+      email: preferido(naLoja?.email),
+    },
+    enderecos: (enderecos || []).map((e: any) => ({
+      id: e.id,
+      apelido: e.apelido,
+      cep: String(e.cep || '').replace(/\D/g, ''),
+      rua: e.rua,
+      numero: e.numero,
+      complemento: e.complemento || '',
+      bairro: e.bairro,
+      cidade: e.cidade,
+      estado: e.estado,
+    })),
+  })
+}
+
+/** Dono do token, pelo cadastro do portal. Token inválido devolve null. */
+async function clienteDoPortal(supabase: any, token: any) {
+  const jwt = String(token || '')
+  if (jwt.length < 20) return null
+
+  const { data, error } = await supabase.auth.getUser(jwt)
+  if (error || !data?.user?.id) return null
+
+  const { data: perfil } = await supabase
+    .from('portal_clientes')
+    .select('user_id, instagram, nome_completo, cpf, celular, bloqueado')
+    .eq('user_id', data.user.id)
+    .maybeSingle()
+
+  if (!perfil || perfil.bloqueado) return null
+  return perfil
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -197,11 +270,18 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
   if (faltando.length) return json({ error: 'Complete o endereço de entrega' }, 400)
   if (endereco.cep.length !== 8) return json({ error: 'CEP inválido' }, 400)
 
-  // Identificador da cliente da loja. O sistema inteiro (vendas, romaneio,
-  // portal) é indexado por @ do Instagram, e a loja não pede @ — então o
-  // WhatsApp, que é único e ela já informou, faz esse papel. O prefixo evita
-  // colidir com um @ de verdade e mostra na Produção de onde a venda veio.
-  const identificador = `loja.${whatsapp}`
+  // Identificador da cliente no sistema, em ordem de confiança:
+  //   1. entrou com a conta do portal — é o @ dela, confirmado pelo token;
+  //   2. o WhatsApp informado já está no cadastro — é a cliente de sempre
+  //      comprando pela loja, e a virada confirma isso de novo;
+  //   3. cliente nova: o WhatsApp vira o identificador, com prefixo para não
+  //      colidir com um @ de verdade e para mostrar na Produção de onde veio.
+  const doPortal = await clienteDoPortal(supabase, payload.portal_token)
+
+  const { data: jaCadastrada } = await supabase
+    .rpc('loja_cliente_por_whatsapp', { p_tenant_id: pedido.tenant_id, p_whatsapp: whatsapp })
+
+  const identificador = doPortal?.instagram || jaCadastrada || `loja.${whatsapp}`
 
   // Trocar de endereço invalida a cotação: o frete era para outro CEP
   const mudouCep = String(pedido.endereco?.cep || '') !== endereco.cep
@@ -214,6 +294,7 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
       cliente_cpf: cpf,
       cliente_email: email,
       cliente_instagram: identificador,
+      cliente_user_id: doPortal?.user_id || null,
       endereco,
       ...(mudouCep ? { frete_cotacoes: null, frete_escolhido: null, valor_frete: 0, total: 0 } : {}),
     })

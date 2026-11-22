@@ -160,7 +160,29 @@ async function pagamentoAprovado(token: string | undefined, paymentId: string, p
 // ────────────────────────────────────────────────────────────────────────────
 async function virar(supabase: any, pedido: any, pagoEm: string) {
   const tenantId = pedido.tenant_id
-  const identificador = String(pedido.cliente_instagram || `loja.${pedido.cliente_whatsapp}`)
+
+  // Quem é esta cliente no sistema.
+  //
+  // A loja pede WhatsApp, não @ do Instagram — mas quem já compra nas lives
+  // tem cadastro com o mesmo número. Sem procurar por ele, a mesma pessoa
+  // ganharia um cadastro novo a cada compra, e as peças da loja cairiam num
+  // segundo romaneio, com um segundo frete.
+  const { data: jaCadastrada } = await supabase
+    .rpc('loja_cliente_por_whatsapp', {
+      p_tenant_id: tenantId,
+      p_whatsapp: pedido.cliente_whatsapp,
+    })
+
+  const identificador = String(
+    jaCadastrada || pedido.cliente_instagram || `loja.${pedido.cliente_whatsapp}`
+  )
+
+  if (identificador !== pedido.cliente_instagram) {
+    await supabase
+      .from('loja_pedidos')
+      .update({ cliente_instagram: identificador })
+      .eq('id', pedido.id)
+  }
 
   const { data: itens, error: itensErro } = await supabase
     .from('loja_pedido_itens')
@@ -175,7 +197,7 @@ async function virar(supabase: any, pedido: any, pagoEm: string) {
   // por ele que a Produção, o romaneio e o portal acham esta cliente.
   const { data: clienteExistente } = await supabase
     .from('clientes')
-    .select('id')
+    .select('*')
     .eq('tenant_id', tenantId)
     .ilike('instagram', identificador)
     .maybeSingle()
@@ -188,7 +210,16 @@ async function virar(supabase: any, pedido: any, pagoEm: string) {
   }
 
   if (clienteExistente) {
-    await supabase.from('clientes').update(dadosCliente).eq('id', clienteExistente.id)
+    // Cliente de live que comprou na loja: completa o que falta no cadastro,
+    // sem passar por cima do que a loja já tinha anotado dela
+    const faltando: Record<string, string> = {}
+    for (const [campo, valor] of Object.entries(dadosCliente)) {
+      if (!String(valor || '').trim()) continue
+      if (!String(clienteExistente[campo] || '').trim()) faltando[campo] = String(valor)
+    }
+    if (Object.keys(faltando).length) {
+      await supabase.from('clientes').update(faltando).eq('id', clienteExistente.id)
+    }
   } else {
     const { error } = await supabase
       .from('clientes')
@@ -281,6 +312,24 @@ async function virar(supabase: any, pedido: any, pagoEm: string) {
   if (cotErro) console.error('Não foi possível gravar a cotação do romaneio:', cotErro)
   else await supabase.from('romaneios').update({ melhor_envio_cotacao_id: cotacao.id }).eq('id', romaneio.id)
 
+  // O frete entrou junto com as peças, num pagamento só. Sem registrar aqui,
+  // a tela de Frete e Pagamentos mostra este romaneio como "baixa manual, não
+  // entrou pelo Mercado Pago" — e ele entrou.
+  const { error: pagErro } = await supabase
+    .from('pagamentos_frete')
+    .insert([{
+      romaneio_id: romaneio.id,
+      valor: Number(pedido.valor_frete || 0),
+      valor_original: Number(frete.valor_base ?? frete.valor ?? 0),
+      metodo: pedido.forma_pagamento === 'cartao' ? 'cartao' : 'pix',
+      status: 'aprovado',
+      gateway_transaction_id: pedido.mp_payment_id ? String(pedido.mp_payment_id) : null,
+      pago_em: pagoEm,
+      observacao: `Pago junto com as peças no pedido ${pedido.codigo} da loja`,
+    }])
+
+  if (pagErro) console.error('Não foi possível registrar o pagamento do frete:', pagErro)
+
   // ── 4. As peças viram venda e entram na Produção ────────────────────────
   const numeroPedido = parseInt(String(romaneio.numero).replace(/\D/g, ''), 10) || null
   const hoje = new Date().toISOString().slice(0, 10)
@@ -319,10 +368,75 @@ async function virar(supabase: any, pedido: any, pagoEm: string) {
     await supabase.from('loja_pedido_itens').update({ venda_id: venda.id }).eq('id', itens[i].id)
   }
 
+  // ── 6. Acesso ao portal ─────────────────────────────────────────────────
+  const acesso = await garantirAcessoPortal(supabase, identificador, pedido)
+
   await supabase
     .from('loja_pedidos')
-    .update({ numero_pedido: numeroPedido, romaneio_id: romaneio.id })
+    .update({ numero_pedido: numeroPedido, romaneio_id: romaneio.id, acesso_portal: acesso })
     .eq('id', pedido.id)
 
   return numeroPedido
+}
+
+/**
+ * Acesso da cliente ao portal, criado na primeira compra.
+ *
+ * Mesma regra do botão que a loja já usa no cadastro de clientes
+ * (api/portal-cliente.js): o login é o @ (ou o identificador da loja) e a
+ * senha é o número do WhatsApp, só dígitos. É o que permite mandar o acesso
+ * junto com a confirmação sem inventar senha nova nem guardá-la em lugar
+ * nenhum.
+ *
+ * Falhar aqui não derruba a virada: a venda já está feita, e acesso ao portal
+ * se resolve depois.
+ */
+async function garantirAcessoPortal(supabase: any, instagram: string, pedido: any) {
+  try {
+    const insta = instagram.replace(/^@/, '').toLowerCase()
+    const email = `${insta}@portal.vmkids.com.br`
+    const senha = String(pedido.cliente_whatsapp || '').replace(/\D/g, '')
+    if (senha.length < 6) return false
+
+    // Já tem acesso? Então não mexemos na senha dela.
+    const { data: jaTem } = await supabase
+      .from('portal_clientes')
+      .select('id, user_id')
+      .eq('instagram', insta)
+      .maybeSingle()
+
+    if (jaTem?.user_id) return true
+
+    const { data: criado, error } = await supabase.auth.admin.createUser({
+      email,
+      password: senha,
+      email_confirm: true,
+    })
+
+    // Conta já existe no Auth sem linha em portal_clientes: deixa como está,
+    // porque trocar a senha de quem já usa o portal seria pior que não criar
+    if (error || !criado?.user?.id) {
+      console.error('Não foi possível criar o acesso ao portal:', error?.message)
+      return false
+    }
+
+    const { error: perfilErro } = await supabase
+      .from('portal_clientes')
+      .insert([{
+        user_id: criado.user.id,
+        instagram: insta,
+        nome_completo: pedido.cliente_nome || '',
+        cpf: pedido.cliente_cpf || null,
+        celular: pedido.cliente_whatsapp || null,
+      }])
+
+    if (perfilErro) {
+      console.error('Não foi possível criar o perfil do portal:', perfilErro)
+      return false
+    }
+    return true
+  } catch (erro) {
+    console.error('Falha ao preparar o acesso ao portal:', erro)
+    return false
+  }
 }

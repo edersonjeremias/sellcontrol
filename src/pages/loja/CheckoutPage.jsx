@@ -4,8 +4,12 @@ import PortalToastProvider, { usePortalToast } from '../../components/portal/Por
 import LojaHeader from '../../components/loja/LojaHeader'
 import { relogio } from '../../components/loja/CarrinhoPainel'
 import { tituloPeca, legendaPeca } from '../../components/loja/CardPeca'
+import ModalEntrar from '../../components/loja/ModalEntrar'
 import { lerPedidoSalvo } from './useCarrinhoLoja'
-import { buscarPedido, identificar, cotarFrete, pagar, buscarCep } from '../../services/lojaCheckoutService'
+import { portalSb } from '../../lib/portalSupabase'
+import {
+  buscarPedido, identificar, cotarFrete, pagar, buscarCep, dadosDoPortal,
+} from '../../services/lojaCheckoutService'
 import '../../styles/portal.css'
 import './loja.css'
 
@@ -64,6 +68,12 @@ function Checkout() {
   const [cotando, setCotando] = useState(false)
   const [pagando, setPagando] = useState(false)
 
+  // Conta do portal: quem já compra nas lives entra e não vira cadastro novo
+  const [entrarAberto, setEntrarAberto] = useState(false)
+  const [portalToken, setPortalToken] = useState(null)
+  const [portalInsta, setPortalInsta] = useState('')
+  const [enderecosSalvos, setEnderecosSalvos] = useState([])
+
   // ── Carrega o pedido montado na vitrine ──────────────────────────────────
   useEffect(() => {
     if (!pedidoId) {
@@ -103,6 +113,42 @@ function Checkout() {
     return () => clearInterval(timer)
   }, [pedido?.reserva_expira_em])
 
+  // ── Conta do portal ──────────────────────────────────────────────────────
+  // Puxa nome, CPF e endereços já cadastrados. A cliente confere e, se quiser,
+  // troca — o que ela deixar na tela é o que vale para esta entrega.
+  const aplicarPortal = useCallback(async (token) => {
+    try {
+      const r = await dadosDoPortal(pedidoId, token)
+      setPortalToken(token)
+      setPortalInsta(r.instagram || '')
+      setCliente(c => ({
+        nome: r.cliente.nome || c.nome,
+        whatsapp: r.cliente.whatsapp || c.whatsapp,
+        cpf: r.cliente.cpf || c.cpf,
+        email: r.cliente.email || c.email,
+      }))
+      setEnderecosSalvos(r.enderecos || [])
+      if (r.enderecos?.length) {
+        const { id, apelido, ...campos } = r.enderecos[0]
+        setEndereco(e => ({ ...e, ...campos }))
+      }
+      toast(`Olá, @${r.instagram}! Seus dados já estão aqui.`, 'success')
+    } catch (err) {
+      toast(err.message || 'Não foi possível carregar seus dados', 'error')
+    }
+  }, [pedidoId, toast])
+
+  // Sessão do portal já aberta neste aparelho: aproveita sem pedir senha
+  useEffect(() => {
+    if (!pedidoId) return
+    let vivo = true
+    portalSb.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token
+      if (vivo && token) aplicarPortal(token)
+    })
+    return () => { vivo = false }
+  }, [pedidoId, aplicarPortal])
+
   const preencherPeloCep = useCallback(async (valor) => {
     const achado = await buscarCep(valor).catch(() => null)
     if (!achado) return toast('CEP não encontrado', 'error')
@@ -114,7 +160,7 @@ function Checkout() {
     setCotando(true)
     try {
       // Os dados vão antes: é o CEP salvo no pedido que o servidor usa na cotação
-      await identificar(pedidoId, cliente, endereco)
+      await identificar(pedidoId, cliente, endereco, portalToken)
       const r = await cotarFrete(pedidoId)
       setCotacoes(r.cotacoes || [])
       setFreteId(r.cotacoes?.[0]?.id || '') // a mais barata já vem marcada
@@ -228,6 +274,22 @@ function Checkout() {
         {/* ── Dados ── */}
         <section className="loja-bloco">
           <h2>Seus dados</h2>
+
+          {portalInsta ? (
+            <p className="loja-nota" style={{ marginTop: 0, marginBottom: 12, color: 'var(--p-green)' }}>
+              Você entrou como <b>@{portalInsta}</b>. Suas compras ficam todas juntas.
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="loja-btn secundario largo"
+              style={{ marginBottom: 12 }}
+              onClick={() => setEntrarAberto(true)}
+            >
+              Já compro com vocês? Entrar
+            </button>
+          )}
+
           <div className="loja-form">
             <Campo rotulo="Nome completo" largura={2}>
               <input
@@ -270,6 +332,25 @@ function Checkout() {
         {/* ── Entrega ── */}
         <section className="loja-bloco">
           <h2>Entrega</h2>
+
+          {enderecosSalvos.length > 1 && (
+            <div className="loja-chips" style={{ padding: '0 0 12px' }}>
+              {enderecosSalvos.map(e => (
+                <button
+                  key={e.id}
+                  type="button"
+                  className={`loja-chip ${endereco.cep === e.cep && endereco.numero === e.numero ? 'ativo' : ''}`}
+                  onClick={() => {
+                    const { id, apelido, ...campos } = e
+                    setEndereco(atual => ({ ...atual, ...campos }))
+                  }}
+                >
+                  {e.apelido || `${e.rua}, ${e.numero}`}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="loja-form">
             <Campo rotulo="CEP">
               <input
@@ -390,6 +471,16 @@ function Checkout() {
           </section>
         )}
       </div>
+
+      {entrarAberto && (
+        <ModalEntrar
+          onFechar={() => setEntrarAberto(false)}
+          onEntrou={async (token) => {
+            setEntrarAberto(false)
+            await aplicarPortal(token)
+          }}
+        />
+      )}
     </div>
   )
 }

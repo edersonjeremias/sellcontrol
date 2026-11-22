@@ -130,6 +130,19 @@ function Pedido() {
               na produção. O frete está pago: assim que a peça for separada e embalada, a etiqueta sai e você
               recebe o rastreio no WhatsApp.
             </p>
+            {pedido.acesso_portal && pedido.identificador && (
+              <div className="loja-resumo" style={{ marginTop: 14, marginBottom: 0 }}>
+                <div style={{ display: 'block', color: 'var(--p-text)' }}>
+                  <b style={{ display: 'block', marginBottom: 6 }}>Acompanhe seu pedido</b>
+                  <span style={{ color: 'var(--p-muted)', fontSize: 13, lineHeight: 1.5 }}>
+                    Entre em <a href={`/portal/${slug}`} style={{ color: 'var(--p-blue)' }}>/portal/{slug}</a> com
+                    o usuário <b>{pedido.identificador}</b> e a senha igual ao número do seu
+                    WhatsApp, só os números. Lá você vê a entrega do começo ao fim.
+                  </span>
+                </div>
+              </div>
+            )}
+
             <Link to={`/loja/${slug}`} className="loja-btn largo" style={{ marginTop: 16 }}>
               Continuar vendo peças
             </Link>
