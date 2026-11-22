@@ -197,13 +197,17 @@ Usa `.in('status', ['PENDENTE', 'ENVIADO', 'REENVIADO', 'LEMBRETE'])` — **nunc
 5. Consulta pagamento na API do MP com o token correto
 6. Se `status === 'approved'`, atualiza `cobrancas` com `status: 'PAGO'`
 
-### Dois endpoints de webhook (ambos funcionando)
+### Um endpoint de webhook
 | URL | Onde está |
 |---|---|
-| `https://sellcontrol.vercel.app/api/webhook` | `api/webhook.js` (Vercel serverless) |
 | `https://gtsdgkalolqzjmmwtvdv.supabase.co/functions/v1/mercadopago-webhook` | `supabase/functions/mercadopago-webhook/index.ts` (Deno) |
 
-A `notification_url` nas preferências aponta para o **Supabase** (mais confiável).
+A `notification_url` de toda cobrança e de todo pedido da loja aponta para lá.
+
+O gêmeo em `api/webhook.js` foi removido em 22/11/2026: ele não recebia mais
+nada desde que a `notification_url` passou a apontar para o Supabase, e o
+plano Hobby da Vercel só aceita 12 funções em `/api` — a décima terceira faz o
+deploy inteiro falhar na hora de publicar, sem erro de build.
 
 ### Deploy da Edge Function
 ```bash
