@@ -5,6 +5,10 @@
       "destination": "https://api.mercadopago.com/:path*"
     },
     {
+      "source": "/loja/:slug/p/:codigo",
+      "destination": "/api/loja-peca?slug=:slug&codigo=:codigo"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/"
     }
