@@ -53,9 +53,15 @@ export const buscarPedido = (pedidoId) => checkout('pedido', pedidoId)
 export const dadosDoPortal = (pedidoId, portalToken) =>
   checkout('portal', pedidoId, { portal_token: portalToken })
 
-/** Grava quem compra e para onde vai. Trocar o CEP derruba a cotação antiga. */
-export const identificar = (pedidoId, cliente, endereco, portalToken = null) =>
-  checkout('identificar', pedidoId, { cliente, endereco, portal_token: portalToken })
+/**
+ * Grava quem compra, para onde vai e o destino do pedido.
+ *
+ * `destino` é 'entrega' (paga peças e frete agora) ou 'sacolinha' (paga só as
+ * peças e espera o fechamento). Trocar o CEP ou o destino derruba a cotação
+ * antiga, que era de outro envio.
+ */
+export const identificar = (pedidoId, cliente, endereco, portalToken = null, destino = 'entrega') =>
+  checkout('identificar', pedidoId, { cliente, endereco, portal_token: portalToken, destino })
 
 /** Cota no Melhor Envio, com a caixa escolhida pelo peso das peças */
 export const cotarFrete = (pedidoId) => checkout('cotar', pedidoId)

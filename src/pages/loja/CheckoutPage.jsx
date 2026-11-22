@@ -73,6 +73,9 @@ function Checkout() {
   const [portalToken, setPortalToken] = useState(null)
   const [portalInsta, setPortalInsta] = useState('')
   const [enderecosSalvos, setEnderecosSalvos] = useState([])
+  // 'entrega' = paga peças e frete agora. 'sacolinha' = paga só as peças e
+  // espera o fechamento, com um frete só. Só existe para quem entrou.
+  const [destino, setDestino] = useState('entrega')
 
   // ── Carrega o pedido montado na vitrine ──────────────────────────────────
   useEffect(() => {
@@ -91,6 +94,7 @@ function Checkout() {
         setFreteId(r.pedido.frete?.id || '')
         if (r.pedido.cliente?.nome) setCliente(r.pedido.cliente)
         if (r.pedido.endereco) setEndereco(e => ({ ...e, ...r.pedido.endereco }))
+        if (r.pedido.destino) setDestino(r.pedido.destino)
         if (!r.pedido.itens?.length) setErroFatal('vazio')
       })
       .catch(err => { if (vivo) setErroFatal(err.message || 'Não foi possível abrir seu pedido') })
@@ -160,7 +164,7 @@ function Checkout() {
     setCotando(true)
     try {
       // Os dados vão antes: é o CEP salvo no pedido que o servidor usa na cotação
-      await identificar(pedidoId, cliente, endereco, portalToken)
+      await identificar(pedidoId, cliente, endereco, portalToken, 'entrega')
       const r = await cotarFrete(pedidoId)
       setCotacoes(r.cotacoes || [])
       setFreteId(r.cotacoes?.[0]?.id || '') // a mais barata já vem marcada
@@ -175,10 +179,23 @@ function Checkout() {
 
   // ── Pagar ────────────────────────────────────────────────────────────────
   async function finalizar(forma) {
-    if (!freteId) return toast('Escolha uma opção de frete', 'error')
-    setPagando(true)
+    if (naSacolinha) {
+      // Sem endereço e sem frete: o que vai ao servidor é só quem ela é
+      setPagando(true)
+      try {
+        await identificar(pedidoId, cliente, endereco, portalToken, 'sacolinha')
+      } catch (err) {
+        toast(err.message || 'Não foi possível salvar seus dados', 'error')
+        setPagando(false)
+        return
+      }
+    } else {
+      if (!freteId) return toast('Escolha uma opção de frete', 'error')
+      setPagando(true)
+    }
+
     try {
-      const r = await pagar(pedidoId, freteId, forma)
+      const r = await pagar(pedidoId, naSacolinha ? null : freteId, forma)
       if (forma === 'cartao' && r.link) {
         // O Mercado Pago devolve a cliente na página do pedido pela back_url
         window.location.href = r.link
@@ -192,14 +209,18 @@ function Checkout() {
     }
   }
 
+  const naSacolinha = destino === 'sacolinha'
   const freteEscolhido = cotacoes.find(c => c.id === freteId)
-  const total = Number(pedido?.valor_itens || 0) + Number(freteEscolhido?.valor || 0)
+  const total = Number(pedido?.valor_itens || 0) + (naSacolinha ? 0 : Number(freteEscolhido?.valor || 0))
 
-  const dadosCompletos =
+  const dadosPessoaisOk =
     cliente.nome.trim().length > 2 &&
     cliente.whatsapp.replace(/\D/g, '').length >= 10 &&
     cliente.cpf.replace(/\D/g, '').length === 11 &&
-    cliente.email.includes('@') &&
+    cliente.email.includes('@')
+
+  const dadosCompletos =
+    dadosPessoaisOk &&
     endereco.cep.replace(/\D/g, '').length === 8 &&
     endereco.rua && endereco.numero && endereco.bairro && endereco.cidade && endereco.estado
 
@@ -276,9 +297,28 @@ function Checkout() {
           <h2>Seus dados</h2>
 
           {portalInsta ? (
-            <p className="loja-nota" style={{ marginTop: 0, marginBottom: 12, color: 'var(--p-green)' }}>
-              Você entrou como <b>@{portalInsta}</b>. Suas compras ficam todas juntas.
-            </p>
+            <>
+              <p className="loja-nota" style={{ marginTop: 0, marginBottom: 12, color: 'var(--p-green)' }}>
+                Você entrou como <b>@{portalInsta}</b>. Suas compras ficam todas juntas.
+              </p>
+
+              {/* Só quem já é cliente tem sacolinha esperando */}
+              <label className={`loja-opcao ${!naSacolinha ? 'ativa' : ''}`}>
+                <input type="radio" name="destino" checked={!naSacolinha} onChange={() => setDestino('entrega')} />
+                <span className="loja-opcao-texto">
+                  <b>Receber agora</b>
+                  <span>paga as peças e o frete, e o pedido sai sozinho</span>
+                </span>
+              </label>
+
+              <label className={`loja-opcao ${naSacolinha ? 'ativa' : ''}`}>
+                <input type="radio" name="destino" checked={naSacolinha} onChange={() => setDestino('sacolinha')} />
+                <span className="loja-opcao-texto">
+                  <b>Guardar na minha sacolinha</b>
+                  <span>paga só as peças e elas saem junto com as outras, num frete só</span>
+                </span>
+              </label>
+            </>
           ) : (
             <button
               type="button"
@@ -329,7 +369,16 @@ function Checkout() {
           <p className="loja-nota">O CPF é exigido pela transportadora para emitir a etiqueta.</p>
         </section>
 
-        {/* ── Entrega ── */}
+        {/* ── Entrega: na sacolinha o endereço vem no fechamento ── */}
+        {naSacolinha ? (
+          <section className="loja-bloco">
+            <h2>Entrega</h2>
+            <p className="loja-nota" style={{ marginTop: 0, fontSize: 14 }}>
+              Estas peças vão para a sua sacolinha e saem junto com as demais, num frete só.
+              O endereço e o valor do envio você escolhe quando encerrar a sacolinha, no portal.
+            </p>
+          </section>
+        ) : (
         <section className="loja-bloco">
           <h2>Entrega</h2>
 
@@ -419,9 +468,10 @@ function Checkout() {
             <p className="loja-nota">Complete seus dados e o endereço para calcular o frete.</p>
           )}
         </section>
+        )}
 
         {/* ── Frete ── */}
-        {cotacoes.length > 0 && (
+        {!naSacolinha && cotacoes.length > 0 && (
           <section className="loja-bloco">
             <h2>Como você quer receber</h2>
             {cotacoes.map(c => (
@@ -443,12 +493,14 @@ function Checkout() {
         )}
 
         {/* ── Pagamento ── */}
-        {freteEscolhido && (
+        {(freteEscolhido || (naSacolinha && dadosPessoaisOk)) && (
           <section className="loja-bloco">
             <h2>Pagamento</h2>
             <div className="loja-resumo">
               <div><span>Peças</span><span>{moeda(pedido.valor_itens)}</span></div>
-              <div><span>Frete</span><span>{moeda(freteEscolhido.valor)}</span></div>
+              {naSacolinha
+                ? <div><span>Frete</span><span>no fechamento da sacolinha</span></div>
+                : <div><span>Frete</span><span>{moeda(freteEscolhido.valor)}</span></div>}
               <div className="total"><span>Total</span><span>{moeda(total)}</span></div>
             </div>
 
@@ -465,8 +517,9 @@ function Checkout() {
               Pagar com cartão
             </button>
             <p className="loja-nota">
-              As peças ficam guardadas enquanto o pagamento estiver aberto. Confirmado o pagamento,
-              o pedido entra na produção e sai com o frete já pago.
+              {naSacolinha
+                ? 'As peças ficam guardadas enquanto o pagamento estiver aberto. Confirmado o pagamento, elas entram na sua sacolinha já quitadas: no fechamento você paga só o frete.'
+                : 'As peças ficam guardadas enquanto o pagamento estiver aberto. Confirmado o pagamento, o pedido entra na produção e sai com o frete já pago.'}
             </p>
           </section>
         )}

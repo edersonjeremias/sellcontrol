@@ -126,9 +126,19 @@ function Pedido() {
           <section className="loja-bloco destaque">
             <h2>Pagamento confirmado</h2>
             <p className="loja-nota" style={{ fontSize: 14 }}>
-              Seu pedido <b>{pedido.codigo}</b>{numeroPedido ? <> (romaneio {numeroPedido})</> : null} já entrou
-              na produção. O frete está pago: assim que a peça for separada e embalada, a etiqueta sai e você
-              recebe o rastreio no WhatsApp.
+              {pedido.destino === 'sacolinha' ? (
+                <>
+                  Suas peças do pedido <b>{pedido.codigo}</b> estão pagas e já foram para a sua
+                  sacolinha. Elas saem junto com as demais quando você encerrar a sacolinha no
+                  portal — e aí você paga só o frete, uma vez só.
+                </>
+              ) : (
+                <>
+                  Seu pedido <b>{pedido.codigo}</b>{numeroPedido ? <> (romaneio {numeroPedido})</> : null} já
+                  entrou na produção. O frete está pago: assim que a peça for separada e embalada, a
+                  etiqueta sai e você recebe o rastreio no WhatsApp.
+                </>
+              )}
             </p>
             {pedido.acesso_portal && pedido.identificador && (
               <div className="loja-resumo" style={{ marginTop: 14, marginBottom: 0 }}>

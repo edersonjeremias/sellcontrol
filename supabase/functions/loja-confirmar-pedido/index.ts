@@ -227,6 +227,34 @@ async function virar(supabase: any, pedido: any, pagoEm: string) {
     if (error) console.error('Não foi possível cadastrar a cliente da loja:', error)
   }
 
+  // ── 2. Guardar na sacolinha: sem romaneio, sem frete ────────────────────
+  // A peça já está paga e fica esperando o fechamento junto com as da live. É
+  // lá que ela entra num romaneio e num frete só — o motivo de a cliente ter
+  // pedido para guardar.
+  if (pedido.destino === 'sacolinha') {
+    const vendas = itens.map((i: any) => linhaDeVenda(i, tenantId, identificador, null))
+
+    const { data: criadas, error: vendasErro } = await supabase
+      .from('vendas')
+      .insert(vendas)
+      .select('id')
+
+    if (vendasErro) throw vendasErro
+
+    for (let i = 0; i < itens.length; i++) {
+      const venda = criadas?.[i]
+      if (venda) await supabase.from('loja_pedido_itens').update({ venda_id: venda.id }).eq('id', itens[i].id)
+    }
+
+    const acessoSacolinha = await garantirAcessoPortal(supabase, identificador, pedido)
+    await supabase
+      .from('loja_pedidos')
+      .update({ acesso_portal: acessoSacolinha })
+      .eq('id', pedido.id)
+
+    return null
+  }
+
   // ── 2. Endereço ─────────────────────────────────────────────────────────
   const e = pedido.endereco || {}
   const { data: enderecoCriado, error: endErro } = await supabase
@@ -332,25 +360,8 @@ async function virar(supabase: any, pedido: any, pagoEm: string) {
 
   // ── 4. As peças viram venda e entram na Produção ────────────────────────
   const numeroPedido = parseInt(String(romaneio.numero).replace(/\D/g, ''), 10) || null
-  const hoje = new Date().toISOString().slice(0, 10)
 
-  const vendas = itens.map((i: any) => ({
-    tenant_id: tenantId,
-    codigo: i.codigo || '',
-    produto: i.produto || '',
-    modelo: i.modelo || '',
-    cor: i.cor || '',
-    marca: i.marca || '',
-    tamanho: i.tamanho || '',
-    preco: Number(i.preco || 0),
-    cliente_nome: identificador,
-    data_live: hoje,
-    live_nome: 'LOJA',
-    status: 'Vendido',
-    etapa: 'fechada',
-    numero_pedido: numeroPedido,
-    origem: 'loja',
-  }))
+  const vendas = itens.map((i: any) => linhaDeVenda(i, tenantId, identificador, numeroPedido))
 
   const { data: criadas, error: vendasErro } = await supabase
     .from('vendas')
@@ -377,6 +388,36 @@ async function virar(supabase: any, pedido: any, pagoEm: string) {
     .eq('id', pedido.id)
 
   return numeroPedido
+}
+
+/**
+ * A peça da loja como linha de venda.
+ *
+ * `origem: 'loja'` é o que diz à Produção de onde ela veio e o que mantém a
+ * peça fora da busca de cobrança: ela já foi paga no pedido, e cobrá-la de
+ * novo no fechamento seria cobrar duas vezes pela mesma peça.
+ *
+ * `numeroPedido` nulo é a peça guardada na sacolinha: ela ganha romaneio no
+ * fechamento, junto com as da live.
+ */
+function linhaDeVenda(item: any, tenantId: string, identificador: string, numeroPedido: number | null) {
+  return {
+    tenant_id: tenantId,
+    codigo: item.codigo || '',
+    produto: item.produto || '',
+    modelo: item.modelo || '',
+    cor: item.cor || '',
+    marca: item.marca || '',
+    tamanho: item.tamanho || '',
+    preco: Number(item.preco || 0),
+    cliente_nome: identificador,
+    data_live: new Date().toISOString().slice(0, 10),
+    live_nome: 'LOJA',
+    status: 'Vendido',
+    etapa: 'fechada',
+    numero_pedido: numeroPedido,
+    origem: 'loja',
+  }
 }
 
 /**

@@ -575,7 +575,10 @@ export async function getHistoricoCreditos(tenantId, cliente = null) {
 // ── Importação ───────────────────────────────────────────────
 export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   console.log('🔍 Buscando vendas para cobrança:', { dataISO, live, tenantId: tid(tenantId) })
-  let qV = supabase.from('vendas').select('id, cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).neq('etapa', 'rascunho').eq('data_live', dataISO).in('status', [COBRANCA_ENVIADA, 'ENVIADO', 'Vendido', 'VENDIDO'])
+  // A peça comprada na loja pública já foi paga no próprio pedido (peças, ou
+  // peças e frete). Ela entra na sacolinha e no romaneio como qualquer outra,
+  // mas cobrá-la de novo aqui seria cobrar duas vezes pela mesma peça.
+  let qV = supabase.from('vendas').select('id, cliente_nome, produto, modelo, cor, marca, tamanho, preco, preco_promocional, codigo, live_nome, status, data_live').eq('tenant_id', tid(tenantId)).neq('etapa', 'rascunho').eq('data_live', dataISO).in('status', [COBRANCA_ENVIADA, 'ENVIADO', 'Vendido', 'VENDIDO']).is('origem', null)
   if (live) qV = qV.eq('live_nome', live)
   const { data: vendas } = await qV
   console.log('📦 Vendas encontradas:', vendas?.length || 0, vendas)

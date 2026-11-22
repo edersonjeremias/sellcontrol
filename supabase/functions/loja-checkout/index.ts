@@ -145,6 +145,7 @@ function paraTela(pedido: any, itens: any[]) {
     cotacoes: pedido.frete_cotacoes || [],
     frete: pedido.frete_escolhido || null,
     forma_pagamento: pedido.forma_pagamento || null,
+    destino: pedido.destino || 'entrega',
     // Como ela acompanha o pedido sozinha depois de pagar
     acesso_portal: pedido.acesso_portal === true,
     identificador: pedido.cliente_instagram || '',
@@ -255,6 +256,12 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
   if (!cpfValido(cpf)) return json({ error: 'CPF inválido. Confira os números.' }, 400)
   if (!EMAIL_RE.test(email)) return json({ error: 'Informe um e-mail válido' }, 400)
 
+  // Guardar na sacolinha é só para quem entrou com a conta: a peça fica
+  // esperando o fechamento junto com as da live, e quem não é cliente não tem
+  // sacolinha nenhuma para esperar. Quem decide é o token, não a tela.
+  const doPortal = await clienteDoPortal(supabase, payload.portal_token)
+  const destino = payload.destino === 'sacolinha' && doPortal ? 'sacolinha' : 'entrega'
+
   const endereco = {
     cep: String(e.cep || '').replace(/\D/g, ''),
     rua: String(e.rua || '').trim(),
@@ -265,10 +272,13 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
     estado: String(e.estado || '').trim().toUpperCase().slice(0, 2),
   }
 
-  const faltando = ['cep', 'rua', 'numero', 'bairro', 'cidade', 'estado']
-    .filter(campo => !(endereco as any)[campo])
-  if (faltando.length) return json({ error: 'Complete o endereço de entrega' }, 400)
-  if (endereco.cep.length !== 8) return json({ error: 'CEP inválido' }, 400)
+  // Na sacolinha o endereço vem depois, no fechamento, com as demais peças
+  if (destino === 'entrega') {
+    const faltando = ['cep', 'rua', 'numero', 'bairro', 'cidade', 'estado']
+      .filter(campo => !(endereco as any)[campo])
+    if (faltando.length) return json({ error: 'Complete o endereço de entrega' }, 400)
+    if (endereco.cep.length !== 8) return json({ error: 'CEP inválido' }, 400)
+  }
 
   // Identificador da cliente no sistema, em ordem de confiança:
   //   1. entrou com a conta do portal — é o @ dela, confirmado pelo token;
@@ -276,8 +286,6 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
   //      comprando pela loja, e a virada confirma isso de novo;
   //   3. cliente nova: o WhatsApp vira o identificador, com prefixo para não
   //      colidir com um @ de verdade e para mostrar na Produção de onde veio.
-  const doPortal = await clienteDoPortal(supabase, payload.portal_token)
-
   const { data: jaCadastrada } = await supabase
     .rpc('loja_cliente_por_whatsapp', { p_tenant_id: pedido.tenant_id, p_whatsapp: whatsapp })
 
@@ -295,8 +303,14 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
       cliente_email: email,
       cliente_instagram: identificador,
       cliente_user_id: doPortal?.user_id || null,
+      destino,
       endereco,
-      ...(mudouCep ? { frete_cotacoes: null, frete_escolhido: null, valor_frete: 0, total: 0 } : {}),
+      // Trocar para a sacolinha zera o frete: não há envio para cobrar agora
+      ...(destino === 'sacolinha'
+        ? { frete_cotacoes: null, frete_escolhido: null, valor_frete: 0, total: 0 }
+        : mudouCep
+          ? { frete_cotacoes: null, frete_escolhido: null, valor_frete: 0, total: 0 }
+          : {}),
     })
     .eq('id', pedido.id)
 
@@ -305,7 +319,7 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
     return json({ error: 'Não foi possível salvar seus dados' }, 500)
   }
 
-  return json({ ok: true, cotacao_perdida: mudouCep })
+  return json({ ok: true, destino, cotacao_perdida: mudouCep || destino === 'sacolinha' })
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -460,12 +474,21 @@ async function acaoPagar(supabase: any, pedido: any, config: any, payload: any) 
   if (!emAberto(pedido)) return json({ error: 'A reserva das peças expirou. Monte a sacola de novo.' }, 409)
 
   const forma = payload.forma === 'cartao' ? 'cartao' : 'pix'
+  const naSacolinha = pedido.destino === 'sacolinha'
 
+  // Na sacolinha paga-se só as peças: o frete sai uma vez só, no fechamento,
+  // com tudo o que ela juntou.
   const cotacoes: any[] = pedido.frete_cotacoes || []
-  const escolhida = cotacoes.find((c: any) => String(c.id) === String(payload.cotacao_id))
-  if (!escolhida) return json({ error: 'Escolha uma opção de frete. Se demorou, calcule de novo.' }, 409)
+  const escolhida = naSacolinha
+    ? null
+    : cotacoes.find((c: any) => String(c.id) === String(payload.cotacao_id))
 
-  if (!pedido.cliente_cpf || !pedido.endereco?.cep) {
+  if (!naSacolinha && !escolhida) {
+    return json({ error: 'Escolha uma opção de frete. Se demorou, calcule de novo.' }, 409)
+  }
+
+  if (!pedido.cliente_cpf) return json({ error: 'Complete seus dados antes de pagar' }, 400)
+  if (!naSacolinha && !pedido.endereco?.cep) {
     return json({ error: 'Complete seus dados antes de pagar' }, 400)
   }
 
@@ -478,7 +501,7 @@ async function acaoPagar(supabase: any, pedido: any, config: any, payload: any) 
 
   // O total é recalculado aqui, sempre: o navegador manda só a escolha
   const valorItens = itens.reduce((s: number, i: any) => s + Number(i.preco || 0), 0)
-  const valorFrete = Number(escolhida.valor)
+  const valorFrete = escolhida ? Number(escolhida.valor) : 0
   const total = Number((valorItens + valorFrete).toFixed(2))
   if (!(total > 0)) return json({ error: 'Valor do pedido inválido' }, 422)
 
@@ -490,7 +513,7 @@ async function acaoPagar(supabase: any, pedido: any, config: any, payload: any) 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 
   const base = {
-    frete_escolhido: escolhida,
+    frete_escolhido: escolhida || null,
     valor_itens: valorItens,
     valor_frete: valorFrete,
     total,
@@ -616,12 +639,12 @@ async function acaoPagar(supabase: any, pedido: any, config: any, payload: any) 
           currency_id: 'BRL',
           unit_price: Number(Number(i.preco).toFixed(2)),
         })),
-        {
+        ...(escolhida ? [{
           title: `Frete — ${escolhida.transportadora} ${escolhida.servico}`.slice(0, 250),
           quantity: 1,
           currency_id: 'BRL',
           unit_price: valorFrete,
-        },
+        }] : []),
       ],
       payer: {
         name: pedido.cliente_nome,
