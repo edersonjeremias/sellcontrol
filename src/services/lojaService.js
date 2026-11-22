@@ -12,14 +12,22 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 async function chamar(acao, slug, payload = {}) {
-  const resposta = await fetch(`${SUPABASE_URL}/functions/v1/loja-publica`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-    },
-    body: JSON.stringify({ acao, slug, ...payload }),
-  })
+  let resposta
+  try {
+    resposta = await fetch(`${SUPABASE_URL}/functions/v1/loja-publica`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ acao, slug, ...payload }),
+    })
+  } catch {
+    // Resposta que nem chega: internet caída ou função fora do ar. O 404 do
+    // gateway vem sem CORS e o navegador corta antes, virando "Failed to
+    // fetch" — que não diz nada a quem está comprando.
+    throw new Error('Não foi possível falar com a loja agora. Confira sua conexão e tente de novo.')
+  }
 
   const dados = await resposta.json().catch(() => ({}))
   if (!resposta.ok) {
