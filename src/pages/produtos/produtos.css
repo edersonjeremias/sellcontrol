@@ -192,8 +192,9 @@
 /* Gênero compacto */
 .vendas-container .th-genero,
 .vendas-container .col-genero {
-  width: 45px !important;
-  min-width: 45px !important;
+  /* 58px porque INF e BB entraram na lista: a 45px o select cortava o texto */
+  width: 58px !important;
+  min-width: 58px !important;
   text-align: center;
 }
 

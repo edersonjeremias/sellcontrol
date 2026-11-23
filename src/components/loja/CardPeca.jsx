@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { rotuloGenero } from './genero'
 
 const moeda = v => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -12,6 +13,7 @@ export function tituloPeca(p) {
 export function legendaPeca(p) {
   const partes = []
   if (String(p.marca || '').trim()) partes.push(p.marca.trim())
+  if (rotuloGenero(p.genero)) partes.push(rotuloGenero(p.genero))
   if (String(p.tamanho || '').trim()) partes.push(`Tam. ${p.tamanho.trim()}`)
   return partes.join(' · ')
 }

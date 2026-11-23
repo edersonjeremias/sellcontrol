@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import PortalToastProvider, { usePortalToast } from '../../components/portal/PortalToast'
 import LojaHeader from '../../components/loja/LojaHeader'
 import CardPeca, { tituloPeca } from '../../components/loja/CardPeca'
+import { rotuloGenero } from '../../components/loja/genero'
 import CarrinhoPainel, { BarraCarrinho } from '../../components/loja/CarrinhoPainel'
 import ModalEntrar from '../../components/loja/ModalEntrar'
 import useCarrinhoLoja, { lerPedidoSalvo } from './useCarrinhoLoja'
@@ -167,6 +168,7 @@ function Peca() {
 
             <div className="loja-peca-meta">
               {peca.marca && <span className="loja-peca-tag">{peca.marca}</span>}
+              {rotuloGenero(peca.genero) && <span className="loja-peca-tag">{rotuloGenero(peca.genero)}</span>}
               {peca.tamanho && <span className="loja-peca-tag">Tamanho {peca.tamanho}</span>}
               {peca.condicao && <span className="loja-peca-tag">{peca.condicao}</span>}
               <span className="loja-peca-tag">Cód. {peca.codigo}</span>

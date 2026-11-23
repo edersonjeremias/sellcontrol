@@ -1,6 +1,8 @@
 {
   "permissions": {
     "allow": [
+      "Bash(npx supabase functions deploy *)",
+      "PowerShell(npx supabase functions deploy *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",

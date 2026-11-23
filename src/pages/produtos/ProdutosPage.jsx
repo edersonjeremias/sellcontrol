@@ -1511,9 +1511,11 @@ export default function ProdutosPage() {
                         style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
                       >
                         <option value="">-</option>
-                        <option value="M">M</option>
-                        <option value="F">F</option>
-                        <option value="U">U</option>
+                        <option value="M">Masculino</option>
+                        <option value="F">Feminino</option>
+                        <option value="U">Unissex</option>
+                        <option value="INF">Infantil</option>
+                        <option value="BB">Bebê</option>
                       </select>
                     </div>
                   )}
@@ -1883,10 +1885,14 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
             data-field="genero"
             data-alterado={p._alterados?.genero ? "true" : undefined}
           >
+            {/* Abreviado porque a coluna é estreita e quem cadastra o dia
+                inteiro escolhe rápido. Na loja vai por extenso. */}
             <option value=""></option>
-            <option value="M">M</option>
-            <option value="F">F</option>
-            <option value="U">U</option>
+            <option value="M" title="Masculino">M</option>
+            <option value="F" title="Feminino">F</option>
+            <option value="U" title="Unissex">U</option>
+            <option value="INF" title="Infantil">INF</option>
+            <option value="BB" title="Bebê">BB</option>
           </select>
         </td>
       )}

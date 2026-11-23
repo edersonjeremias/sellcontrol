@@ -8,7 +8,10 @@
 // tamanho 36 costuma aceitar 37 também.
 // ============================================================================
 
+import { rotuloGenero } from './genero'
+
 const GRUPOS = [
+  { campo: 'genero',    faceta: 'generos',    titulo: 'Para quem' },
   { campo: 'categoria', faceta: 'categorias', titulo: 'Tipo de peça' },
   { campo: 'tamanho',   faceta: 'tamanhos',   titulo: 'Tamanho' },
   { campo: 'marca',     faceta: 'marcas',     titulo: 'Marca' },
@@ -55,7 +58,7 @@ export default function FiltrosLoja({ facetas, filtros, onAlternar, onLimpar }) 
               ) : (
                 <label key={valor} className={`loja-filtro-opcao ${marcado ? 'ativo' : ''}`}>
                   <input type="checkbox" checked={marcado} onChange={() => onAlternar(campo, valor)} />
-                  <span>{valor}</span>
+                  <span>{campo === 'genero' ? rotuloGenero(valor) : valor}</span>
                 </label>
               )
             })}

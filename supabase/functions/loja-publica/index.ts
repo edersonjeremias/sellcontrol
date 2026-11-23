@@ -49,6 +49,7 @@ function paraVitrine(p: any) {
     cor: p.cor || '',
     marca: p.marca || '',
     tamanho: p.tamanho || '',
+    genero: p.genero || '',
     condicao: p.condicao || '',
     preco: precoDe(p),
     preco_cheio: Number(p.preco_promocional || 0) > 0 ? Number(p.preco || 0) : null,
@@ -234,6 +235,7 @@ async function acaoCatalogo(supabase: any, tenantId: string, loja: any, payload:
     categorias: unicos(todas.map((p: any) => p.produto)),
     tamanhos: ordenaTamanhos(unicos(todas.map((p: any) => p.tamanho))),
     marcas: unicos(todas.map((p: any) => p.marca)),
+    generos: ordenaGeneros(unicos(todas.map((p: any) => p.genero))),
   }
 
   const f = payload.filtros || {}
@@ -246,6 +248,7 @@ async function acaoCatalogo(supabase: any, tenantId: string, loja: any, payload:
     casaFiltro(p.produto, f.categoria) &&
     casaFiltro(p.tamanho, f.tamanho) &&
     casaFiltro(p.marca, f.marca) &&
+    casaFiltro(p.genero, f.genero) &&
     casaBusca(p, termos)
   )
 
@@ -521,6 +524,24 @@ function casaBusca(p: any, termos: string[]) {
 // "calca" acha "Calça": ninguém digita acento procurando no celular
 function semAcento(texto: string) {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+/**
+ * Para quem a peça é, na ordem em que a vitrine mostra: infantil primeiro,
+ * depois feminino e masculino, unissex por último. Alfabético deixaria a
+ * ordem do filtro à mercê de como o cadastro abrevia cada um.
+ */
+const ORDEM_GENERO = ['inf', 'infantil', 'bb', 'bebe', 'bebê', 'f', 'feminino', 'm', 'masculino', 'u', 'unissex']
+
+function ordenaGeneros(generos: string[]) {
+  return [...generos].sort((a, b) => {
+    const ia = ORDEM_GENERO.indexOf(String(a).trim().toLowerCase())
+    const ib = ORDEM_GENERO.indexOf(String(b).trim().toLowerCase())
+    if (ia >= 0 && ib >= 0) return ia - ib
+    if (ia >= 0) return -1
+    if (ib >= 0) return 1
+    return String(a).localeCompare(String(b), 'pt-BR')
+  })
 }
 
 /**

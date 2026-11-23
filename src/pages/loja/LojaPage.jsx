@@ -34,7 +34,7 @@ function Catalogo() {
   const [fechada, setFechada] = useState(false)
   const [erro, setErro] = useState('')
   const [pecas, setPecas] = useState([])
-  const [facetas, setFacetas] = useState({ categorias: [], tamanhos: [], marcas: [] })
+  const [facetas, setFacetas] = useState({ categorias: [], tamanhos: [], marcas: [], generos: [] })
   const [filtros, setFiltros] = useState({})
   const [ordem, setOrdem] = useState('recentes')
   const [filtrosAbertos, setFiltrosAbertos] = useState(false) // gaveta do celular
@@ -76,7 +76,7 @@ function Catalogo() {
         if (!vivo) return
         setLoja(dados.loja)
         setFechada(Boolean(dados.fechada))
-        setFacetas(dados.facetas || { categorias: [], tamanhos: [], marcas: [] })
+        setFacetas(dados.facetas || { categorias: [], tamanhos: [], marcas: [], generos: [] })
         setTemMais(Boolean(dados.tem_mais))
         setTotal(Number(dados.total || 0))
         // "Ver mais" acrescenta; filtro novo substitui
