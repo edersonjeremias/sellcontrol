@@ -156,6 +156,41 @@ function MotivoModal({ value, onChange, onConfirm, onClose }) {
   )
 }
 
+// Prontos e Enviados viram histórico e crescem sem parar: essas duas abas
+// mostram uma página por vez. Em Produção fica inteira, é a lista de trabalho.
+const ITENS_POR_PAGINA = 20
+
+function Paginacao({ pagina, total, onIr }) {
+  const totalPaginas = Math.max(1, Math.ceil(total / ITENS_POR_PAGINA))
+  if (total <= ITENS_POR_PAGINA) return null
+
+  const primeiro = (pagina - 1) * ITENS_POR_PAGINA + 1
+  const ultimo   = Math.min(pagina * ITENS_POR_PAGINA, total)
+
+  return (
+    <div className="prod-v2-paginacao">
+      <button type="button" className="prod-btn prod-btn-ghost"
+        onClick={() => onIr(1)} disabled={pagina === 1}>Primeira</button>
+      <button type="button" className="prod-btn prod-btn-ghost"
+        onClick={() => onIr(pagina - 1)} disabled={pagina === 1}>Anterior</button>
+
+      <select className="prod-v2-input" value={pagina}
+        onChange={(e) => onIr(Number(e.target.value))} style={{ minWidth: 60 }}>
+        {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((n) => (
+          <option key={n} value={n}>{n}</option>
+        ))}
+      </select>
+
+      <button type="button" className="prod-btn prod-btn-ghost"
+        onClick={() => onIr(pagina + 1)} disabled={pagina >= totalPaginas}>Próxima</button>
+      <button type="button" className="prod-btn prod-btn-ghost"
+        onClick={() => onIr(totalPaginas)} disabled={pagina >= totalPaginas}>Última</button>
+
+      <span className="prod-v2-paginacao-info">{primeiro} - {ultimo} de {total}</span>
+    </div>
+  )
+}
+
 // ── Card do celular ────────────────────────────────────────────
 // No celular a tabela não cabe: cada pedido vira um card e toda a edição
 // acontece no DetalheModal, que já existia para o duplo clique do desktop.
@@ -608,6 +643,32 @@ export default function ProducaoPage() {
     })
   }, [rows, mode, busca, filtroEntrega])
 
+  // Só Prontos e Enviados paginam
+  const paginado = mode !== 'producao'
+  const [pagina, setPagina] = useState(1)
+  const tableWrapRef = useRef(null)
+
+  // Trocar de aba, buscar ou filtrar recomeça da primeira página
+  useEffect(() => { setPagina(1) }, [mode, busca, filtroEntrega])
+
+  // Apagar ou mover um pedido pode encurtar a lista por baixo da página aberta
+  const totalPaginas = Math.max(1, Math.ceil(filteredRows.length / ITENS_POR_PAGINA))
+  useEffect(() => {
+    if (pagina > totalPaginas) setPagina(totalPaginas)
+  }, [pagina, totalPaginas])
+
+  const visibleRows = useMemo(() => {
+    if (!paginado) return filteredRows
+    const inicio = (pagina - 1) * ITENS_POR_PAGINA
+    return filteredRows.slice(inicio, inicio + ITENS_POR_PAGINA)
+  }, [filteredRows, paginado, pagina])
+
+  const irParaPagina = useCallback((n) => {
+    setPagina(n)
+    // A próxima página começa do topo, não de onde a rolagem parou
+    if (tableWrapRef.current) tableWrapRef.current.scrollTop = 0
+  }, [])
+
   const showDelivery = mode !== 'producao'
 
   // Larguras do modo "Em Produção" (table-layout: fixed). O espaço das colunas
@@ -677,12 +738,12 @@ export default function ProducaoPage() {
         </div>
 
         {/* ── Table ── */}
-        <div className="prod-v2-table-wrap">
+        <div className="prod-v2-table-wrap" ref={tableWrapRef}>
           {loading && <div className="prod-v2-empty">Carregando...</div>}
           {!loading && filteredRows.length === 0 && <div className="prod-v2-empty">Nenhum registro encontrado.</div>}
           {!loading && filteredRows.length > 0 && isMobile && (
             <div className="prod-card-lista">
-              {filteredRows.map((row) => (
+              {visibleRows.map((row) => (
                 <Fragment key={row.id}>
                   <CardProducao
                     row={row}
@@ -735,7 +796,7 @@ export default function ProducaoPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRows.map((row) => {
+                {visibleRows.map((row) => {
                   const waLink = buildWaLink(row.whatsapp)
                   const rastreioLink = row.link_rastreio || ''
                   const precisaMotivo = row.atrasado && !(row.obs_prod || '').toUpperCase().includes('ATRASO')
@@ -978,6 +1039,10 @@ export default function ProducaoPage() {
             </table>
           )}
         </div>
+
+        {!loading && paginado && (
+          <Paginacao pagina={pagina} total={filteredRows.length} onIr={irParaPagina} />
+        )}
 
         {modalErr && <ErrModal titulo={modalErr.titulo} mensagem={modalErr.mensagem} onClose={() => setModalErr(null)} />}
         {modalMotivo !== null && (

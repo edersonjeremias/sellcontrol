@@ -1308,6 +1308,21 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 .prod-modal-body  { color:#abb1bd; font-size:13px; line-height:1.6; margin-bottom:14px; }
 .prod-modal-footer { display:flex; justify-content:flex-end; gap:8px; }
 
+/* ── Paginação (abas Prontos e Enviados) ── */
+.prod-v2-paginacao {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 6px;
+  padding: 8px 10px;
+  background: #191b20;
+  border-top: 1px solid #3c414b;
+  flex-shrink: 0;
+}
+.prod-v2-paginacao .prod-btn:disabled { opacity: .4; }
+.prod-v2-paginacao-info {
+  margin-left: 10px; color: #abb1bd; font-size: 11px;
+  font-weight: 700; white-space: nowrap;
+}
+
 /* ── Cards do celular ── */
 .prod-card-lista { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
 
@@ -1383,6 +1398,10 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
   .prod-v2-tab { flex: 1; text-align: center; }
   .prod-v2-count { flex: 1 1 100%; text-align: center; padding-top: 2px; }
   .prod-dash-card { padding: 12px; }
+  .prod-v2-paginacao { gap: 5px; padding: 10px 8px; }
+  .prod-v2-paginacao .prod-btn { height: 34px; font-size: 12px; padding: 3px 10px; }
+  .prod-v2-paginacao .prod-v2-input { height: 34px; }
+  .prod-v2-paginacao-info { flex: 1 1 100%; margin-left: 0; text-align: center; }
 }
 
 /* ══════════════════════════════════════════
