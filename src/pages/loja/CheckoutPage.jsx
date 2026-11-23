@@ -6,7 +6,7 @@ import { relogio } from '../../components/loja/CarrinhoPainel'
 import { tituloPeca, legendaPeca } from '../../components/loja/CardPeca'
 import ModalEntrar from '../../components/loja/ModalEntrar'
 import { lerPedidoSalvo } from './useCarrinhoLoja'
-import { portalSb } from '../../lib/portalSupabase'
+import useContaLoja from './useContaLoja'
 import {
   buscarPedido, identificar, cotarFrete, pagar, buscarCep, dadosDoPortal,
 } from '../../services/lojaCheckoutService'
@@ -69,6 +69,7 @@ function Checkout() {
   const [pagando, setPagando] = useState(false)
 
   // Conta do portal: quem já compra nas lives entra e não vira cadastro novo
+  const conta = useContaLoja()
   const [entrarAberto, setEntrarAberto] = useState(false)
   const [portalToken, setPortalToken] = useState(null)
   const [portalInsta, setPortalInsta] = useState('')
@@ -142,16 +143,11 @@ function Checkout() {
     }
   }, [pedidoId, toast])
 
-  // Sessão do portal já aberta neste aparelho: aproveita sem pedir senha
+  // Conta já aberta neste aparelho: puxa os dados sem pedir senha de novo
   useEffect(() => {
-    if (!pedidoId) return
-    let vivo = true
-    portalSb.auth.getSession().then(({ data }) => {
-      const token = data?.session?.access_token
-      if (vivo && token) aplicarPortal(token)
-    })
-    return () => { vivo = false }
-  }, [pedidoId, aplicarPortal])
+    if (!pedidoId || !conta.token || portalToken === conta.token) return
+    aplicarPortal(conta.token)
+  }, [pedidoId, conta.token, portalToken, aplicarPortal])
 
   const preencherPeloCep = useCallback(async (valor) => {
     const achado = await buscarCep(valor).catch(() => null)
@@ -261,6 +257,15 @@ function Checkout() {
         quantidade={pedido?.itens?.length || 0}
         onAbrirCarrinho={() => navegar(`/loja/${slug}`)}
         mostrarVoltar
+        instagram={portalInsta || conta.instagram}
+        onEntrar={() => setEntrarAberto(true)}
+        onSair={async () => {
+          await conta.sair()
+          setPortalToken(null)
+          setPortalInsta('')
+          setEnderecosSalvos([])
+          setDestino('entrega')
+        }}
       />
 
       <div className="loja-checkout">

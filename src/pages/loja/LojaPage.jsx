@@ -4,7 +4,9 @@ import PortalToastProvider, { usePortalToast } from '../../components/portal/Por
 import LojaHeader from '../../components/loja/LojaHeader'
 import CardPeca from '../../components/loja/CardPeca'
 import CarrinhoPainel, { BarraCarrinho } from '../../components/loja/CarrinhoPainel'
+import ModalEntrar from '../../components/loja/ModalEntrar'
 import useCarrinhoLoja, { lerPedidoSalvo } from './useCarrinhoLoja'
+import useContaLoja from './useContaLoja'
 import { buscarCatalogo } from '../../services/lojaService'
 import '../../styles/portal.css'
 import './loja.css'
@@ -42,6 +44,8 @@ function Catalogo() {
   const [painelAberto, setPainelAberto] = useState(false)
 
   const carrinho = useCarrinhoLoja(slug, toast)
+  const conta = useContaLoja()
+  const [entrarAberto, setEntrarAberto] = useState(false)
   const primeiraCarga = useRef(true)
 
   useEffect(() => {
@@ -124,6 +128,9 @@ function Catalogo() {
         slug={slug}
         quantidade={carrinho.quantidade}
         onAbrirCarrinho={() => setPainelAberto(true)}
+        instagram={conta.instagram}
+        onEntrar={() => setEntrarAberto(true)}
+        onSair={conta.sair}
       />
 
       {fechada ? (
@@ -217,6 +224,16 @@ function Catalogo() {
         restante={carrinho.restante}
         onAbrir={() => setPainelAberto(true)}
       />
+
+      {entrarAberto && (
+        <ModalEntrar
+          onFechar={() => setEntrarAberto(false)}
+          onEntrou={() => {
+            setEntrarAberto(false)
+            toast('Pronto! Você está conectada neste aparelho.', 'success')
+          }}
+        />
+      )}
 
       {painelAberto && (
         <CarrinhoPainel

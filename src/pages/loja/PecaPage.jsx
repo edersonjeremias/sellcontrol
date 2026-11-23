@@ -4,7 +4,9 @@ import PortalToastProvider, { usePortalToast } from '../../components/portal/Por
 import LojaHeader from '../../components/loja/LojaHeader'
 import CardPeca, { tituloPeca } from '../../components/loja/CardPeca'
 import CarrinhoPainel, { BarraCarrinho } from '../../components/loja/CarrinhoPainel'
+import ModalEntrar from '../../components/loja/ModalEntrar'
 import useCarrinhoLoja, { lerPedidoSalvo } from './useCarrinhoLoja'
+import useContaLoja from './useContaLoja'
 import { buscarPeca } from '../../services/lojaService'
 import '../../styles/portal.css'
 import './loja.css'
@@ -32,6 +34,8 @@ function Peca() {
   const [painelAberto, setPainelAberto] = useState(false)
 
   const carrinho = useCarrinhoLoja(slug, toast)
+  const conta = useContaLoja()
+  const [entrarAberto, setEntrarAberto] = useState(false)
 
   useEffect(() => {
     if (!slug || !codigo) return
@@ -83,7 +87,20 @@ function Peca() {
         quantidade={carrinho.quantidade}
         onAbrirCarrinho={() => setPainelAberto(true)}
         mostrarVoltar
+        instagram={conta.instagram}
+        onEntrar={() => setEntrarAberto(true)}
+        onSair={conta.sair}
       />
+
+      {entrarAberto && (
+        <ModalEntrar
+          onFechar={() => setEntrarAberto(false)}
+          onEntrou={() => {
+            setEntrarAberto(false)
+            toast('Pronto! Você está conectada neste aparelho.', 'success')
+          }}
+        />
+      )}
 
       {carregando ? (
         <div className="loja-peca">

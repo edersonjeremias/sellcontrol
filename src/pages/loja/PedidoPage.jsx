@@ -5,6 +5,7 @@ import LojaHeader from '../../components/loja/LojaHeader'
 import { relogio } from '../../components/loja/CarrinhoPainel'
 import { tituloPeca } from '../../components/loja/CardPeca'
 import { limparPedidoSalvo } from './useCarrinhoLoja'
+import useContaLoja from './useContaLoja'
 import { buscarPedido, confirmarPedido } from '../../services/lojaCheckoutService'
 import '../../styles/portal.css'
 import './loja.css'
@@ -34,7 +35,23 @@ function Pedido() {
   const [copiado, setCopiado] = useState(false)
   const [numeroPedido, setNumeroPedido] = useState(null)
 
+  const conta = useContaLoja()
   const pagoRef = useRef(false)
+  const logouRef = useRef(false)
+
+  // Depois de pagar, a cliente fica conectada neste aparelho.
+  //
+  // A conta dela nasce na primeira compra e a senha é o número do WhatsApp
+  // que ela acabou de informar, então dá para deixá-la logada sem pedir que
+  // digite nada — e a próxima compra já a reconhece, inclusive no celular.
+  useEffect(() => {
+    if (!pedido || pedido.status !== 'pago' || logouRef.current) return
+    if (conta.instagram || !pedido.identificador) return
+
+    logouRef.current = true
+    conta.entrarComWhatsapp(pedido.identificador, pedido.cliente?.whatsapp)
+      .catch(() => {}) // não conseguiu entrar sozinha: ela entra pelo botão quando quiser
+  }, [pedido, conta])
 
   // ── Carrega o pedido ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -119,7 +136,16 @@ function Pedido() {
 
   return (
     <div className="loja-root">
-      <LojaHeader nome={loja?.nome || 'Loja'} slug={slug} quantidade={0} onAbrirCarrinho={() => {}} mostrarVoltar />
+      <LojaHeader
+        nome={loja?.nome || 'Loja'}
+        slug={slug}
+        quantidade={0}
+        onAbrirCarrinho={() => {}}
+        mostrarVoltar
+        instagram={conta.instagram}
+        onSair={conta.sair}
+        onEntrar={conta.instagram ? () => {} : null}
+      />
 
       <div className="loja-checkout">
         {pago ? (
@@ -145,9 +171,13 @@ function Pedido() {
                 <div style={{ display: 'block', color: 'var(--p-text)' }}>
                   <b style={{ display: 'block', marginBottom: 6 }}>Acompanhe seu pedido</b>
                   <span style={{ color: 'var(--p-muted)', fontSize: 13, lineHeight: 1.5 }}>
-                    Entre em <a href={`/portal/${slug}`} style={{ color: 'var(--p-blue)' }}>/portal/{slug}</a> com
-                    o usuário <b>{pedido.identificador}</b> e a senha igual ao número do seu
-                    WhatsApp, só os números. Lá você vê a entrega do começo ao fim.
+                    {conta.instagram
+                      ? <>Você já está conectada como <b>@{conta.instagram}</b> neste aparelho. </>
+                      : null}
+                    Veja a entrega do começo ao fim no{' '}
+                    <a href={`/portal/${slug}`} style={{ color: 'var(--p-blue)' }}>portal do cliente</a>.
+                    Em outro aparelho, entre com o usuário <b>{pedido.identificador}</b> e a senha
+                    igual ao número do seu WhatsApp, só os números.
                   </span>
                 </div>
               </div>

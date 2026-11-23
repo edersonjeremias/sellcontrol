@@ -63,6 +63,24 @@
   color: var(--p-muted);
 }
 
+/* Conta: discreta ao lado da sacola, que é a ação principal */
+.loja-conta {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 9px 12px;
+  border: 1px solid var(--p-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--p-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.loja-conta:hover { color: var(--p-text); }
+
 .loja-btn-carrinho {
   position: relative;
   display: inline-flex;

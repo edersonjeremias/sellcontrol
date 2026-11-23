@@ -3,7 +3,10 @@ import { Link } from 'react-router-dom'
 // Cabeçalho da loja pública. Fica grudado no topo porque é por ele que a
 // cliente volta ao catálogo e abre o carrinho — as duas ações que ela mais
 // repete enquanto escolhe peça.
-export default function LojaHeader({ nome, slug, quantidade, onAbrirCarrinho, mostrarVoltar }) {
+export default function LojaHeader({
+  nome, slug, quantidade, onAbrirCarrinho, mostrarVoltar,
+  instagram, onEntrar, onSair,
+}) {
   return (
     <header className="loja-header">
       <Link to={`/loja/${slug}`} className="loja-header-nome">
@@ -16,6 +19,20 @@ export default function LojaHeader({ nome, slug, quantidade, onAbrirCarrinho, mo
         )}
         <span>{nome}</span>
       </Link>
+
+      {/* A conta fica à vista em toda a loja: a sessão é por aparelho, então
+          é aqui que a cliente entra no celular dela */}
+      {onEntrar && (
+        instagram ? (
+          <button type="button" className="loja-conta" onClick={onSair} title="Sair da conta">
+            @{instagram}
+          </button>
+        ) : (
+          <button type="button" className="loja-conta" onClick={onEntrar}>
+            Entrar
+          </button>
+        )
+      )}
 
       <button
         type="button"
