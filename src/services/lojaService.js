@@ -45,8 +45,10 @@ async function chamar(acao, slug, payload = {}) {
  * O pedidoId vai junto para a peça que a própria cliente guardou continuar
  * aparecendo para ela — a reserva esconde a peça das outras, não dela.
  */
-export const buscarCatalogo = (slug, { pagina = 1, filtros = {}, busca = '', pedidoId = null } = {}) =>
-  chamar('catalogo', slug, { pagina, filtros, busca, pedido_id: pedidoId })
+export const buscarCatalogo = (
+  slug,
+  { pagina = 1, filtros = {}, busca = '', ordem = 'recentes', pedidoId = null } = {}
+) => chamar('catalogo', slug, { pagina, filtros, busca, ordem, pedido_id: pedidoId })
 
 /** Página de uma peça só, a que é divulgada no Instagram */
 export const buscarPeca = (slug, codigo, pedidoId = null) =>

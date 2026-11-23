@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import PortalToastProvider, { usePortalToast } from '../../components/portal/PortalToast'
 import LojaHeader from '../../components/loja/LojaHeader'
 import CardPeca from '../../components/loja/CardPeca'
+import FiltrosLoja, { contarFiltros } from '../../components/loja/FiltrosLoja'
 import CarrinhoPainel, { BarraCarrinho } from '../../components/loja/CarrinhoPainel'
 import ModalEntrar from '../../components/loja/ModalEntrar'
 import useCarrinhoLoja, { lerPedidoSalvo } from './useCarrinhoLoja'
@@ -19,10 +20,10 @@ import './loja.css'
 // Function loja-publica.
 // ============================================================================
 
-const FILTROS = [
-  { campo: 'categoria', faceta: 'categorias', rotulo: 'Tipo' },
-  { campo: 'tamanho',   faceta: 'tamanhos',   rotulo: 'Tamanho' },
-  { campo: 'marca',     faceta: 'marcas',     rotulo: 'Marca' },
+const ORDENS = [
+  { valor: 'recentes', rotulo: 'Mais recentes' },
+  { valor: 'menor', rotulo: 'Menor preço' },
+  { valor: 'maior', rotulo: 'Maior preço' },
 ]
 
 function Catalogo() {
@@ -35,10 +36,13 @@ function Catalogo() {
   const [pecas, setPecas] = useState([])
   const [facetas, setFacetas] = useState({ categorias: [], tamanhos: [], marcas: [] })
   const [filtros, setFiltros] = useState({})
+  const [ordem, setOrdem] = useState('recentes')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false) // gaveta do celular
   const [busca, setBusca] = useState('')
   const [buscaAtiva, setBuscaAtiva] = useState('') // com atraso: uma consulta por pausa, não por tecla
   const [pagina, setPagina] = useState(1)
   const [temMais, setTemMais] = useState(false)
+  const [total, setTotal] = useState(0) // quantas peças o filtro atual encontrou
   const [carregando, setCarregando] = useState(true)
   const [carregandoMais, setCarregandoMais] = useState(false)
   const [painelAberto, setPainelAberto] = useState(false)
@@ -67,13 +71,14 @@ function Catalogo() {
     if (inicial && !primeiraCarga.current) setCarregando(true)
     if (!inicial) setCarregandoMais(true)
 
-    buscarCatalogo(slug, { pagina, filtros, busca: buscaAtiva, pedidoId: lerPedidoSalvo(slug) })
+    buscarCatalogo(slug, { pagina, filtros, busca: buscaAtiva, ordem, pedidoId: lerPedidoSalvo(slug) })
       .then(dados => {
         if (!vivo) return
         setLoja(dados.loja)
         setFechada(Boolean(dados.fechada))
         setFacetas(dados.facetas || { categorias: [], tamanhos: [], marcas: [] })
         setTemMais(Boolean(dados.tem_mais))
+        setTotal(Number(dados.total || 0))
         // "Ver mais" acrescenta; filtro novo substitui
         setPecas(prev => inicial ? (dados.pecas || []) : [...prev, ...(dados.pecas || [])])
         setErro('')
@@ -90,12 +95,17 @@ function Catalogo() {
       })
 
     return () => { vivo = false }
-  }, [slug, pagina, filtros, buscaAtiva])
+  }, [slug, pagina, filtros, buscaAtiva, ordem])
 
+  // Marca e desmarca uma opção dentro do grupo, sem derrubar as outras
   const alternarFiltro = useCallback((campo, valor) => {
-    setFiltros(prev => (prev[campo] === valor
-      ? { ...prev, [campo]: undefined }
-      : { ...prev, [campo]: valor }))
+    setFiltros(prev => {
+      const atuais = prev[campo] || []
+      const novos = atuais.includes(valor)
+        ? atuais.filter(v => v !== valor)
+        : [...atuais, valor]
+      return { ...prev, [campo]: novos.length ? novos : undefined }
+    })
     setPagina(1)
   }, [])
 
@@ -106,7 +116,17 @@ function Catalogo() {
     setPagina(1)
   }, [])
 
-  const temFiltro = Object.values(filtros).some(Boolean) || Boolean(buscaAtiva.trim())
+  const filtrosAtivos = contarFiltros(filtros)
+  const temFiltro = filtrosAtivos > 0 || Boolean(buscaAtiva.trim())
+
+  const painelFiltros = (
+    <FiltrosLoja
+      facetas={facetas}
+      filtros={filtros}
+      onAlternar={alternarFiltro}
+      onLimpar={limparFiltros}
+    />
+  )
 
   // Erro de rede ou loja inexistente: sem cabeçalho, porque nem o nome da loja
   // chegou até aqui
@@ -139,36 +159,47 @@ function Catalogo() {
           <p>Logo tem peça nova por aqui. Acompanhe o Instagram para saber quando a loja abrir.</p>
         </div>
       ) : (
-        <>
-          <div className="loja-filtros">
-            <input
-              className="loja-busca"
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-              placeholder="Buscar peça, marca, tamanho…"
-              inputMode="search"
-            />
-            <span className="loja-busca-dica">
-              Procure por mais de uma coisa separando por vírgula: jeans, 10
-            </span>
-          </div>
+        <div className="loja-corpo">
+          {/* Coluna de filtros: fica à vista no computador e vira gaveta no celular */}
+          <aside className="loja-lateral">{painelFiltros}</aside>
 
-          {FILTROS.map(({ campo, faceta, rotulo }) => (
-            (facetas[faceta] || []).length > 1 && (
-              <div className="loja-chips" key={campo}>
-                {facetas[faceta].map(valor => (
-                  <button
-                    key={valor}
-                    type="button"
-                    className={`loja-chip ${filtros[campo] === valor ? 'ativo' : ''}`}
-                    onClick={() => alternarFiltro(campo, valor)}
-                  >
-                    {campo === 'tamanho' ? `${rotulo} ${valor}` : valor}
-                  </button>
-                ))}
-              </div>
-            )
-          ))}
+          <div className="loja-vitrine">
+            <div className="loja-filtros">
+              <input
+                className="loja-busca"
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                placeholder="Buscar peça, marca, tamanho…"
+                inputMode="search"
+              />
+              <span className="loja-busca-dica">
+                Procure por mais de uma coisa separando por vírgula: jeans, 10
+              </span>
+            </div>
+
+            <div className="loja-barra-lista">
+              <button
+                type="button"
+                className="loja-btn-filtrar"
+                onClick={() => setFiltrosAbertos(true)}
+              >
+                Filtrar
+                {filtrosAtivos > 0 && <span className="loja-badge">{filtrosAtivos}</span>}
+              </button>
+
+              <span className="loja-contagem">
+                {carregando ? '' : `${total} ${total === 1 ? 'peça' : 'peças'}`}
+              </span>
+
+              <select
+                className="loja-ordem"
+                value={ordem}
+                onChange={e => { setOrdem(e.target.value); setPagina(1) }}
+                aria-label="Ordenar"
+              >
+                {ORDENS.map(o => <option key={o.valor} value={o.valor}>{o.rotulo}</option>)}
+              </select>
+            </div>
 
           {carregando ? (
             <div className="loja-grid">
@@ -215,7 +246,31 @@ function Catalogo() {
               )}
             </>
           )}
-        </>
+          </div>
+        </div>
+      )}
+
+      {/* Gaveta de filtros do celular */}
+      {filtrosAbertos && (
+        <div className="loja-gaveta-fundo" onClick={() => setFiltrosAbertos(false)}>
+          <div className="loja-gaveta" onClick={e => e.stopPropagation()}>
+            <div className="loja-painel-topo">
+              <h2>Filtrar</h2>
+              <button type="button" className="loja-fechar" onClick={() => setFiltrosAbertos(false)} aria-label="Fechar">×</button>
+            </div>
+
+            {painelFiltros}
+
+            <div className="loja-gaveta-rodape">
+              <button type="button" className="loja-btn secundario" onClick={limparFiltros}>
+                Limpar
+              </button>
+              <button type="button" className="loja-btn" onClick={() => setFiltrosAbertos(false)}>
+                Ver {total} {total === 1 ? 'peça' : 'peças'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <BarraCarrinho

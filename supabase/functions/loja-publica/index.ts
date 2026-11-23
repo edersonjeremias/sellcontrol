@@ -239,12 +239,17 @@ async function acaoCatalogo(supabase: any, tenantId: string, loja: any, payload:
   const f = payload.filtros || {}
   const termos = termosDaBusca(payload.busca)
 
+  // Cada filtro aceita várias opções ao mesmo tempo, como em qualquer loja:
+  // quem procura tamanho 36 costuma aceitar 37 também. Dentro do mesmo filtro
+  // vale OU; entre filtros diferentes vale E.
   const filtradas = todas.filter((p: any) =>
-    (!f.categoria || igual(p.produto, f.categoria)) &&
-    (!f.tamanho   || igual(p.tamanho, f.tamanho)) &&
-    (!f.marca     || igual(p.marca, f.marca)) &&
+    casaFiltro(p.produto, f.categoria) &&
+    casaFiltro(p.tamanho, f.tamanho) &&
+    casaFiltro(p.marca, f.marca) &&
     casaBusca(p, termos)
   )
+
+  ordenar(filtradas, payload.ordem)
 
   const pagina = Math.max(1, parseInt(String(payload.pagina || 1), 10) || 1)
   const inicio = (pagina - 1) * POR_PAGINA
@@ -470,6 +475,23 @@ function unicos(valores: any[]) {
 
 function igual(a: any, b: any) {
   return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase()
+}
+
+/** Valor da peça contra o filtro, que pode vir vazio, como texto ou como lista */
+function casaFiltro(valor: any, escolhido: any) {
+  const lista = Array.isArray(escolhido) ? escolhido : escolhido ? [escolhido] : []
+  if (!lista.length) return true
+  return lista.some((e: any) => igual(valor, e))
+}
+
+/**
+ * Ordem da vitrine. O padrão é a peça mais recente primeiro: em brechó o que
+ * acabou de entrar é o que a cliente ainda não viu.
+ */
+function ordenar(pecas: any[], ordem: any) {
+  if (ordem === 'menor') pecas.sort((a, b) => precoDe(a) - precoDe(b))
+  else if (ordem === 'maior') pecas.sort((a, b) => precoDe(b) - precoDe(a))
+  // 'recentes' já vem do banco, por created_at
 }
 
 /**

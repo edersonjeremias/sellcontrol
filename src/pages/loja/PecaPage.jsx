@@ -31,6 +31,7 @@ function Peca() {
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [fotoAtiva, setFotoAtiva] = useState(0)
+  const [ampliada, setAmpliada] = useState(false)
   const [painelAberto, setPainelAberto] = useState(false)
 
   const carrinho = useCarrinhoLoja(slug, toast)
@@ -122,28 +123,46 @@ function Peca() {
       ) : (
         <>
           <div className="loja-peca">
-            <div className="loja-peca-foto">
-              {peca.imagens?.[fotoAtiva]
-                ? <img src={peca.imagens[fotoAtiva]} alt={tituloPeca(peca)} />
-                : null}
+            <div className="loja-peca-fotos">
+              {/* Clicar amplia: no computador a foto fica do tamanho de uma
+                  foto, e quem quiser ver a textura da peça abre em tela cheia */}
+              <button
+                type="button"
+                className="loja-peca-foto"
+                onClick={() => peca.imagens?.[fotoAtiva] && setAmpliada(true)}
+                aria-label="Ampliar foto"
+              >
+                {peca.imagens?.[fotoAtiva]
+                  ? <img src={peca.imagens[fotoAtiva]} alt={tituloPeca(peca)} />
+                  : null}
+                <span className="loja-peca-lupa" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                  </svg>
+                </span>
+              </button>
+
+              {peca.imagens?.length > 1 && (
+                <div className="loja-peca-minis">
+                  {peca.imagens.map((url, i) => (
+                    <button
+                      key={url}
+                      type="button"
+                      className={`loja-peca-mini ${i === fotoAtiva ? 'ativa' : ''}`}
+                      onClick={() => setFotoAtiva(i)}
+                      aria-label={`Foto ${i + 1}`}
+                    >
+                      <img src={url} alt="" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {peca.imagens?.length > 1 && (
-              <div className="loja-peca-minis">
-                {peca.imagens.map((url, i) => (
-                  <button
-                    key={url}
-                    type="button"
-                    className={`loja-peca-mini ${i === fotoAtiva ? 'ativa' : ''}`}
-                    onClick={() => setFotoAtiva(i)}
-                    aria-label={`Foto ${i + 1}`}
-                  >
-                    <img src={url} alt="" loading="lazy" />
-                  </button>
-                ))}
-              </div>
-            )}
-
+            <div className="loja-peca-info">
             <h1 className="loja-peca-nome">{tituloPeca(peca) || `Peça ${peca.codigo}`}</h1>
 
             <div className="loja-peca-meta">
@@ -168,7 +187,15 @@ function Peca() {
                 {carrinho.ocupado ? 'Guardando…' : 'Quero esta peça'}
               </button>
             )}
+            </div>
           </div>
+
+          {ampliada && (
+            <div className="loja-zoom" onClick={() => setAmpliada(false)}>
+              <button type="button" className="loja-fechar loja-zoom-fechar" aria-label="Fechar">×</button>
+              <img src={peca.imagens[fotoAtiva]} alt={tituloPeca(peca)} />
+            </div>
+          )}
 
           {dados.relacionadas?.length > 0 && (
             <div className="loja-relacionadas">
