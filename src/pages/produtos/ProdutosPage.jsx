@@ -16,6 +16,17 @@ import { formatarAoDigitar, parsearMoedaInput } from '../../utils/moeda'
 import './produtos.css'
 
 // ─── HELPERS ──
+
+// Campos de texto que comecam com inicial maiuscula. O resto da frase
+// fica como foi digitado, para nao estragar nomes como "Polo Ralph Lauren"
+const CAMPOS_INICIAL_MAIUSCULA = ['produto', 'modelo', 'cor', 'marca']
+
+function normalizarTexto(field, value) {
+  if (field === 'tamanho') return value.toUpperCase()
+  if (CAMPOS_INICIAL_MAIUSCULA.includes(field)) return value.charAt(0).toUpperCase() + value.slice(1)
+  return value
+}
+
 function gerarId() {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 }
@@ -510,6 +521,8 @@ export default function ProdutosPage() {
         const digitos = value.replace(/\D/g, '').slice(0, 3)
         value = negativo ? `-${digitos}` : digitos
       }
+
+      value = normalizarTexto(field, value)
 
       // Marca o campo como pendente: a borda amarela some quando o produto é salvo
       return { ...p, [field]: value, _alterados: { ...p._alterados, [field]: true } }
@@ -1441,7 +1454,7 @@ export default function ProdutosPage() {
                 <input
                   list="lista-produtos"
                   value={produtoEditando.produto}
-                  onChange={e => setProdutoEditando({...produtoEditando, produto: e.target.value})}
+                  onChange={e => setProdutoEditando({...produtoEditando, produto: normalizarTexto('produto', e.target.value)})}
                   style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
                   placeholder="Nome do produto"
                 />
@@ -1457,7 +1470,7 @@ export default function ProdutosPage() {
                   <input
                     list="lista-modelos"
                     value={produtoEditando.modelo}
-                    onChange={e => setProdutoEditando({...produtoEditando, modelo: e.target.value})}
+                    onChange={e => setProdutoEditando({...produtoEditando, modelo: normalizarTexto('modelo', e.target.value)})}
                     style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
                   />
                   <datalist id="lista-modelos">
@@ -1469,7 +1482,7 @@ export default function ProdutosPage() {
                   <input
                     list="lista-marcas"
                     value={produtoEditando.marca}
-                    onChange={e => setProdutoEditando({...produtoEditando, marca: e.target.value})}
+                    onChange={e => setProdutoEditando({...produtoEditando, marca: normalizarTexto('marca', e.target.value)})}
                     style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
                   />
                   <datalist id="lista-marcas">
@@ -1485,7 +1498,7 @@ export default function ProdutosPage() {
                   <input
                     list="lista-cores"
                     value={produtoEditando.cor}
-                    onChange={e => setProdutoEditando({...produtoEditando, cor: e.target.value})}
+                    onChange={e => setProdutoEditando({...produtoEditando, cor: normalizarTexto('cor', e.target.value)})}
                     style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
                   />
                   <datalist id="lista-cores">
@@ -1497,7 +1510,7 @@ export default function ProdutosPage() {
                   <input
                     list="lista-tamanhos"
                     value={produtoEditando.tamanho}
-                    onChange={e => setProdutoEditando({...produtoEditando, tamanho: e.target.value})}
+                    onChange={e => setProdutoEditando({...produtoEditando, tamanho: normalizarTexto('tamanho', e.target.value)})}
                     style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14 }}
                   />
                   <datalist id="lista-tamanhos">
