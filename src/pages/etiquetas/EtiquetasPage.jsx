@@ -61,6 +61,13 @@ function ehBaixaManual(rom) {
   return !pag?.gateway_transaction_id
 }
 
+const ITENS_POR_PAGINA = 20
+
+const STATUS_LISTADOS = [
+  'pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada',
+  'despachado', 'em_transito', 'entregue', 'retirado', 'cancelado',
+]
+
 const LABEL_STATUS = {
   preparando: 'Preparando',
   pronto: 'Pronto',
@@ -203,7 +210,8 @@ export default function EtiquetasPage() {
   const isMobile = useIsMobile()
 
   const [romaneios, setRomaneios] = useState([])
-  const [romaneiosFiltrados, setRomaneiosFiltrados] = useState([])
+  const [totalRegistros, setTotalRegistros] = useState(0)
+  const [paginaAtual, setPaginaAtual] = useState(1)
   const [loading, setLoading] = useState(true)
   const [gerando, setGerando] = useState(null)
   const [modalAberto, setModalAberto] = useState(null)
@@ -260,33 +268,62 @@ export default function EtiquetasPage() {
   const [statusFiltro, setStatusFiltro] = useState('etiqueta_gerada')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [buscaAplicada, setBuscaAplicada] = useState('')
+
+  // Espera a digitação parar antes de ir ao banco
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setBuscaAplicada(busca.trim())
+      setPaginaAtual(1)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [busca])
 
   const carregar = useCallback(async () => {
     if (!tenantId) return
     setLoading(true)
     try {
-      // O Melhor Envio só devolve o código depois que a transportadora
-      // registra o objeto, então buscamos os que ainda estão sem rastreio
-      await sincronizarRastreio({ tenant_id: tenantId })
 
-      const { data: cfg } = await supabase
-        .from('configuracoes')
-        .select('margem_frete, slug')
-        .eq('tenant_id', tenantId)
-        .maybeSingle()
-
-      setMargemFrete(Number(cfg?.margem_frete ?? 0))
-      setSlugLoja(cfg?.slug || '')
-
-      const { data, error } = await supabase
+      // Os filtros vão para o banco: a tela carrega só a página pedida
+      let query = supabase
         .from('romaneios')
-        .select('*, enderecos_clientes(*), pagamentos_frete(*)')
+        .select('*, enderecos_clientes(*), pagamentos_frete(*)', { count: 'exact' })
         .eq('tenant_id', tenantId)
-        .in('status', ['pronto', 'frete_cotado', 'frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado', 'cancelado'])
+
+      if (statusFiltro === 'aguardando_pagamento') {
+        query = query.in('status', ['pronto', 'frete_cotado'])
+      } else if (statusFiltro && statusFiltro !== 'todos') {
+        query = query.eq('status', statusFiltro)
+      } else {
+        query = query.in('status', STATUS_LISTADOS)
+      }
+
+      // As aspas protegem o ponto do instagram, que quebraria a sintaxe do or
+      const termo = buscaAplicada.replace(/["%,]/g, '')
+      if (termo) {
+        query = query.or(`numero.ilike."%${termo}%",cliente_instagram.ilike."%${termo}%"`)
+      }
+
+      // Etiqueta gerada e aguardando pagamento aparecem sempre, sem corte de
+      // data, para não esquecer de despachar nem de cobrar
+      if (!['etiqueta_gerada', 'aguardando_pagamento'].includes(statusFiltro)) {
+        if (dataInicio) {
+          query = query.or(`frete_pago_em.gte.${dataInicio},and(frete_pago_em.is.null,created_at.gte.${dataInicio})`)
+        }
+        if (dataFim) {
+          const fim = `${dataFim}T23:59:59`
+          query = query.or(`frete_pago_em.lte.${fim},and(frete_pago_em.is.null,created_at.lte.${fim})`)
+        }
+      }
+
+      const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
+        .range(inicio, inicio + ITENS_POR_PAGINA - 1)
 
       if (error) throw error
       setRomaneios(data || [])
+      setTotalRegistros(count || 0)
 
       // WhatsApp dos clientes desses romaneios (para o link de frete)
       const instas = [...new Set((data || [])
@@ -312,58 +349,38 @@ export default function EtiquetasPage() {
     } finally {
       setLoading(false)
     }
-  }, [tenantId])
+  }, [tenantId, statusFiltro, buscaAplicada, dataInicio, dataFim, paginaAtual])
 
   useEffect(() => { carregar() }, [carregar])
 
-  // Aplicar filtros
+  // Config da loja: não muda entre páginas, basta uma vez
   useEffect(() => {
-    let filtrados = [...romaneios]
+    if (!tenantId) return
 
-    // Filtro de status
-    if (statusFiltro && statusFiltro !== 'todos') {
-      if (statusFiltro === 'aguardando_pagamento') {
-        // Aguardando Pagamento = romaneios que ainda não foram pagos
-        filtrados = filtrados.filter(rom =>
-          ['pronto', 'frete_cotado'].includes(rom.status)
-        )
-      } else {
-        filtrados = filtrados.filter(rom => rom.status === statusFiltro)
-      }
-    }
+    supabase
+      .from('configuracoes')
+      .select('margem_frete, slug')
+      .eq('tenant_id', tenantId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setMargemFrete(Number(data?.margem_frete ?? 0))
+        setSlugLoja(data?.slug || '')
+      })
+  }, [tenantId])
 
-    // Filtro de busca (cliente ou romaneio)
-    if (busca) {
-      const termo = busca.toLowerCase()
-      filtrados = filtrados.filter(rom =>
-        rom.numero?.toLowerCase().includes(termo) ||
-        rom.cliente_instagram?.toLowerCase().includes(termo)
-      )
-    }
+  // O Melhor Envio só devolve o código depois que a transportadora registra o
+  // objeto. É uma consulta externa: roda ao abrir a tela e no botão Atualizar,
+  // nunca a cada filtro ou troca de página.
+  const sincronizarEAtualizar = useCallback(async () => {
+    if (!tenantId) return
+    const r = await sincronizarRastreio({ tenant_id: tenantId })
+    if (r?.atualizados || r?.despachados || r?.entregues) carregar()
+  }, [tenantId, carregar])
 
-    // Filtro de data - EXCETO quando status = 'etiqueta_gerada' ou 'aguardando_pagamento'
-    // Etiquetas geradas SEMPRE aparecem todas (para não esquecer de despachar)
-    // Aguardando pagamento SEMPRE aparecem todos (para não esquecer de cobrar/dar baixa)
-    if (!['etiqueta_gerada', 'aguardando_pagamento'].includes(statusFiltro)) {
-      // Filtro de data início
-      if (dataInicio) {
-        filtrados = filtrados.filter(rom => {
-          const dataRom = new Date(rom.frete_pago_em || rom.created_at)
-          return dataRom >= new Date(dataInicio)
-        })
-      }
+  useEffect(() => {
+    if (tenantId) sincronizarRastreio({ tenant_id: tenantId })
+  }, [tenantId])
 
-      // Filtro de data fim
-      if (dataFim) {
-        filtrados = filtrados.filter(rom => {
-          const dataRom = new Date(rom.frete_pago_em || rom.created_at)
-          return dataRom <= new Date(dataFim + 'T23:59:59')
-        })
-      }
-    }
-
-    setRomaneiosFiltrados(filtrados)
-  }, [romaneios, busca, statusFiltro, dataInicio, dataFim])
 
   /** Link público do romaneio, criando token e código se ainda não existirem */
   const garantirLink = async (rom) => {
@@ -991,7 +1008,7 @@ export default function EtiquetasPage() {
 
           <select
             value={statusFiltro}
-            onChange={(e) => setStatusFiltro(e.target.value)}
+            onChange={(e) => { setStatusFiltro(e.target.value); setPaginaAtual(1) }}
             style={{
               flex: isMobile ? '1 1 100%' : '0 0 auto',
               minWidth: 0,
@@ -1017,7 +1034,7 @@ export default function EtiquetasPage() {
           <input
             type="date"
             value={dataInicio}
-            onChange={(e) => setDataInicio(e.target.value)}
+            onChange={(e) => { setDataInicio(e.target.value); setPaginaAtual(1) }}
             title="Data início"
             style={{
               flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
@@ -1036,7 +1053,7 @@ export default function EtiquetasPage() {
           <input
             type="date"
             value={dataFim}
-            onChange={(e) => setDataFim(e.target.value)}
+            onChange={(e) => { setDataFim(e.target.value); setPaginaAtual(1) }}
             title="Data fim"
             style={{
               flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
@@ -1059,6 +1076,7 @@ export default function EtiquetasPage() {
                 setStatusFiltro('etiqueta_gerada')
                 setDataInicio('')
                 setDataFim('')
+                setPaginaAtual(1)
               }}
               style={{
                 flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
@@ -1078,7 +1096,7 @@ export default function EtiquetasPage() {
           )}
 
           <button
-            onClick={carregar}
+            onClick={() => { carregar(); sincronizarEAtualizar() }}
             style={{
               flex: isMobile ? '1 1 calc(50% - 4px)' : '0 0 auto',
               background: 'rgba(255,255,255,0.1)',
@@ -1096,7 +1114,7 @@ export default function EtiquetasPage() {
           </button>
         </div>
 
-        {romaneiosFiltrados.length === 0 ? (
+        {romaneios.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: 60,
@@ -1140,7 +1158,7 @@ export default function EtiquetasPage() {
             </div>
 
             {/* Linhas da Tabela */}
-            {romaneiosFiltrados.map(rom => {
+            {romaneios.map(rom => {
               const formatarData = (data) => {
                 if (!data) return '-'
                 const d = new Date(data)
@@ -1458,6 +1476,78 @@ export default function EtiquetasPage() {
             })}
           </div>
         )}
+
+        {/* Paginação */}
+        {totalRegistros > 0 && (() => {
+          const totalPaginas = Math.max(1, Math.ceil(totalRegistros / ITENS_POR_PAGINA))
+          const primeiro = (paginaAtual - 1) * ITENS_POR_PAGINA + 1
+          const ultimo = Math.min(paginaAtual * ITENS_POR_PAGINA, totalRegistros)
+
+          const estiloBotao = (desabilitado) => ({
+            padding: '6px 12px',
+            background: desabilitado ? '#2a2a2a' : '#3a3a3a',
+            border: 'none',
+            borderRadius: 4,
+            color: desabilitado ? '#666' : '#e0e0e0',
+            fontSize: 13,
+            cursor: desabilitado ? 'not-allowed' : 'pointer',
+          })
+
+          return (
+            <div style={{
+              padding: '16px 8px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+            }}>
+              <button onClick={() => setPaginaAtual(1)} disabled={paginaAtual === 1}
+                style={estiloBotao(paginaAtual === 1)}>
+                Primeira
+              </button>
+
+              <button onClick={() => setPaginaAtual(p => Math.max(1, p - 1))} disabled={paginaAtual === 1}
+                style={estiloBotao(paginaAtual === 1)}>
+                Anterior
+              </button>
+
+              <select
+                value={paginaAtual}
+                onChange={e => setPaginaAtual(Number(e.target.value))}
+                style={{
+                  padding: '6px 12px',
+                  background: '#3a3a3a',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 4,
+                  color: '#e0e0e0',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(pagina => (
+                  <option key={pagina} value={pagina}>{pagina}</option>
+                ))}
+              </select>
+
+              <button onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+                disabled={paginaAtual >= totalPaginas}
+                style={estiloBotao(paginaAtual >= totalPaginas)}>
+                Próxima
+              </button>
+
+              <button onClick={() => setPaginaAtual(totalPaginas)}
+                disabled={paginaAtual >= totalPaginas}
+                style={estiloBotao(paginaAtual >= totalPaginas)}>
+                Última
+              </button>
+
+              <span style={{ marginLeft: 16, color: '#888', fontSize: 13, whiteSpace: 'nowrap' }}>
+                {primeiro} - {ultimo} de {totalRegistros}
+              </span>
+            </div>
+          )
+        })()}
 
         {/* Modal de Detalhes */}
         {modalAberto && (
