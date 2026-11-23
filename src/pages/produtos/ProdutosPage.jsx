@@ -1110,7 +1110,7 @@ export default function ProdutosPage() {
               </label>
               <label>
                 <input type="checkbox" checked={cols.loja} onChange={e => setCols(c => ({ ...c, loja: e.target.checked }))} />
-                Loja
+                Botão da loja
               </label>
               <button onClick={() => setShowSettings(false)} className="btn-primary" style={{ marginTop: '16px' }}>
                 Fechar
@@ -1148,7 +1148,7 @@ export default function ProdutosPage() {
                   >
                     Cód. {ordenarPor === 'codigo' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
                   </th>
-                  {cols.preco_promocional && <th className="th-preco">Promo</th>}
+                  {cols.preco_promocional && <th className="th-promo">Promo</th>}
                   <th
                     className="th-qtd"
                     onClick={() => toggleOrdenacao('quantidade')}
@@ -1157,7 +1157,6 @@ export default function ProdutosPage() {
                     Qtd. {ordenarPor === 'quantidade' && (ordenarDirecao === 'asc' ? '▲' : '▼')}
                   </th>
                   {cols.peso && <th className="th-peso" title="Peso da peça em gramas. Vazio usa o peso da categoria.">Peso g</th>}
-                  {cols.loja && <th className="th-loja" title="Peça publicada no catálogo público">Loja</th>}
                   <th className="th-acoes">Ações</th>
                 </tr>
               </thead>
@@ -2057,7 +2056,7 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
 
       {/* PREÇO PROMOCIONAL */}
       {cols.preco_promocional && (
-        <td className="col-preco">
+        <td className="col-promo">
           <input
             type="text"
             className="cell-input"
@@ -2113,28 +2112,27 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
         </td>
       )}
 
-      {/* LOJA — publica ou tira a peça do catálogo público */}
-      {cols.loja && (
-        <td className="col-loja">
-          <button
-            type="button"
-            className={`btn-loja ${p.publicado_loja ? 'no-ar' : ''}`}
-            title={p.publicado_loja ? 'No ar na loja. Clique para tirar.' : 'Publicar na loja'}
-            onClick={() => onAlternarLoja(p._key)}
-            disabled={p.isNew}
-          >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-              <line x1="3" y1="6" x2="21" y2="6"/>
-              <path d="M16 10a4 4 0 0 1-8 0"/>
-            </svg>
-          </button>
-        </td>
-      )}
-
       {/* AÇÕES */}
       <td className="col-acoes">
         <div className="acoes-wrapper">
+          {/* Publicar na loja é ação, não dado da peça: fica com as outras
+              ações e devolve uma coluna inteira para a planilha */}
+          {cols.loja && (
+            <button
+              type="button"
+              className={`btn-loja ${p.publicado_loja ? 'no-ar' : ''}`}
+              title={p.publicado_loja ? 'No ar na loja. Clique para tirar.' : 'Publicar na loja'}
+              onClick={() => onAlternarLoja(p._key)}
+              disabled={p.isNew}
+            >
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>
+            </button>
+          )}
+
           {/* Salvar */}
           <button
             type="button"

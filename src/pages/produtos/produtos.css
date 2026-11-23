@@ -177,8 +177,8 @@
 /* Código (cabe 4 dígitos: 1000) */
 .vendas-container .th-codigo,
 .vendas-container .col-codigo {
-  width: 70px !important;
-  min-width: 70px !important;
+  width: 56px !important;
+  min-width: 56px !important;
 }
 
 .vendas-container .col-codigo .cell-input {
@@ -227,6 +227,22 @@
   min-width: 65px !important;
 }
 
+/* Promo tem largura própria: é o valor menos consultado da linha */
+.vendas-container .th-promo,
+.vendas-container .col-promo {
+  width: 54px !important;
+  min-width: 54px !important;
+}
+
+.vendas-container .col-promo .cell-input {
+  width: 100%;
+  font-weight: 600;
+  color: var(--green);
+  text-align: right;
+  font-size: 13px;
+  padding: 7px 4px;
+}
+
 .vendas-container .col-preco .cell-input {
   width: 100%;
   font-weight: 600;
@@ -239,8 +255,8 @@
 /* Quantidade (cabe 4 dígitos: 9999) */
 .vendas-container .th-qtd,
 .vendas-container .col-qtd {
-  width: 65px !important;
-  min-width: 65px !important;
+  width: 50px !important;
+  min-width: 50px !important;
   text-align: center;
 }
 
@@ -254,7 +270,8 @@
 /* Descrição: a mais larga depois de Produto, porque é texto corrido */
 .vendas-container .th-descricao,
 .vendas-container .col-descricao {
-  min-width: 200px;
+  width: 100px !important;
+  min-width: 100px !important;
 }
 
 .vendas-container .col-descricao .cell-input {
@@ -277,20 +294,13 @@
   color: var(--muted);
 }
 
-/* Loja pública: a peça está no ar ou não */
-.vendas-container .th-loja,
-.vendas-container .col-loja {
-  width: 54px !important;
-  min-width: 54px !important;
-  text-align: center;
-}
-
-/* Mesmo glassmorphism dos botões inline das tabelas */
+/* Publicar na loja: botão dentro da coluna Ações.
+   Mesmo glassmorphism dos botões inline das tabelas. */
 .vendas-container .btn-loja {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  width: 26px;
   height: 26px;
   padding: 0;
   border: 1px solid transparent;
@@ -321,12 +331,19 @@
 .vendas-container .col-modelo { min-width: 130px; }
 .vendas-container .col-cor { min-width: 80px; }
 .vendas-container .col-marca { min-width: 100px; }
-.vendas-container .col-tam { min-width: 60px; text-align: center; }
+.vendas-container .col-tam,
+.vendas-container .th-tam {
+  width: 48px !important;
+  min-width: 48px !important;
+  text-align: center;
+}
 
 /* Ações */
 .vendas-container .th-acoes,
 .vendas-container .col-acoes {
-  min-width: 165px; /* o link da peça na loja entra aqui quando ela está no ar */
+  /* cabem publicar na loja, salvar, copiar texto, imagens, duplicar, excluir,
+     e o link da peça quando ela está no ar */
+  min-width: 200px;
   text-align: center;
 }
 
