@@ -706,6 +706,16 @@
   margin-left: 8px;
 }
 
+/* pre-line: a quebra de linha que a loja escreveu é mantida, porque medidas
+   e detalhes costumam ser escritos um por linha */
+.loja-peca-descricao {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--p-text);
+  white-space: pre-line;
+}
+
 .loja-peca-unica {
   font-size: 12px;
   color: var(--p-muted);

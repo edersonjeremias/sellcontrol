@@ -178,6 +178,8 @@ function Peca() {
               {moeda(peca.preco)}
               {peca.preco_cheio ? <s>{moeda(peca.preco_cheio)}</s> : null}
             </div>
+            {peca.descricao && <p className="loja-peca-descricao">{peca.descricao}</p>}
+
             <p className="loja-peca-unica">Peça única. Fica guardada para você por alguns minutos depois de entrar na sacola.</p>
 
             {noCarrinho ? (

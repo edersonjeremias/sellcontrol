@@ -145,7 +145,7 @@ async function disponiveis(supabase: any, tenantId: string, pedidoProprio?: stri
 
   const { data: produtos, error } = await supabase
     .from('produtos')
-    .select('id, codigo, produto, modelo, cor, marca, tamanho, condicao, preco, preco_promocional, quantidade, imagens, created_at')
+    .select('id, codigo, produto, modelo, cor, marca, tamanho, genero, condicao, descricao, preco, preco_promocional, quantidade, imagens, created_at')
     .eq('tenant_id', tenantId)
     .eq('publicado_loja', true)
     .eq('ativo', true)
@@ -296,7 +296,9 @@ async function acaoPeca(supabase: any, tenantId: string, loja: any, payload: any
 
   return json({
     loja,
-    peca: { ...paraVitrine(achada), imagens },
+    // A descrição só vai na página da peça: no catálogo ela não cabe no card
+    // e multiplicaria o tamanho da resposta por nada
+    peca: { ...paraVitrine(achada), imagens, descricao: String(achada.descricao || '').trim() },
     relacionadas,
   })
 }

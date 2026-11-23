@@ -251,6 +251,17 @@
   font-size: 13px;
 }
 
+/* Descrição: a mais larga depois de Produto, porque é texto corrido */
+.vendas-container .th-descricao,
+.vendas-container .col-descricao {
+  min-width: 200px;
+}
+
+.vendas-container .col-descricao .cell-input {
+  width: 100%;
+  font-size: 13px;
+}
+
 /* Peso em gramas (cabe 5 dígitos) */
 .vendas-container .th-peso,
 .vendas-container .col-peso {

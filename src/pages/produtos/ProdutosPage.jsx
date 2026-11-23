@@ -30,6 +30,7 @@ function novoProduto(codigo = '') {
     cor: '',
     marca: '',
     tamanho: '',
+    descricao: '',
     genero: '',
     condicao: '', // Vazio por padrão, usuário escolhe
     custo: '',
@@ -55,6 +56,7 @@ function mapProduto(p) {
     cor: p.cor || '',
     marca: p.marca || '',
     tamanho: p.tamanho || '',
+    descricao: p.descricao || '',
     genero: p.genero || '',
     condicao: p.condicao === 'Novo' ? 'N' : p.condicao === 'Usado' ? 'U' : p.condicao || '',
     // Converte de reais (banco) para centavos formatados (ex: 139.90 -> "13990" -> "139,90")
@@ -106,6 +108,7 @@ export default function ProdutosPage() {
     preco_promocional: true,
     loja: true,
     peso: false,
+    descricao: true,
   })
 
   // Estados de paginação
@@ -1098,6 +1101,10 @@ export default function ProdutosPage() {
                 Preço Promoção
               </label>
               <label>
+                <input type="checkbox" checked={cols.descricao} onChange={e => setCols(c => ({ ...c, descricao: e.target.checked }))} />
+                Descrição
+              </label>
+              <label>
                 <input type="checkbox" checked={cols.peso} onChange={e => setCols(c => ({ ...c, peso: e.target.checked }))} />
                 Peso (g)
               </label>
@@ -1124,6 +1131,7 @@ export default function ProdutosPage() {
                   <th>Cor</th>
                   <th>Marca</th>
                   <th className="th-tam">Tam.</th>
+                  {cols.descricao && <th className="th-descricao">Descrição</th>}
                   {cols.condicao && <th className="th-condicao">Cond.</th>}
                   {cols.custo && <th className="th-preco">Custo</th>}
                   <th
@@ -1497,6 +1505,20 @@ export default function ProdutosPage() {
                     {listas.tamanhos?.map(item => <option key={item} value={item} />)}
                   </datalist>
                 </div>
+              </div>
+
+              {/* Descrição: campo alto, porque aqui é onde dá para escrever de
+                  verdade o que a cliente vai ler na loja */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Descrição</label>
+                <textarea
+                  rows={3}
+                  value={produtoEditando.descricao || ''}
+                  onChange={e => setProdutoEditando({...produtoEditando, descricao: e.target.value})}
+                  style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14, resize: 'vertical' }}
+                  placeholder="Caimento, medidas, detalhes de uso…"
+                />
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>Aparece na página da peça, na loja</span>
               </div>
 
               {/* Gênero e Condição */}
@@ -1941,6 +1963,25 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
           title={p.tamanho || undefined}
         />
       </td>
+
+      {/* DESCRIÇÃO — o que a foto não mostra. Vai inteira na loja; aqui a
+          linha é uma só, e o texto completo aparece ao passar o mouse. */}
+      {cols.descricao && (
+        <td className="col-descricao">
+          <input
+            className="cell-input"
+            value={p.descricao}
+            onChange={e => onChange(p._key, 'descricao', e.target.value)}
+            onKeyDown={navegarProximo}
+            disabled={desabilitado}
+            placeholder="Caimento, medidas, detalhes…"
+            data-key={p._key}
+            data-field="descricao"
+            data-alterado={p._alterados?.descricao ? "true" : undefined}
+            title={p.descricao || undefined}
+          />
+        </td>
+      )}
 
       {/* CONDIÇÃO */}
       {cols.condicao && (
