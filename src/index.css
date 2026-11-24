@@ -782,7 +782,11 @@ thead th { position: sticky; top: 0; z-index: 90; background: var(--table-header
   background: var(--body-bg);
   margin-left: -12px;
   margin-right: -12px;
-  padding: 8px 12px;
+  /* O sticky gruda no limite do padding do .app-main, e o conteúdo rola por
+     dentro desse padding. A margem negativa estende a barra até lá em cima,
+     e o padding devolve o respiro, então nada aparece por trás dela. */
+  margin-top: -16px;
+  padding: 24px 12px 8px;
 }
 
 /* Cabeçalho fixo para listagens montadas com grid em vez de <table>.

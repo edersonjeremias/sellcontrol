@@ -228,22 +228,23 @@ export default function EtiquetasPage() {
   const [slugLoja, setSlugLoja] = useState('')
 
   // O cabeçalho da tabela gruda logo abaixo da barra de filtros, que muda
-  // de altura quando os campos quebram em várias linhas no celular
-  const barraRef = useRef(null)
+  // de altura quando os campos quebram em várias linhas no celular.
+  // É callback ref porque a barra só existe depois que a lista carrega: um
+  // useEffect([]) rodaria antes dela nascer e a altura ficaria em zero.
   const [alturaBarra, setAlturaBarra] = useState(0)
+  const observerBarra = useRef(null)
 
-  useEffect(() => {
-    const el = barraRef.current
-    if (!el) return
+  const barraRef = useCallback((node) => {
+    observerBarra.current?.disconnect()
+    if (!node) return
 
     // getBoundingClientRect dá a altura fracionária: arredondar para cima
     // evita a fresta de 1px por onde as linhas apareciam
-    const medir = () => setAlturaBarra(Math.ceil(el.getBoundingClientRect().height))
+    const medir = () => setAlturaBarra(Math.ceil(node.getBoundingClientRect().height))
     medir()
 
-    const observer = new ResizeObserver(medir)
-    observer.observe(el)
-    return () => observer.disconnect()
+    observerBarra.current = new ResizeObserver(medir)
+    observerBarra.current.observe(node)
   }, [])
 
   // Estados para cotação
