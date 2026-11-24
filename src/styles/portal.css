@@ -287,7 +287,8 @@
 .portal-peca-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* sem o preço ao lado, o status fica encostado à direita */
+  justify-content: flex-end;
   margin-top: 4px;
 }
 .portal-peca-valor {

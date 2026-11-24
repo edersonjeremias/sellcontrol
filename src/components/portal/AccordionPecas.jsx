@@ -44,9 +44,6 @@ function PecaCard({ peca, getStatusOverride }) {
         </div>
       )}
       <div className="portal-peca-footer">
-        <div className="portal-peca-valor">
-          R$ {Number(peca.valor || 0).toFixed(2).replace('.', ',')}
-        </div>
         {statusExibir && (
           <span className={`portal-peca-status ${statusCss(statusExibir)}`}>
             {statusExibir}
@@ -64,7 +61,6 @@ function PecaCard({ peca, getStatusOverride }) {
 
 function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
   const [open, setOpen] = useState(false)
-  const total = pecas.reduce((s, p) => s + Number(p.valor || 0), 0)
 
   const dataFmt = (() => {
     try {
@@ -83,7 +79,7 @@ function AccordionGroup({ data, pecas, getStatusOverride, debito }) {
         <div className="portal-accordion-info">
           <div className="portal-accordion-data">{dataFmt}</div>
           <div className="portal-accordion-resumo">
-            {pecas.length} {pecas.length === 1 ? 'peça' : 'peças'} • {fmtValor(total)}
+            {pecas.length} {pecas.length === 1 ? 'peça' : 'peças'}
           </div>
         </div>
 
