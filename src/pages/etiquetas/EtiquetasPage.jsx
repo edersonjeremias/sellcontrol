@@ -61,6 +61,55 @@ function ehBaixaManual(rom) {
   return !pag?.gateway_transaction_id
 }
 
+// Ícones das ações da linha, no mesmo traço dos botões do resto do sistema
+const IconWa = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.118.554 4.107 1.523 5.83L.057 23.857a.5.5 0 0 0 .621.608l6.228-1.638A11.95 11.95 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.95 9.95 0 0 1-5.053-1.373l-.362-.214-3.747.985.986-3.645-.232-.374A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
+  </svg>
+)
+
+const IconEnviar = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+  </svg>
+)
+
+const IconSacola = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+    <line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+)
+
+const IconEtiqueta = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+    <line x1="7" y1="7" x2="7.01" y2="7" />
+  </svg>
+)
+
+const IconImpressora = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 6 2 18 2 18 9" />
+    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <rect x="6" y="14" width="12" height="8" />
+  </svg>
+)
+
+const IconCaminhao = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+    <circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" />
+  </svg>
+)
+
+const IconLapis = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+)
+
 const ITENS_POR_PAGINA = 20
 
 const STATUS_LISTADOS = [
@@ -1138,7 +1187,7 @@ export default function EtiquetasPage() {
             <div className="grid-header-fixo" style={{
               top: alturaBarra,
               display: isMobile ? 'none' : 'grid',
-              gridTemplateColumns: '110px 1fr 100px 100px 120px 250px 82px',
+              gridTemplateColumns: '110px 1fr 100px 100px 120px 170px 82px',
               gap: 16,
               padding: '14px 20px',
               borderTopLeftRadius: 12,
@@ -1173,7 +1222,7 @@ export default function EtiquetasPage() {
                   style={{
                     display: isMobile ? 'flex' : 'grid',
                     flexDirection: isMobile ? 'column' : undefined,
-                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 250px 82px',
+                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 170px 82px',
                     gap: isMobile ? 6 : 16,
                     padding: isMobile ? '12px 14px' : '16px 20px',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -1299,21 +1348,13 @@ export default function EtiquetasPage() {
                 >
                   {['pronto', 'frete_cotado', 'frete_pago'].includes(rom.status) && (
                     <button
+                      type="button"
+                      className="btn-action-sm"
                       onClick={() => handleMarcarRetirado(rom)}
                       title="Cliente retirou o pedido na loja"
-                      style={{
-                        background: 'rgba(156,39,176,0.15)',
-                        color: '#ce93d8',
-                        border: '1px solid rgba(156,39,176,0.5)',
-                        borderRadius: 6,
-                        padding: '6px 10px',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                      }}
+                      style={{ color: '#ce93d8', borderColor: 'rgba(156,39,176,0.5)' }}
                     >
-                      Retirou
+                      <IconSacola />
                     </button>
                   )}
 
@@ -1321,103 +1362,67 @@ export default function EtiquetasPage() {
                       falta é a cliente saber que deu certo */}
                   {['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito'].includes(rom.status) && (
                     <button
+                      type="button"
+                      className="btn-action-sm"
                       onClick={() => handleAvisarCliente(rom)}
                       title={rom.codigo_rastreio ? 'Mandar o rastreio no WhatsApp' : 'Avisar a cliente no WhatsApp'}
-                      style={{
-                        background: 'rgba(37,211,102,0.15)',
-                        color: '#25d366',
-                        border: '1px solid rgba(37,211,102,0.5)',
-                        borderRadius: 6,
-                        padding: '6px 10px',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                      }}
+                      style={{ color: '#25d366', borderColor: 'rgba(37,211,102,0.5)' }}
                     >
-                      {rom.codigo_rastreio ? 'Rastreio' : 'Avisar'}
+                      <IconWa />
                     </button>
                   )}
 
                   {!['frete_pago', 'etiqueta_gerada', 'despachado', 'cancelado'].includes(rom.status) && (
                     <button
+                      type="button"
+                      className="btn-action-sm"
                       onClick={() => handleEnviarLinkFrete(rom)}
                       title="Enviar link de frete pelo WhatsApp"
-                      style={{
-                        background: 'rgba(37,211,102,0.15)',
-                        color: '#25d366',
-                        border: '1px solid rgba(37,211,102,0.5)',
-                        borderRadius: 6,
-                        padding: '6px 10px',
-                        fontSize: 11,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                      }}
+                      style={{ color: '#25d366', borderColor: 'rgba(37,211,102,0.5)' }}
                     >
-                      Enviar Link
+                      <IconEnviar />
                     </button>
                   )}
 
                   {rom.status === 'frete_pago' && (
                     <button
+                      type="button"
+                      className="btn-action-sm"
                       onClick={() => handleGerarEtiqueta(rom)}
                       disabled={gerando === rom.id}
-                      title="Gerar Etiqueta"
+                      title="Gerar etiqueta no Melhor Envio"
                       style={{
-                        background: 'var(--p-blue)',
-                        color: '#0f0f0f',
-                        border: 'none',
-                        borderRadius: 6,
-                        padding: '6px 10px',
-                        fontSize: 11,
-                        fontWeight: 700,
+                        color: 'var(--p-blue)',
+                        borderColor: 'rgba(138,180,248,0.5)',
                         cursor: gerando === rom.id ? 'wait' : 'pointer',
-                        opacity: gerando === rom.id ? 0.6 : 1,
-                        whiteSpace: 'nowrap',
+                        opacity: gerando === rom.id ? 0.5 : 1,
                       }}
                     >
-                      {gerando === rom.id ? '...' : 'Gerar'}
+                      <IconEtiqueta />
                     </button>
                   )}
 
                   {(rom.status === 'etiqueta_gerada' || rom.status === 'despachado') && (
                     <>
                       <button
+                        type="button"
+                        className="btn-action-sm"
                         onClick={() => handleImprimirEtiqueta(rom)}
-                        title="Imprimir Etiqueta"
-                        style={{
-                          background: 'rgba(33,150,243,0.2)',
-                          color: '#2196f3',
-                          border: '1px solid rgba(33,150,243,0.5)',
-                          borderRadius: 6,
-                          padding: '6px 10px',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
+                        title="Imprimir etiqueta"
+                        style={{ color: '#2196f3', borderColor: 'rgba(33,150,243,0.5)' }}
                       >
-                        Imprimir
+                        <IconImpressora />
                       </button>
 
                       {rom.status === 'etiqueta_gerada' && (
                         <button
+                          type="button"
+                          className="btn-action-sm"
                           onClick={() => handleMarcarDespachado(rom)}
-                          title="Marcar como Despachado"
-                          style={{
-                            background: 'rgba(76,175,80,0.2)',
-                            color: '#4caf50',
-                            border: '1px solid rgba(76,175,80,0.5)',
-                            borderRadius: 6,
-                            padding: '6px 10px',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                          }}
+                          title="Marcar como despachado"
+                          style={{ color: '#4caf50', borderColor: 'rgba(76,175,80,0.5)' }}
                         >
-                          Despachar
+                          <IconCaminhao />
                         </button>
                       )}
                     </>
@@ -1425,21 +1430,13 @@ export default function EtiquetasPage() {
 
                   {/* Botão Editar - sempre visível */}
                   <button
+                    type="button"
+                    className="btn-action-sm"
                     onClick={() => handleAbrirEdicao(rom)}
-                    title="Editar Romaneio"
-                    style={{
-                      background: 'rgba(255,152,0,0.2)',
-                      color: '#ff9800',
-                      border: '1px solid rgba(255,152,0,0.5)',
-                      borderRadius: 6,
-                      padding: '6px 10px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
+                    title="Editar romaneio"
+                    style={{ color: '#ff9800', borderColor: 'rgba(255,152,0,0.5)' }}
                   >
-                    Editar
+                    <IconLapis />
                   </button>
                 </div>
 
