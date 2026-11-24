@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { linkRastreio } from '../../lib/rastreio'
 import { siteUrl } from '../../lib/siteUrl'
 
 const STATUS_LABEL = {
@@ -50,10 +51,21 @@ function PecaCard({ peca, getStatusOverride }) {
           </span>
         )}
       </div>
-      {peca.rastreio && (
-        <div style={{ fontSize:11, color:'var(--p-blue)', marginTop:2 }}>
-          Rastreio: {peca.rastreio}
+      {peca.romaneio && (
+        <div style={{ fontSize:11, color:'var(--p-muted)', marginTop:2 }}>
+          Pacote {peca.romaneio}
+          {peca.transportadora ? ' · ' + peca.transportadora : ''}
         </div>
+      )}
+      {peca.rastreio && (
+        <a
+          href={linkRastreio(peca.rastreio, peca.transportadora)}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display:'inline-block', fontSize:11, color:'var(--p-blue)', marginTop:2, fontWeight:600 }}
+        >
+          Rastreio: {peca.rastreio}
+        </a>
       )}
     </div>
   )
