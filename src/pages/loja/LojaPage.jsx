@@ -76,7 +76,7 @@ function Catalogo() {
         if (!vivo) return
         setLoja(dados.loja)
         setFechada(Boolean(dados.fechada))
-        setFacetas(dados.facetas || { categorias: [], tamanhos: [], marcas: [], generos: [] })
+        if (dados.facetas) setFacetas(dados.facetas)
         setTemMais(Boolean(dados.tem_mais))
         setTotal(Number(dados.total || 0))
         // "Ver mais" acrescenta; filtro novo substitui
@@ -242,6 +242,9 @@ function Catalogo() {
                   >
                     {carregandoMais ? 'Carregando…' : 'Ver mais peças'}
                   </button>
+                  <span className="loja-contagem" style={{ flex: 'none' }}>
+                    {pecas.length} de {total}
+                  </span>
                 </div>
               )}
             </>

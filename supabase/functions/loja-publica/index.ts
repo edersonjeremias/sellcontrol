@@ -30,7 +30,26 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,60}$/
 // Quantas peças o catálogo manda por vez. O resto vem no "Ver mais": sem
 // limite, um cadastro de mil peças viraria um payload de megabytes no 3G da
 // cliente.
-const POR_PAGINA = 60
+//
+// 24 é o lote de uma rolagem: enche a tela com folga em qualquer largura
+// (2, 3 ou 4 colunas) e carrega 24 fotos, não 60.
+const POR_PAGINA = 24
+
+/**
+ * A foto no tamanho em que ela vai ser mostrada.
+ *
+ * A loja fotografa com o celular e sobe arquivos de vários megabytes. Mostrar
+ * o original num card de 200px desperdiça banda da cliente e processamento do
+ * Storage — e é a diferença entre a vitrine abrir na hora e engasgar no 3G.
+ *
+ * URL que não seja do Storage (foto hospedada fora) passa como está.
+ */
+function foto(url: any, largura: number, qualidade = 72) {
+  const texto = String(url || '')
+  if (!texto.includes('/storage/v1/object/public/')) return texto || null
+  const base = texto.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')
+  return `${base}?width=${largura}&quality=${qualidade}`
+}
 
 /** Preço que a cliente paga: o promocional quando existir */
 function precoDe(p: any) {
@@ -38,8 +57,13 @@ function precoDe(p: any) {
   return promo > 0 ? promo : Number(p.preco || 0)
 }
 
-/** Só o que a vitrine precisa. Custo, estoque e datas não saem daqui. */
-function paraVitrine(p: any) {
+/**
+ * Só o que a vitrine precisa. Custo, estoque e datas não saem daqui.
+ *
+ * `largura` é o tamanho em que a foto vai aparecer: 400 no card da vitrine,
+ * maior na página da peça, onde ela ocupa a tela.
+ */
+function paraVitrine(p: any, largura = 400) {
   const imagens: string[] = Array.isArray(p.imagens) ? p.imagens : []
   return {
     id: p.id,
@@ -53,7 +77,7 @@ function paraVitrine(p: any) {
     condicao: p.condicao || '',
     preco: precoDe(p),
     preco_cheio: Number(p.preco_promocional || 0) > 0 ? Number(p.preco || 0) : null,
-    imagem: imagens[0] || null,
+    imagem: foto(imagens[0], largura),
   }
 }
 
@@ -143,16 +167,7 @@ async function disponiveis(supabase: any, tenantId: string, pedidoProprio?: stri
   const { error: expError } = await supabase.rpc('loja_expirar_pedidos', { p_tenant_id: tenantId })
   if (expError) console.error('Falha ao expirar reservas:', expError)
 
-  const { data: produtos, error } = await supabase
-    .from('produtos')
-    .select('id, codigo, produto, modelo, cor, marca, tamanho, genero, condicao, descricao, preco, preco_promocional, quantidade, imagens, created_at')
-    .eq('tenant_id', tenantId)
-    .eq('publicado_loja', true)
-    .eq('ativo', true)
-    .gte('quantidade', 1)
-    .order('created_at', { ascending: false })
-
-  if (error) throw error
+  const produtos = await todasPublicadas(supabase, tenantId)
 
   const reservados = await contarReservados(supabase, tenantId, pedidoProprio)
 
@@ -162,6 +177,48 @@ async function disponiveis(supabase: any, tenantId: string, pedidoProprio?: stri
     if (!(precoDe(p) > 0)) return false
     return Number(p.quantidade) - (reservados.get(p.id) || 0) > 0
   })
+}
+
+/**
+ * Todas as peças publicadas, em lotes.
+ *
+ * O PostgREST devolve no máximo 1000 linhas por consulta. Sem buscar em
+ * lotes, uma loja com mais de mil peças publicadas mostraria só as mil
+ * primeiras — e ninguém perceberia, porque a resposta vem sem erro.
+ *
+ * O teto existe para a Edge Function não ficar sem memória num acervo enorme:
+ * chegando nele, a vitrine mostra as mais recentes, que é o que a cliente
+ * ainda não viu.
+ */
+const TETO_CATALOGO = 5000
+const LOTE_BANCO = 1000
+
+async function todasPublicadas(supabase: any, tenantId: string) {
+  const colunas = 'id, codigo, produto, modelo, cor, marca, tamanho, genero, condicao, descricao, preco, preco_promocional, quantidade, imagens, created_at'
+  const todas: any[] = []
+
+  for (let inicio = 0; inicio < TETO_CATALOGO; inicio += LOTE_BANCO) {
+    const { data, error } = await supabase
+      .from('produtos')
+      .select(colunas)
+      .eq('tenant_id', tenantId)
+      .eq('publicado_loja', true)
+      .eq('ativo', true)
+      .gte('quantidade', 1)
+      .order('created_at', { ascending: false })
+      .range(inicio, inicio + LOTE_BANCO - 1)
+
+    if (error) throw error
+    if (!data?.length) break
+
+    todas.push(...data)
+    if (data.length < LOTE_BANCO) break
+  }
+
+  if (todas.length >= TETO_CATALOGO) {
+    console.log(`Catálogo no teto de ${TETO_CATALOGO} peças — tenant ${tenantId}`)
+  }
+  return todas
 }
 
 /**
@@ -286,7 +343,11 @@ async function acaoPeca(supabase: any, tenantId: string, loja: any, payload: any
     return json({ loja, indisponivel: true }, 200)
   }
 
-  const imagens = (Array.isArray(achada.imagens) ? achada.imagens : []).filter(Boolean)
+  // Na página da peça a foto ocupa a tela, então vem maior que no card — e
+  // ainda assim redimensionada, não o arquivo de vários megabytes do celular
+  const imagens = (Array.isArray(achada.imagens) ? achada.imagens : [])
+    .filter(Boolean)
+    .map((url: string) => foto(url, 1000, 80))
 
   // Mais peças do mesmo tipo, para quem chegou pelo link de uma peça só
   const relacionadas = todas
@@ -298,7 +359,9 @@ async function acaoPeca(supabase: any, tenantId: string, loja: any, payload: any
     loja,
     // A descrição só vai na página da peça: no catálogo ela não cabe no card
     // e multiplicaria o tamanho da resposta por nada
-    peca: { ...paraVitrine(achada), imagens, descricao: String(achada.descricao || '').trim() },
+    // 1000px também em `imagem`: é ela que vira o cartão do link no WhatsApp
+    // e no Instagram, onde uma foto de 400px sai borrada
+    peca: { ...paraVitrine(achada, 1000), imagens, descricao: String(achada.descricao || '').trim() },
     relacionadas,
   })
 }
