@@ -266,6 +266,8 @@ export default function EtiquetasPage() {
   const [modalAberto, setModalAberto] = useState(null)
   // instagram (minúsculo, sem @) -> whatsapp do cliente, para o botão de envio do link
   const [whatsPorInstagram, setWhatsPorInstagram] = useState({})
+  // instagram -> total em aberto, para avisar quem vier retirar na loja
+  const [debitoPorInstagram, setDebitoPorInstagram] = useState({})
   // Erros da transportadora ficam em modal: o toast some antes de dar tempo de ler
   const [erroModal, setErroModal] = useState(null)
   // Confirmações em modal, no lugar de window.confirm e prompt
@@ -393,6 +395,23 @@ export default function EtiquetasPage() {
           if (chave && c.whatsapp) mapa[chave] = c.whatsapp
         }
         setWhatsPorInstagram(mapa)
+
+        // Compras em aberto: mesma regra do resto do sistema. Buscamos todas
+        // as pendentes do tenant e cruzamos em minúsculo, porque a cobrança
+        // guarda o instagram escrito do jeito que foi lançado.
+        const { data: pendentes } = await supabase
+          .from('cobrancas')
+          .select('cliente, total')
+          .eq('tenant_id', tenantId)
+          .not('status', 'in', '("PAGO","BAIXADO","CANCELADO")')
+
+        const devendo = {}
+        for (const c of pendentes || []) {
+          const chave = String(c.cliente || '').replace('@', '').trim().toLowerCase()
+          if (!chave) continue
+          devendo[chave] = (devendo[chave] || 0) + Number(c.total || 0)
+        }
+        setDebitoPorInstagram(devendo)
       }
     } catch (err) {
       console.error('Erro ao carregar romaneios:', err)
@@ -1264,6 +1283,34 @@ export default function EtiquetasPage() {
 
                   <div style={{ color: '#e8eaed', fontSize: 14 }}>
                     @{rom.cliente_instagram}
+
+                    {/* Aviso para quem vier retirar na loja */}
+                    {(() => {
+                      const deve = debitoPorInstagram[
+                        String(rom.cliente_instagram || '').replace('@', '').toLowerCase()
+                      ]
+                      if (!deve) return null
+
+                      return (
+                        <span
+                          title="Cliente com compra em aberto — cobrar antes de entregar"
+                          style={{
+                            marginLeft: 8,
+                            display: 'inline-block',
+                            background: 'rgba(244,67,54,0.18)',
+                            color: '#ff8a80',
+                            border: '1px solid rgba(244,67,54,0.5)',
+                            borderRadius: 5,
+                            padding: '2px 6px',
+                            fontSize: 10,
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          DEVE R$ {Number(deve).toFixed(2)}
+                        </span>
+                      )
+                    })()}
                   </div>
 
                   {(!isMobile || rom.frete_pago_em) && (
@@ -1593,6 +1640,28 @@ export default function EtiquetasPage() {
                   <div style={{ color: '#9aa0a6', fontSize: 14, marginTop: 4 }}>
                     @{modalAberto.cliente_instagram}
                   </div>
+
+                  {(() => {
+                    const deve = debitoPorInstagram[
+                      String(modalAberto.cliente_instagram || '').replace('@', '').toLowerCase()
+                    ]
+                    if (!deve) return null
+
+                    return (
+                      <div style={{
+                        marginTop: 10,
+                        padding: '8px 12px',
+                        background: 'rgba(244,67,54,0.12)',
+                        border: '1px solid rgba(244,67,54,0.45)',
+                        borderRadius: 6,
+                        color: '#ff8a80',
+                        fontSize: 13,
+                        fontWeight: 700,
+                      }}>
+                        Cliente deve R$ {Number(deve).toFixed(2)} — cobrar antes de entregar
+                      </div>
+                    )
+                  })()}
                 </div>
                 <button
                   onClick={() => setModalAberto(null)}
