@@ -618,3 +618,51 @@ export async function buscarVendasParaCobranca(tenantId, dataISO, live) {
   console.log('✅ Resultado final:', resultado.length, 'clientes', resultado)
   return resultado
 }
+
+/**
+ * Peças da cobrança que já entraram em um romaneio.
+ *
+ * Excluir a cobrança apaga a venda da conta da cliente, mas a peça continua
+ * dentro do romaneio — e o romaneio pode já estar pago ou despachado. Esta
+ * consulta devolve essas peças para a tela avisar antes.
+ */
+export async function pecasEmRomaneio(tenantId, cobranca) {
+  const vendaIds = (Array.isArray(cobranca?.itens) ? cobranca.itens : [])
+    .map(i => i.venda_id)
+    .filter(Boolean)
+
+  if (!vendaIds.length) return []
+
+  const { data: vendas, error } = await supabase
+    .from('vendas')
+    .select('id, codigo, produto, modelo, cor, tamanho, numero_pedido')
+    .eq('tenant_id', tid(tenantId))
+    .in('id', vendaIds)
+    .not('numero_pedido', 'is', null)
+
+  if (error) throw error
+  if (!vendas?.length) return []
+
+  // Romaneio cancelado não trava nada: a peça voltou a ficar livre
+  const numeros = [...new Set(vendas.map(v => v.numero_pedido))]
+  const { data: romaneios } = await supabase
+    .from('romaneios')
+    .select('numero, status')
+    .eq('tenant_id', tid(tenantId))
+    .neq('status', 'cancelado')
+
+  const ativos = new Map()
+  for (const rom of romaneios || []) {
+    const n = parseInt(String(rom.numero).replace(/\D/g, ''), 10)
+    if (numeros.includes(n)) ativos.set(n, rom)
+  }
+
+  return vendas
+    .filter(v => ativos.has(v.numero_pedido))
+    .map(v => ({
+      codigo: v.codigo,
+      descricao: [v.produto, v.modelo, v.cor, v.tamanho].filter(Boolean).join(' '),
+      romaneio: ativos.get(v.numero_pedido).numero,
+      status: ativos.get(v.numero_pedido).status,
+    }))
+}

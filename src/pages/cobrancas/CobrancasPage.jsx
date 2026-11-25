@@ -10,7 +10,7 @@ import {
   getSaldoCliente, abaterCredito, getMapaCreditosClientes,
   buscarVendasParaCobranca, gerarPreferenciaMp,
   sincronizarCobrancaComVendas, dividirPagamento,
-  marcarVendasComoPagas,
+  marcarVendasComoPagas, pecasEmRomaneio,
 } from '../../services/cobrancasService'
 import { getConfig } from '../../services/configService'
 
@@ -32,6 +32,14 @@ const COR_STATUS = {
 const LABEL_STATUS = {
   PENDENTE: 'Pendente', ENVIADO: 'Enviado', REENVIADO: 'Reenviado',
   LEMBRETE: 'Lembrete', PAGO: 'Pago', BAIXADO: 'Baixado', CANCELADO: 'Cancelado',
+}
+
+// Status do romaneio em palavras, para o aviso de peça já enviada
+const LABEL_STATUS_ROMANEIO = {
+  preparando: 'preparação', pronto: 'pronto', frete_cotado: 'frete cotado',
+  frete_pago: 'frete pago', etiqueta_gerada: 'etiqueta gerada',
+  despachado: 'despachado', em_transito: 'trânsito', entregue: 'entregue',
+  retirado: 'retirado na loja',
 }
 
 function fmtData(iso) {
@@ -169,6 +177,7 @@ export default function CobrancasPage() {
 
   // Modal confirmação
   const [confirm, setConfirm] = useState(null)  // { msg, onSim }
+  const [bloqueio, setBloqueio] = useState(null) // peças já em romaneio
 
   // Modal dividir pagamento
   const [showDividir,    setShowDividir]    = useState(false)
@@ -367,7 +376,23 @@ export default function CobrancasPage() {
     })
   }
 
-  function excluir(cobranca) {
+  async function excluir(cobranca) {
+    // Peça já dentro de romaneio não pode sumir da cobrança: o envio já foi
+    // montado e pode até estar pago ou despachado
+    try {
+      const presas = await pecasEmRomaneio(tenantId, cobranca)
+      if (presas.length) {
+        setBloqueio({
+          cliente: cobranca.cliente,
+          pecas: presas,
+        })
+        return
+      }
+    } catch (e) {
+      showToast('Não foi possível conferir os romaneios: ' + e.message, 'error')
+      return
+    }
+
     setConfirm({
       msg: `Excluir cobrança de ${cobranca.cliente}? Se houver crédito aplicado, ele será devolvido.`,
       onSim: async () => {
@@ -1289,6 +1314,55 @@ export default function CobrancasPage() {
                 disabled={dividindo}
               >
                 {dividindo ? 'Gerando links… (pode levar até 30s)' : 'Gerar 2 Links de Pagamento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          MODAL: PEÇA JÁ EM ROMANEIO
+      ══════════════════════════════════════════════════════ */}
+      {bloqueio && (
+        <div className="modal-overlay" style={{ zIndex: 11000 }}>
+          <div className="modal-card mini" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header" style={{ background: 'rgba(242,139,130,0.08)', borderBottom: '1px solid rgba(242,139,130,0.4)' }}>
+              <h3 style={{ margin: 0, color: 'var(--red)' }}>Não dá para excluir</h3>
+            </div>
+
+            <div className="modal-body" style={{ padding: 20, textAlign: 'left' }}>
+              <p style={{ margin: '0 0 14px', lineHeight: 1.5 }}>
+                {bloqueio.pecas.length === 1
+                  ? 'Uma peça desta cobrança já está em um romaneio:'
+                  : `${bloqueio.pecas.length} peças desta cobrança já estão em romaneio:`}
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                {bloqueio.pecas.map(p => (
+                  <div key={`${p.codigo}-${p.romaneio}`} style={{
+                    padding: '8px 10px',
+                    borderRadius: 6,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--border-light)',
+                    fontSize: 13,
+                  }}>
+                    <b>{p.romaneio}</b> · {p.codigo} {p.descricao}
+                    <span style={{ color: 'var(--muted)', fontSize: 11, display: 'block', marginTop: 2 }}>
+                      romaneio em {LABEL_STATUS_ROMANEIO[p.status] || p.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <p style={{ margin: 0, color: 'var(--muted)', fontSize: 12, lineHeight: 1.6 }}>
+                Tire a peça do romaneio na Expedição antes de excluir a cobrança.
+                Assim o envio não fica com peça que a cliente não vai pagar.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-cancel" style={{ flex: 1 }} onClick={() => setBloqueio(null)}>
+                Entendi
               </button>
             </div>
           </div>
