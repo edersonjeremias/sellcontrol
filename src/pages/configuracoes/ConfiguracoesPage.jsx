@@ -52,6 +52,8 @@ function AbaConfiguracoes({ tenantId, showToast }) {
     email_contato: '',
     link_frete: '',
     mensagem_encerramento_sacolinha: '',
+    sacolinha_encerrar_auto: false,
+    sacolinha_prazo_dias: 60,
     codigo_automatico: false,
     proximo_codigo: 100,
     produtos_codigo_automatico: false,
@@ -87,6 +89,8 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           email_contato: cfg.email_contato || '',
           link_frete: cfg.link_frete || '',
           mensagem_encerramento_sacolinha: cfg.mensagem_encerramento_sacolinha || '',
+          sacolinha_encerrar_auto: cfg.sacolinha_encerrar_auto || false,
+          sacolinha_prazo_dias: cfg.sacolinha_prazo_dias || 60,
           codigo_automatico: cfg.codigo_automatico || false,
           proximo_codigo: cfg.proximo_codigo || 100,
           produtos_codigo_automatico: cfg.produtos_codigo_automatico || false,
@@ -239,6 +243,53 @@ function AbaConfiguracoes({ tenantId, showToast }) {
           Exibido em um modal logo após o cliente encerrar a sacolinha no portal. Ele precisa marcar um check de ciência
           e clicar em "Entendi" para fechar. Deixe em branco para não exibir nenhum aviso.
         </div>
+      </div>
+
+      {/* ── Prazo de guarda da sacolinha ── */}
+      <div style={{ marginBottom: 28, padding: 16, background: 'var(--card-bg)', borderRadius: 8 }}>
+        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 8, fontWeight: 600 }}>
+          ⏳ Prazo de Guarda da Sacolinha
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '8px 0' }}>
+          <input
+            type="checkbox"
+            checked={form.sacolinha_encerrar_auto}
+            onChange={e => setForm(p => ({ ...p, sacolinha_encerrar_auto: e.target.checked }))}
+            style={{ width: 20, height: 20, cursor: 'pointer', accentColor: 'var(--blue)' }}
+          />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-body)', fontWeight: 600, marginBottom: 2 }}>
+              Encerrar a sacolinha automaticamente
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+              Quando a peça mais antiga da cliente passa do prazo, o sistema cria o pedido
+              na Produção sozinho, sem esperar a cliente pedir.
+            </div>
+          </div>
+        </label>
+
+        {form.sacolinha_encerrar_auto && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-light)' }}>
+            <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+              Prazo em dias
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={form.sacolinha_prazo_dias}
+              onChange={e => setForm(p => ({ ...p, sacolinha_prazo_dias: parseInt(e.target.value) || 60 }))}
+              style={{ ...SI, maxWidth: 120 }}
+            />
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, lineHeight: 1.5 }}>
+              60 dias ≈ 2 meses. A conta começa na peça mais antiga que ainda está na
+              sacolinha, não na última compra.
+              <br />
+              Na Produção, esses pedidos aparecem com o selo <b>SISTEMA</b> ao lado do nome,
+              para a equipe saber explicar à cliente que foi o prazo que venceu — ela não pediu o envio.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Embalagens ── */}

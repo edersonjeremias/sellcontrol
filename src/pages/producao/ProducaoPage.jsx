@@ -6,10 +6,10 @@ import {
   STATUS_ENTREGA_OPTS, STATUS_PROD_OPTS, PACOTE_OPTS,
   createProducaoPedido, duplicateProducaoPedido, getProducaoData,
   checkInadimplencia, saveProducaoField,
-  getPecasPendentesCliente, slugCliente,
+  getPecasPendentesCliente, slugCliente, encerrarSacolinhasVencidas,
 } from '../../services/producaoService'
 // PACOTE_OPTS é usado como fallback quando a empresa não cadastrou embalagens
-import { getConfig } from '../../services/configService'
+import { getConfig, saveConfig } from '../../services/configService'
 import { hojeISO } from '../../lib/datas'
 import { linkRastreio } from '../../lib/rastreio'
 import { calcRomaneioTotal, getStatusPedido } from '../../services/pedidosService'
@@ -156,6 +156,15 @@ function MotivoModal({ value, onChange, onConfirm, onClose }) {
   )
 }
 
+// A cliente não pediu este envio: a sacolinha venceu o prazo e o sistema
+// encerrou. A equipe precisa reconhecer isso de longe, porque a cliente vai
+// dizer que não pediu nada quando receber o contato.
+const SeloAuto = () => (
+  <span className="prod-selo-auto" title="Encerrado pelo sistema: a sacolinha passou do prazo de guarda. A cliente não solicitou o envio.">
+    SISTEMA
+  </span>
+)
+
 // Prontos e Enviados viram histórico e crescem sem parar: essas duas abas
 // mostram uma página por vez. Em Produção fica inteira, é a lista de trabalho.
 const ITENS_POR_PAGINA = 20
@@ -208,6 +217,7 @@ function CardProducao({ row, mode, pecasAberta, onAbrir, onTogglePecas }) {
             {row.atrasado && <span title="Atrasado">⏳ </span>}
             {row.cliente_nome || '—'}
           </span>
+          {row.encerrado_automatico && <SeloAuto />}
           {!entrega && row.pecas_pendentes > 0 && (
             <span className="prod-card-pecas"
               style={{ color: row.pecas_pendentes <= PECAS_RAPIDO ? '#22c55e' : '#f0f0f1' }}>
@@ -289,13 +299,14 @@ function ColunasModal({ cols, onChange, onClose }) {
           {COLUNAS_OPCIONAIS.map(({ key, label }) => (
             <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,.07)', cursor: 'pointer', color: '#f0f0f1', fontSize: 13 }}>
               <input type="checkbox" checked={!!cols[key]}
-                onChange={(e) => onChange((prev) => ({ ...prev, [key]: e.target.checked }))}
+                onChange={(e) => onChange({ ...cols, [key]: e.target.checked })}
                 style={{ width: 16, height: 16, accentColor: '#00bcd4', cursor: 'pointer' }} />
               {label}
             </label>
           ))}
           <p style={{ color: '#abb1bd', fontSize: 12, marginTop: 12, lineHeight: 1.5 }}>
-            As colunas desmarcadas somem da tabela e o espaço vai para as colunas de texto.
+            As colunas desmarcadas somem da tabela e o espaço vai para as colunas
+            de texto. A escolha vale para toda a equipe e fica salva.
           </p>
         </div>
         <div className="prod-modal-footer">
@@ -397,18 +408,21 @@ export default function ProducaoPage() {
   const [showSettings, setShowSettings] = useState(false)
   const [colsConfig,   setColsConfig]   = useState({ peso: true, pacote: true })
 
-  // ── Colunas opcionais (lembradas por empresa) ───────────────
-  useEffect(() => {
-    if (!tenantId) return
+  // ── Colunas opcionais ───────────────────────────────────────
+  // A escolha fica no banco, em configuracoes.producao_colunas: vale para a
+  // equipe inteira e sobrevive a trocar de aparelho ou limpar o navegador,
+  // que era o problema de guardar no localStorage.
+  const salvarColunas = useCallback(async (novas) => {
+    setColsConfig(novas)
     try {
-      const salvo = JSON.parse(localStorage.getItem(`sc_prod_cols_${tenantId}`))
-      if (salvo) setColsConfig((p) => ({ ...p, ...salvo }))
-    } catch {}
+      await saveConfig(tenantId, { producao_colunas: novas })
+    } catch (e) {
+      setModalErr({
+        titulo: '⚠️ Erro',
+        mensagem: `As colunas mudaram só nesta tela: não foi possível salvar.<br><br>${e.message || ''}`,
+      })
+    }
   }, [tenantId])
-  useEffect(() => {
-    if (!tenantId) return
-    localStorage.setItem(`sc_prod_cols_${tenantId}`, JSON.stringify(colsConfig))
-  }, [colsConfig, tenantId])
 
   // ── Load ────────────────────────────────────────────────────
   // silencioso: recarrega sem esconder a tabela nem abrir modal de erro
@@ -416,11 +430,32 @@ export default function ProducaoPage() {
     if (!tenantId) return
     if (!silencioso) setLoading(true)
     try {
+      // Antes de listar: encerra as sacolinhas que passaram do prazo, para os
+      // pedidos novos já entrarem nesta mesma leitura
+      const encerradas = await encerrarSacolinhasVencidas(tenantId)
+      if (signal?.cancelled) return
+
       const [data, cfg] = await Promise.all([getProducaoData(tenantId), getConfig(tenantId)])
       if (signal?.cancelled) return
       setRows(data.rows); setClientes(data.clientes)
       if (cfg?.link_frete) setLinkFrete(cfg.link_frete)
       if (cfg?.pacotes?.length) setPacoteOpts(cfg.pacotes)
+      // No recarregamento silencioso a escolha da tela manda: ela pode ter
+      // acabado de mudar e ainda estar a caminho do banco
+      if (!silencioso && cfg?.producao_colunas) {
+        setColsConfig((p) => ({ ...p, ...cfg.producao_colunas }))
+      }
+
+      // A equipe precisa saber de cara: a cliente não pediu esses envios
+      if (!silencioso && encerradas.length > 0) {
+        const linhas = encerradas
+          .map((c) => `<b>${c.cliente}</b> — ${c.pecas} peça(s), a mais antiga de ${c.pecaMaisAntiga}`)
+          .join('<br>')
+        setModalErr({
+          titulo: '🔔 Sacolinha encerrada pelo prazo',
+          mensagem: `O sistema encerrou a sacolinha de ${encerradas.length} cliente(s) que passaram do prazo de guarda. Elas <b>não pediram</b> o envio — se perguntarem, foi o prazo que venceu.<br><br>${linhas}`,
+        })
+      }
     } catch (e) {
       if (signal?.cancelled || silencioso) return
       setModalErr({ titulo: '⚠️ Erro', mensagem: e.message || 'Erro ao carregar.' })
@@ -830,6 +865,7 @@ export default function ProducaoPage() {
                           onClick={() => setDetalhe(row)} title="Clique para editar">
                           {row.cliente_nome || '—'}
                         </button>
+                        {row.encerrado_automatico && <SeloAuto />}
                       </td>
 
                       {/* Status Prod */}
@@ -1055,7 +1091,7 @@ export default function ProducaoPage() {
         )}
         {showDash && <DashboardModal rows={rows} onClose={() => setShowDash(false)} />}
         {showSettings && (
-          <ColunasModal cols={colsConfig} onChange={setColsConfig} onClose={() => setShowSettings(false)} />
+          <ColunasModal cols={colsConfig} onChange={salvarColunas} onClose={() => setShowSettings(false)} />
         )}
       </div>
     </AppShell>

@@ -124,6 +124,28 @@ export async function getPecasPendentesCliente(tenantId, clienteNome) {
     }))
 }
 
+// Encerra sozinha a sacolinha de quem passou do prazo, criando o pedido na
+// Produção. Quem decide se roda e com que prazo é a configuração da empresa —
+// a função devolve lista vazia quando está desligada.
+//
+// Roda no carregamento da Produção, junto da auto-liberação de quem quitou a
+// dívida: a tela é aberta todo dia e assim ninguém precisa lembrar de nada.
+export async function encerrarSacolinhasVencidas(tenantId = null) {
+  const tid = TENANT_ID(tenantId)
+  const { data, error } = await supabase.rpc('encerrar_sacolinhas_vencidas', { p_tenant_id: tid })
+  if (error) {
+    // Não é motivo para derrubar a tela: a equipe segue trabalhando e a
+    // rotina tenta de novo na próxima abertura.
+    console.error('Encerramento automático indisponível:', error.message)
+    return []
+  }
+  return (data || []).map((r) => ({
+    cliente: r.cliente_nome || '',
+    pecaMaisAntiga: formatDateBr(r.peca_mais_antiga),
+    pecas: Number(r.pecas) || 0,
+  }))
+}
+
 export async function getProducaoData(tenantId = null) {
   const tid = TENANT_ID(tenantId)
   const [pedidosRes, clientesRes, devedoresRes, romaneiosRes, pecasMap] = await Promise.all([

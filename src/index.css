@@ -1327,6 +1327,23 @@ select.prod-v2-cell option { background: #26292f; color: #f0f0f1; }
 .prod-modal-body  { color:#abb1bd; font-size:13px; line-height:1.6; margin-bottom:14px; }
 .prod-modal-footer { display:flex; justify-content:flex-end; gap:8px; }
 
+/* ── Selo: encerrado pelo sistema, não pela cliente ── */
+.prod-selo-auto {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .4px;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: help;
+}
+.prod-card-topo .prod-selo-auto { margin-left: 0; flex-shrink: 0; }
+
 /* ── Paginação (abas Prontos e Enviados) ── */
 .prod-v2-paginacao {
   display: flex; align-items: center; justify-content: center;
