@@ -288,6 +288,7 @@ export async function getVendas(tenantId = null, dataLive, liveNome, opts = {}) 
     data_live:    row.data_live    || '',
     live_nome:    row.live_nome    || '',
     sacolinha:    row.sacolinha    ?? null,
+    descricao:    row.descricao    || '',
     etapa:        row.etapa        || 'fechada',
     status:       row.status       || '',
     fila1:        row.fila1        || '',
@@ -424,6 +425,7 @@ export async function salvarVendas(tenantId = null, linhas, dataLiveOrOpts, live
       data_live: temCliente ? (dataLive || null) : null,
       live_nome: temCliente ? (liveNome || '') : '',
       sacolinha: l.sacolinha ?? null, status: l.status || '',
+      descricao: l.descricao || '',
       fila1: l.fila1 || '', fila2: l.fila2 || '', fila3: l.fila3 || '',
       etapa,
     }
@@ -532,6 +534,7 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
         marca: linha.marca || '',
         tamanho: linha.tamanho || '',
         codigo: linha.codigo || '',
+        descricao: linha.descricao || '',
         sacolinha: linha.sacolinha ?? null
       })
       .eq('id', linha.id)
@@ -551,6 +554,7 @@ export async function enviarVenda(tenantId = null, linha, dataLive, liveNome) {
     preco: parseMoney(linha.preco),
     preco_promocional: parseMoney(linha.preco_promocional),
     codigo: linha.codigo || '',
+    descricao: linha.descricao || '',
     cliente_nome: linha.cliente_nome || '',
     data_live: dataLive || null, live_nome: liveNome || '',
     sacolinha: linha.sacolinha ?? null,
@@ -633,6 +637,7 @@ export async function updateVendaEnviada(tenantId = null, linha) {
       preco:             parseMoney(linha.preco),
       preco_promocional: parseMoney(linha.preco_promocional),
       codigo:            linha.codigo       || '',
+      descricao:         linha.descricao    || '',
       cliente_nome:      linha.cliente_nome || '',
       data_live:         linha.data_live    || null,
       live_nome:         linha.live_nome    || '',

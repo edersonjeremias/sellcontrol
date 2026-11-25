@@ -189,6 +189,16 @@ function TabelaRow({
           onKeyDown={onEnterNext} disabled={camposDesabilitados} />
       </td>
 
+      {/* DESCRIÇÃO (opcional) */}
+      {cols.descricao && (
+        <td className="col-descricao">
+          <input className="cell-input" value={linha.descricao || ''}
+            onChange={e => upd('descricao', e.target.value)}
+            onKeyDown={onEnterNext} disabled={camposDesabilitados}
+            title={linha.descricao || ''} />
+        </td>
+      )}
+
       {/* CONDIÇÃO (opcional) */}
       {cols.condicao && (
         <td className="col-tam">
@@ -222,7 +232,7 @@ function TabelaRow({
 
       {/* PREÇO PROMOCIONAL (opcional) */}
       {cols.preco_promocional && (
-        <td className="col-preco">
+        <td className="col-promo">
           <input
             className="cell-input price"
             value={linha.preco_promocional}

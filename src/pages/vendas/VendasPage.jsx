@@ -46,7 +46,7 @@ function novaLinha(codigo = '') {
     tamanho: '', preco: '', preco_promocional: '', codigo, cliente_nome: '',
     data_live: '', live_nome: '', sacolinha: null,
     status: '', fila1: '', fila2: '', fila3: '',
-    custo: '', qtde: '', condicao: '', genero: '',
+    custo: '', qtde: '', condicao: '', genero: '', descricao: '',
     isNew: true, deleted: false, isSent: false, liberado: false,
   }
 }
@@ -82,6 +82,7 @@ function mapRow(row) {
     qtde:         row.qtde         || '',
     condicao:     row.condicao     || '',
     genero:       row.genero       || '',
+    descricao:    row.descricao    || '',
     isSent: linhaJaEnviada(row.status) && row.cliente_nome?.trim(),
     liberado: false,
   }
@@ -168,7 +169,7 @@ export default function VendasPage() {
   const isRecoveringBackupRef = useRef(false)  // flag para não resetar cache ao recuperar backup
 
   // ── Configurações de colunas ──
-  const [colsConfig,    setColsConfig]    = useState({ custo: false, condicao: false, genero: false, preco_promocional: false })
+  const [colsConfig,    setColsConfig]    = useState({ custo: false, condicao: false, genero: false, preco_promocional: false, descricao: false })
   const [showSettings,  setShowSettings]  = useState(false)
   const [modalQt,       setModalQt]       = useState(false)
   const [qtInput,       setQtInput]       = useState('2')
@@ -192,6 +193,7 @@ export default function VendasPage() {
   const [lastSaveTime, setLastSaveTime] = useState(null)
   const [showRecoverModal, setShowRecoverModal] = useState(false)
   const [backupRemoto, setBackupRemoto] = useState(false) // backup veio de outra máquina
+  const [produtoSelIdx, setProdutoSelIdx] = useState(0)
   const [modalRestaurarLive, setModalRestaurarLive] = useState(false)
   const [livesSalvas, setLivesSalvas] = useState([])
   const [carregandoLives, setCarregandoLives] = useState(false)
@@ -1181,6 +1183,7 @@ export default function VendasPage() {
         })
         if (controller.signal.aborted) return
         setProdutosSugestoes(resultado.data)
+        setProdutoSelIdx(0) // cada busca nova comeca destacando o primeiro
       } catch (err) {
         if (controller.signal.aborted) return
         console.error('❌ Erro ao buscar produtos:', err)
@@ -1196,15 +1199,33 @@ export default function VendasPage() {
 
   // ── ADICIONAR PRODUTO NA VENDA AO PRESSIONAR ENTER ──
   const handleFiltroProdutoKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && produtosSugestoes.length > 0) {
+    if (!produtosSugestoes.length) {
+      if (e.key === 'Escape') { setProdutosSugestoes([]); setFiltroProduto('') }
+      return
+    }
+    // Setas percorrem a lista e Enter pega o item destacado, como nos campos
+    // da linha — antes o Enter pegava sempre o primeiro resultado.
+    if (e.key === 'ArrowDown') {
       e.preventDefault()
-      adicionarProdutoNaVenda(produtosSugestoes[0]) // Adiciona o primeiro da lista
+      setProdutoSelIdx(i => (i + 1) % produtosSugestoes.length)
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setProdutoSelIdx(i => (i - 1 + produtosSugestoes.length) % produtosSugestoes.length)
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const escolhido = produtosSugestoes[produtoSelIdx] || produtosSugestoes[0]
+      if (escolhido) adicionarProdutoNaVenda(escolhido)
+      return
     }
     if (e.key === 'Escape') {
       setProdutosSugestoes([])
       setFiltroProduto('')
     }
-  }, [produtosSugestoes])
+  }, [produtosSugestoes, produtoSelIdx])
 
   // ── ADICIONAR PRODUTO DA BUSCA NA TABELA DE VENDAS ──
   const adicionarProdutoNaVenda = useCallback(async (produto) => {
@@ -1225,6 +1246,7 @@ export default function VendasPage() {
       marca: produto.marca || '',
       tamanho: produto.tamanho || '',
       condicao: produto.condicao || '',
+      descricao: produto.descricao || '',
       custo: formatMoney(produto.custo) || '0,00', // Formata com vírgula
       preco: formatMoney(produto.preco) || '0,00', // Formata com vírgula
       // Sem a coluna ativa a promoção do catálogo não entra na venda
@@ -2517,7 +2539,8 @@ export default function VendasPage() {
                   {produtosSugestoes.map((p, idx) => (
                     <li
                       key={p.id}
-                      className={idx === 0 ? 'active' : ''}
+                      className={idx === produtoSelIdx ? 'active' : ''}
+                      onMouseEnter={() => setProdutoSelIdx(idx)}
                       onClick={() => adicionarProdutoNaVenda(p)}
                     >
                       {p.codigo} - {p.produto} - {p.modelo} - {p.cor} - {p.marca} {p.tamanho && `(${p.tamanho})`} - R$ {p.preco} - Qtd: {p.quantidade}
@@ -2567,10 +2590,11 @@ export default function VendasPage() {
                     {colsConfig.genero   && <th className="col-genero">Gênero</th>}
                     <th className="col-cor">Cor</th><th>Marca</th>
                     <th className="col-tam">Tam.</th>
+                    {colsConfig.descricao && <th className="col-descricao">Descrição</th>}
                     {colsConfig.condicao && <th className="col-tam">Cond.</th>}
                     {colsConfig.custo    && <th className="col-preco">Custo</th>}
                     <th className="col-preco">Preço</th>
-                    {colsConfig.preco_promocional && <th className="col-preco" style={{ color: 'var(--yellow)' }}>🎁 Promoção</th>}
+                    {colsConfig.preco_promocional && <th className="col-promo" style={{ color: 'var(--yellow)' }}>Promo</th>}
                     <th className="col-cod">Cód.</th>
                     <th className="col-cliente">Cliente</th>
                     <th className="col-acoes">Ações</th>
@@ -2906,6 +2930,7 @@ export default function VendasPage() {
               { key:'preco_promocional', label:'🎁 Coluna Preço Promocional' },
               { key:'condicao', label:'Coluna Novo / Usado' },
               { key:'genero',   label:'Coluna Masc. / Fem. / Unissex' },
+              { key:'descricao', label:'Coluna Descrição' },
             ].map(({ key, label }) => (
               <label key={key} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 0', borderBottom:'1px solid rgba(255,255,255,.07)', cursor:'pointer', color:'#c9d1d9', fontSize:14 }}>
                 <input type="checkbox" checked={!!colsConfig[key]}

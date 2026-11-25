@@ -764,6 +764,11 @@ input[type="date"] { color-scheme: dark; }
 .vendas-page tbody tr:hover { background-color: #1a1a1a; }
 .vendas-page .cell-input { background: var(--cell-bg); border-color: var(--cell-border); border-radius: 8px; }
 .vendas-page .cell-input:focus { border-color: var(--blue); }
+/* Colunas estreitas: Tam. e Promo tem conteudo curto e roubavam largura
+   das colunas de texto. So em Vendas. */
+.vendas-page .col-tam { min-width: 58px; }
+.vendas-page .col-promo { min-width: 62px; width: 62px; text-align: right; }
+.vendas-page .col-descricao { min-width: 180px; }
 
 /* ── TABELA ── */
 #tabela-container { flex: 1; min-height: 0; width: calc(100% - 32px); margin: 16px 16px 20px; background: var(--card-bg); border-radius: 8px; box-shadow: var(--shadow); border: 1px solid var(--border-light); display: flex; flex-direction: column; overflow: hidden; }
