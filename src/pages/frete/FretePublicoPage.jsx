@@ -344,6 +344,43 @@ function FretePublico() {
         </div>
       </div>
 
+      {/* ── Compra em aberto: o envio fica travado até o acerto ────────── */}
+      {!pago && dados.debito?.tem && (
+        <div style={{ ...card, borderColor: 'rgba(251,188,4,.45)', background: 'rgba(251,188,4,.08)' }}>
+          <div style={{ color: 'var(--p-yellow)', fontWeight: 800, fontSize: 16, marginBottom: 8 }}>
+            Você tem live em aberto
+          </div>
+
+          <div style={{ color: '#e8eaed', fontSize: 13, lineHeight: 1.6 }}>
+            {dados.debito.quantidade === 1
+              ? 'Encontramos uma compra ainda não paga'
+              : `Encontramos ${dados.debito.quantidade} compras ainda não pagas`}
+            {' '}no total de <b>{moeda(dados.debito.valor)}</b>.<br />
+            Para liberar o envio deste pedido, é preciso acertar antes.
+          </div>
+
+          {dados.debito.cobrancas?.some(c => c.link_codigo) && (
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {dados.debito.cobrancas.filter(c => c.link_codigo).map(c => (
+                <a
+                  key={c.link_codigo}
+                  className="portal-btn portal-btn-blue"
+                  href={`${window.location.origin}/r/${c.link_codigo}`}
+                  style={{ textDecoration: 'none', textAlign: 'center' }}
+                >
+                  Pagar compra de {fmtDataLive(c.data)} · {moeda(c.total)}
+                </a>
+              ))}
+            </div>
+          )}
+
+          <div style={{ color: 'var(--p-muted)', fontSize: 12, marginTop: 12, lineHeight: 1.5 }}>
+            Já pagou? Pode levar alguns minutos para o sistema confirmar.
+            Se continuar aparecendo, fale com a loja.
+          </div>
+        </div>
+      )}
+
       {/* ── Retirado na loja: não há frete a pagar ─────────────────────── */}
       {romaneio.status === 'retirado' && (
         <div style={{ ...card, borderColor: 'rgba(197,138,249,.4)', background: 'rgba(197,138,249,.08)', textAlign: 'center' }}>
@@ -603,7 +640,7 @@ function FretePublico() {
       </div>
 
       {/* ── Pedido sem peso/medidas: não dá para cotar ─────────────────── */}
-      {!pago && !dados.medidas_ok && (
+      {!pago && !dados.debito?.tem && !dados.medidas_ok && (
         <div style={{ ...card, borderColor: 'rgba(242,139,130,.4)', background: 'rgba(242,139,130,.08)' }}>
           <div style={{ color: 'var(--p-red)', fontWeight: 700, fontSize: 14, marginBottom: 6 }}>
             ⚠️ Não conseguimos calcular o frete
@@ -616,7 +653,7 @@ function FretePublico() {
       )}
 
       {/* ── Frete ──────────────────────────────────────────────────────── */}
-      {!pago && dados.medidas_ok && !editandoEndereco && endereco && (
+      {!pago && !dados.debito?.tem && dados.medidas_ok && !editandoEndereco && endereco && (
         <div style={card}>
           <div style={titulo}>Frete</div>
 

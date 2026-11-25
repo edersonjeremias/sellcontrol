@@ -172,6 +172,7 @@ async function acaoDados(supabase: any, romaneio: any, instagram: string) {
     .order('padrao', { ascending: false })
 
   const pagamento = await buscarPagamento(supabase, romaneio.id)
+  const debito = await buscarDebito(supabase, romaneio.tenant_id, instagram)
   const margem = Number(config?.margem_frete ?? 15)
 
   // Cotações já salvas (cliente voltou ao link sem ter escolhido ainda)
@@ -199,6 +200,7 @@ async function acaoDados(supabase: any, romaneio: any, instagram: string) {
       frete_pago_em: romaneio.frete_pago_em,
     },
     itens: itens || [],
+    debito,
     cliente: {
       nome: cadastro?.nome || '',
       telefone: cadastro?.telefone || '',
@@ -314,6 +316,10 @@ async function acaoCotar(supabase: any, romaneio: any, instagram: string, payloa
   if (['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado'].includes(romaneio.status)) {
     return json({ error: 'O frete deste pedido já foi pago' }, 409)
   }
+
+  // Compra em aberto trava o envio: o frete só é cotado depois do acerto
+  const debito = await buscarDebito(supabase, romaneio.tenant_id, instagram)
+  if (debito.tem) return json({ error: mensagemDebito(debito), debito }, 409)
 
   // Sem peso/medidas reais a cotação sairia errada — melhor parar aqui
   if (!temMedidas(romaneio)) return json({ error: SEM_MEDIDAS, sem_medidas: true }, 422)
@@ -475,6 +481,10 @@ async function acaoPagar(supabase: any, romaneio: any, payload: any) {
   if (['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado'].includes(romaneio.status)) {
     return json({ error: 'O frete deste pedido já foi pago' }, 409)
   }
+  const instagram = String(romaneio.cliente_instagram || '').replace('@', '')
+  const debito = await buscarDebito(supabase, romaneio.tenant_id, instagram)
+  if (debito.tem) return json({ error: mensagemDebito(debito), debito }, 409)
+
   if (!temMedidas(romaneio)) return json({ error: SEM_MEDIDAS, sem_medidas: true }, 422)
   if (!payload.cotacao_id) return json({ error: 'Escolha uma opção de frete' }, 400)
 
@@ -561,6 +571,46 @@ async function acaoStatus(supabase: any, romaneio: any) {
     pago: ['frete_pago', 'etiqueta_gerada', 'despachado', 'em_transito', 'entregue', 'retirado'].includes(romaneio.status),
     pagamento_status: pagamento?.status || null,
   })
+}
+
+function mensagemDebito(debito: { quantidade: number; valor: number }) {
+  const compras = debito.quantidade === 1 ? 'uma compra em aberto' : `${debito.quantidade} compras em aberto`
+  const valor = debito.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return `Você tem ${compras}, no total de ${valor}. ` +
+         `Acerte com a loja para liberar o envio deste pedido.`
+}
+
+/**
+ * Compras em aberto da cliente. Mesma regra do resto do sistema: cobrança
+ * que não está paga, baixada nem cancelada é dívida.
+ */
+async function buscarDebito(supabase: any, tenantId: string, instagram: string) {
+  const { data, error } = await supabase
+    .from('cobrancas')
+    .select('id, data, total, status, link_codigo')
+    .eq('tenant_id', tenantId)
+    .ilike('cliente', instagram)
+    .not('status', 'in', '("PAGO","BAIXADO","CANCELADO")')
+    .order('data', { ascending: true })
+
+  if (error) {
+    console.error('Erro ao buscar débito do cliente:', error)
+    return { tem: false, quantidade: 0, valor: 0, cobrancas: [] }
+  }
+
+  const cobrancas = data || []
+  const valor = cobrancas.reduce((s: number, c: any) => s + Number(c.total || 0), 0)
+
+  return {
+    tem: cobrancas.length > 0,
+    quantidade: cobrancas.length,
+    valor: Number(valor.toFixed(2)),
+    cobrancas: cobrancas.map((c: any) => ({
+      data: c.data,
+      total: Number(c.total || 0),
+      link_codigo: c.link_codigo,
+    })),
+  }
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
