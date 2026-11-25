@@ -675,6 +675,12 @@ export default function ProdutosPage() {
     setProdutoComImagens(p)
   }, [produtos])
 
+  // Duplo clique na linha abre o modal: a descricao nao cabe na celula da tabela
+  const abrirModalEdicao = useCallback((key) => {
+    const p = produtosRef.current.find(pr => pr._key === key)
+    if (p) setProdutoEditando(p)
+  }, [])
+
   // Atualiza produto após alteração nas imagens
   const atualizarAposImagens = useCallback(async () => {
     if (!produtoComImagens?.id) return
@@ -1202,6 +1208,7 @@ export default function ProdutosPage() {
                   onSalvar={salvar}
                   onCopiar={copiar}
                   onAbrirImagens={abrirImagens}
+                  onAbrirModal={abrirModalEdicao}
                   onExcluir={excluir}
                   onReativar={reativar}
                   onAlternarLoja={alternarLoja}
@@ -1524,10 +1531,10 @@ export default function ProdutosPage() {
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Descrição</label>
                 <textarea
-                  rows={3}
+                  rows={10}
                   value={produtoEditando.descricao || ''}
                   onChange={e => setProdutoEditando({...produtoEditando, descricao: e.target.value})}
-                  style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14, resize: 'vertical' }}
+                  style={{ width: '100%', padding: '10px 12px', background: '#2a2a2a', border: '1px solid var(--border-light)', borderRadius: 6, color: 'var(--text-header)', fontSize: 14, resize: 'vertical', minHeight: 120, lineHeight: 1.5, fontFamily: 'inherit' }}
                   placeholder="Caimento, medidas, detalhes de uso…"
                 />
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>Aparece na página da peça, na loja</span>
@@ -1803,7 +1810,7 @@ function copyToClipboard(text) {
   })
 }
 
-function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onAbrirImagens, onExcluir, onReativar, onAlternarLoja, onCopiarLinkLoja }) {
+function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQuantidade, onSalvar, onCopiar, onAbrirImagens, onAbrirModal, onExcluir, onReativar, onAlternarLoja, onCopiarLinkLoja }) {
   const p = produto
   const desabilitado = !p.ativo && !p.isNew
   const [txtCopiado, setTxtCopiado] = useState(false)
@@ -1873,7 +1880,11 @@ function ProdutoRow({ produto, listas, cols, onChange, onProdutoBlur, onEnterNoQ
   }
 
   return (
-    <tr className={p.isNew ? 'linha-nova' : ''} style={{ opacity: desabilitado ? 0.5 : 1 }}>
+    <tr
+      className={p.isNew ? 'linha-nova' : ''}
+      style={{ opacity: desabilitado ? 0.5 : 1 }}
+      onDoubleClick={() => onAbrirModal?.(p._key)}
+    >
       {/* PRODUTO */}
       <td className="col-produto">
         <AutocompleteInput
