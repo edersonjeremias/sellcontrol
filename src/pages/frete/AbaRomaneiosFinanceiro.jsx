@@ -5,7 +5,7 @@ import {
 } from '../../services/freteFinanceiroService'
 import {
   S, LABEL_STATUS, COR_STATUS, LABEL_METODO,
-  primeiroDiaMes, ultimoDiaMes, fmtData, fmtDataHora,
+  primeiroDiaMes, ultimoDiaMes, isoLocal, fmtData, fmtDataHora, partesDataHora,
   parseValor, mascaraValor, casaBusca,
 } from './freteUi'
 
@@ -32,13 +32,20 @@ function corDiferenca(d) {
 export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, isMobile, abas }) {
   const [dataIni, setDataIni] = useState(primeiroDiaMes)
   const [dataFim, setDataFim] = useState(ultimoDiaMes)
+  const [periodoPor, setPeriodoPor] = useState('romaneio')
   const [situacao, setSituacao] = useState('todos')
   const [busca, setBusca] = useState('')
 
   // Só o período vai ao servidor. Busca e situação filtram o array local, para
   // seguir filtrando a cada tecla sem ida ao banco.
-  const [aplicado, setAplicado] = useState(() => ({ dataIni: primeiroDiaMes(), dataFim: ultimoDiaMes() }))
+  const [aplicado, setAplicado] = useState(() => ({
+    dataIni: primeiroDiaMes(), dataFim: ultimoDiaMes(), periodoPor: 'romaneio',
+  }))
   const [jaFiltrou, setJaFiltrou] = useState(false)
+
+  // Vale o que já foi consultado, não o que está no campo: os cartões precisam
+  // descrever os dados na tela, não o filtro que o usuário está montando
+  const porTransferencia = aplicado.periodoPor === 'transferencia'
 
   const [linhas, setLinhas] = useState([])
   const [carregando, setCarregando] = useState(false)
@@ -63,11 +70,24 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
 
   useEffect(() => { carregar() }, [carregar])
 
-  const pendente = !jaFiltrou || aplicado.dataIni !== dataIni || aplicado.dataFim !== dataFim
+  const pendente = !jaFiltrou
+    || aplicado.dataIni !== dataIni
+    || aplicado.dataFim !== dataFim
+    || aplicado.periodoPor !== periodoPor
 
   function aplicarFiltros() {
     setJaFiltrou(true)
-    setAplicado({ dataIni, dataFim })
+    setAplicado({ dataIni, dataFim, periodoPor })
+  }
+
+  // "Quanto foi transferido hoje" em um clique: joga as duas datas para hoje e
+  // já consulta, sem passar pelo Filtrar
+  function filtrarHoje() {
+    const hoje = isoLocal(new Date())
+    setDataIni(hoje)
+    setDataFim(hoje)
+    setJaFiltrou(true)
+    setAplicado({ dataIni: hoje, dataFim: hoje, periodoPor })
   }
 
   // ── Filtro em memória ─────────────────────────────────────────────────────
@@ -225,6 +245,10 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
 
   const todosMarcados = idsVisiveis.length > 0 && idsVisiveis.every(id => selecionados.has(id))
 
+  const vazioTexto = porTransferencia
+    ? 'Nenhuma transferência marcada neste período.'
+    : 'Nenhum romaneio no período.'
+
   return (
     <>
       {/* ── Título, filtros e abas na mesma linha ── */}
@@ -239,6 +263,15 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
             placeholder="Romaneio, cliente, rastreio... (separe por vírgula)"
             style={S.inp}
           />
+        </div>
+        <div className="ff-f">
+          <label>Período por</label>
+          <select value={periodoPor} onChange={e => setPeriodoPor(e.target.value)}
+            style={{ ...S.inp, minWidth: 150 }}
+            title="Qual data o período usa para filtrar">
+            <option value="romaneio">Data do romaneio</option>
+            <option value="transferencia">Data da transferência</option>
+          </select>
         </div>
         <div className="ff-f">
           <label>De</label>
@@ -262,6 +295,7 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
           >
             {pendente ? 'Filtrar •' : 'Filtrar'}
           </button>
+          <button onClick={filtrarHoje} style={S.sec} title="Período de hoje, já aplicado">Hoje</button>
           <button onClick={exportarCsv} style={S.sec}>Exportar</button>
         </div>
         {abas}
@@ -291,11 +325,19 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
             <div className="ff-card-label">Sobrou</div>
             <div className="ff-card-valor" style={{ color: 'var(--green)' }}>{fmtR(totais.sobra)}</div>
           </div>
-          <div className="ff-card">
-            <div className="ff-card-label">A transferir</div>
-            <div className="ff-card-valor" style={{ color: 'var(--purple)' }}>{fmtR(totais.aTransferir)}</div>
-            <div className="ff-card-obs">já transferido: {fmtR(totais.transferido)}</div>
-          </div>
+          {porTransferencia ? (
+            <div className="ff-card ff-card-sep">
+              <div className="ff-card-label">Transferido no período</div>
+              <div className="ff-card-valor" style={{ color: 'var(--purple)' }}>{fmtR(totais.transferido)}</div>
+              <div className="ff-card-obs">{totais.qtd} romaneio(s)</div>
+            </div>
+          ) : (
+            <div className="ff-card">
+              <div className="ff-card-label">A transferir</div>
+              <div className="ff-card-valor" style={{ color: 'var(--purple)' }}>{fmtR(totais.aTransferir)}</div>
+              <div className="ff-card-obs">já transferido: {fmtR(totais.transferido)}</div>
+            </div>
+          )}
         </div>
       )}
 
@@ -345,7 +387,7 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
                 </div>
               </div>
             ))}
-            {linhas.length === 0 && <p className="ff-vazio">Nenhum romaneio no período.</p>}
+            {linhas.length === 0 && <p className="ff-vazio">{vazioTexto}</p>}
             {linhas.length > 0 && visiveis.length === 0 && <p className="ff-vazio">Nenhum resultado para o filtro.</p>}
           </div>
         ) : (
@@ -415,6 +457,11 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
                       >
                         {l.frete_transferido ? 'Sim' : 'Não'}
                       </button>
+                      {l.frete_transferido && l.frete_transferido_em && (
+                        <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
+                          {partesDataHora(l.frete_transferido_em).data}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <div className="acoes-wrapper">
@@ -427,7 +474,7 @@ export default function AbaRomaneiosFinanceiro({ tenantId, showToast, profile, i
                   </tr>
                 ))}
                 {linhas.length === 0 && (
-                  <tr><td colSpan={11} className="ff-vazio">Nenhum romaneio no período.</td></tr>
+                  <tr><td colSpan={11} className="ff-vazio">{vazioTexto}</td></tr>
                 )}
                 {linhas.length > 0 && visiveis.length === 0 && (
                   <tr><td colSpan={11} className="ff-vazio">Nenhum resultado para o filtro.</td></tr>

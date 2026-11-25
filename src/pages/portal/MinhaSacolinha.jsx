@@ -19,6 +19,13 @@ function fmtData(iso) {
   return `${d}/${m}/${y}`
 }
 
+// Busca sem acento e em minúsculas, para "calca" achar "Calça"
+function semAcento(v) {
+  return String(v || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
 function fmtValor(v) {
   return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
@@ -47,6 +54,7 @@ export default function MinhaSacolinha({ onIrParaFrete }) {
   const [aba,       setAba]           = useState('sacola')
   const [modalOpen, setModalOpen]     = useState(false)
   const [avisoFrete, setAvisoFrete]   = useState(null)
+  const [busca,      setBusca]        = useState('')
 
   const carregar = useCallback(async () => {
     if (!cliente) return
@@ -80,10 +88,17 @@ export default function MinhaSacolinha({ onIrParaFrete }) {
   const temDivida = cobrancas.some(c => c.status_pagamento !== 'PAGO')
   const ativa     = isProducaoAtiva(producao)
 
-  const pecasSacola   = produtos.filter(p =>
+  // Multi-termo: "calca jeans azul" exige as três palavras, em qualquer ordem
+  const termos = semAcento(busca).trim().split(/\s+/).filter(Boolean)
+  const achados = termos.length === 0 ? produtos : produtos.filter(p => {
+    const texto = semAcento(`${p.codigo_peca || ''} ${p.descricao_completa || ''}`)
+    return termos.every(t => texto.includes(t))
+  })
+
+  const pecasSacola   = achados.filter(p =>
     !STATUS_ENVIADO_PECA.some(v => (p.status_peca || '').toLowerCase().includes(v))
   )
-  const pecasEnviadas = produtos.filter(p =>
+  const pecasEnviadas = achados.filter(p =>
     STATUS_ENVIADO_PECA.some(v => (p.status_peca || '').toLowerCase().includes(v))
   )
 
@@ -139,10 +154,22 @@ export default function MinhaSacolinha({ onIrParaFrete }) {
           className={`portal-btn ${!ativa && !temDivida ? 'portal-btn-green' : 'portal-btn-gray'}`}
           onClick={handleEncerrarClick}
           disabled={ativa}
+          style={{ flexDirection: 'column', gap: 1, lineHeight: 1.25 }}
         >
-          Encerrar Sacolinha
+          <span>Encerrar Sacolinha</span>
+          <span style={{ fontSize: 11, fontWeight: 500, opacity: .85 }}>
+            Solicitar envio
+          </span>
         </button>
       </div>
+
+      <input
+        className="portal-input"
+        value={busca}
+        onChange={e => setBusca(e.target.value)}
+        placeholder="Buscar por código, produto, cor, marca..."
+        style={{ marginBottom: 10 }}
+      />
 
       {/* Abas */}
       <div className="portal-tabs">

@@ -43,18 +43,37 @@ const CAMPOS_ROMANEIO = `
 
 /**
  * Romaneios do período com custo do frete, recebido no MP e diferença.
+ *
+ * O período pode contar por duas datas diferentes, e a escolha muda a
+ * pergunta que a tela responde:
+ *   romaneio      — quais romaneios saíram no período (visão de expedição)
+ *   transferencia — quanto de frete foi transferido no período, pela data em
+ *                   que a transferência foi marcada (visão de caixa)
+ *
  * @param {string} tenantId
- * @param {{ dataIni: string, dataFim: string }} filtros - datas yyyy-mm-dd
+ * @param {{ dataIni: string, dataFim: string, periodoPor?: 'romaneio'|'transferencia' }} filtros
  */
-export async function getRomaneiosFinanceiro(tenantId, { dataIni, dataFim }) {
-  const { data, error } = await supabase
+export async function getRomaneiosFinanceiro(tenantId, { dataIni, dataFim, periodoPor = 'romaneio' }) {
+  let consulta = supabase
     .from('romaneios')
     .select(CAMPOS_ROMANEIO)
     .eq('tenant_id', tenantId)
-    .gte('created_at', inicioDoDia(dataIni))
-    .lte('created_at', fimDoDia(dataFim))
-    .order('created_at', { ascending: false })
 
+  if (periodoPor === 'transferencia') {
+    // Quem não foi transferido não tem data de transferência: fica de fora
+    consulta = consulta
+      .eq('frete_transferido', true)
+      .gte('frete_transferido_em', inicioDoDia(dataIni))
+      .lte('frete_transferido_em', fimDoDia(dataFim))
+      .order('frete_transferido_em', { ascending: false })
+  } else {
+    consulta = consulta
+      .gte('created_at', inicioDoDia(dataIni))
+      .lte('created_at', fimDoDia(dataFim))
+      .order('created_at', { ascending: false })
+  }
+
+  const { data, error } = await consulta
   if (error) throw error
   return (data || []).map(calcularLinha)
 }
