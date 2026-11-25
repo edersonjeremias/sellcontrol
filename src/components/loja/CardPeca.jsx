@@ -30,7 +30,13 @@ export default function CardPeca({ peca, slug, noCarrinho }) {
 
       <div className="loja-card-info">
         <span className="loja-card-nome">{tituloPeca(peca) || `Peça ${peca.codigo}`}</span>
-        {legendaPeca(peca) && <span className="loja-card-meta">{legendaPeca(peca)}</span>}
+        {/* Código na frente de tudo: é por ele que a cliente pergunta no
+            direct, e sem isso a loja tinha de abrir a peça para descobrir */}
+        <span className="loja-card-meta">
+          {peca.codigo && <b className="loja-card-codigo">Cód. {peca.codigo}</b>}
+          {peca.codigo && legendaPeca(peca) ? ' · ' : ''}
+          {legendaPeca(peca)}
+        </span>
         <span className="loja-card-preco">
           {moeda(peca.preco)}
           {peca.preco_cheio ? <s>{moeda(peca.preco_cheio)}</s> : null}

@@ -167,11 +167,13 @@ function Peca() {
             <h1 className="loja-peca-nome">{tituloPeca(peca) || `Peça ${peca.codigo}`}</h1>
 
             <div className="loja-peca-meta">
+              {/* Código primeiro, e em destaque: é o que a cliente manda no
+                  direct e o que a loja procura para achar a peça */}
+              <span className="loja-peca-tag codigo">Cód. {peca.codigo}</span>
               {peca.marca && <span className="loja-peca-tag">{peca.marca}</span>}
               {rotuloGenero(peca.genero) && <span className="loja-peca-tag">{rotuloGenero(peca.genero)}</span>}
               {peca.tamanho && <span className="loja-peca-tag">Tamanho {peca.tamanho}</span>}
               {peca.condicao && <span className="loja-peca-tag">{peca.condicao}</span>}
-              <span className="loja-peca-tag">Cód. {peca.codigo}</span>
             </div>
 
             <div className="loja-peca-preco">
