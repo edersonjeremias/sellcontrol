@@ -17,6 +17,7 @@ import AbaStatusExpedicao from './AbaStatusExpedicao'
 import AbaTransportadoras from './AbaTransportadoras'
 import AbaIntegracoes from './AbaIntegracoes'
 import AbaLoja from './AbaLoja'
+import AbaBio from './AbaBio'
 
 const SI = {
   background: 'var(--input-bg)', border: '1px solid var(--border-light)',
@@ -1087,7 +1088,9 @@ export default function ConfiguracoesPage() {
 
   return (
     <AppShell title="Configurações">
-      <div style={{ padding: '0 16px', maxWidth: 640 }}>
+      {/* A aba do link da bio mostra a configuração e a pré-visualização lado
+          a lado: nos 640px das outras o celular da prévia não cabe. */}
+      <div style={{ padding: '0 16px', maxWidth: aba === 'bio' ? 1100 : 640 }}>
 
         <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 4 }}>
           <TabBtn label="Configurações da Empresa" active={aba === 'config'} onClick={() => setAba('config')} />
@@ -1096,6 +1099,7 @@ export default function ConfiguracoesPage() {
               <TabBtn label="Usuários e Permissões" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
               <TabBtn label="Transportadoras" active={aba === 'transportadoras'} onClick={() => setAba('transportadoras')} />
               <TabBtn label="Loja" active={aba === 'loja'} onClick={() => setAba('loja')} />
+              <TabBtn label="Link da Bio" active={aba === 'bio'} onClick={() => setAba('bio')} />
               <TabBtn label="Status Expedição" active={aba === 'status'} onClick={() => setAba('status')} />
               <TabBtn label="Assuntos" active={aba === 'assuntos'} onClick={() => setAba('assuntos')} />
               <TabBtn label="Integrações" active={aba === 'integracoes'} onClick={() => setAba('integracoes')} />
@@ -1118,6 +1122,9 @@ export default function ConfiguracoesPage() {
         )}
         {aba === 'loja' && (
           <AbaLoja tenantId={tenantId} showToast={showToast} />
+        )}
+        {aba === 'bio' && (
+          <AbaBio tenantId={tenantId} showToast={showToast} />
         )}
         {aba === 'status' && (
           <AbaStatusExpedicao tenantId={tenantId} showToast={showToast} />

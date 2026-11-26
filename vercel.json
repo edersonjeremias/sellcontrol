@@ -9,6 +9,14 @@
       "destination": "/api/loja-peca?slug=:slug&codigo=:codigo"
     },
     {
+      "source": "/bio/:slug",
+      "destination": "/api/bio?slug=:slug"
+    },
+    {
+      "source": "/b/:slug",
+      "destination": "/api/bio?slug=:slug"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/"
     }

@@ -1,0 +1,279 @@
+/* ================================================
+   LINK DA BIO — página pública de links
+   ================================================
+   As cores não vêm daqui: cada empresa escolhe as suas na configuração e elas
+   chegam como variáveis --bio-* no elemento raiz. Este arquivo cuida só da
+   forma — espaçamento, tamanho e movimento —, que é igual para todo mundo.
+
+   O mesmo CSS desenha a página aberta e a pré-visualização dentro das
+   Configurações. Duas folhas de estilo garantiriam que a pré-visualização
+   mentisse mais cedo ou mais tarde.
+   ================================================ */
+
+.bio-root {
+  --bio-raio: 10px;
+  min-height: 100vh;
+  width: 100%;
+  background: var(--bio-fundo);
+  color: var(--bio-texto);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 40px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* Rolagem funciona, barra não aparece (regra do manifesto) */
+.bio-root *::-webkit-scrollbar { display: none; }
+.bio-root * { -ms-overflow-style: none; scrollbar-width: none; box-sizing: border-box; }
+
+.bio-raio-reto        { --bio-raio: 2px; }
+.bio-raio-arredondado { --bio-raio: 12px; }
+.bio-raio-pilula      { --bio-raio: 999px; }
+
+.bio-conteudo {
+  width: 100%;
+  max-width: 580px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Topo ── */
+.bio-topo {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  min-height: 36px;
+  margin-bottom: 4px;
+}
+
+.bio-compartilhar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(127, 127, 127, .18); /* navegador antigo, sem color-mix */
+  background: color-mix(in srgb, var(--bio-texto) 10%, transparent);
+  color: var(--bio-texto);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .15s, transform .15s;
+}
+.bio-compartilhar:hover {
+  background: rgba(127, 127, 127, .3);
+  background: color-mix(in srgb, var(--bio-texto) 20%, transparent);
+}
+.bio-compartilhar:active { transform: scale(.94); }
+
+/* ── Identidade ── */
+.bio-logo {
+  width: 104px;
+  height: 104px;
+  object-fit: cover;
+  background: rgba(127, 127, 127, .14);
+  background: color-mix(in srgb, var(--bio-texto) 8%, transparent);
+  margin-bottom: 14px;
+}
+.bio-logo-circulo  { border-radius: 50%; }
+.bio-logo-quadrado { border-radius: 20px; }
+
+.bio-logo-vazio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--bio-texto);
+  border: 1.5px solid rgba(127, 127, 127, .45);
+  border: 1.5px solid color-mix(in srgb, var(--bio-texto) 25%, transparent);
+}
+
+.bio-titulo {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  text-align: center;
+  word-break: break-word;
+}
+
+.bio-descricao {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  opacity: .72;
+  max-width: 420px;
+  white-space: pre-line;
+}
+
+/* ── Redes sociais ── */
+.bio-sociais {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px;
+  margin: 16px 0 4px;
+}
+
+.bio-social {
+  color: var(--bio-texto);
+  opacity: .9;
+  display: inline-flex;
+  transition: opacity .15s, transform .15s;
+}
+.bio-social:hover  { opacity: 1; transform: translateY(-2px); }
+.bio-social:active { transform: scale(.92); }
+
+/* ── Botões ── */
+.bio-botoes {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.bio-botao {
+  position: relative;
+  width: 100%;
+  min-height: 58px;
+  padding: 14px 44px;
+  border-radius: var(--bio-raio);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.bio-botao:hover  { transform: translateY(-2px); }
+.bio-botao:active { transform: scale(.985); }
+
+/* Os três acabamentos. A cor em si vem da configuração. */
+.bio-botao-solido {
+  background: var(--bio-botao);
+  color: var(--bio-botao-texto);
+  border: 1px solid rgba(127, 127, 127, .22);
+  border: 1px solid color-mix(in srgb, var(--bio-botao-texto) 12%, transparent);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+}
+.bio-botao-contorno {
+  background: transparent;
+  color: var(--bio-botao);
+  border: 2px solid var(--bio-botao);
+}
+.bio-botao-suave {
+  background: rgba(127, 127, 127, .2);
+  background: color-mix(in srgb, var(--bio-botao) 18%, transparent);
+  color: var(--bio-botao-texto);
+  border: 1px solid rgba(127, 127, 127, .4);
+  border: 1px solid color-mix(in srgb, var(--bio-botao) 45%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+/* Destaque: o botão que a loja quer que seja clicado primeiro */
+.bio-botao-destaque {
+  box-shadow: 0 0 0 2px rgba(127, 127, 127, .7), 0 6px 22px rgba(0, 0, 0, .3);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--bio-botao-texto) 55%, transparent),
+              0 6px 22px rgba(0, 0, 0, .3);
+}
+
+.bio-botao-rotulo {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.bio-botao-sub {
+  font-size: 12px;
+  opacity: .7;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+}
+
+/* O ícone não empurra o texto: o rótulo fica centrado como no modelo */
+.bio-botao-icone {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: .85;
+}
+
+/* ── Rodapé ── */
+.bio-rodape {
+  margin-top: 36px;
+  font-size: 12px;
+  opacity: .45;
+  text-align: center;
+}
+.bio-rodape a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 700;
+}
+.bio-rodape a:hover { text-decoration: underline; }
+
+/* ── Estados de página inteira ── */
+.bio-aviso {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  text-align: center;
+  background: #121212;
+  color: #e0e0e0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+.bio-aviso b { font-size: 19px; color: #fff; }
+.bio-aviso p { margin: 0; font-size: 14px; color: #9aa0a6; max-width: 340px; line-height: 1.5; }
+
+/* ================================================
+   Pré-visualização dentro das Configurações
+   ================================================
+   O mesmo desenho, dentro de um celular. A altura é fixa porque a tela de
+   configuração não pode crescer junto com a lista de botões. */
+.bio-previa {
+  width: 300px;
+  height: 600px;
+  border-radius: 34px;
+  border: 8px solid #2a2a2a;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .55);
+  overflow: hidden;
+  background: #121212;
+}
+
+.bio-previa .bio-root {
+  min-height: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 18px 14px 28px;
+}
+
+.bio-previa .bio-logo       { width: 78px; height: 78px; }
+.bio-previa .bio-titulo     { font-size: 16px; }
+.bio-previa .bio-descricao  { font-size: 12px; }
+.bio-previa .bio-botao      { min-height: 48px; padding: 10px 36px; }
+.bio-previa .bio-botao-rotulo { font-size: 13px; }
+.bio-previa .bio-botao-sub  { font-size: 11px; }
+.bio-previa .bio-botoes     { gap: 10px; margin-top: 18px; }
+.bio-previa .bio-sociais    { gap: 14px; }

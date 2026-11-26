@@ -66,6 +66,7 @@ import ImpressaoSacolinhaClientePage from './pages/impressao/ImpressaoSacolinhaC
 import EtiquetasProdutosPage         from './pages/impressao/EtiquetasPage'
 import EtiquetasEnvioPage            from './pages/etiquetas/EtiquetasPage'
 import PortalApp                     from './pages/portal/PortalApp'
+import BioPage                       from './pages/bio/BioPage'
 import LojaPage                      from './pages/loja/LojaPage'
 import PecaPage                      from './pages/loja/PecaPage'
 import CheckoutPage                  from './pages/loja/CheckoutPage'
@@ -147,6 +148,10 @@ export default function App() {
             <Route path="/loja/:slug/checkout" element={<CheckoutPage />} />
             <Route path="/loja/:slug/pedido/:pedidoId" element={<PedidoPage />} />
             <Route path="/loja/:slug" element={<LojaPage />} />
+            {/* Link da bio: a página de links que vai no Instagram.
+                /b/ é a versão curta, para caber em qualquer lugar. */}
+            <Route path="/bio/:slug" element={<BioPage />} />
+            <Route path="/b/:slug" element={<BioPage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>
