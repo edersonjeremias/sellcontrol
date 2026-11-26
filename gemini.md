@@ -29,8 +29,9 @@ O SellControl é um sistema SaaS multi-tenant.
 2. **Nomenclatura:**
     - Entidades de banco de dados e regras de negócio geralmente em Português (ex: `vendas`, `clientes`, `producao`).
     - Estrutura de código e componentes React seguem convenções em Inglês (ex: `VendasPage`, `useAuth`, `AuthContext`).
-3. **Autenticação:** As rotas são protegidas pelos componentes `RequireAuth` e `RequireRole` definidos no `AuthContext`.
-4. **Tratamento de Erros:** Utilize o `showGlobalToast` do `AppContext` para feedback consistente ao usuário.
+3. **Autenticação:** As rotas são protegidas pelos componentes `RequireAuth`, `RequirePage`, `RequireModulo` e `RequireRole`, definidos no `AuthContext`. Tela normal usa `RequirePage slug="..."` (confere módulo contratado → cargo → permissão por usuário). `RequireRole` sozinho é só para as telas do dono do SaaS.
+4. **Módulos por empresa:** o sistema é vendido por assinatura e **toda página ou canal público novo tem que entrar no catálogo** `src/lib/modulos.js`, senão fica fora da negociação. A regra completa está em [CLAUDE.md](CLAUDE.md).
+5. **Tratamento de Erros:** Utilize o `showGlobalToast` do `AppContext` para feedback consistente ao usuário.
 
 ## 📜 Principais Entidades (Database)
 - `tenants`: Empresas cadastradas.
