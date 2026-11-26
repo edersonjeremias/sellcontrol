@@ -115,6 +115,23 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 26/11/2026 (3) — peça pendente não encerra a sacolinha sozinha
+
+[20261126e](supabase/migrations/20261126e_encerramento_ignora_pendente.sql)
+recria `encerrar_sacolinhas_vencidas`: peça com status `Pendente` sai da conta
+do prazo, como já saíam `Gerar Crédito` e `Crédito gerado`. Nenhuma delas é
+peça para montar, e contando o prazo por elas a rotina encerrava a sacolinha de
+quem só tinha peça pendente — a Produção recebia pedido sem nada para fazer.
+
+A regra vale **só na rotina de encerramento**. Na coluna PEÇAS, na lista que a
+seta da Produção abre e no filtro "Não enviados" da Expedição a peça pendente
+continua à vista: ela ainda tem que ser resolvida. Quem decide isso nas telas é
+`pecaNaSacolinha` em [src/lib/statusVenda.js](src/lib/statusVenda.js), que
+**não** mudou.
+
+Efeito: cliente só com peça pendente ou com crédito nunca é encerrada sozinha;
+quem tem também peça normal é encerrada pelo prazo da peça normal mais antiga.
+
 ### 26/11/2026 (2) — o valor quem decide é o servidor, e o portal é por empresa
 
 **Dinheiro.** O link de pagamento era montado no navegador, com o preço dentro,
