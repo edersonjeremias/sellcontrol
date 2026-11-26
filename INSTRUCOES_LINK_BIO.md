@@ -63,7 +63,7 @@ cliente vê.
 - **Contagem de cliques** — aparece ao lado de cada link depois do primeiro
   toque.
 - **Prévia no WhatsApp** — colar o link numa conversa mostra o logo e o nome da
-  loja, não "SellControl" (`api/bio.js`).
+  loja, não "SellControl" (`api/preview.js`).
 - **Link curto** — `/b/<endereco>` abre a mesma página de `/bio/<endereco>`.
 - **Botão de compartilhar** — usa o compartilhamento nativo do celular e, no
   computador, copia o link.
@@ -84,4 +84,4 @@ cliente vê.
 | `src/components/bio/EditorLinks.jsx` | A lista de links da configuração |
 | `src/components/bio/IconesBio.jsx` | Os ícones (SVG, sem fonte externa) |
 | `src/pages/bio/BioPage.jsx` | A página aberta `/bio/:slug` |
-| `api/bio.js` | As meta tags para o robô do WhatsApp e do Instagram |
+| `api/preview.js` | As meta tags para o robô do WhatsApp e do Instagram (bio e peça) |
