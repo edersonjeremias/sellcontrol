@@ -66,6 +66,27 @@ Detalhes, decisões e o que ainda falta:
 
 ---
 
+## Multi-empresa e segredos
+
+O sistema tem mais de uma empresa dentro do mesmo banco. Três regras que valem
+para qualquer código novo:
+
+1. **`tenant_id` é obrigatório, nunca tem padrão.** Não escreva
+   `tenantId || import.meta.env.VITE_TENANT_ID`. Esse fallback existe em
+   serviços antigos e faz uma chamada sem tenant gravar na empresa do Ederson
+   sem dar erro. Em código novo, falte o tenant, estoure.
+2. **Credencial de empresa não cai em variável de ambiente.** Token do Mercado
+   Pago, token do Melhor Envio e afins vêm de `configuracoes` daquele
+   `tenant_id`. Sem token configurado, o certo é erro com mensagem clara —
+   cair no token do ambiente é cobrar na conta de outra empresa.
+3. **Quem usa `SUPABASE_SERVICE_ROLE_KEY` valida o chamador.** Service role
+   ignora RLS. Em rota de `api/` ou Edge Function, confira o
+   `Authorization` com `supabase.auth.getUser()` e cheque `tenant_id`/role no
+   `users_perfil` antes de agir (modelo: `api/mp-extrato.js`), ou use um
+   segredo **por empresa**, guardado no banco (modelo:
+   `supabase/functions/receber-solicitacao-envio`). E segredo nenhum mora em
+   `src/` — tudo em `src/` vai inteiro para o navegador.
+
 ## Banco de dados
 
 - Mudança de schema vai em `supabase/migrations/<AAAAMMDD>_<assunto>.sql`,

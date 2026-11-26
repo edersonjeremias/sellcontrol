@@ -2,6 +2,13 @@
 
 > Documento para onboarding de novos desenvolvedores. Descreve o que é o sistema, onde chegamos e decisões técnicas importantes.
 
+> ⚠️ **Parado em abril/2026.** Serve para entender a origem do sistema, mas
+> envelheceu: o domínio de produção hoje é `https://sellcontrol.app`, as roles
+> são só `master`, `admin` e `usuario`, o menu passou a ser bloqueado de
+> verdade (por módulo contratado, cargo e permissão de página) e a seção "Onde
+> paramos" não vale mais. O que manda hoje é [CLAUDE.md](CLAUDE.md),
+> [gemini.md](gemini.md) e os `INSTRUCOES_*.md`.
+
 ---
 
 ## O que é o sistema
