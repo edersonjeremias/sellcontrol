@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
+import { exigirTenant } from '../lib/tenant'
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'relatorioService')
 
 // Converte preço para número (aceita string com vírgula ou número)
 function toNum(val) {
@@ -63,7 +64,7 @@ export async function getClientesRelatorio(tenantId) {
 
 // ── Relatório: vendas ──────────────────────────────────────────
 
-export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtroStatus, filtroStatusExpedicao, cliente } = {}) {
+export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtroStatus, filtroStatusExpedicao, cliente, origem } = {}) {
   const TAMANHO_PAGINA = 1000
 
   // Sem paginação o Supabase corta em 1000 linhas; como a ordem é data_live DESC,
@@ -106,6 +107,13 @@ export async function getVendasRelatorio(tenantId, { dataInicio, dataFim, filtro
 
     if (cliente?.trim()) {
       q = q.ilike('cliente_nome', `%${cliente.trim()}%`)
+    }
+
+    // A loja grava origem='loja' em cada peça; o que vem da live fica nulo
+    if (origem === 'loja') {
+      q = q.eq('origem', 'loja')
+    } else if (origem === 'live') {
+      q = q.is('origem', null)
     }
 
     return q

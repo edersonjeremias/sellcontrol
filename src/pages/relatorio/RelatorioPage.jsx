@@ -46,6 +46,7 @@ export default function RelatorioPage() {
   const [cliente, setCliente]       = useState('')   // vai ao servidor, diferente da busca livre
   const [filtroStatus, setFiltroStatus] = useState('todos') // 'todos' | 'vendidos' | 'cadastrados' | 'ENVIADO' | 'CANCELADO' | 'DEVOLVIDO'
   const [filtroStatusExpedicao, setFiltroStatusExpedicao] = useState('todos') // Filtro de status da expedição
+  const [origem, setOrigem] = useState('todas') // 'todas' | 'loja' | 'live'
   const [statusExpedicaoList, setStatusExpedicaoList] = useState([]) // Lista de status de expedição
   const [clientesList, setClientesList] = useState([])   // sugestões do campo Cliente
   const [vendasBase, setVendasBase] = useState([])  // todos do período (sem filtro de busca)
@@ -53,7 +54,7 @@ export default function RelatorioPage() {
   // sem isso cada tecla numa data dispara uma consulta.
   const [aplicado, setAplicado] = useState(() => ({
     dataInicio: primeiroDiaMes(), dataFim: ultimoDiaMes(),
-    filtroStatus: 'todos', filtroStatusExpedicao: 'todos', cliente: '',
+    filtroStatus: 'todos', filtroStatusExpedicao: 'todos', cliente: '', origem: 'todas',
   }))
   const [carregando, setCarregando] = useState(false)
   const [jaFiltrou, setJaFiltrou] = useState(false)  // nenhuma consulta até o primeiro Filtrar
@@ -72,7 +73,7 @@ export default function RelatorioPage() {
 
   const aplicarFiltros = useCallback(() => {
     setJaFiltrou(true)
-    setAplicado({ dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente })
+    setAplicado({ dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente, origem })
   }, [dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente])
 
   const pendente =
@@ -81,7 +82,8 @@ export default function RelatorioPage() {
     aplicado.dataFim !== dataFim ||
     aplicado.filtroStatus !== filtroStatus ||
     aplicado.filtroStatusExpedicao !== filtroStatusExpedicao ||
-    aplicado.cliente !== cliente
+    aplicado.cliente !== cliente ||
+    aplicado.origem !== origem
 
   useEffect(() => { carregar() }, [carregar])
 
@@ -318,6 +320,11 @@ export default function RelatorioPage() {
           {statusExpedicaoList.map(status => (
             <option key={status.id} value={status.nome}>{status.nome}</option>
           ))}
+        </select>
+        <select value={origem} onChange={e => setOrigem(e.target.value)} style={{ ...S.inp, minWidth:120 }}>
+          <option value="todas">🧾 Origem: Todas</option>
+          <option value="loja">🛒 Loja online</option>
+          <option value="live">📹 Live</option>
         </select>
         <AutocompleteInput
           value={cliente}
