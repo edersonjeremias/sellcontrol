@@ -3,6 +3,9 @@ import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { siteUrl } from '../lib/siteUrl'
 import { getUserProfile, getPagesForUser } from '../services/authService'
+import { getMeusModulos } from '../services/modulosService'
+import { moduloPorSlug, SLUGS_ESSENCIAIS, SLUGS_FORA_DO_CATALOGO } from '../lib/modulos'
+import ModuloBloqueado from '../components/ui/ModuloBloqueado'
 
 const AuthContext = createContext(null)
 
@@ -17,6 +20,10 @@ export function AuthProvider({ children }) {
   const [session,    setSession]    = useState(null)
   const [profile,    setProfile]    = useState(null)
   const [menuItems,  setMenuItems]  = useState([])
+  // null = ainda não sei o que a empresa contratou (sessão carregando, ou a
+  // migration de tenant_modulos ainda não rodou). Lista vazia trancaria todo
+  // mundo fora; null faz o sistema seguir pelas páginas, como era antes.
+  const [modulos,    setModulos]    = useState(null)
   const [isRecovery, setIsRecovery] = useState(_recoveryOnLoad)
   const [authError,  setAuthError]  = useState('')
   const [menuLoaded, setMenuLoaded] = useState(false)
@@ -26,6 +33,7 @@ export function AuthProvider({ children }) {
     if (!user) {
       setProfile(null)
       setMenuItems([])
+      setModulos(null)
       setMenuLoaded(false)
       return null
     }
@@ -37,6 +45,7 @@ export function AuthProvider({ children }) {
       setAuthError('Este e-mail não tem acesso ao sistema. Peça ao administrador para criar seu usuário em Configurações → Usuários e Permissões.')
       setProfile(null)
       setMenuItems([])
+      setModulos(null)
       setMenuLoaded(false)
       await supabase.auth.signOut()
       return null
@@ -47,25 +56,43 @@ export function AuthProvider({ children }) {
       await supabase.auth.signOut()
       setProfile(null)
       setMenuItems([])
+      setModulos(null)
       setMenuLoaded(false)
       return null
     }
 
     setProfile(data)
     setAuthError('')
-    const pagesRes = await getPagesForUser(data.id, data.tenant_id, data.role)
+
+    // O que a empresa contratou e o que esta pessoa pode abrir são duas
+    // perguntas diferentes, e as duas valem: o módulo é da empresa, a página é
+    // do usuário. Vão juntas numa ida só para não atrasar o login.
+    const [pagesRes, modulosAtivos] = await Promise.all([
+      getPagesForUser(data.id, data.tenant_id, data.role),
+      getMeusModulos(),
+    ])
+
+    setModulos(modulosAtivos)
+
     if (pagesRes.error) {
       console.error('Erro ao carregar menu', pagesRes.error)
       setMenuItems([])
       setMenuLoaded(false)
     } else {
       const fetched = pagesRes.data || []
-      console.log('🔍 DEBUG - Páginas retornadas do banco:', fetched)
-      console.log('🔍 DEBUG - Total de páginas:', fetched.length)
-      console.log('🔍 DEBUG - Slugs:', fetched.map(p => p.slug))
 
-      // Menu sempre vem do banco: master recebe tudo, os demais só o que está em pages_access
-      setMenuItems(fetched)
+      // O menu mostra só o que a empresa tem contratado. `pages` é mantida em
+      // sincronia ao salvar os módulos, mas se sobrar uma linha antiga ela
+      // apareceria no menu levando a uma tela bloqueada.
+      const visiveis = modulosAtivos === null
+        ? fetched
+        : fetched.filter(p =>
+            modulosAtivos.includes(p.slug) ||
+            SLUGS_ESSENCIAIS.includes(p.slug) ||
+            SLUGS_FORA_DO_CATALOGO.includes(p.slug)
+          )
+
+      setMenuItems(visiveis)
     }
     setMenuLoaded(true)
     return data
@@ -97,6 +124,7 @@ export function AuthProvider({ children }) {
         setSession(sess)
         setProfile(null)
         setMenuItems([])
+        setModulos(null)
         setMenuLoaded(false)
         setIsRecovery(true)
         if (isMounted) setLoading(false)
@@ -114,6 +142,7 @@ export function AuthProvider({ children }) {
         setSession(null)
         setProfile(null)
         setMenuItems([])
+        setModulos(null)
         setMenuLoaded(false)
         setIsRecovery(false)
         if (isMounted) setLoading(false)
@@ -182,6 +211,7 @@ export function AuthProvider({ children }) {
     const result = await supabase.auth.signOut()
     setProfile(null)
     setMenuItems([])
+    setModulos(null)
     setMenuLoaded(false)
     setSession(null)
     setIsRecovery(false)
@@ -190,18 +220,38 @@ export function AuthProvider({ children }) {
     return result
   }, [])
 
+  /**
+   * A empresa contratou este módulo?
+   *
+   * Sem resposta do banco (modulos === null) devolve true: é o estado entre o
+   * deploy e a migration, e barrar aí tiraria o sistema do ar de todo mundo.
+   * O master do sistema (quem vende) enxerga tudo.
+   */
+  const temModulo = useCallback((slug) => {
+    if (!slug) return false
+    if (profile?.role === 'master') return true
+    if (modulos === null) return true
+    // Dashboard e Configurações vão junto com a assinatura. Mesmo que a linha
+    // falte no banco, ninguém fica trancado fora do próprio sistema.
+    if (SLUGS_ESSENCIAIS.includes(slug)) return true
+    if (SLUGS_FORA_DO_CATALOGO.includes(slug)) return true
+    return modulos.includes(slug)
+  }, [modulos, profile?.role])
+
   const value = useMemo(() => ({
     loading,
     session,
     profile,
     menuItems,
     menuLoaded,
+    modulos,
+    temModulo,
     isRecovery,
     authError,
     signIn,
     signInWithGoogle,
     signOut,
-  }), [loading, session, profile, menuItems, menuLoaded, isRecovery, authError, signIn, signInWithGoogle, signOut])
+  }), [loading, session, profile, menuItems, menuLoaded, modulos, temModulo, isRecovery, authError, signIn, signInWithGoogle, signOut])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
@@ -223,17 +273,39 @@ export function RequireAuth({ children }) {
   return children
 }
 
-// Protege a rota pela página liberada no botão "Páginas" de cada usuário.
+// Protege a rota em três perguntas, nesta ordem:
+//
+//   1. a EMPRESA contratou o módulo?        → senão, tela de não contratado
+//   2. o CARGO dessa pessoa abre essa tela? → senão, volta para o início
+//   3. a PÁGINA está liberada para ela?     → senão, primeira que ela pode ver
+//
 // Sem isso o menu só escondia o item — quem digitasse a URL entrava assim mesmo.
 function PageGuard({ slug, children }) {
-  const { profile, menuItems, menuLoaded } = useAuth()
+  const { profile, menuItems, menuLoaded, temModulo } = useAuth()
 
-  // Master enxerga tudo
+  // O master do sistema (quem vende) enxerga tudo, em qualquer empresa.
   if (profile?.role === 'master') return children
 
-  // Espera o menu carregar para não barrar quem tem acesso
+  // Espera o carregamento: decidir antes mostraria a tela por um instante
+  // para depois trocar por "não contratado".
   if (!menuLoaded) return <div style={{ padding: 24, color: '#fff' }}>Carregando...</div>
 
+  // 1. Contrato da empresa. Vale até para quem administra a empresa: o módulo
+  //    é da assinatura, não do cargo.
+  if (!temModulo(slug)) return <ModuloBloqueado slug={slug} />
+
+  // 2. Cargo. Telas como Configurações, RH, Cupons e Avisos são de quem
+  //    administra a empresa: nelas o cargo é a permissão, e não se depende da
+  //    página estar marcada em Usuários e Permissões — era assim antes dos
+  //    módulos, e quem administra a empresa não pode perder as Configurações
+  //    por causa de uma caixinha desmarcada.
+  const rolesPermitidos = moduloPorSlug(slug)?.roles
+  if (rolesPermitidos) {
+    if (profile && rolesPermitidos.includes(profile.role)) return children
+    return <Navigate to="/dashboard" replace />
+  }
+
+  // 3. Permissão de página, por usuário.
   if (menuItems.some((p) => p.slug === slug)) return children
 
   // Sem acesso: manda para a primeira página que a pessoa pode abrir
@@ -252,6 +324,22 @@ export function RequirePage({ slug, children }) {
   return (
     <RequireAuth>
       <PageGuard slug={slug}>{children}</PageGuard>
+    </RequireAuth>
+  )
+}
+
+/**
+ * Só o contrato da empresa, sem olhar permissão de página.
+ *
+ * Para tela que é de todo mundo da empresa quando o módulo existe — o
+ * quiosque de ponto é o caso: a funcionária bate o ponto sem ter página
+ * liberada em Usuários e Permissões.
+ */
+export function RequireModulo({ slug, children }) {
+  const { temModulo } = useAuth()
+  return (
+    <RequireAuth>
+      {temModulo(slug) ? children : <ModuloBloqueado slug={slug} />}
     </RequireAuth>
   )
 }

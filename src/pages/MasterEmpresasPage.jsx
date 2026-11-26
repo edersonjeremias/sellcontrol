@@ -6,9 +6,10 @@ import { useApp } from '../context/AppContext'
 import { createTenantAndAdmin } from '../services/masterService'
 import { getConfig } from '../services/configService'
 import {
-  getAllTenants, getTenantPages, saveTenantPages, ALL_PAGES,
+  getAllTenants, getTenantPages,
   updateTenantInfo, deleteTenant, getTenantAdmin, updateTenantAdmin,
 } from '../services/authService'
+import AbaModulosEmpresa from '../components/config/AbaModulosEmpresa'
 import { supabase } from '../lib/supabase'
 import { COBRANCA_ENVIADA } from '../lib/statusVenda'
 
@@ -186,7 +187,7 @@ function AbaEmpresa({ showToast }) {
         })
         if (error) throw error
         if (!data?.ok) throw new Error(data?.message || 'Falha ao criar.')
-        showToast('Empresa e admin criados!', 'success')
+        showToast('Empresa criada. Agora habilite os módulos em "Módulos por Empresa".', 'success')
         novaEmpresa()
         carregarTenants()
       } else {
@@ -488,101 +489,6 @@ function AbaEmpresa({ showToast }) {
           </>
         )}
       </form>
-    </div>
-  )
-}
-
-// ── Aba: Páginas por Empresa ────────────────────────────────────
-const BY_CATEGORY = ALL_PAGES.reduce((acc, p) => {
-  if (!acc[p.category]) acc[p.category] = []
-  acc[p.category].push(p)
-  return acc
-}, {})
-
-function AbaPaginas({ showToast }) {
-  const [tenants,  setTenants]  = useState([])
-  const [tenantId, setTenantId] = useState('')
-  const [selected, setSelected] = useState({})
-  const [loading,  setLoading]  = useState(false)
-  const [saving,   setSaving]   = useState(false)
-
-  useEffect(() => {
-    getAllTenants().then(({ data }) => setTenants(data))
-  }, [])
-
-  useEffect(() => {
-    setSelected({})
-    if (!tenantId) return
-    setLoading(true)
-    getTenantPages(tenantId).then(({ data }) => {
-      const slugs = new Set((data || []).map(p => p.slug))
-      const sel = {}
-      ALL_PAGES.forEach(p => { sel[p.slug] = slugs.has(p.slug) })
-      setSelected(sel)
-      setLoading(false)
-    })
-  }, [tenantId])
-
-  async function salvar() {
-    setSaving(true)
-    try {
-      const slugs = Object.entries(selected).filter(([, v]) => v).map(([k]) => k)
-      await saveTenantPages(tenantId, slugs)
-      showToast('Páginas salvas!')
-    } catch (e) {
-      showToast('Erro: ' + e.message, 'error')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const toggle = slug => setSelected(prev => ({ ...prev, [slug]: !prev[slug] }))
-
-  return (
-    <div style={{ padding: '20px 0', maxWidth: 520 }}>
-      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 16 }}>
-        Selecione a empresa e marque quais páginas ela poderá usar.
-      </p>
-
-      <div style={{ marginBottom: 20 }}>
-        <label style={{ fontSize: 12, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Empresa</label>
-        <select value={tenantId} onChange={e => setTenantId(e.target.value)} style={SI}>
-          <option value="">-- Selecione uma empresa --</option>
-          {tenants.map(t => (
-            <option key={t.tenant_id} value={t.tenant_id}>
-              {t.nome_loja || t.tenant_id}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {tenantId && loading && <div style={{ color: 'var(--muted)', fontSize: 13 }}>Carregando…</div>}
-
-      {tenantId && !loading && (
-        <>
-          {Object.entries(BY_CATEGORY).map(([cat, pages]) => (
-            <div key={cat} style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid var(--border-light)' }}>
-                {cat}
-              </div>
-              {pages.map(p => (
-                <label key={p.slug} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 8px', borderRadius: 6, cursor: 'pointer', marginBottom: 2 }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--table-row-hover)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <input type="checkbox" checked={!!selected[p.slug]} onChange={() => toggle(p.slug)}
-                    style={{ accentColor: 'var(--blue)', width: 16, height: 16, cursor: 'pointer' }} />
-                  <span style={{ fontSize: 14, color: 'var(--text-body)' }}>{p.label}</span>
-                  <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>/{p.slug}</span>
-                </label>
-              ))}
-            </div>
-          ))}
-          <button className="btn-acao btn-blue" onClick={salvar} disabled={saving}
-            style={{ width: '100%', minHeight: 42, fontSize: 14, color: '#171717', fontWeight: 700, marginTop: 8 }}>
-            {saving ? 'Salvando…' : 'Salvar Páginas da Empresa'}
-          </button>
-        </>
-      )}
     </div>
   )
 }
@@ -2201,7 +2107,7 @@ function AbaUsuarios({ showToast }) {
 
                 {tenantPages.length === 0 ? (
                   <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-                    Esta empresa não tem páginas configuradas. Vá em "Páginas por Empresa" primeiro.
+                    Esta empresa não tem páginas configuradas. Vá em "Módulos por Empresa" primeiro.
                   </p>
                 ) : (
                   <>
@@ -2269,13 +2175,13 @@ export default function MasterEmpresasPage() {
       <section className="admin-panel">
         <div style={{ borderBottom: '1px solid var(--border-header)', marginBottom: 4 }}>
           <TabBtn label="Empresa"             active={aba === 'empresa'}  onClick={() => setAba('empresa')} />
-          <TabBtn label="Páginas por Empresa" active={aba === 'paginas'}  onClick={() => setAba('paginas')} />
+          <TabBtn label="Módulos por Empresa" active={aba === 'paginas'}  onClick={() => setAba('paginas')} />
           <TabBtn label="Usuários da Empresa" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
           <TabBtn label="Importar Bling"      active={aba === 'bling'}    onClick={() => setAba('bling')} />
           <TabBtn label="Importar Dados"      active={aba === 'importar'} onClick={() => setAba('importar')} />
         </div>
         {aba === 'empresa'  && <AbaEmpresa showToast={showToast} />}
-        {aba === 'paginas'  && <AbaPaginas showToast={showToast} />}
+        {aba === 'paginas'  && <AbaModulosEmpresa showToast={showToast} />}
         {aba === 'usuarios' && <AbaUsuarios showToast={showToast} />}
         {aba === 'bling'    && <AbaImportarBling showToast={showToast} />}
         {aba === 'importar' && <AbaImportarDados showToast={showToast} />}

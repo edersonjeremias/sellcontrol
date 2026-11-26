@@ -17,6 +17,19 @@ export default async function handler(req, res) {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY)
 
+  // Rastreio Público é um módulo da assinatura: sem ele, a página não abre
+  // para as clientes da empresa. Erro na pergunta deixa passar e fica no log —
+  // tirar o rastreio do ar por engano gera ligação de cliente procurando
+  // pedido que já saiu.
+  const { data: temRastreio, error: erroModulo } = await supabase
+    .rpc('tenant_tem_modulo', { p_tenant_id: tenantId, p_slug: 'rastreio' })
+
+  if (erroModulo) {
+    console.error('Não foi possível conferir o módulo Rastreio:', erroModulo)
+  } else if (temRastreio !== true) {
+    return res.status(404).json({ error: 'Rastreio não disponível' })
+  }
+
   const [itemsRes, cfgRes] = await Promise.all([
     supabase
       .from('vendas')

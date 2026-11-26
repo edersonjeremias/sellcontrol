@@ -100,6 +100,20 @@ serve(async (req) => {
     }
     if (!romaneio) return json({ error: 'Link inválido ou expirado' }, 404)
 
+    // O Link de Frete é um módulo da assinatura. Sem ele, o link responde o
+    // mesmo que link inválido. Erro na pergunta deixa passar e fica no log:
+    // derrubar o link de quem está pagando frete atrasa entrega de verdade.
+    const { data: temFrete, error: erroModulo } = await supabase.rpc('tenant_tem_modulo', {
+      p_tenant_id: romaneio.tenant_id,
+      p_slug: 'frete-link',
+    })
+
+    if (erroModulo) {
+      console.error('Não foi possível conferir o módulo Link de Frete:', erroModulo)
+    } else if (temFrete !== true) {
+      return json({ error: 'Link inválido ou expirado' }, 404)
+    }
+
     const instagram = String(romaneio.cliente_instagram || '').replace('@', '')
 
     switch (acao) {

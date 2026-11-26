@@ -81,6 +81,29 @@ function paraVitrine(p: any, largura = 400) {
   }
 }
 
+/**
+ * A empresa contratou este módulo da assinatura?
+ *
+ * Quem responde é tenant_tem_modulo, no banco: a trava não pode morar no
+ * front, senão basta saber o endereço da loja.
+ *
+ * Se a pergunta não chega a ser respondida (função ainda não criada, banco
+ * instável), deixamos passar e registramos no log. Uma loja fora do ar por
+ * engano custa venda de verdade; o risco contrário é a loja de uma empresa
+ * seguir no ar até o próximo deploy.
+ */
+async function temModulo(supabase: any, tenantId: string, slug: string) {
+  const { data, error } = await supabase.rpc('tenant_tem_modulo', {
+    p_tenant_id: tenantId,
+    p_slug: slug,
+  })
+  if (error) {
+    console.error(`Não foi possível conferir o módulo ${slug} do tenant ${tenantId}:`, error)
+    return true
+  }
+  return data === true
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -108,6 +131,13 @@ serve(async (req) => {
       return json({ error: 'Erro ao abrir a loja' }, 500)
     }
     if (!config) return json({ error: 'Loja não encontrada' }, 404)
+
+    // A empresa tem o módulo Loja na assinatura? Sem ele, o endereço responde
+    // o mesmo que loja inexistente: dizer "existe, mas não pagou" entregaria
+    // o cliente dela a quem perguntasse.
+    if (!(await temModulo(supabase, config.tenant_id, 'loja'))) {
+      return json({ error: 'Loja não encontrada' }, 404)
+    }
 
     const loja = {
       nome: config.nome_loja || 'Loja',

@@ -1080,7 +1080,7 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
 
 // ── Página principal ───────────────────────────────────────────
 export default function ConfiguracoesPage() {
-  const { profile }   = useAuth()
+  const { profile, temModulo } = useAuth()
   const { showToast } = useApp()
   const [aba, setAba] = useState('config')
 
@@ -1098,8 +1098,8 @@ export default function ConfiguracoesPage() {
             <>
               <TabBtn label="Usuários e Permissões" active={aba === 'usuarios'} onClick={() => setAba('usuarios')} />
               <TabBtn label="Transportadoras" active={aba === 'transportadoras'} onClick={() => setAba('transportadoras')} />
-              <TabBtn label="Loja" active={aba === 'loja'} onClick={() => setAba('loja')} />
-              <TabBtn label="Link da Bio" active={aba === 'bio'} onClick={() => setAba('bio')} />
+              {temModulo('loja')  && <TabBtn label="Loja" active={aba === 'loja'} onClick={() => setAba('loja')} />}
+              {temModulo('bio')   && <TabBtn label="Link da Bio" active={aba === 'bio'} onClick={() => setAba('bio')} />}
               <TabBtn label="Status Expedição" active={aba === 'status'} onClick={() => setAba('status')} />
               <TabBtn label="Assuntos" active={aba === 'assuntos'} onClick={() => setAba('assuntos')} />
               <TabBtn label="Integrações" active={aba === 'integracoes'} onClick={() => setAba('integracoes')} />
@@ -1120,10 +1120,10 @@ export default function ConfiguracoesPage() {
         {aba === 'transportadoras' && (
           <AbaTransportadoras tenantId={tenantId} showToast={showToast} />
         )}
-        {aba === 'loja' && (
+        {aba === 'loja' && temModulo('loja') && (
           <AbaLoja tenantId={tenantId} showToast={showToast} />
         )}
-        {aba === 'bio' && (
+        {aba === 'bio' && temModulo('bio') && (
           <AbaBio tenantId={tenantId} showToast={showToast} />
         )}
         {aba === 'status' && (

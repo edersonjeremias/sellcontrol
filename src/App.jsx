@@ -43,7 +43,7 @@ function RecoveryGuard() {
   return null
 }
 import { AppProvider } from './context/AppContext'
-import { AuthProvider, RequireAuth, RequireRole, RequirePage } from './context/AuthContext'
+import { AuthProvider, RequireAuth, RequireRole, RequirePage, RequireModulo } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -115,7 +115,7 @@ export default function App() {
             <Route path="/clientes" element={<RequirePage slug="clientes"><ClientesPage /></RequirePage>} />
             <Route path="/pedidos" element={<Navigate to="/expedicao" replace />} />
             <Route path="/expedicao" element={<RequirePage slug="expedicao"><PedidosPage /></RequirePage>} />
-            <Route path="/configuracoes" element={<RequireAuth><RequireRole allowed={['master','admin']}><ConfiguracoesPage /></RequireRole></RequireAuth>} />
+            <Route path="/configuracoes" element={<RequirePage slug="configuracoes"><ConfiguracoesPage /></RequirePage>} />
             <Route path="/impressao-sacolinha" element={<RequirePage slug="impressao-sacolinha"><ImpressaoSacolinhaPage /></RequirePage>} />
             <Route path="/impressao-pedidos"          element={<RequirePage slug="impressao-pedidos"><ImpressaoPedidosPage /></RequirePage>} />
             <Route path="/impressao-sacolinha-cliente" element={<RequirePage slug="impressao-sacolinha-cliente"><ImpressaoSacolinhaClientePage /></RequirePage>} />
@@ -131,11 +131,11 @@ export default function App() {
             <Route path="/contas-pagar"          element={<RequirePage slug="contas-pagar"><ContasPagarPage /></RequirePage>} />
             <Route path="/creditos-clientes"     element={<RequirePage slug="creditos-clientes"><CreditosPage /></RequirePage>} />
             <Route path="/comissoes"             element={<RequirePage slug="comissoes"><ComissoesPage /></RequirePage>} />
-            <Route path="/cupons"                element={<RequireAuth><RequireRole allowed={['master','admin']}><CuponsPage /></RequireRole></RequireAuth>} />
-            <Route path="/avisos"                element={<RequireAuth><RequireRole allowed={['master','admin']}><AvisosPage /></RequireRole></RequireAuth>} />
+            <Route path="/cupons"                element={<RequirePage slug="cupons"><CuponsPage /></RequirePage>} />
+            <Route path="/avisos"                element={<RequirePage slug="avisos"><AvisosPage /></RequirePage>} />
             <Route path="/compras"               element={<RequirePage slug="compras"><ComprasPage /></RequirePage>} />
-            <Route path="/rh"                    element={<RequireAuth><RequireRole allowed={['master','admin']}><RhPage /></RequireRole></RequireAuth>} />
-            <Route path="/ponto"                 element={<RequireAuth><PontoQuiosquePage /></RequireAuth>} />
+            <Route path="/rh"                    element={<RequirePage slug="rh"><RhPage /></RequirePage>} />
+            <Route path="/ponto"                 element={<RequireModulo slug="ponto"><PontoQuiosquePage /></RequireModulo>} />
             {/* /f e /r são as versões curtas: URL longa chega quebrada no WhatsApp */}
             <Route path="/f/:codigo" element={<FretePublicoPage />} />
             <Route path="/frete/:token" element={<FretePublicoPage />} />

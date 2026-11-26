@@ -133,6 +133,45 @@ serve(async (req) => {
       throw new Error(`Erro ao criar perfil em users_perfil: ${profileError.message}`)
     }
 
+    // 5. O essencial da assinatura.
+    //
+    // Empresa nova começa sem módulo nenhum: é o master que liga o que foi
+    // negociado, em Empresas → Módulos por Empresa. Dashboard e Configurações
+    // são a exceção — sem eles o admin entra e não vê tela nenhuma, nem para
+    // cadastrar a própria equipe.
+    //
+    // A lista também está em src/lib/modulos.js (campo essencial).
+    const ESSENCIAIS = [
+      { slug: 'dashboard',     label: 'Dashboard',     category: 'Principal', icon: 'dashboard', order_index: 10 },
+      { slug: 'configuracoes', label: 'Configurações', category: 'Admin',     icon: 'settings',  order_index: 100 },
+    ]
+
+    try {
+      const agora = new Date().toISOString()
+
+      await supabaseAdmin.from('tenant_modulos').upsert(
+        ESSENCIAIS.map(m => ({
+          tenant_id: tenantId, slug: m.slug, ativo: true, preco_mensal: 0, habilitado_em: agora,
+        })),
+        { onConflict: 'tenant_id,slug' }
+      )
+
+      const { data: paginas } = await supabaseAdmin
+        .from('pages')
+        .insert(ESSENCIAIS.map(m => ({ tenant_id: tenantId, ...m })))
+        .select('id')
+
+      if (paginas?.length) {
+        await supabaseAdmin.from('pages_access').insert(
+          paginas.map(p => ({ tenant_id: tenantId, user_id: userCreated.user.id, page_id: p.id }))
+        )
+      }
+    } catch (erroModulos) {
+      // Empresa, login e perfil já estão criados: não desfazemos tudo por
+      // causa disto. O master liga os módulos na tela e o acesso aparece.
+      console.error('Empresa criada, mas os módulos essenciais falharam:', erroModulos)
+    }
+
     return new Response(JSON.stringify({ ok: true, tenantId, adminId: userCreated.user.id }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

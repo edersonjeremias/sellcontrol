@@ -69,21 +69,35 @@ export default function PortalApp() {
           return
         }
 
-        // Buscar por slug
-        const { data, error } = await supabase
-          .from('configuracoes_public')
-          .select('tenant_id, nome_loja')
-          .eq('slug', slug)
-          .single()
+        // Resolve o slug pelo contrato: canal_publico só responde se a empresa
+        // tem o módulo Portal na assinatura. Sem ele, a cliente vê o mesmo que
+        // endereço errado — a empresa não paga pelo portal, o portal não abre.
+        const { data: canal, error: erroCanal } = await supabase
+          .rpc('canal_publico', { p_slug: slug, p_canal: 'portal' })
 
-        if (error || !data) {
+        // A função é nova: enquanto a migration de módulos não roda, o portal
+        // segue abrindo pelo caminho antigo em vez de ficar fora do ar.
+        let dados = null
+        if (erroCanal) {
+          console.warn('canal_publico indisponível, lendo configuracoes_public:', erroCanal.message)
+          const { data } = await supabase
+            .from('configuracoes_public')
+            .select('tenant_id, nome_loja')
+            .eq('slug', slug)
+            .single()
+          dados = data || null
+        } else if (canal?.encontrado) {
+          dados = { tenant_id: canal.tenant_id, nome_loja: canal.nome_loja }
+        }
+
+        if (!dados) {
           setErro(true)
           setLoading(false)
           return
         }
 
-        setTenantId(data.tenant_id)
-        setNomeEmpresa(data.nome_loja || 'Portal')
+        setTenantId(dados.tenant_id)
+        setNomeEmpresa(dados.nome_loja || 'Portal')
       } catch {
         setErro(true)
       } finally {

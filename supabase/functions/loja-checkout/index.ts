@@ -91,6 +91,22 @@ serve(async (req) => {
 
     if (!config) return json({ error: 'Loja não encontrada' }, 404)
 
+    // Módulo Loja fora da assinatura: ninguém novo compra. A confirmação do
+    // pedido já pago fica de fora desta trava de propósito — quem pagou tem
+    // que receber o pedido, mesmo que a empresa tenha saído do módulo depois.
+    const { data: temLoja, error: erroModulo } = await supabase.rpc('tenant_tem_modulo', {
+      p_tenant_id: pedido.tenant_id,
+      p_slug: 'loja',
+    })
+
+    if (erroModulo) {
+      // Pergunta sem resposta deixa passar: checkout fora do ar por engano
+      // custa venda de verdade. Fica registrado no log.
+      console.error('Não foi possível conferir o módulo Loja:', erroModulo)
+    } else if (temLoja !== true) {
+      return json({ error: 'Loja não encontrada' }, 404)
+    }
+
     switch (acao) {
       case 'pedido':      return await acaoPedido(supabase, pedido, config)
       case 'portal':      return await acaoPortal(supabase, pedido, payload)

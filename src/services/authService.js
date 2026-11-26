@@ -1,34 +1,8 @@
 import { supabase } from '../lib/supabase'
 
-// Catálogo completo de páginas disponíveis no sistema
-// Lista completa de páginas disponíveis no sistema
-export const ALL_PAGES = [
-  { slug: 'dashboard',                   label: 'Dashboard',                 category: 'Principal',  icon: 'dashboard',      order_index: 10 },
-  { slug: 'notificacoes',                label: 'Notificações',              category: 'Principal',  icon: 'notifications',  order_index: 15 },
-  { slug: 'vendas',                      label: 'Vendas',                    category: 'Operações',  icon: 'sell',           order_index: 20 },
-  { slug: 'editar-vendas',               label: 'Editar Vendas',             category: 'Operações',  icon: 'edit',           order_index: 25 },
-  { slug: 'producao',                    label: 'Produção',                  category: 'Operações',  icon: 'factory',        order_index: 30 },
-  { slug: 'expedicao',                   label: 'Expedição',                 category: 'Operações',  icon: 'local_shipping', order_index: 35 },
-  { slug: 'impressao-sacolinha',         label: 'Impressão Sacolinha',       category: 'Operações',  icon: 'local_offer',    order_index: 40 },
-  { slug: 'impressao-pedidos',           label: 'Impressão Pedidos',         category: 'Operações',  icon: 'receipt_long',   order_index: 45 },
-  { slug: 'impressao-sacolinha-cliente', label: 'Impressão Sacol. Cliente',  category: 'Operações',  icon: 'shopping_bag',   order_index: 50 },
-  { slug: 'etiquetas',                   label: 'Etiquetas Produtos',        category: 'Operações',  icon: 'label',          order_index: 55 },
-  { slug: 'etiquetas-envio',             label: 'Etiquetas Envio',           category: 'Operações',  icon: 'local_shipping', order_index: 56 },
-  { slug: 'cobrancas',                   label: 'Cobranças',                 category: 'Financeiro', icon: 'payments',       order_index: 60 },
-  { slug: 'relatorio',                   label: 'Relatório',                 category: 'Financeiro', icon: 'bar_chart',      order_index: 65 },
-  { slug: 'dashboard-financeiro',        label: 'Dashboard Financeiro',      category: 'Financeiro', icon: 'insights',       order_index: 70 },
-  { slug: 'contas-pagar',                label: 'Contas a Pagar',            category: 'Financeiro', icon: 'receipt',        order_index: 75 },
-  { slug: 'creditos-clientes',           label: 'Créditos de Clientes',      category: 'Financeiro', icon: 'loyalty',        order_index: 80 },
-  { slug: 'comissoes',                   label: 'Comissões',                 category: 'Financeiro', icon: 'monetization_on', order_index: 85 },
-  { slug: 'clientes',                    label: 'Cadastro de Cliente',       category: 'Vendas',     icon: 'people',         order_index: 36 },
-  { slug: 'contatos',                    label: 'CRM — Contatos',            category: 'Vendas',     icon: 'forum',          order_index: 37 },
-  { slug: 'cupons',                      label: 'Cupons de Desconto',        category: 'Vendas',     icon: 'confirmation_number', order_index: 38 },
-  { slug: 'configuracoes',               label: 'Configurações',             category: 'Admin',      icon: 'settings',       order_index: 90 },
-]
-
-// Debug: verificar se cupons está presente (remover após deploy)
-console.log('🔍 ALL_PAGES carregado:', ALL_PAGES.length, 'páginas')
-console.log('🎟️ Cupons presente:', ALL_PAGES.find(p => p.slug === 'cupons') ? 'SIM ✅' : 'NÃO ❌')
+// O catálogo de páginas e módulos do sistema mora em src/lib/modulos.js.
+// Aqui não há segunda lista: duas listas divergiam toda vez que uma página
+// nova entrava no sistema e alguém atualizava só uma delas.
 
 function isMissingResource(error) {
   if (!error) return false
@@ -249,34 +223,6 @@ export async function deleteTenant(tenantId) {
   await supabase.from('users_perfil').delete().eq('tenant_id', tenantId)
   const { error } = await supabase.from('configuracoes').delete().eq('tenant_id', tenantId)
   if (error) throw error
-}
-
-// Sincroniza quais páginas uma empresa pode usar (master)
-export async function saveTenantPages(tenantId, slugs) {
-  const { data: current } = await supabase
-    .from('pages').select('id, slug').eq('tenant_id', tenantId)
-
-  const currentMap = new Map((current || []).map(p => [p.slug, p.id]))
-  const currentSlugs = new Set(currentMap.keys())
-  const newSlugs = new Set(slugs)
-
-  const toRemoveSlugs = [...currentSlugs].filter(s => !newSlugs.has(s))
-  const toRemoveIds   = toRemoveSlugs.map(s => currentMap.get(s)).filter(Boolean)
-  const toAddSlugs    = [...newSlugs].filter(s => !currentSlugs.has(s))
-
-  if (toRemoveIds.length > 0) {
-    await supabase.from('pages_access').delete().in('page_id', toRemoveIds)
-    await supabase.from('pages').delete().eq('tenant_id', tenantId).in('slug', toRemoveSlugs)
-  }
-
-  if (toAddSlugs.length > 0) {
-    const rows = toAddSlugs.map(slug => {
-      const p = ALL_PAGES.find(x => x.slug === slug)
-      return { tenant_id: tenantId, slug, label: p?.label || slug, category: p?.category || '', icon: p?.icon || '', order_index: p?.order_index || 99 }
-    })
-    const { error } = await supabase.from('pages').insert(rows)
-    if (error) throw error
-  }
 }
 
 // NÃO criamos perfil automaticamente para quem entra pelo Google.
