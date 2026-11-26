@@ -46,18 +46,24 @@ export default function BioRender({ pagina, links, previa = false, onClique }) {
     if (previa) return
 
     const url = enderecoLimpo()
-    const texto = textoCompartilhar(p)
 
-    // O celular abre a lista de aplicativos; o WhatsApp cola a frase e o
-    // link um embaixo do outro.
+    // Frase e link num texto só, não em dois campos.
+    //
+    // Passando `url` à parte, cada aplicativo decide como emendar os dois: o
+    // WhatsApp cola o endereço logo depois da última palavra, com um espaço,
+    // e a frase vira um parágrafo com um link no meio. Mandando tudo como
+    // texto, a quebra de linha é nossa — e o WhatsApp continua montando a
+    // prévia do link que encontra dentro dele.
+    const corpo = `${textoCompartilhar(p)}\n\n${url}`
+
     if (navigator.share) {
-      navigator.share({ title: p.titulo || 'Meus links', text: texto, url }).catch(() => {})
+      navigator.share({ title: p.titulo || 'Meus links', text: corpo }).catch(() => {})
       return
     }
 
-    // No computador não há folha de compartilhamento: a conversa inteira vai
+    // No computador não há folha de compartilhamento: a mensagem inteira vai
     // para a área de transferência, pronta para colar.
-    navigator.clipboard?.writeText(`${texto}\n\n${url}`)
+    navigator.clipboard?.writeText(corpo)
     onClique?.({ copiado: url, mensagem: true })
   }
 
