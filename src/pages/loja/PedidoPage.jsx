@@ -49,7 +49,8 @@ function Pedido() {
     if (conta.instagram || !pedido.identificador) return
 
     logouRef.current = true
-    conta.entrarComWhatsapp(pedido.identificador, pedido.cliente?.whatsapp)
+    // O tenant vem na resposta da loja: a conta do portal é por empresa.
+    conta.entrarComWhatsapp(pedido.identificador, pedido.cliente?.whatsapp, loja?.tenant_id)
       .catch(() => {}) // não conseguiu entrar sozinha: ela entra pelo botão quando quiser
   }, [pedido, conta])
 

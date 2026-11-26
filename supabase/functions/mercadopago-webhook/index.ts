@@ -16,6 +16,21 @@ function somaTaxas(pagamento: any): number | null {
   )
 }
 
+/**
+ * O que foi pago cobre o que era devido?
+ *
+ * Compara o valor cobrado pelo Mercado Pago (`transaction_amount`, antes das
+ * taxas dele) com o que a cobrança pede. Um centavo de folga para o
+ * arredondamento de metades; pagar mais que o devido sempre passa.
+ *
+ * Sem esta conferência, bastava um link de pagamento com valor menor para
+ * quitar qualquer cobrança — e o link era montado no navegador.
+ */
+function valorCobre(pagamento: any, esperado: number): boolean {
+  const pago = Number(pagamento?.transaction_amount ?? 0)
+  return pago >= Number(esperado) - 0.011
+}
+
 function valorLiquidoDe(pagamento: any): number {
   const net = pagamento?.transaction_details?.net_received_amount
   if (net !== null && net !== undefined && net !== '') return Number(net)
@@ -129,6 +144,29 @@ serve(async (req) => {
 
           console.log(`Split payment detectado: ${parte} da cobrança ${cobrancaId}`)
 
+          // Confere o valor da parte antes de marcá-la como paga: ver a nota
+          // em valorCobre(), mais abaixo no caminho da cobrança inteira.
+          const { data: cobSplit } = await supabase
+            .from('cobrancas')
+            .select('dados_divisao')
+            .eq('id', cobrancaId)
+            .maybeSingle()
+
+          const esperadoParte = Number(
+            cobSplit?.dados_divisao?.[parte === 'P1' ? 'valor_p1' : 'valor_p2'] || 0
+          )
+
+          if (!esperadoParte || !valorCobre(paymentData, esperadoParte)) {
+            console.error(
+              `Pagamento ${paymentId} NÃO dá baixa na parte ${parte} da cobrança ${cobrancaId}: ` +
+              `pago ${paymentData.transaction_amount}, combinado ${esperadoParte || 'não registrado'}`
+            )
+            return new Response(JSON.stringify({ received: true }), {
+              status: 200,
+              headers: { ...CORS, "Content-Type": "application/json" },
+            })
+          }
+
           const { error: rpcErr } = await supabase.rpc('process_split_payment', {
             p_cobranca_id:    cobrancaId,
             p_parte:          parte,
@@ -148,7 +186,7 @@ serve(async (req) => {
           // o relatório (que soma cobrancas.total) mostraria mais do que entrou.
           const { data: cob } = await supabase
             .from('cobrancas')
-            .select('pix_payment_id, pix_valor, pix_desconto_valor')
+            .select('total, pix_payment_id, pix_valor, pix_desconto_valor')
             .eq('id', cobrancaId)
             .maybeSingle()
 
@@ -159,6 +197,25 @@ serve(async (req) => {
 
           if (pagouPixComDesconto) {
             console.log(`Cobrança ${cobrancaId}: desconto PIX de ${cob!.pix_desconto_valor}, total vai para ${cob!.pix_valor}`)
+          }
+
+          // O valor pago cobre o que a cobrança pede? Até nov/2026 esta baixa
+          // só olhava o status "approved": pagar R$ 1 numa cobrança de R$ 300
+          // deixava ela como PAGO. Pagar mais que o pedido continua valendo.
+          const esperado = pagouPixComDesconto
+            ? Number(cob!.pix_valor)
+            : Number(cob?.total || 0)
+
+          if (esperado > 0 && !valorCobre(paymentData, esperado)) {
+            console.error(
+              `Pagamento ${paymentId} NÃO dá baixa na cobrança ${cobrancaId}: ` +
+              `pago ${paymentData.transaction_amount}, devido ${esperado}. ` +
+              'A cobrança fica pendente para conferência.'
+            )
+            return new Response(JSON.stringify({ received: true }), {
+              status: 200,
+              headers: { ...CORS, "Content-Type": "application/json" },
+            })
           }
 
           const { error } = await supabase

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { exigirTenant } from '../lib/tenant'
 
 export async function getClientes(tenantId) {
   let todos = []
@@ -314,19 +315,24 @@ export async function toggleBloqueio(tenantId, instagram, bloqueado) {
 const slugPortal = (instagram) => String(instagram || '').replace('@', '').toLowerCase()
 
 // null = cliente ainda não tem acesso ao portal criado
-export async function getPortalBloqueado(instagram) {
+//
+// O tenant entra na busca porque a conta do portal é por empresa: a mesma @
+// pode ser cliente de duas lojas, e cada uma tem o seu acesso.
+export async function getPortalBloqueado(tenantId, instagram) {
   const { data } = await supabase
     .from('portal_clientes')
     .select('bloqueado')
+    .eq('tenant_id', exigirTenant(tenantId, 'getPortalBloqueado'))
     .ilike('instagram', slugPortal(instagram))
     .maybeSingle()
   return data ? !!data.bloqueado : null
 }
 
-export async function togglePortalBloqueado(instagram, bloqueado) {
+export async function togglePortalBloqueado(tenantId, instagram, bloqueado) {
   const { error } = await supabase
     .from('portal_clientes')
     .update({ bloqueado })
+    .eq('tenant_id', exigirTenant(tenantId, 'togglePortalBloqueado'))
     .ilike('instagram', slugPortal(instagram))
   return { error }
 }

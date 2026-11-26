@@ -190,7 +190,7 @@ function emAberto(pedido: any) {
 // a conta é o Supabase, validando o token. Aceitar um @ vindo da tela deixaria
 // qualquer pessoa se dizer outra cliente e ver o endereço dela.
 async function acaoPortal(supabase: any, pedido: any, payload: any) {
-  const cliente = await clienteDoPortal(supabase, payload.portal_token)
+  const cliente = await clienteDoPortal(supabase, payload.portal_token, pedido.tenant_id)
   if (!cliente) return json({ error: 'Sua sessão expirou. Entre de novo.' }, 401)
 
   const { data: enderecos } = await supabase
@@ -235,7 +235,7 @@ async function acaoPortal(supabase: any, pedido: any, payload: any) {
 }
 
 /** Dono do token, pelo cadastro do portal. Token inválido devolve null. */
-async function clienteDoPortal(supabase: any, token: any) {
+async function clienteDoPortal(supabase: any, token: any, tenantId?: string) {
   const jwt = String(token || '')
   if (jwt.length < 20) return null
 
@@ -244,11 +244,16 @@ async function clienteDoPortal(supabase: any, token: any) {
 
   const { data: perfil } = await supabase
     .from('portal_clientes')
-    .select('user_id, instagram, nome_completo, cpf, celular, bloqueado')
+    .select('user_id, tenant_id, instagram, nome_completo, cpf, celular, bloqueado')
     .eq('user_id', data.user.id)
     .maybeSingle()
 
   if (!perfil || perfil.bloqueado) return null
+
+  // A conta do portal é de uma empresa. Entrar na loja de outra com ela traria
+  // o cadastro e os endereços de uma pessoa que não é cliente dali.
+  if (tenantId && perfil.tenant_id && perfil.tenant_id !== tenantId) return null
+
   return perfil
 }
 
@@ -275,7 +280,7 @@ async function acaoIdentificar(supabase: any, pedido: any, payload: any) {
   // Guardar na sacolinha é só para quem entrou com a conta: a peça fica
   // esperando o fechamento junto com as da live, e quem não é cliente não tem
   // sacolinha nenhuma para esperar. Quem decide é o token, não a tela.
-  const doPortal = await clienteDoPortal(supabase, payload.portal_token)
+  const doPortal = await clienteDoPortal(supabase, payload.portal_token, pedido.tenant_id)
   const destino = payload.destino === 'sacolinha' && doPortal ? 'sacolinha' : 'entrega'
 
   const endereco = {

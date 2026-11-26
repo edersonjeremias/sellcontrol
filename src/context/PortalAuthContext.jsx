@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { portalSb } from '../lib/portalSupabase'
-import { emailPortalDeInstagram } from '../lib/emailInterno'
+import { emailsPortalPossiveis } from '../lib/emailInterno'
 
 const Ctx = createContext(null)
 
@@ -48,9 +48,16 @@ export function PortalAuthProvider({ children, tenantId }) {
   async function login(instagram, senha) {
     setBloqueado(false)
     const insta = instagram.trim().replace(/^@/, '').toLowerCase()
-    const email = emailPortalDeInstagram(insta)
-    const { error } = await portalSb.auth.signInWithPassword({ email, password: senha })
-    if (error) throw error
+
+    // Duas tentativas: o endereço desta empresa e, se não existir, o antigo
+    // (de quando a conta do portal era uma só para todo o sistema).
+    let ultimoErro = null
+    for (const email of emailsPortalPossiveis(insta, tenantId)) {
+      const { error } = await portalSb.auth.signInWithPassword({ email, password: senha })
+      if (!error) return
+      ultimoErro = error
+    }
+    throw ultimoErro
   }
 
   async function logout() {

@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
     const { data: cob } = await supabase
       .from('cobrancas')
-      .select('tenant_id, status, dados_divisao, cupom_id')
+      .select('tenant_id, status, total, dados_divisao, cupom_id, pix_payment_id, pix_valor, pix_desconto_valor')
       .eq('id', cobrancaId)
       .single()
 
@@ -51,7 +51,28 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Referência do pagamento não corresponde à cobrança' })
       }
 
+      // O valor pago cobre o que a cobranca pede? Sem isto, um link de
+      // pagamento com valor menor quitava a cobranca inteira — e o link era
+      // montado no navegador. Pagar mais do que o devido continua valendo.
       const splitMatch = String(extRef).match(/^(.+)-(P[12])$/)
+
+      const pagouPixComDesconto =
+        cob.pix_payment_id === String(paymentId) &&
+        Number(cob.pix_desconto_valor || 0) > 0 &&
+        Number(cob.pix_valor || 0) > 0
+
+      const esperado = splitMatch
+        ? Number(cob.dados_divisao?.[splitMatch[2] === 'P1' ? 'valor_p1' : 'valor_p2'] || 0)
+        : (pagouPixComDesconto ? Number(cob.pix_valor) : Number(cob.total || 0))
+
+      const pago = Number(payment.transaction_amount ?? 0)
+      if (!(esperado > 0) || pago < esperado - 0.011) {
+        console.error(
+          `Pagamento ${paymentId} nao da baixa na cobranca ${cobrancaId}: pago ${pago}, devido ${esperado}`
+        )
+        return res.status(200).json({ ok: false, status: 'valor_insuficiente' })
+      }
+
       if (splitMatch) {
         await supabase.rpc('process_split_payment', {
           p_cobranca_id:    cobrancaId,
@@ -103,6 +124,17 @@ export default async function handler(req, res) {
       const searchData = await searchResp.json()
       const payment = searchData.results?.[0]
       if (!payment || payment.status !== 'approved') continue
+
+      // Mesma conferência do caminho 1: a parte só é baixada se o valor pago
+      // cobrir o que foi combinado para ela.
+      const combinado = Number(div[parte === 'P1' ? 'valor_p1' : 'valor_p2'] || 0)
+      const pagoParte = Number(payment.transaction_amount ?? 0)
+      if (!(combinado > 0) || pagoParte < combinado - 0.011) {
+        console.error(
+          `Pagamento ${payment.id} nao da baixa na parte ${parte} de ${cobrancaId}: pago ${pagoParte}, combinado ${combinado}`
+        )
+        continue
+      }
 
       const { error: rpcErr } = await supabase.rpc('process_split_payment', {
         p_cobranca_id:    cobrancaId,

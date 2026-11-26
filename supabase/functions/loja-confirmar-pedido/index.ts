@@ -58,7 +58,12 @@ serve(async (req) => {
     // Nunca confiamos em quem chamou: quem diz que o dinheiro entrou é o
     // Mercado Pago, consultado com o token da loja.
     const idPagamento = String(payment_id || pedido.mp_payment_id || '')
-    const aprovado = await pagamentoAprovado(config?.mp_access_token, idPagamento, pedido.id)
+    const aprovado = await pagamentoAprovado(
+      config?.mp_access_token,
+      idPagamento,
+      pedido.id,
+      Number(pedido.total || 0),
+    )
 
     if (!aprovado.ok) {
       return json({ ok: false, pago: false, motivo: aprovado.motivo }, 200)
@@ -113,7 +118,17 @@ serve(async (req) => {
 // ────────────────────────────────────────────────────────────────────────────
 // O pagamento está aprovado?
 // ────────────────────────────────────────────────────────────────────────────
-async function pagamentoAprovado(token: string | undefined, paymentId: string, pedidoId: string) {
+async function pagamentoAprovado(
+  token: string | undefined,
+  paymentId: string,
+  pedidoId: string,
+  totalDevido: number,
+) {
+  // Pagar menos que o pedido não confirma o pedido. O link da loja é montado
+  // aqui no servidor, então o valor certo é o do banco; esta conferência é a
+  // rede de segurança — e um centavo de folga cobre arredondamento.
+  const cobre = (p: any) =>
+    !(totalDevido > 0) || Number(p?.transaction_amount ?? 0) >= totalDevido - 0.011
   const chave = String(token || '').trim()
   if (!chave) return { ok: false, motivo: 'Loja sem token do Mercado Pago' }
 
@@ -124,6 +139,10 @@ async function pagamentoAprovado(token: string | undefined, paymentId: string, p
     })
     if (r.ok) {
       const p = await r.json()
+      if (p.status === 'approved' && !cobre(p)) {
+        console.error(`Pedido ${pedidoId}: pago ${p.transaction_amount}, devido ${totalDevido}`)
+        return { ok: false, motivo: 'Valor pago menor que o do pedido' }
+      }
       if (p.status === 'approved') {
         return {
           ok: true,
@@ -145,7 +164,7 @@ async function pagamentoAprovado(token: string | undefined, paymentId: string, p
   if (!busca.ok) return { ok: false, motivo: 'Não foi possível consultar o pagamento' }
 
   const resultado = await busca.json()
-  const aprovado = (resultado?.results || []).find((p: any) => p.status === 'approved')
+  const aprovado = (resultado?.results || []).find((p: any) => p.status === 'approved' && cobre(p))
   if (!aprovado) return { ok: false, motivo: 'Pagamento ainda não aprovado' }
 
   return {
@@ -438,7 +457,10 @@ async function garantirAcessoPortal(supabase: any, instagram: string, pedido: an
     // Mesmo domínio de api/portal-cliente.js e src/lib/emailInterno.js:
     // é identificador interno da conta, e trocá-lo invalida login já criado.
     const dominioPortal = Deno.env.get('PORTAL_EMAIL_DOMINIO') ?? 'portal.vmkids.com.br'
-    const email = `${insta}@${dominioPortal}`
+    // A conta da cliente no portal é por empresa: um pedaço do tenant entra
+    // no endereço, senão a @maria de duas lojas divide a mesma conta.
+    const sufixoEmpresa = String(pedido.tenant_id || '').replace(/-/g, '').slice(0, 8).toLowerCase()
+    const email = `${insta}.${sufixoEmpresa}@${dominioPortal}`
     const senha = String(pedido.cliente_whatsapp || '').replace(/\D/g, '')
     if (senha.length < 6) return false
 
@@ -447,6 +469,7 @@ async function garantirAcessoPortal(supabase: any, instagram: string, pedido: an
       .from('portal_clientes')
       .select('id, user_id')
       .eq('instagram', insta)
+      .eq('tenant_id', pedido.tenant_id)
       .maybeSingle()
 
     if (jaTem?.user_id) return true
@@ -468,6 +491,7 @@ async function garantirAcessoPortal(supabase: any, instagram: string, pedido: an
       .from('portal_clientes')
       .insert([{
         user_id: criado.user.id,
+        tenant_id: pedido.tenant_id,
         instagram: insta,
         nome_completo: pedido.cliente_nome || '',
         cpf: pedido.cliente_cpf || null,

@@ -12,15 +12,40 @@ export const DOMINIOS_LEGADOS = ['vmkids.local']
 // A cliente entra no portal com o @ do Instagram, e o Supabase Auth também
 // exige e-mail: o endereço é montado com este domínio. Ele é só identificador
 // interno, mas **mudar o valor invalida todos os logins já criados** — a conta
-// no Auth é localizada pelo e-mail. Por isso o padrão continua o de origem,
-// mesmo com o sistema já sendo vendido para outras empresas; trocar exige
-// migrar as contas existentes (ver PORTAL_EMAIL_DOMINIO nas pendências).
+// no Auth é localizada pelo e-mail. Por isso o padrão continua o de origem.
 export const DOMINIO_EMAIL_PORTAL =
   import.meta.env.VITE_PORTAL_EMAIL_DOMINIO || 'portal.vmkids.com.br'
 
-/** E-mail interno da conta do portal de uma cliente, a partir do @ dela. */
-export const emailPortalDeInstagram = (instagram) =>
-  `${String(instagram || '').trim().replace(/^@+/, '').toLowerCase()}@${DOMINIO_EMAIL_PORTAL}`
+const soHandle = (instagram) =>
+  String(instagram || '').trim().replace(/^@+/, '').toLowerCase()
+
+/**
+ * E-mail da conta do portal de uma cliente, dentro de uma empresa.
+ *
+ * O @ sozinho não identifica mais a conta: a @maria da empresa A e a @maria da
+ * empresa B são pessoas diferentes, e dividiam a mesma conta (quem cadastrasse
+ * depois trocava a senha da outra). Por isso o endereço leva um pedaço do
+ * tenant_id — estável, diferente do slug da loja, que a empresa pode mudar.
+ *
+ * Sem tenantId devolve o formato antigo, que é o das contas já criadas.
+ */
+export function emailPortalDeInstagram(instagram, tenantId = '') {
+  const handle = soHandle(instagram)
+  const empresa = String(tenantId || '').replace(/-/g, '').slice(0, 8).toLowerCase()
+  const sufixo = empresa ? `.${empresa}` : ''
+  return `${handle}${sufixo}@${DOMINIO_EMAIL_PORTAL}`
+}
+
+/**
+ * Os endereços que a conta de uma cliente pode ter, na ordem em que o login
+ * deve tentar: primeiro o da empresa, depois o antigo (de quando a conta era
+ * global). Conta antiga continua entrando com a mesma senha.
+ */
+export function emailsPortalPossiveis(instagram, tenantId = '') {
+  const comEmpresa = emailPortalDeInstagram(instagram, tenantId)
+  const legado = emailPortalDeInstagram(instagram)
+  return comEmpresa === legado ? [legado] : [comEmpresa, legado]
+}
 
 export function emailDeUsername(username, dominio = DOMINIO_EMAIL_INTERNO) {
   return `${username}@${dominio}`

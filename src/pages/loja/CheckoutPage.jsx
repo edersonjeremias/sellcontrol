@@ -532,6 +532,7 @@ function Checkout() {
 
       {entrarAberto && (
         <ModalEntrar
+          tenantId={loja?.tenant_id}
           onFechar={() => setEntrarAberto(false)}
           onEntrou={async (token) => {
             setEntrarAberto(false)

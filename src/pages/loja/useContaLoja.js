@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { portalSb } from '../../lib/portalSupabase'
-import { emailPortalDeInstagram } from '../../lib/emailInterno'
+import { emailsPortalPossiveis } from '../../lib/emailInterno'
 
 // ============================================================================
 // A conta da cliente dentro da loja
@@ -66,18 +66,21 @@ export default function useContaLoja() {
    * acesso), então dá para deixá-la conectada sem pedir que ela digite nada
    * logo depois de pagar — que é quando ela menos quer preencher formulário.
    */
-  const entrarComWhatsapp = useCallback(async (identificador, whatsapp) => {
+  const entrarComWhatsapp = useCallback(async (identificador, whatsapp, tenantId = '') => {
     const insta = String(identificador || '').replace(/^@/, '').toLowerCase()
     const senha = String(whatsapp || '').replace(/\D/g, '')
     if (!insta || senha.length < 6) return false
 
-    const { data, error } = await portalSb.auth.signInWithPassword({
-      email: emailPortalDeInstagram(insta),
-      password: senha,
-    })
-    if (error || !data?.session) return false
+    // O endereco da conta leva a empresa; conta antiga ainda usa o formato
+    // global, entao tentamos os dois.
+    let sessao = null
+    for (const email of emailsPortalPossiveis(insta, tenantId)) {
+      const r = await portalSb.auth.signInWithPassword({ email, password: senha })
+      if (!r.error && r.data?.session) { sessao = r.data.session; break }
+    }
+    if (!sessao) return false
 
-    await aplicarSessao(data.session)
+    await aplicarSessao(sessao)
     return true
   }, [aplicarSessao])
 

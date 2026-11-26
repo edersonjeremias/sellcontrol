@@ -170,17 +170,17 @@ export default function ClientesPage() {
   useEffect(() => {
     if (!current) { setPortalBloq(null); return }
     let valido = true
-    getPortalBloqueado(current)
+    getPortalBloqueado(tenantId, current)
       .then(v => { if (valido) setPortalBloq(v) })
       .catch(() => { if (valido) setPortalBloq(null) })
     return () => { valido = false }
-  }, [current])
+  }, [current, tenantId])
 
   const handleTogglePortal = async (bloquear) => {
     if (!current) return
     setSaving(true)
     try {
-      const { error } = await togglePortalBloqueado(current, bloquear)
+      const { error } = await togglePortalBloqueado(tenantId, current, bloquear)
       if (error) throw error
       setPortalBloq(bloquear)
       showToast(bloquear ? 'Acesso ao portal BLOQUEADO!' : 'Acesso ao portal LIBERADO!', bloquear ? 'error' : 'success')

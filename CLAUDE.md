@@ -115,6 +115,51 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 26/11/2026 (2) — o valor quem decide é o servidor, e o portal é por empresa
+
+**Dinheiro.** O link de pagamento era montado no navegador, com o preço dentro,
+e a baixa só olhava se o Mercado Pago dizia "approved" — dava para pagar R$ 1
+numa cobrança de R$ 300 e ela virava PAGO.
+
+- `api/criar-preferencia-mp` reescreve o valor do item com o total da cobrança
+  quando o `external_reference` aponta para uma cobrança que já existe, e
+  recusa cobrança paga. Cobrança que ainda não existe (a tela de Vendas cria a
+  preferência antes de gravar) segue com o valor do pedido.
+- `api/dividir-pagamento` valida no servidor: as duas partes têm que fechar com
+  o total, nenhuma pode ser zero, parte já paga não se redivide, e só os campos
+  esperados são gravados — antes o `dados_divisao` do corpo ia direto para a
+  tabela, inclusive com `status_p1: PAGO`.
+- `mercadopago-webhook`, `api/confirmar-pagamento` e `loja-confirmar-pedido`
+  conferem o valor pago antes de dar baixa (um centavo de folga; pagar mais
+  sempre passa). PIX com desconto compara com `pix_valor` e parte dividida com
+  o `valor_pN` gravado. **Pagamento a menos deixa a cobrança pendente e
+  registra no log** — a baixa passa a ser manual nesse caso.
+- `api/aplicar-cupom` ganhou a ação de remover cupom (ver registro anterior).
+
+**Portal da cliente por empresa** —
+[20261126b_portal_por_empresa.sql](supabase/migrations/20261126b_portal_por_empresa.sql).
+A conta era identificada só pelo @: a @maria da empresa A e a @maria da empresa
+B eram a mesma conta (quem cadastrasse depois trocava a senha da outra), e a
+sacolinha mostrava as peças das duas lojas juntas.
+
+- `portal_clientes`, `portal_cobrancas`, `portal_producao` e `portal_produtos`
+  ganharam `tenant_id`; a unicidade virou `(tenant_id, instagram)`.
+- `portal_get_tenant()` diz de qual empresa é a conta logada, e
+  `portal_get_minha_sacolinha` passou a filtrar por ela. As políticas das
+  tabelas legadas também.
+- O e-mail da conta leva um pedaço do tenant (`maria.7135c82e@...`). O login
+  tenta o endereço da empresa e depois o antigo, então **conta já criada
+  continua entrando com a mesma senha**.
+- `loja-publica` devolve o `tenant_id` da loja (o front precisa dele para
+  montar o login), e `loja-checkout` recusa conta de portal de outra empresa.
+- No painel, bloquear/desbloquear portal passou a exigir o tenant.
+
+**Ainda sem filtro por empresa:** `portal_get_meus_debitos`,
+`portal_encerrar_sacolinha` e as funções de conversa do portal foram criadas
+direto no banco e não têm código no repositório. O SELECT que extrai a
+definição delas está no fim da migration; com ela em mãos, aplicar o mesmo
+`portal_get_tenant()`.
+
 ### 26/11/2026 — nada mais é fixo na empresa do dono
 
 - `tenant_id` passou a ser obrigatório: `src/lib/tenant.js` (`exigirTenant`)

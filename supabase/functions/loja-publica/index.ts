@@ -142,6 +142,10 @@ serve(async (req) => {
     const loja = {
       nome: config.nome_loja || 'Loja',
       slug: config.slug,
+      // A conta da cliente no portal é por empresa, e o endereço dela leva um
+      // pedaço deste id. A loja abre sem login, então o front precisa saber de
+      // qual empresa é a vitrine para montar o e-mail certo no login.
+      tenant_id: config.tenant_id,
       ativa: config.loja_ativa === true,
       reserva_minutos: Number(config.loja_reserva_minutos ?? 15),
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { portalSb } from '../../lib/portalSupabase'
-import { emailPortalDeInstagram } from '../../lib/emailInterno'
+import { emailsPortalPossiveis } from '../../lib/emailInterno'
 
 // ============================================================================
 // Entrar com a conta do portal, de dentro do checkout
@@ -12,7 +12,7 @@ import { emailPortalDeInstagram } from '../../lib/emailInterno'
 // e para ela não digitar endereço que o sistema já tem.
 // ============================================================================
 
-export default function ModalEntrar({ onFechar, onEntrou }) {
+export default function ModalEntrar({ onFechar, onEntrou, tenantId }) {
   const [instagram, setInstagram] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState('')
@@ -29,10 +29,15 @@ export default function ModalEntrar({ onFechar, onEntrou }) {
     setErro('')
     setEntrando(true)
     try {
-      const { data, error } = await portalSb.auth.signInWithPassword({
-        email: emailPortalDeInstagram(insta),
-        password: senha,
-      })
+      // Primeiro o endereco desta empresa, depois o antigo (de quando a
+      // conta do portal era uma so para todo o sistema).
+      let data = null
+      let error = null
+      for (const email of emailsPortalPossiveis(insta, tenantId)) {
+        const r = await portalSb.auth.signInWithPassword({ email, password: senha })
+        if (!r.error) { data = r.data; error = null; break }
+        error = r.error
+      }
       if (error || !data?.session?.access_token) throw error || new Error('sem sessão')
       onEntrou(data.session.access_token)
     } catch {

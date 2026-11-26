@@ -30,8 +30,14 @@ export default async function handler(req, res) {
   }
 
   const instaSlug   = instagram.trim().replace(/^@/, '').toLowerCase()
-  const email       = `${instaSlug}@${DOMINIO_PORTAL}`
   const instaHandle = instaSlug // SEM @ - normalizado
+
+  // O endereço da conta leva um pedaço do tenant: a @maria de uma empresa e a
+  // @maria de outra são pessoas diferentes e dividiam a mesma conta, então
+  // quem cadastrasse depois trocava a senha da outra.
+  const sufixoEmpresa = String(perfil.tenant_id || '').replace(/-/g, '').slice(0, 8).toLowerCase()
+  const email       = `${instaSlug}.${sufixoEmpresa}@${DOMINIO_PORTAL}`
+  const emailLegado = `${instaSlug}@${DOMINIO_PORTAL}`
 
   // A cliente tem que ser da empresa de quem está preparando o acesso. Sem
   // isto, a equipe de uma empresa mexeria no acesso da cliente de outra — as
@@ -49,77 +55,93 @@ export default async function handler(req, res) {
     })
   }
 
-  // Tenta criar o usuário no Auth
+  // Conta antiga desta cliente, de quando o portal era de uma empresa só:
+  // continua valendo, com o endereço antigo. Criar outra agora deixaria duas
+  // contas para a mesma pessoa, e ela não saberia qual senha usar.
+  const { data: contaAntiga } = await supabase
+    .from('portal_clientes')
+    .select('id, user_id, nome_completo, tenant_id')
+    .eq('instagram', instaHandle)
+    .eq('tenant_id', perfil.tenant_id)
+    .maybeSingle()
+
   let userId
-  const { data: created, error: createErr } = await supabase.auth.admin.createUser({
-    email,
-    password: phone,
-    email_confirm: true,
-  })
 
-  if (createErr) {
-    // Se já existe, busca e atualiza a senha
-    const jaExiste =
-      createErr.message?.toLowerCase().includes('already') ||
-      createErr.message?.toLowerCase().includes('exist')  ||
-      createErr.status === 422
-
-    if (!jaExiste) {
-      return res.status(400).json({ error: 'Erro Auth: ' + createErr.message })
-    }
-
-    // Busca pelo email na lista de usuários
-    let found = null
-    let page  = 1
-    while (!found) {
-      const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers({
-        page, perPage: 1000,
-      })
-      if (listErr || !users?.length) break
-      found = users.find(u => u.email === email)
-      if (found || users.length < 1000) break
-      page++
-    }
-
-    if (!found) {
-      return res.status(400).json({ error: 'Usuário não encontrado: ' + createErr.message })
-    }
-
-    // Atualiza a senha
-    const { error: updErr } = await supabase.auth.admin.updateUserById(found.id, {
+  if (contaAntiga?.user_id) {
+    // Já tem conta nesta empresa: só renova a senha, que é o WhatsApp.
+    userId = contaAntiga.user_id
+    const { error: updErr } = await supabase.auth.admin.updateUserById(userId, {
       password: phone,
       email_confirm: true,
     })
     if (updErr) return res.status(400).json({ error: 'Erro ao atualizar senha: ' + updErr.message })
-    userId = found.id
   } else {
-    userId = created.user.id
+    const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+      email,
+      password: phone,
+      email_confirm: true,
+    })
+
+    if (createErr) {
+      const jaExiste =
+        createErr.message?.toLowerCase().includes('already') ||
+        createErr.message?.toLowerCase().includes('exist')  ||
+        createErr.status === 422
+
+      if (!jaExiste) {
+        return res.status(400).json({ error: 'Erro Auth: ' + createErr.message })
+      }
+
+      // O endereço já está em uso no Auth sem linha em portal_clientes para
+      // esta empresa: é a conta desta empresa criada antes, ou a conta global
+      // de quando o portal não tinha empresa. Procura os dois endereços.
+      let found = null
+      let page = 1
+      while (!found) {
+        const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers({
+          page, perPage: 1000,
+        })
+        if (listErr || !users?.length) break
+        found = users.find(u => u.email === email) || users.find(u => u.email === emailLegado)
+        if (found || users.length < 1000) break
+        page++
+      }
+
+      if (!found) {
+        return res.status(400).json({ error: 'Usuário não encontrado: ' + createErr.message })
+      }
+
+      const { error: updErr } = await supabase.auth.admin.updateUserById(found.id, {
+        password: phone,
+        email_confirm: true,
+      })
+      if (updErr) return res.status(400).json({ error: 'Erro ao atualizar senha: ' + updErr.message })
+      userId = found.id
+    } else {
+      userId = created.user.id
+    }
   }
 
-  // portal_clientes tem unique em user_id E em instagram. Resolver o conflito
-  // apenas por user_id quebrava quando já havia uma linha com esse instagram
-  // apontando para outro usuário do Auth (cliente recadastrado, ou usuário
-  // recriado): o insert batia em portal_clientes_instagram_key.
-  // O instagram é a identidade do cliente no portal, então é por ele que a
-  // linha é localizada; o user_id passa a ser o da conta recém-preparada.
-  const { data: existente } = await supabase
-    .from('portal_clientes')
-    .select('id, nome_completo')
-    .eq('instagram', instaHandle)
-    .maybeSingle()
-
-  const { error: profErr } = existente
+  // A identidade da cliente no portal é (empresa, @): é por esse par que a
+  // linha é localizada. Antes era só o @, e por isso a mesma pessoa em duas
+  // empresas batia na unicidade e tomava a linha da outra.
+  const { error: profErr } = contaAntiga
     ? await supabase
         .from('portal_clientes')
         .update({
           user_id: userId,
-          nome_completo: nome_completo || existente.nome_completo || '',
+          nome_completo: nome_completo || contaAntiga.nome_completo || '',
         })
-        .eq('id', existente.id)
+        .eq('id', contaAntiga.id)
     : await supabase
         .from('portal_clientes')
         .upsert(
-          { user_id: userId, instagram: instaHandle, nome_completo: nome_completo || '' },
+          {
+            user_id: userId,
+            tenant_id: perfil.tenant_id,
+            instagram: instaHandle,
+            nome_completo: nome_completo || '',
+          },
           { onConflict: 'user_id' }
         )
 
