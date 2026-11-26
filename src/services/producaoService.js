@@ -3,8 +3,9 @@ import { parseDateLocal, toDateOnly, formatDateBr } from '../lib/datas'
 import { linkRastreio } from '../lib/rastreio'
 import { getClientes } from './clientesService'
 import { pecaNaSacolinha, STATUS_FORA_SQL } from '../lib/statusVenda'
+import { exigirTenant } from '../lib/tenant'
 
-const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const TENANT_ID = (tenantId) => exigirTenant(tenantId, 'producaoService')
 
 export const STATUS_PROD_OPTS = [
   'Iniciado', 'Lavando', 'Costureira', 'Mancha', 'Secando',

@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase'
 import { COBRANCA_ENVIADA, cobrancaFoiEnviada } from '../lib/statusVenda'
+import { exigirTenant } from '../lib/tenant'
 
 // tenantId enviado pelo app, com fallback para .env para compatibilidade
-const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const TENANT_ID = (tenantId) => exigirTenant(tenantId, 'vendasService')
 
 // ── Utilitários de formatação ──────────────────────────────────
 export function formatMoney(val) {

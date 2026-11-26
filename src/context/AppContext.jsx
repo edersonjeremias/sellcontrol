@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react'
-import { getDadosIniciais, getListas } from '../services/vendasService'
+import { createContext, useContext, useState, useCallback } from 'react'
 
 const AppContext = createContext(null)
 
@@ -17,19 +16,14 @@ export function AppProvider({ children }) {
   const [toasts, setToasts] = useState([])
   _setToasts = setToasts
 
-  const [lives,      setLives]      = useState([])
-  const [bloqueados, setBloqueados] = useState({})
-
   const showToast = useCallback((msg, type = 'success', duration = 3300) => showGlobalToast(msg, type, duration), [])
 
-  const carregarDados = useCallback(async () => {
-    const [dados] = await Promise.all([ getDadosIniciais() ])
-    setLives(dados.lives)
-    setBloqueados(dados.bloqueados)
-  }, [])
-
+  // `lives`, `bloqueados` e `carregarDados` moravam aqui e ninguém consumia:
+  // as telas carregam isso por conta própria, já com o tenant da pessoa. O
+  // `carregarDados` daqui era a única chamada do sistema que buscava dados
+  // sem dizer de qual empresa — saiu junto.
   return (
-    <AppContext.Provider value={{ lives, bloqueados, showToast, carregarDados }}>
+    <AppContext.Provider value={{ showToast }}>
       {/* Toast container */}
       <div id="toast-container">
         {toasts.map(t => {

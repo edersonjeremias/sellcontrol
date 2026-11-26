@@ -1,8 +1,7 @@
 import { supabase } from '../lib/supabase'
+import { exigirTenant } from '../lib/tenant'
 
-function tid(tenantId) {
-  return tenantId || import.meta.env.VITE_TENANT_ID
-}
+const tid = (tenantId) => exigirTenant(tenantId, 'cuponsService')
 
 // ── Listar cupons ──
 export async function getCupons(tenantId) {

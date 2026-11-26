@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase'
 import { portalSb } from '../lib/portalSupabase'
+import { exigirTenant } from '../lib/tenant'
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'conversasService')
 
 // Colunas Kanban padrão — salvas em configuracoes.kanban_colunas
 export const COLUNAS_DEFAULT = [

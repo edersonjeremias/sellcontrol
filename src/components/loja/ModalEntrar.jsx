@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { portalSb } from '../../lib/portalSupabase'
+import { emailPortalDeInstagram } from '../../lib/emailInterno'
 
 // ============================================================================
 // Entrar com a conta do portal, de dentro do checkout
@@ -29,7 +30,7 @@ export default function ModalEntrar({ onFechar, onEntrou }) {
     setEntrando(true)
     try {
       const { data, error } = await portalSb.auth.signInWithPassword({
-        email: `${insta}@portal.vmkids.com.br`,
+        email: emailPortalDeInstagram(insta),
         password: senha,
       })
       if (error || !data?.session?.access_token) throw error || new Error('sem sessão')

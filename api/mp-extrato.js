@@ -127,7 +127,8 @@ export default async function handler(req, res) {
     .eq('tenant_id', tenantId)
     .maybeSingle()
 
-  const mpToken = cfg?.mp_access_token?.trim() || process.env.MP_ACCESS_TOKEN || ''
+  // Só o token desta empresa (ver api/criar-preferencia-mp.js).
+  const mpToken = cfg?.mp_access_token?.trim() || ''
   if (!mpToken) {
     return fim(res, 422, {
       error: 'Token do Mercado Pago não configurado. Vá em Configurações → Integrações.',

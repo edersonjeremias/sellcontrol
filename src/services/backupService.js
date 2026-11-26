@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
+import { exigirTenant } from '../lib/tenant'
 
-const TENANT_ID = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const TENANT_ID = (tenantId) => exigirTenant(tenantId, 'backupService')
 
 // O id do usuário não muda durante a sessão e o backup roda a cada poucos
 // segundos, então vale guardar para não refazer a chamada toda vez.

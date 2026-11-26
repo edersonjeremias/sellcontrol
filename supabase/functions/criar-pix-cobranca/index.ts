@@ -222,7 +222,9 @@ async function dadosPagador(supabase: any, cobranca: any) {
     .replace(/[^a-z0-9]/g, '') || 'cliente'
 
   const pagador: Record<string, unknown> = {
-    email: `${slug}@vmkids.com.br`,
+    // Domínio do sistema, não o de uma empresa: este e-mail é só o que
+    // o Mercado Pago exige para o pagador, e não vai para ninguém.
+    email: `${slug}@${Deno.env.get('EMAIL_DOMINIO_INTERNO') ?? 'sellcontrol.app'}`,
     first_name: instagram || 'Cliente',
   }
 

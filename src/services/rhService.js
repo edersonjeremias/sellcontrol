@@ -3,8 +3,9 @@ import {
   sincronizarContaPorLancamentoId, removerContaDoLancamento, removerContasDoGrupo,
   sincronizarContaPorPeriodoVT, removerContaDoPeriodoVT,
 } from './rhContasPagar'
+import { exigirTenant } from '../lib/tenant'
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'rhService')
 
 // Tabela ainda não criada no banco — a tela mostra o aviso de migração
 // em vez de estourar um erro em cima do usuário.

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { exigirUsuario } from './_auth.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -8,10 +8,29 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).json({ ok: true })
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' })
 
-  const { email, password, nome, username, role, tenant_id } = req.body || {}
+  // Quem cria usuário é quem administra a empresa. Até nov/2026 esta rota não
+  // conferia nada: um POST criava usuário master dentro de qualquer empresa,
+  // e o tenant_id não é segredo (sai na view configuracoes_public).
+  const { perfil, admin: supabase, erro } = await exigirUsuario(req, ['master', 'admin'])
+  if (erro) return res.status(erro.status).json({ error: erro.error })
+
+  const { email, password, nome, username, role } = req.body || {}
+
+  // A empresa é a de quem está criando, não a que vem no pedido. Só o master
+  // do sistema cria em outra empresa, porque é ele quem cadastra as empresas.
+  const tenant_id = perfil.role === 'master'
+    ? (req.body?.tenant_id || perfil.tenant_id)
+    : perfil.tenant_id
 
   if (!password || !nome || !username || !tenant_id) {
-    return res.status(400).json({ error: 'Campos obrigatórios: username, senha, nome, tenant_id' })
+    return res.status(400).json({ error: 'Campos obrigatórios: username, senha, nome' })
+  }
+
+  // Admin não promove ninguém a master: master é o dono do sistema, não um
+  // cargo dentro da empresa.
+  const roleFinal = role || 'usuario'
+  if (roleFinal === 'master' && perfil.role !== 'master') {
+    return res.status(403).json({ error: 'Só o suporte do sistema pode criar um usuário master.' })
   }
 
   if (password.length < 6) {
@@ -28,11 +47,6 @@ export default async function handler(req, res) {
   // o antigo @vmkids.local ('.local' é TLD reservado e não resolve MX).
   const dominioInterno = process.env.EMAIL_DOMINIO_INTERNO || 'sellcontrol.app'
   const emailFinal = email?.trim() || `${username}@${dominioInterno}`
-
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
 
   // Verifica se username já existe nesse tenant
   const { data: existente } = await supabase
@@ -72,7 +86,7 @@ export default async function handler(req, res) {
       nome,
       username,
       email: emailFinal,
-      role: role || 'usuario'
+      role: roleFinal
     }])
 
   if (profileError) {

@@ -63,27 +63,20 @@ serve(async (req) => {
       return null
     }
 
-    const envToken = Deno.env.get('MP_ACCESS_TOKEN') ?? ''
-    let paymentData: any = null
+    // O aviso do Mercado Pago traz só o id do pagamento: de qual empresa ele é
+    // só se descobre consultando. Por isso tentamos os tokens das empresas até
+    // um responder — cada token só enxerga os pagamentos da própria conta.
+    //
+    // O MP_ACCESS_TOKEN do ambiente saiu daqui (nov/2026): era o token do dono
+    // do sistema, resto da época de uma empresa só, e tentá-lo primeiro só
+    // gastava uma chamada em todo pagamento das outras empresas.
+    const { data: configs } = await supabase
+      .from('configuracoes')
+      .select('mp_access_token')
+      .not('mp_access_token', 'is', null)
 
-    // Tenta env var primeiro (rápido)
-    if (envToken) {
-      const r = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: { 'Authorization': `Bearer ${envToken}` }
-      })
-      if (r.ok) paymentData = await r.json()
-    }
-
-    // Fallback: tenta todos os tokens armazenados no banco
-    if (!paymentData) {
-      const { data: configs } = await supabase
-        .from('configuracoes')
-        .select('mp_access_token')
-        .not('mp_access_token', 'is', null)
-
-      const tokens = (configs || []).map((c: any) => c.mp_access_token).filter(Boolean)
-      paymentData = await buscarPayment(tokens)
-    }
+    const tokens = (configs || []).map((c: any) => c.mp_access_token).filter(Boolean)
+    const paymentData: any = await buscarPayment(tokens)
 
     if (!paymentData) {
       console.error('Não foi possível consultar o pagamento com nenhum token disponível')

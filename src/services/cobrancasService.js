@@ -2,8 +2,10 @@ import { supabase, supabasePublic } from '../lib/supabase'
 import { toDateOnly } from '../lib/datas'
 import { COBRANCA_ENVIADA } from '../lib/statusVenda'
 import { siteUrl } from '../lib/siteUrl'
+import { DOMINIO_EMAIL_INTERNO } from '../lib/emailInterno'
+import { exigirTenant } from '../lib/tenant'
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'cobrancasService')
 
 const WEBHOOK_URL = 'https://gtsdgkalolqzjmmwtvdv.supabase.co/functions/v1/mercadopago-webhook'
 
@@ -258,13 +260,13 @@ async function chamarMpApi(tenant_id, payload, signal) {
 }
 
 export async function gerarPreferenciaMp({ cliente, total, whatsapp, data, live, idCobranca, tenantId }) {
-  const tenant_id = tenantId || import.meta.env.VITE_TENANT_ID
+  const tenant_id = exigirTenant(tenantId, 'gerarPreferenciaMp')
   const titulo = `Pedido-${String(cliente).split(' ')[0]}-${String(data).replace(/\//g, '-')}`
   const emailSlug = String(cliente).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '') || 'cliente'
 
   const payload = {
     items: [{ title: titulo, quantity: 1, currency_id: 'BRL', unit_price: parseFloat(Number(total).toFixed(2)) }],
-    payer: { name: cliente, email: `${emailSlug}@vmkids.com.br` },
+    payer: { name: cliente, email: `${emailSlug}@${DOMINIO_EMAIL_INTERNO}` },
     external_reference: String(idCobranca),
     notification_url: WEBHOOK_URL,
     back_urls: {
@@ -322,7 +324,7 @@ export async function cancelarCobranca(cobrancaId) {
 // ── Dividir Pagamento ──────────────────────────────────────────
 
 export async function dividirPagamento(cobranca, valorParte1, tenantId) {
-  const tenant_id = tenantId || import.meta.env.VITE_TENANT_ID
+  const tenant_id = exigirTenant(tenantId, 'gerarPreferenciaMp')
   const total = Number(cobranca.total)
   const v1 = parseFloat(parseFloat(String(valorParte1).replace(',', '.')).toFixed(2))
   const v2 = parseFloat((total - v1).toFixed(2))
@@ -340,7 +342,7 @@ export async function dividirPagamento(cobranca, valorParte1, tenantId) {
         quantity: 1, currency_id: 'BRL',
         unit_price: parseFloat(Number(valor).toFixed(2)),
       }],
-      payer: { name: cobranca.cliente, email: `${emailSlug}@vmkids.com.br` },
+      payer: { name: cobranca.cliente, email: `${emailSlug}@${DOMINIO_EMAIL_INTERNO}` },
       external_reference: `${cobranca.id}-P${parte}`,
       notification_url: WEBHOOK_URL,
       back_urls: {

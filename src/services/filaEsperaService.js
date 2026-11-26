@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { exigirTenant } from '../lib/tenant'
 
 // ============================================================================
 // FILA DE ESPERA — o que faltou peça
@@ -12,7 +13,7 @@ import { supabase } from '../lib/supabase'
 // cada peça, em que tamanho, em que cor, e quanto de venda ficou na mesa.
 // ============================================================================
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'filaEsperaService')
 
 const TAMANHO_PAGINA = 1000
 

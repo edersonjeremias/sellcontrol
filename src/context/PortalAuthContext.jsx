@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { portalSb } from '../lib/portalSupabase'
+import { emailPortalDeInstagram } from '../lib/emailInterno'
 
 const Ctx = createContext(null)
 
@@ -47,7 +48,7 @@ export function PortalAuthProvider({ children, tenantId }) {
   async function login(instagram, senha) {
     setBloqueado(false)
     const insta = instagram.trim().replace(/^@/, '').toLowerCase()
-    const email = `${insta}@portal.vmkids.com.br`
+    const email = emailPortalDeInstagram(insta)
     const { error } = await portalSb.auth.signInWithPassword({ email, password: senha })
     if (error) throw error
   }

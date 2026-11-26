@@ -29,7 +29,10 @@ export default async function handler(req, res) {
 
     if (dbErr) console.error('Supabase erro:', dbErr.message)
 
-    const MP_TOKEN = config?.mp_access_token?.trim() || process.env.MP_ACCESS_TOKEN || ''
+    // Só o token DESTA empresa. O fallback para o MP_ACCESS_TOKEN do
+    // ambiente saiu em nov/2026: era o token do dono do sistema, e empresa
+    // sem token configurado cobrava na conta dele.
+    const MP_TOKEN = config?.mp_access_token?.trim() || ''
     if (!MP_TOKEN) {
       return res.status(422).json({ error: 'Token do Mercado Pago não encontrado. Configure-o em Configurações da Empresa.' })
     }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getCobrancaById, formatMoeda, dividirPagamento, gerarPreferenciaMp, getSaldoCliente, gerarPixCobranca } from '../../services/cobrancasService'
-import { validarCupom, calcularDesconto } from '../../services/cuponsService'
+import { validarCupom } from '../../services/cuponsService'
 import { supabase } from '../../lib/supabase'
 
 function fmtData(iso) {
@@ -397,22 +397,31 @@ export default function ReciboPage() {
 
     setAplicando(true)
     try {
-      // Validar cupom
-      const cupom = await validarCupom(cob.tenant_id, codigoCupom)
+      // Quem valida o cupom e calcula o desconto é o servidor: esta página
+      // abre sem login, e o valor que a cliente deve não pode sair daqui.
+      const aplicado = await fetch('/api/aplicar-cupom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cobrancaId: id, codigo: codigoCupom.trim() }),
+      })
 
-      // Calcular desconto
-      const totalAtual = cupomAplicado ? cupomAplicado.totalOriginal : Number(cob.total)
-      const { desconto, totalFinal } = calcularDesconto(totalAtual, cupom.percentual)
+      const resultado = await aplicado.json().catch(() => ({}))
+      if (!aplicado.ok || !resultado.ok) {
+        throw new Error(resultado.error || 'Erro ao aplicar cupom')
+      }
 
-      // ✅ Gerar NOVO link do Mercado Pago com valor atualizado
+      const totalFinal = Number(resultado.total)
+      const desconto   = Number(resultado.desconto)
+
+      // Link do Mercado Pago com o valor que o servidor acabou de gravar.
       let novoLink = cob.link_mp
       let novoIdMp = cob.id_mp
 
-      if (Number(totalFinal) > 0 && cob.cliente && cob.data) {
+      if (totalFinal > 0 && cob.cliente && cob.data) {
         try {
           const mp = await gerarPreferenciaMp({
             cliente: cob.cliente,
-            total: Number(totalFinal),
+            total: totalFinal,
             whatsapp: cob.whatsapp || '',
             data: cob.data,
             live: cob.live || '',
@@ -421,70 +430,48 @@ export default function ReciboPage() {
           })
           novoLink = mp.link
           novoIdMp = mp.id_mp
+
+          // Guarda o link novo na cobrança (a rota só grava o que recebe).
+          await fetch('/api/aplicar-cupom', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cobrancaId: id,
+              codigo: resultado.codigo,
+              link_mp: novoLink,
+              id_mp: novoIdMp,
+            }),
+          })
         } catch (err) {
           console.error('Erro ao gerar novo link MP:', err)
           setErroCupom('Cupom aplicado, mas erro ao gerar link de pagamento: ' + err.message)
         }
       }
 
-      // Salvar cupom aplicado na cobrança + novo link via API (usa service_role para bypassar RLS)
-      console.log('🎟️ Salvando cupom no banco via API:', {
-        cobrancaId: id,
-        cupom_codigo: cupom.codigo,
-        cupom_desconto_percentual: cupom.percentual,
-        cupom_desconto_valor: Number(desconto),
-        total: Number(totalFinal)
-      })
+      // ⚠️ NÃO incrementa o uso aqui! Só quando PAGAR de verdade — quem
+      // incrementa é o webhook do Mercado Pago ou a baixa manual.
 
-      const apiResponse = await fetch('/api/aplicar-cupom', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cobrancaId: id,
-          cupom_codigo: cupom.codigo,
-          cupom_desconto_percentual: cupom.percentual,
-          cupom_desconto_valor: Number(desconto),
-          cupom_id: cupom.id,
-          total: Number(totalFinal),
-          link_mp: novoLink,
-          id_mp: novoIdMp
-        })
-      })
-
-      const apiResult = await apiResponse.json()
-      console.log('✅ Resultado API aplicar-cupom:', apiResult)
-
-      if (!apiResponse.ok || !apiResult.ok) {
-        console.error('❌ ERRO ao salvar cupom via API:', apiResult)
-        throw new Error(apiResult.error || 'Erro ao aplicar cupom')
-      }
-
-      // ⚠️ NÃO incrementa aqui! Só incrementa quando PAGAR de verdade
-      // O incremento acontece no webhook do Mercado Pago ou ao baixar manualmente
-
-      // Atualizar estado local
       setCupomAplicado({
-        codigo: cupom.codigo,
-        percentual: cupom.percentual,
-        desconto: Number(desconto),
-        totalOriginal: totalAtual,
-        totalFinal: Number(totalFinal),
-        data_inicio: cupom.data_inicio,
-        data_fim: cupom.data_fim,
-        hora_inicio: cupom.hora_inicio,
-        hora_fim: cupom.hora_fim,
+        codigo: resultado.codigo,
+        percentual: resultado.percentual,
+        desconto,
+        totalOriginal: Number(resultado.total_cheio),
+        totalFinal,
+        data_inicio: resultado.cupom?.data_inicio,
+        data_fim: resultado.cupom?.data_fim,
+        hora_inicio: resultado.cupom?.hora_inicio,
+        hora_fim: resultado.cupom?.hora_fim,
       })
 
-      // Atualizar total, link E campos do cupom na cobrança
       setCob(prev => ({
         ...prev,
-        total: Number(totalFinal),
+        total: totalFinal,
         link_mp: novoLink,
         id_mp: novoIdMp,
-        cupom_codigo: cupom.codigo,
-        cupom_desconto_percentual: cupom.percentual,
-        cupom_desconto_valor: Number(desconto),
-        cupom_id: cupom.id
+        cupom_codigo: resultado.codigo,
+        cupom_desconto_percentual: resultado.percentual,
+        cupom_desconto_valor: desconto,
+        cupom_id: resultado.cupom?.id
       }))
 
       setCodigoCupom('')
@@ -497,20 +484,28 @@ export default function ReciboPage() {
 
   const handleRemoverCupom = async () => {
     try {
-      // Remover cupom da cobrança
-      const { error } = await supabase
-        .from('cobrancas')
-        .update({
-          cupom_codigo: null,
-          cupom_desconto_percentual: null,
-          cupom_desconto_valor: null,
-        })
-        .eq('id', id)
+      // Pela rota, não direto na tabela: esta página abre sem login e a RLS
+      // só deixa anônimo LER cobranças — o update daqui não gravava nada e o
+      // total continuava descontado no banco.
+      const resposta = await fetch('/api/aplicar-cupom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cobrancaId: id, remover: true }),
+      })
 
-      if (error) throw error
+      const resultado = await resposta.json().catch(() => ({}))
+      if (!resposta.ok || !resultado.ok) {
+        throw new Error(resultado.error || 'Erro ao remover cupom')
+      }
 
-      // Restaurar total original
-      setCob(prev => ({ ...prev, total: cupomAplicado.totalOriginal }))
+      setCob(prev => ({
+        ...prev,
+        total: Number(resultado.total),
+        cupom_codigo: null,
+        cupom_desconto_percentual: null,
+        cupom_desconto_valor: null,
+        cupom_id: null,
+      }))
       setCupomAplicado(null)
       setCodigoCupom('')
       setErroCupom('')

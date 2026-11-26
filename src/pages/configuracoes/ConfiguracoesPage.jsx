@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useApp } from '../../context/AppContext'
 import AppShell from '../../components/ui/AppShell'
 import {
-  getConfig, saveConfig, invalidateMpTokenCache,
+  getConfig, saveConfig,
   getUsuarios, updateUsuarioRole, ROLES,
 } from '../../services/configService'
 import {
@@ -13,6 +13,7 @@ import ConfigAssuntos from './ConfigAssuntos'
 import ConfigMenu from './ConfigMenu'
 import UserActionsMenu from '../../components/config/UserActionsMenu'
 import { emailDeUsername } from '../../lib/emailInterno'
+import { postApiInterna } from '../../lib/apiInterna'
 import AbaStatusExpedicao from './AbaStatusExpedicao'
 import AbaTransportadoras from './AbaTransportadoras'
 import AbaIntegracoes from './AbaIntegracoes'
@@ -150,7 +151,6 @@ function AbaConfiguracoes({ tenantId, showToast }) {
         token_me_length: form.token_melhor_envio?.length || 0
       })
       await saveConfig(tenantId, form)
-      invalidateMpTokenCache()
       showToast('Configurações salvas!')
     } catch (e) {
       showToast('Erro ao salvar: ' + e.message, 'error')
@@ -799,20 +799,16 @@ function AbaUsuarios({ tenantId, profileAtual, showToast }) {
       // Gera email fictício se não fornecido
       const emailFinal = form.email?.trim() || emailDeUsername(form.username)
 
-      const resp = await fetch('/api/criar-usuario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nome: form.nome,
-          username: form.username,
-          email: emailFinal,
-          password: form.password,
-          role: form.role,
-          tenant_id: tenantId
-        }),
+      // A rota confere quem está criando e usa a empresa de quem chamou: o
+      // tenant_id vai junto só porque o master pode criar em outra empresa.
+      const json = await postApiInterna('/api/criar-usuario', {
+        nome: form.nome,
+        username: form.username,
+        email: emailFinal,
+        password: form.password,
+        role: form.role,
+        tenant_id: tenantId,
       })
-      const json = await resp.json()
-      if (!resp.ok) throw new Error(json.error || 'Erro ao criar usuário')
 
       // Salva as páginas selecionadas para o novo usuário
       if (formPageIds.length > 0) {

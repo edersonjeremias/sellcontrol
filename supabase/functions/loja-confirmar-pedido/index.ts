@@ -435,7 +435,10 @@ function linhaDeVenda(item: any, tenantId: string, identificador: string, numero
 async function garantirAcessoPortal(supabase: any, instagram: string, pedido: any) {
   try {
     const insta = instagram.replace(/^@/, '').toLowerCase()
-    const email = `${insta}@portal.vmkids.com.br`
+    // Mesmo domínio de api/portal-cliente.js e src/lib/emailInterno.js:
+    // é identificador interno da conta, e trocá-lo invalida login já criado.
+    const dominioPortal = Deno.env.get('PORTAL_EMAIL_DOMINIO') ?? 'portal.vmkids.com.br'
+    const email = `${insta}@${dominioPortal}`
     const senha = String(pedido.cliente_whatsapp || '').replace(/\D/g, '')
     if (senha.length < 6) return false
 

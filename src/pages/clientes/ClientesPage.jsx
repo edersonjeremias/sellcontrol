@@ -10,6 +10,7 @@ import {
 } from '../../services/clientesService'
 import { supabase } from '../../lib/supabase'
 import { siteUrl } from '../../lib/siteUrl'
+import { postApiInterna } from '../../lib/apiInterna'
 import { formatDateBr } from '../../lib/datas'
 
 const LABEL = {
@@ -259,23 +260,21 @@ export default function ClientesPage() {
 
     setPortalBtnLoading(true)
     try {
-      const res = await fetch('/api/portal-cliente', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // A rota exige o login de quem clicou e só prepara acesso de cliente
+      // desta empresa — antes era aberta e redefinia a senha de qualquer uma.
+      let json
+      try {
+        json = await postApiInterna('/api/portal-cliente', {
           instagram:     nome,
           whatsapp:      phone,
           nome_completo: detalhes.nomeCompleto || '',
-        }),
-      })
-      const json = await res.json()
-
-      if (!res.ok) {
-        if (json.tableMissing) {
+        })
+      } catch (e) {
+        if (e.dados?.tableMissing) {
           setNeedsPortalSetup(true)
-          showToast('Tabelas do portal não criadas. Clique em "Configurar Portal" abaixo.', 'error')
+          showToast('Tabelas do portal não criadas. Rode a migration do portal no Supabase.', 'error')
         } else {
-          showToast('Erro: ' + (json.error || 'Falhou'), 'error')
+          showToast('Erro: ' + e.message, 'error')
         }
         return
       }
@@ -327,25 +326,6 @@ Qualquer dúvida, estamos à disposição! 😊`
     }
   }
 
-  const executarPortalMigracao = async () => {
-    setPortalMigrating(true)
-    try {
-      const r = await fetch('/api/portal-migrar?secret=vmkids-migrate-2026')
-      const json = await r.json()
-      if (json.success) {
-        showToast('Portal configurado! Tente enviar o acesso novamente.', 'success')
-        setNeedsPortalSetup(false)
-      } else {
-        showToast('Erro: ' + (json.error || 'Falhou'), 'error')
-        if (json.instrucoes) showToast(json.instrucoes, 'error')
-      }
-    } catch (e) {
-      showToast('Erro de rede: ' + e.message, 'error')
-    } finally {
-      setPortalMigrating(false)
-    }
-  }
-
   const buscarCep = async () => {
     const cep = (detalhes.cep || '').replace(/\D/g, '')
     if (cep.length !== 8) return
@@ -386,11 +366,9 @@ Qualquer dúvida, estamos à disposição! 😊`
   ADD COLUMN IF NOT EXISTS uf              text DEFAULT '',
   ADD COLUMN IF NOT EXISTS email           text DEFAULT '';`
 
-  const [migrating,        setMigrating]        = useState(false)
   const [sqlCopied,        setSqlCopied]        = useState(false)
   const [portalBtnLoading, setPortalBtnLoading] = useState(false)
   const [needsPortalSetup, setNeedsPortalSetup] = useState(false)
-  const [portalMigrating,  setPortalMigrating]  = useState(false)
 
   const copiarSQL = () => {
     navigator.clipboard.writeText(SQL_MIGRATION).then(() => {
@@ -399,23 +377,11 @@ Qualquer dúvida, estamos à disposição! 😊`
     })
   }
 
-  const executarMigracao = async () => {
-    setMigrating(true)
-    try {
-      const r = await fetch('/api/run-migration?secret=vmkids-migrate-2026')
-      const json = await r.json()
-      if (json.success) {
-        showToast('Migração concluída! Recarregando...', 'success')
-        setTimeout(() => window.location.reload(), 1500)
-      } else {
-        showToast('Erro: ' + (json.error || 'Falhou'), 'error')
-      }
-    } catch (e) {
-      showToast('Erro de rede: ' + e.message, 'error')
-    } finally {
-      setMigrating(false)
-    }
-  }
+  // Os botões "Executar Migração Automática" e "Configurar Portal Agora"
+  // saíram em nov/2026: chamavam /api/run-migration e /api/portal-migrar, que
+  // rodavam ALTER TABLE protegidos por um segredo escrito aqui no front — ou
+  // seja, visível para qualquer um que abrisse o JS do site. Mudança de banco
+  // é feita colando o SQL no Supabase, como todas as outras.
 
   return (
     <AppShell title="">
@@ -463,29 +429,9 @@ Qualquer dúvida, estamos à disposição! 😊`
             Migração pendente — colunas whatsapp, senha e detalhes ausentes na tabela clientes
           </div>
 
-          {/* Opção 1: botão automático */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <button
-              onClick={executarMigracao}
-              disabled={migrating}
-              style={{
-                background: '#fbbc04', color: '#171717', border: 'none', borderRadius: 6,
-                padding: '8px 16px', fontWeight: 700, cursor: 'pointer', display: 'flex',
-                alignItems: 'center', gap: 6, fontSize: '0.88rem',
-              }}
-            >
-              <span className="material-icons" style={{ fontSize: 16 }}>bolt</span>
-              {migrating ? 'Executando...' : 'Executar Migração Automática'}
-            </button>
-            <span style={{ color: 'var(--muted)', fontSize: '0.78rem' }}>
-              (requer SUPABASE_DB_URL no Vercel)
-            </span>
-          </div>
-
-          {/* Opção 2: manual */}
-          <div style={{ borderTop: '1px solid rgba(251,188,4,0.3)', paddingTop: 10 }}>
+          <div>
             <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
-              Ou cole manualmente no <b>Supabase → SQL Editor → New query → Run:</b>
+              Cole no <b>Supabase → SQL Editor → New query → Run:</b>
             </div>
             <div style={{ position: 'relative' }}>
               <div style={{
@@ -529,22 +475,9 @@ Qualquer dúvida, estamos à disposição! 😊`
             Tabelas do Portal do Cliente não encontradas
           </div>
           <div style={{ color:'var(--muted)', fontSize:'0.85rem' }}>
-            Clique no botão abaixo para criar as tabelas automaticamente. Requer <b>SUPABASE_DB_URL</b> nas variáveis de ambiente do Vercel.
+            Rode a migration do portal no <b>Supabase → SQL Editor</b> e tente
+            enviar o acesso de novo.
           </div>
-          <button
-            onClick={executarPortalMigracao}
-            disabled={portalMigrating}
-            style={{
-              background: 'rgba(138,180,248,.18)', color: 'var(--blue)',
-              border: '1px solid rgba(138,180,248,.35)', borderRadius: 6,
-              padding: '8px 16px', fontWeight: 700, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.88rem',
-              width: 'fit-content',
-            }}
-          >
-            <span className="material-icons" style={{ fontSize:16 }}>settings</span>
-            {portalMigrating ? 'Configurando...' : 'Configurar Portal Agora'}
-          </button>
         </div>
       )}
 

@@ -1,11 +1,23 @@
-import { createClient } from '@supabase/supabase-js'
+import { exigirUsuario } from './_auth.js'
+
+// O e-mail da conta do portal é montado com este domínio — é só identificador
+// interno do Supabase Auth, mas trocar o valor invalida os logins já criados.
+// O mesmo padrão está em src/lib/emailInterno.js (DOMINIO_EMAIL_PORTAL).
+const DOMINIO_PORTAL = process.env.PORTAL_EMAIL_DOMINIO || 'portal.vmkids.com.br'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   if (req.method === 'OPTIONS') return res.status(200).json({ ok: true })
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido' })
+
+  // Quem prepara o acesso da cliente é a equipe da loja, na tela de Clientes.
+  // Até nov/2026 esta rota era aberta e, para conta já existente, **trocava a
+  // senha** — qualquer um redefinia o acesso de uma cliente sabendo só o @
+  // dela e abria sacolinha, débitos e endereço.
+  const { perfil, admin: supabase, erro } = await exigirUsuario(req, ['master', 'admin', 'usuario'])
+  if (erro) return res.status(erro.status).json({ error: erro.error })
 
   const { instagram, whatsapp, nome_completo } = req.body || {}
   if (!instagram?.trim() || !whatsapp?.trim()) {
@@ -17,14 +29,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'WhatsApp deve ter no mínimo 6 dígitos' })
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
-
   const instaSlug   = instagram.trim().replace(/^@/, '').toLowerCase()
-  const email       = `${instaSlug}@portal.vmkids.com.br`
+  const email       = `${instaSlug}@${DOMINIO_PORTAL}`
   const instaHandle = instaSlug // SEM @ - normalizado
+
+  // A cliente tem que ser da empresa de quem está preparando o acesso. Sem
+  // isto, a equipe de uma empresa mexeria no acesso da cliente de outra — as
+  // contas do portal são identificadas só pelo @, sem tenant.
+  const { data: clienteDaEmpresa } = await supabase
+    .from('clientes')
+    .select('id')
+    .eq('tenant_id', perfil.tenant_id)
+    .ilike('instagram', instaHandle)
+    .maybeSingle()
+
+  if (!clienteDaEmpresa) {
+    return res.status(403).json({
+      error: 'Esta cliente não está cadastrada na sua empresa. Cadastre primeiro em Clientes.',
+    })
+  }
 
   // Tenta criar o usuário no Auth
   let userId

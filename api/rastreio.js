@@ -52,6 +52,6 @@ export default async function handler(req, res) {
   return res.status(200).json({
     itens: itemsRes.data || [],
     romaneio: Number(romaneio),
-    nomeLoja: cfgRes.data?.nome_loja || 'VM Kids',
+    nomeLoja: cfgRes.data?.nome_loja || 'Loja',
   })
 }

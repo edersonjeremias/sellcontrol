@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { postApiInterna } from '../lib/apiInterna'
 
 // ── Configurações do tenant ────────────────────────────────────
 
@@ -22,24 +23,12 @@ export async function saveConfig(tenantId, campos) {
   if (error) throw error
 }
 
-// Cache em memória para não bater no banco a cada link gerado
-let _cache = { tenantId: null, token: null }
-
-export async function getMpToken(tenantId) {
-  if (_cache.tenantId === tenantId && _cache.token) return _cache.token
-  const { data } = await supabase
-    .from('configuracoes')
-    .select('mp_access_token')
-    .eq('tenant_id', tenantId)
-    .maybeSingle()
-  const token = data?.mp_access_token?.trim() || import.meta.env.VITE_MP_ACCESS_TOKEN || ''
-  _cache = { tenantId, token }
-  return token
-}
-
-export function invalidateMpTokenCache() {
-  _cache = { tenantId: null, token: null }
-}
+// O token do Mercado Pago de cada empresa fica em configuracoes.mp_access_token
+// e quem o lê são as rotas de `api/`, no servidor, sempre pelo tenant_id da
+// cobrança. O getMpToken que existia aqui (com cache em memória) saiu em
+// nov/2026: ninguém o chamava e ele caía no VITE_MP_ACCESS_TOKEN — o token do
+// dono do sistema — quando a empresa não tinha o próprio configurado.
+// Cobrança de uma empresa não pode cair na conta de outra.
 
 // ── Usuários do tenant ─────────────────────────────────────────
 
@@ -116,21 +105,13 @@ export async function toggleUsuarioAtivo(userId, ativo) {
 }
 
 // Reseta senha do usuário (via serverless function)
+//
+// Caminho relativo: a serverless roda no mesmo host da aplicação, então não há
+// domínio para errar nem variável para manter. Vai por postApiInterna porque a
+// rota exige o token de quem está logado — ela só troca a senha de alguém da
+// mesma empresa, e quem manda é quem administra.
 export async function resetUsuarioSenha(userId, novaSenha) {
-  // Caminho relativo: a serverless roda no mesmo host da aplicação, então não
-  // há domínio para errar nem variável para manter
-  const response = await fetch('/api/reset-senha-usuario', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId, novaSenha }),
-  })
-
-  if (!response.ok) {
-    const data = await response.json()
-    throw new Error(data.error || 'Erro ao resetar senha')
-  }
-
-  return await response.json()
+  return postApiInterna('/api/reset-senha-usuario', { userId, novaSenha })
 }
 
 // ── Permissões de Vendas ──────────────────────────────────────

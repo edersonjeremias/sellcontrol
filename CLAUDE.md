@@ -105,3 +105,58 @@ para qualquer código novo:
 - Build local quebrado não significa Vercel quebrada: confira antes de alarmar.
 - Ao final de cada tarefa, commit e push para `main` — a Vercel publica sozinha.
 - Mensagem de commit em português, sem emoji, dizendo o efeito para quem usa.
+- **Toda alteração entra no registro abaixo**, na mesma tarefa em que foi
+  feita: página ou módulo novo, mudança de regra, migration, correção que muda
+  comportamento. Uma linha, com data. Quem abre o projeto amanhã lê daqui.
+
+---
+
+## Registro de alterações
+
+Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
+
+### 26/11/2026 — nada mais é fixo na empresa do dono
+
+- `tenant_id` passou a ser obrigatório: `src/lib/tenant.js` (`exigirTenant`)
+  substituiu o `tenantId || VITE_TENANT_ID` nos 12 serviços que o tinham.
+  Falta de tenant agora é erro na tela, não gravação na empresa errada.
+- Cobranças: as 3 chamadas de `gerarPreferenciaMp` em `CobrancasPage` não
+  passavam o tenant e caíam no fallback. Agora passam.
+- `AppContext` perdeu `lives`, `bloqueados` e `carregarDados` — ninguém
+  consumia, e era a única leitura do sistema sem dizer de qual empresa.
+- Token do Mercado Pago: fim do fallback para o token do ambiente em
+  `api/criar-preferencia-mp`, `api/confirmar-pagamento`, `api/mp-extrato` e no
+  `mercadopago-webhook`. Empresa sem token configurado recebe erro claro em
+  vez de cobrar na conta de outra. `configService.getMpToken` (sem uso) saiu.
+- Rotas de `api/` com service role passaram a conferir quem chamou, via
+  `api/_auth.js` (`exigirUsuario`) e `src/lib/apiInterna.js` no front:
+  `criar-usuario` (admin só cria na própria empresa e não cria master),
+  `reset-senha-usuario` (só gente da mesma empresa, e senha de master só
+  master troca), `portal-cliente` (exige login e cliente cadastrada na
+  empresa de quem chamou).
+- `api/run-migration.js` e `api/portal-migrar.js` **apagados**: rodavam DDL com
+  um segredo escrito no front. Junto saíram os botões da tela de Clientes; o
+  banner agora manda colar o SQL no Supabase.
+- `api/aplicar-cupom` passou a validar o cupom e **calcular o total no
+  servidor** — antes gravava o `total` que viesse no corpo, então quem tinha o
+  link do recibo zerava a própria dívida. Remover cupom virou ação dessa mesma
+  rota e volta a gravar o valor cheio (antes o update saía do navegador, a RLS
+  anônima só lê, e o total descontado ficava no banco).
+- `receber-pedido-live` (ManyChat): o segredo fixo no código saiu; agora usa o
+  `manychat_webhook_token` de cada empresa, como `receber-solicitacao-envio`, e
+  a busca da peça filtra por `tenant_id` — sem isso o comentário de uma live
+  podia marcar peça de outra empresa. **Exige configurar o token em
+  Configurações → Integrações e no header do fluxo do ManyChat.**
+- Nome da VM Kids saiu do produto: e-mail do pagador do MP, `'VM KIDS'` na
+  impressão de pedidos e no rastreio, `package.json`. O domínio do e-mail da
+  conta do portal virou configurável (`VITE_PORTAL_EMAIL_DOMINIO` /
+  `PORTAL_EMAIL_DOMINIO`), mas **o padrão continua o antigo**: trocar o valor
+  invalida os logins de portal já criados.
+
+### 25/11/2026 — módulos por empresa
+
+- Sistema passou a ser vendido por módulo: catálogo em `src/lib/modulos.js`,
+  contrato e preço em `tenant_modulos`, tela em Empresas → Módulos por Empresa,
+  travas dos canais públicos no banco. Ver
+  [INSTRUCOES_MODULOS_SAAS.md](INSTRUCOES_MODULOS_SAAS.md).
+- Link da bio (`/bio/<slug>`) entrou como canal público vendável.

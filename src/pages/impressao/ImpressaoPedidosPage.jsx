@@ -215,7 +215,7 @@ export default function ImpressaoPedidosPage() {
           <div key={i} className="pedido-card">
             <div className="pedido-header">
               <div className="pedido-header-top">
-                <span className="pedido-empresa">{nomeLoja || 'VM KIDS'}</span>
+                <span className="pedido-empresa">{nomeLoja || 'LOJA'}</span>
                 <span className="pedido-data-txt">{c.data}</span>
               </div>
             </div>

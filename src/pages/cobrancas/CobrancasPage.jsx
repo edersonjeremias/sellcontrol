@@ -471,7 +471,7 @@ export default function CobrancasPage() {
 
       if (novoTotal > 0) {
         try {
-          const mp = await gerarPreferenciaMp({ cliente: sel.cliente, total: novoTotal, whatsapp: sel.whatsapp, data: fmtData(sel.data), live: sel.live, idCobranca: sel.id })
+          const mp = await gerarPreferenciaMp({ cliente: sel.cliente, total: novoTotal, whatsapp: sel.whatsapp, data: fmtData(sel.data), live: sel.live, idCobranca: sel.id, tenantId })
           novoLink = mp.link; novoIdMp = mp.id_mp
         } catch (e) {
           console.warn('MP indisponível:', e.message)
@@ -518,7 +518,7 @@ export default function CobrancasPage() {
       const idCobranca = crypto.randomUUID()
       let link = '', idMp = ''
       try {
-        const mp = await gerarPreferenciaMp({ cliente: mNome, total: valor, whatsapp: mWhats, data: mData, live: '', idCobranca })
+        const mp = await gerarPreferenciaMp({ cliente: mNome, total: valor, whatsapp: mWhats, data: mData, live: '', idCobranca, tenantId })
         link = mp.link; idMp = mp.id_mp
       } catch (e) { 
         console.warn('MP indisponível:', e.message)
@@ -571,7 +571,7 @@ export default function CobrancasPage() {
         let link = '', idMp = ''
         if (g.total > 0) {
           try {
-            const mp = await gerarPreferenciaMp({ cliente: g.cliente, total: g.total, whatsapp: g.whatsapp, data: fmtData(g.data) || g.data, live: g.live, idCobranca: id })
+            const mp = await gerarPreferenciaMp({ cliente: g.cliente, total: g.total, whatsapp: g.whatsapp, data: fmtData(g.data) || g.data, live: g.live, idCobranca: id, tenantId })
             link = mp.link; idMp = mp.id_mp
           } catch (e) {
             console.warn('MP erro para cliente:', g.cliente, e.message)

@@ -7,8 +7,9 @@ import { supabase } from '../../lib/supabase'
 import {
   getFuncionarios, salvarLancamento, mascaraValor, parseValor, valorParaInput,
 } from '../../services/rhService'
+import { exigirTenant } from '../../lib/tenant'
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'ComissoesPage')
 
 // Compara nome de live com nome de cadastro ignorando acento e caixa
 function normalizar(txt) {

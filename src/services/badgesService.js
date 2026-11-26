@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase'
+import { exigirTenant } from '../lib/tenant'
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'badgesService')
 
 // Evento global para atualizar os badges do header na hora
 // (disparado pelas páginas quando uma conversa é marcada como lida)

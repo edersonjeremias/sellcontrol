@@ -2,11 +2,46 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 serve(async (req) => {
-  // 1. Verifica a senha de segurança do ManyChat
-  const secret = req.headers.get('x-webhook-secret')
-  if (secret !== 'vmk_live_2024_xK9p') {
+  // 1. Quem está chamando, e de qual empresa?
+  //
+  // Antes havia um segredo escrito aqui no código, igual para todas as
+  // empresas, e a busca da peça varria a tabela `vendas` inteira: o comentário
+  // de uma live podia marcar a peça de outra empresa. Agora é o mesmo esquema
+  // de receber-solicitacao-envio — cada empresa gera o próprio token em
+  // Configurações → Integrações, e o token diz de quem é o pedido.
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const supabase = createClient(supabaseUrl, supabaseKey)
+
+  const token = (
+    req.headers.get('x-webhook-secret') ||
+    new URL(req.url).searchParams.get('token') ||
+    ''
+  ).trim()
+
+  if (!token) {
     return new Response(JSON.stringify({ erro: 'Acesso negado' }), { status: 401 })
   }
+
+  const { data: config, error: erroConfig } = await supabase
+    .from('configuracoes')
+    .select('tenant_id')
+    .eq('manychat_webhook_token', token)
+    .maybeSingle()
+
+  if (erroConfig) {
+    console.error('Erro ao resolver o token:', erroConfig)
+    return new Response(
+      JSON.stringify({ ok: false, mensagem: 'Erro interno no sistema da loja.' }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    )
+  }
+
+  if (!config?.tenant_id) {
+    return new Response(JSON.stringify({ erro: 'Acesso negado' }), { status: 401 })
+  }
+
+  const tenantId = config.tenant_id
 
   // 2. Recebe os dados em JSON que o ManyChat enviou
   const body = await req.json()
@@ -52,16 +87,14 @@ serve(async (req) => {
     )
   }
 
-  // 3. Conecta no seu banco de dados Supabase
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  const supabase = createClient(supabaseUrl, supabaseKey)
-
-  // 4. Atualiza a peca somente quando cliente estiver vazio/nulo
+  // 3. Atualiza a peca somente quando cliente estiver vazio/nulo, e só dentro
+  // da empresa do token: sem o filtro, o comentário de uma live marcava peça
+  // de qualquer empresa do sistema.
   // Busca por codigo com normalizacao simples para reduzir falhas de digitacao/espaco.
   const { data: candidatas, error: erroBusca } = await supabase
     .from('vendas')
     .select('id, codigo, cliente_nome, created_at')
+    .eq('tenant_id', tenantId)
     .or('cliente_nome.eq.,cliente_nome.is.null')
     .order('created_at', { ascending: true })
 
@@ -87,6 +120,7 @@ serve(async (req) => {
     .from('vendas')
     .update({ cliente_nome: usuario })
     .eq('id', candidata.id)
+    .eq('tenant_id', tenantId)
     .select()
 
   // 5. Verifica se deu erro interno (Status 200 forçado para o ManyChat ler)

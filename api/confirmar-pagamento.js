@@ -28,7 +28,8 @@ export default async function handler(req, res) {
       .eq('tenant_id', cob.tenant_id)
       .maybeSingle()
 
-    const mpToken = cfg?.mp_access_token?.trim() || process.env.MP_ACCESS_TOKEN || ''
+    // Só o token da empresa desta cobrança (ver api/criar-preferencia-mp.js).
+    const mpToken = cfg?.mp_access_token?.trim() || ''
     if (!mpToken) return res.status(422).json({ error: 'Token MP não configurado' })
 
     // Caminho 1: temos o paymentId (vindo do back_url do MP)

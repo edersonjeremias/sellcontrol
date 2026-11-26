@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase'
 import { isoLocal, dataLocal, diasTrabalhoSet, competenciaDe } from './rhService'
+import { exigirTenant } from '../lib/tenant'
 
-const tid = (tenantId) => tenantId || import.meta.env.VITE_TENANT_ID
+const tid = (tenantId) => exigirTenant(tenantId, 'pontoService')
 
 const BUCKET_PONTO  = 'rh-ponto'
 const MESES_GUARDAR = 6          // selfies; a marcação nunca é apagada

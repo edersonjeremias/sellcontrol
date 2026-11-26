@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { portalSb } from '../../lib/portalSupabase'
+import { emailPortalDeInstagram } from '../../lib/emailInterno'
 
 // ============================================================================
 // A conta da cliente dentro da loja
@@ -71,7 +72,7 @@ export default function useContaLoja() {
     if (!insta || senha.length < 6) return false
 
     const { data, error } = await portalSb.auth.signInWithPassword({
-      email: `${insta}@portal.vmkids.com.br`,
+      email: emailPortalDeInstagram(insta),
       password: senha,
     })
     if (error || !data?.session) return false
