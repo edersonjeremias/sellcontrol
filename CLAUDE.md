@@ -115,6 +115,32 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 26/11/2026 (4) — relatório separa o que veio da loja do que veio da live
+
+Com a loja no ar as duas vendas caem na mesma tabela `vendas` e o relatório as
+somava sem distinguir. O seletor **Origem** (Todas / Loja online / Live) resolve
+no servidor: `origem = 'loja'` é o que o checkout grava em cada peça
+([loja-confirmar-pedido](supabase/functions/loja-confirmar-pedido/index.ts)), e
+venda de live é `origem` nula, como sempre foi. A coluna e o índice já existiam
+desde [20261121d](supabase/migrations/20261121d_loja_checkout.sql) — faltava
+expor. Sem migration.
+
+É um seletor à parte, não mais uma opção na lista de status, para poder cruzar
+("o que a loja vendeu e foi cancelado").
+
+Dois tropeços nessa tarefa, que valem como aviso:
+
+- O `useCallback` que aplica os filtros ganhou `origem` no corpo mas não nas
+  dependências. O React devolvia a função antiga, que gravava a origem anterior:
+  o botão Filtrar ficava verde para sempre e a tela não mudava. **O projeto não
+  tem `react-hooks/exhaustive-deps` no lint**, então erro de dependência passa
+  direto — confira à mão ao mexer em hook.
+- Um commit meu quebrou a Vercel por levar, junto, o `import '../lib/tenant'`
+  que outra sessão tinha deixado no arquivo antes de o `tenant.js` estar no git.
+  Build local passou porque o arquivo existe em disco. Com duas sessões no mesmo
+  arquivo, `git add <caminho>` carimba tudo o que estiver nele: olhe o
+  `git diff` antes.
+
 ### 26/11/2026 (3) — peça pendente não encerra a sacolinha sozinha
 
 [20261126e](supabase/migrations/20261126e_encerramento_ignora_pendente.sql)

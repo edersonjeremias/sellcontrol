@@ -74,7 +74,7 @@ export default function RelatorioPage() {
   const aplicarFiltros = useCallback(() => {
     setJaFiltrou(true)
     setAplicado({ dataInicio: dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente, origem })
-  }, [dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente])
+  }, [dataIni, dataFim, filtroStatus, filtroStatusExpedicao, cliente, origem])
 
   const pendente =
     !jaFiltrou ||
