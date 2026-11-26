@@ -154,11 +154,24 @@ sacolinha mostrava as peças das duas lojas juntas.
   montar o login), e `loja-checkout` recusa conta de portal de outra empresa.
 - No painel, bloquear/desbloquear portal passou a exigir o tenant.
 
-**Ainda sem filtro por empresa:** `portal_get_meus_debitos`,
-`portal_encerrar_sacolinha` e as funções de conversa do portal foram criadas
-direto no banco e não têm código no repositório. O SELECT que extrai a
-definição delas está no fim da migration; com ela em mãos, aplicar o mesmo
-`portal_get_tenant()`.
+**As sete funções que viviam só dentro do banco** foram trazidas para
+`supabase/migrations/` e ganharam o filtro por empresa —
+[20261126c](supabase/migrations/20261126c_portal_debitos_por_empresa.sql)
+(débitos) e
+[20261126d](supabase/migrations/20261126d_portal_conversas_por_empresa.sql)
+(conversas e encerramento da sacolinha). Três coisas apareceram na leitura
+delas:
+
+- `portal_criar_conversa` descobria a empresa com
+  `SELECT tenant_id FROM configuracoes LIMIT 1` — a primeira linha da tabela.
+  A cliente escrevia para uma loja e a mensagem caía no atendimento de outra.
+- `portal_encerrar_sacolinha` confiava no `@` recebido por parâmetro: dava
+  para fechar a sacolinha de outra cliente chamando a função com o @ dela.
+  Agora o @ é sempre o de quem está logado.
+- As funções de conversa achavam a conversa só pelo `@`, sem empresa.
+
+Lição que ficou: **função criada direto no SQL Editor é código que ninguém
+revisa**. Toda função nova entra em `supabase/migrations/`.
 
 ### 26/11/2026 — nada mais é fixo na empresa do dono
 
