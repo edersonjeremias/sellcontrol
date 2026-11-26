@@ -126,6 +126,35 @@ export const ehChavePix = (link) =>
   link?.tipo === 'pix' && !ehUrl(link?.url) && !ehCaminho(link?.url)
 
 /**
+ * A mensagem que vai junto com o link no botão de compartilhar.
+ *
+ * Mandar só o endereço entrega uma linha azul sem contexto na conversa de
+ * quem recebe. Quando a loja não escreve nada, o sistema monta a frase com o
+ * nome da página — é melhor que nada e não obriga ninguém a preencher.
+ */
+export function textoCompartilhar(pagina) {
+  const escrito = String(pagina?.mensagem_compartilhar || '').trim()
+  if (escrito) return escrito
+
+  const nome = String(pagina?.titulo || '').trim()
+  return nome
+    ? `Este é o link da loja ${nome}\nClique abaixo para mais informações`
+    : 'Clique abaixo para mais informações'
+}
+
+/**
+ * O endereço limpo da página.
+ *
+ * window.location.href carrega o que veio grudado no clique — os
+ * utm_source=ig do Instagram, o fbclid do Facebook. Repassar isso faz a
+ * estatística de quem recebeu o link virar a de quem mandou.
+ */
+export function enderecoLimpo() {
+  if (typeof window === 'undefined') return ''
+  return window.location.origin + window.location.pathname
+}
+
+/**
  * O que pode virar href.
  *
  * montarUrlBio já prefixa https:// no que não reconhece, mas o endereço

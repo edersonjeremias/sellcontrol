@@ -67,9 +67,10 @@ export default function BioPage() {
     setTimeout(() => setAviso(''), 2400)
   }
 
-  function aoClicar({ link, copiado, pix }) {
+  function aoClicar({ link, copiado, pix, mensagem }) {
     if (link?.id) registrarCliqueBio(link.id)
-    if (copiado) mostrarAviso(pix ? 'Chave Pix copiada' : 'Link copiado')
+    if (!copiado) return
+    mostrarAviso(pix ? 'Chave Pix copiada' : mensagem ? 'Mensagem e link copiados' : 'Link copiado')
   }
 
   if (estado === 'carregando') {

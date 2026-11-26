@@ -18,7 +18,7 @@ import {
   BIO_PADRAO, getBioPagina, getBioLinks, salvarBioPagina, salvarBioLinks,
   uploadLogoBio, removerLogoBio, normalizarSlug, linkBio,
 } from '../../services/bioService'
-import { montarUrlBio, valorVisivelBio } from '../../lib/bioUrl'
+import { montarUrlBio, valorVisivelBio, textoCompartilhar } from '../../lib/bioUrl'
 import { rotuloTipo } from '../../components/bio/IconesBio'
 import EditorLinks from '../../components/bio/EditorLinks'
 import BioRender from '../../components/bio/BioRender'
@@ -352,6 +352,7 @@ export default function AbaBio({ tenantId, showToast }) {
         botao_raio: pagina.botao_raio || 'arredondado',
         mostrar_compartilhar: pagina.mostrar_compartilhar !== false,
         mostrar_marca: pagina.mostrar_marca !== false,
+        mensagem_compartilhar: (pagina.mensagem_compartilhar || '').trim() || null,
       })
 
       const gravados = await salvarBioLinks(
@@ -619,6 +620,34 @@ export default function AbaBio({ tenantId, showToast }) {
             />
             Botão de compartilhar no topo
           </label>
+
+          {/* Só faz sentido com o botão ligado: é a frase que ele envia */}
+          {pagina.mostrar_compartilhar !== false && (
+            <div style={{ margin: '0 0 16px 28px' }}>
+              <label style={labelStyle}>Mensagem que vai junto com o link</label>
+              <textarea
+                value={pagina.mensagem_compartilhar || ''}
+                onChange={e => mudarPagina({ mensagem_compartilhar: e.target.value })}
+                rows={2}
+                style={{ ...inputStyle, resize: 'vertical' }}
+                placeholder={textoCompartilhar({ titulo: pagina.titulo })}
+              />
+              <div style={{
+                marginTop: 8, padding: '10px 12px', borderRadius: 8,
+                border: '1px solid var(--border-light)', background: 'rgba(255,255,255,0.02)',
+                fontSize: 12, color: 'var(--muted)', whiteSpace: 'pre-line', lineHeight: 1.6,
+              }}>
+                {textoCompartilhar(pagina)}
+                {'\n\n'}
+                <span style={{ color: 'var(--blue)', wordBreak: 'break-all' }}>
+                  {endereco || 'o link da sua página'}
+                </span>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+                É assim que a mensagem chega em quem recebe. Em branco, vale a frase de cima.
+              </p>
+            </div>
+          )}
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-body)', cursor: 'pointer' }}>
             <input

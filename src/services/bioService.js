@@ -31,6 +31,7 @@ export const BIO_PADRAO = {
   botao_raio: 'arredondado',
   mostrar_compartilhar: true,
   mostrar_marca: true,
+  mensagem_compartilhar: '',
 }
 
 /**

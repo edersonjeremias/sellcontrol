@@ -10,7 +10,7 @@
 // ============================================================================
 
 import IconeBio from './IconesBio'
-import { ehChavePix, hrefSeguro } from '../../lib/bioUrl'
+import { ehChavePix, hrefSeguro, textoCompartilhar, enderecoLimpo } from '../../lib/bioUrl'
 import './bio.css'
 
 /** Iniciais para a página não ficar com um buraco enquanto não há logo */
@@ -44,14 +44,21 @@ export default function BioRender({ pagina, links, previa = false, onClique }) {
 
   function compartilhar() {
     if (previa) return
-    const url = window.location.href
-    const titulo = p.titulo || 'Meus links'
+
+    const url = enderecoLimpo()
+    const texto = textoCompartilhar(p)
+
+    // O celular abre a lista de aplicativos; o WhatsApp cola a frase e o
+    // link um embaixo do outro.
     if (navigator.share) {
-      navigator.share({ title: titulo, url }).catch(() => {})
+      navigator.share({ title: p.titulo || 'Meus links', text: texto, url }).catch(() => {})
       return
     }
-    navigator.clipboard?.writeText(url)
-    onClique?.({ copiado: url })
+
+    // No computador não há folha de compartilhamento: a conversa inteira vai
+    // para a área de transferência, pronta para colar.
+    navigator.clipboard?.writeText(`${texto}\n\n${url}`)
+    onClique?.({ copiado: url, mensagem: true })
   }
 
   function aoClicar(e, link) {
