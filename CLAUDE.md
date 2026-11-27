@@ -137,6 +137,20 @@ sai cortado justamente quando passa de mil, que é quando o erro custa caro.
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 27/11/2026 (3) — filtros de Produtos foram para a engrenagem
+
+Sem estoque, Inativos e Na loja saíram do cabeçalho e entraram no modal da
+engrenagem, numa seção **Mostrar na lista** acima de Colunas Visíveis. Eram
+três caixas ocupando a linha da busca no computador e quebrando para outra
+linha no celular, à frente dos filtros de data.
+
+Estavam duplicados: um bloco no cabeçalho do computador e outro no do celular,
+ligados ao mesmo estado. Agora existe um só, e a engrenagem já aparecia nos
+dois cabeçalhos — sem isso o celular ficaria sem acesso aos filtros.
+
+Só JSX. Sem migration e sem mudança de comportamento: o que cada caixa filtra
+continua igual.
+
 ### 27/11/2026 (2) — Preço e Promo cabem o maior valor, e o padrão virou regra
 
 A coluna Promo saía com o valor cortado (`29,9` no lugar de `29,90`): ela tinha

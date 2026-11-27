@@ -843,44 +843,8 @@ export default function ProdutosPage() {
                 />
               </div>
 
-              {/* Grupo: Checkbox Inativos + Engrenagem + Botão Novo */}
+              {/* Grupo: Engrenagem + Botão Novo */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                  <input
-                    type="checkbox"
-                    checked={mostrarSemEstoque}
-                    onChange={e => {
-                      setMostrarSemEstoque(e.target.checked)
-                      setPaginaAtual(1)
-                    }}
-                  />
-                  Sem estoque
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                  <input
-                    type="checkbox"
-                    checked={mostrarInativos}
-                    onChange={e => {
-                      setMostrarInativos(e.target.checked)
-                      setPaginaAtual(1)
-                    }}
-                  />
-                  Inativos
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#888', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                  <input
-                    type="checkbox"
-                    checked={soLoja}
-                    onChange={e => {
-                      setSoLoja(e.target.checked)
-                      setPaginaAtual(1)
-                    }}
-                  />
-                  Na loja
-                </label>
-
                 <button onClick={() => setShowSettings(!showSettings)} title="Configurações" style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}>
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="3"/>
@@ -994,44 +958,8 @@ export default function ProdutosPage() {
               />
             </div>
 
-            {/* Linha 3: Inativos + Filtros de Data */}
+            {/* Linha 3: Filtros de Data (os de conteúdo foram para a engrenagem) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
-                <input
-                  type="checkbox"
-                  checked={mostrarSemEstoque}
-                  onChange={e => {
-                    setMostrarSemEstoque(e.target.checked)
-                    setPaginaAtual(1)
-                  }}
-                />
-                Sem estoque
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
-                <input
-                  type="checkbox"
-                  checked={mostrarInativos}
-                  onChange={e => {
-                    setMostrarInativos(e.target.checked)
-                    setPaginaAtual(1)
-                  }}
-                />
-                Inativos
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
-                <input
-                  type="checkbox"
-                  checked={soLoja}
-                  onChange={e => {
-                    setSoLoja(e.target.checked)
-                    setPaginaAtual(1)
-                  }}
-                />
-                Na loja
-              </label>
-
               <label style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#888', whiteSpace: 'nowrap' }}>
                 Dt in:
                 <input
@@ -1102,7 +1030,42 @@ export default function ProdutosPage() {
         {showSettings && (
           <div className="modal-overlay" onClick={() => setShowSettings(false)}>
             <div className="modal-config" onClick={e => e.stopPropagation()}>
-              <h3>Colunas Visíveis</h3>
+              <h3>Mostrar na lista</h3>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={mostrarSemEstoque}
+                  onChange={e => {
+                    setMostrarSemEstoque(e.target.checked)
+                    setPaginaAtual(1)
+                  }}
+                />
+                Sem estoque
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={mostrarInativos}
+                  onChange={e => {
+                    setMostrarInativos(e.target.checked)
+                    setPaginaAtual(1)
+                  }}
+                />
+                Inativos
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={soLoja}
+                  onChange={e => {
+                    setSoLoja(e.target.checked)
+                    setPaginaAtual(1)
+                  }}
+                />
+                Na loja
+              </label>
+
+              <h3 style={{ marginTop: 20 }}>Colunas Visíveis</h3>
               <label>
                 <input type="checkbox" checked={cols.genero} onChange={e => setCols(c => ({ ...c, genero: e.target.checked }))} />
                 Gênero
