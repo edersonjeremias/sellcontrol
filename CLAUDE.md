@@ -115,6 +115,20 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 26/11/2026 (8) — foto achatada: `width` sozinho não mantém proporção
+
+O redimensionamento do Storage, chamado só com `width`, **encolhe a largura e
+mantém a altura original**: uma foto 736x1415 voltava 400x1415, achatada. No
+card, com `object-fit: cover`, o resultado era a peça cortada como se
+estivesse com zoom.
+
+`foto()` passou a mandar `resize=contain` junto. Conferido em três fotos
+reais: 736x1415 → 400x769, 864x1227 → 400x568, 960x1100 → 400x458 — proporção
+idêntica à original, e 503 KB viraram 179 KB.
+
+**Transformação de imagem se confere medindo o arquivo que volta**, não pela
+URL montada: a resposta vem 200, a imagem abre, e só a proporção denuncia.
+
 ### 26/11/2026 (7) — fotos da vitrine saíram com 1 pixel
 
 `pecas.map(paraVitrine)` passa **o índice do array** como segundo argumento, e

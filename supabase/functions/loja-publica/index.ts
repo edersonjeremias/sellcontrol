@@ -58,7 +58,11 @@ function foto(url: any, largura: number, qualidade = 72) {
   }
 
   const base = texto.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')
-  return `${base}?width=${px}&quality=${qualidade}`
+  // resize=contain é obrigatório: só com `width`, o Storage encolhe a largura
+  // e MANTÉM a altura original (736x1415 virava 400x1415), achatando a peça.
+  // Com contain ele calcula a altura e a foto chega na proporção em que foi
+  // tirada.
+  return `${base}?width=${px}&resize=contain&quality=${qualidade}`
 }
 
 /** Preço que a cliente paga: o promocional quando existir */
