@@ -65,9 +65,11 @@ DECLARE
   v_unico uuid;
   v_orfas integer;
 BEGIN
-  SELECT count(*), min(id) INTO v_qtd, v_unico FROM tenants;
+  -- Sem min(id): o Postgres não tem MIN para uuid.
+  SELECT count(*) INTO v_qtd FROM tenants;
 
   IF v_qtd = 1 THEN
+    SELECT id INTO v_unico FROM tenants LIMIT 1;
     UPDATE portal_clientes SET tenant_id = v_unico WHERE tenant_id IS NULL;
   END IF;
 
