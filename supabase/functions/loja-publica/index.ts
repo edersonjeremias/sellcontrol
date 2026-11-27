@@ -47,8 +47,18 @@ const POR_PAGINA = 24
 function foto(url: any, largura: number, qualidade = 72) {
   const texto = String(url || '')
   if (!texto.includes('/storage/v1/object/public/')) return texto || null
+
+  // Largura absurda vira foto ilegível em silêncio: uma de 1px esticada no
+  // card aparece como um retângulo de cor sólida, e nada no código reclama.
+  // Já aconteceu — `pecas.map(paraVitrine)` mandava o índice do array aqui.
+  const px = Math.round(Number(largura))
+  if (!Number.isFinite(px) || px < 100 || px > 2000) {
+    console.error(`Largura de foto inválida (${largura}); servindo o original`)
+    return texto
+  }
+
   const base = texto.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')
-  return `${base}?width=${largura}&quality=${qualidade}`
+  return `${base}?width=${px}&quality=${qualidade}`
 }
 
 /** Preço que a cliente paga: o promocional quando existir */
@@ -402,7 +412,10 @@ async function acaoCatalogo(supabase: any, tenantId: string, loja: any, payload:
   return json({
     loja,
     facetas,
-    pecas: pecas.map(paraVitrine),
+    // `pecas.map(paraVitrine)` passaria o índice do array como segundo
+    // argumento, e o segundo argumento é a largura da foto: a primeira peça
+    // vinha com width=0, a segunda com width=1, e assim por diante
+    pecas: pecas.map((p: any) => paraVitrine(p)),
     pagina,
     total: filtradas.length,
     tem_mais: inicio + pecas.length < filtradas.length,
@@ -439,7 +452,7 @@ async function acaoPeca(supabase: any, tenantId: string, loja: any, payload: any
   const relacionadas = todas
     .filter((p: any) => p.id !== achada.id && igual(p.produto, achada.produto))
     .slice(0, 6)
-    .map(paraVitrine)
+    .map((p: any) => paraVitrine(p))
 
   return json({
     loja,

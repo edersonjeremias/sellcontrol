@@ -115,6 +115,21 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 26/11/2026 (7) — fotos da vitrine saíram com 1 pixel
+
+`pecas.map(paraVitrine)` passa **o índice do array** como segundo argumento, e
+o segundo argumento de `paraVitrine` é a largura da foto. A primeira peça era
+pedida com `width=0`, a segunda com `width=1`, e assim por diante: a vitrine
+inteira virou retângulo de cor sólida. Corrigido com
+`.map(p => paraVitrine(p))` nas duas chamadas (catálogo e relacionadas).
+
+`foto()` passou a recusar largura fora de 100–2000px, servindo o original e
+registrando no log. Nada no código reclamava de uma foto de 1px — só a tela da
+cliente.
+
+**Função com parâmetro opcional nunca vai direto em `.map()`.** Vale para
+`.filter()`, `.forEach()` e qualquer outra que passe índice.
+
 ### 26/11/2026 (6) — correção: o painel não rodava
 
 [20261126g](supabase/migrations/20261126g_loja_painel_dia_ambiguo.sql) recria
