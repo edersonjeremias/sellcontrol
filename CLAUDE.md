@@ -115,6 +115,13 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 27/11/2026 (2) — Preço e Promo com a mesma largura na tela de Vendas
+
+A coluna Promo saía com o valor cortado (`29,9` no lugar de `29,90`): ela tinha
+largura fixa e a Preço, só largura mínima, então a Preço ficava com a sobra da
+tabela e a Promo não acompanhava. As duas passaram a ter a mesma largura.
+Só CSS, escopado em `.vendas-page`. Sem migration.
+
 ### 27/11/2026 — Gestão de Etiquetas mostra quando o romaneio ficou pronto
 
 Coluna **Data Pronto** antes de Data Pago, lendo `romaneios.pronto_em`, que já

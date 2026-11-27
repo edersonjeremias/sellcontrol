@@ -767,7 +767,10 @@ input[type="date"] { color-scheme: dark; }
 /* Colunas estreitas: Tam. e Promo tem conteudo curto e roubavam largura
    das colunas de texto. So em Vendas. */
 .vendas-page .col-tam { min-width: 58px; }
-.vendas-page .col-promo { min-width: 62px; width: 62px; text-align: right; }
+/* Preco e Promo com a mesma largura: a Promo tinha largura fixa enquanto a
+   Preco crescia com a sobra da tabela, e o valor saia cortado (29,9). */
+.vendas-page .col-preco,
+.vendas-page .col-promo { min-width: 80px; width: 80px; text-align: right; }
 .vendas-page .col-descricao { min-width: 180px; }
 
 /* ── TABELA ── */
