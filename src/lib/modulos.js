@@ -148,6 +148,10 @@ export const MODULOS = [
     icon: 'settings', order_index: 100, preco: 0, roles: ['master', 'admin'], essencial: true,
     descricao: 'Dados da empresa, usuários e permissões. Vai junto com a assinatura.' },
 
+  { slug: 'painel-loja', label: 'Painel da Loja', categoria: 'Financeiro', tipo: TIPO_PAGINA,
+    icon: 'insights', order_index: 120, preco: 49, roles: ['master', 'admin'], essencial: false,
+    descricao: 'Visitas, funil e faturamento da loja virtual. Depende do módulo Loja.' },
+
   // ── Canais públicos (não aparecem no menu) ────────────────────────────────
   { slug: 'loja', label: 'Loja Virtual', categoria: 'Canais', tipo: TIPO_RECURSO,
     icon: 'storefront', order_index: 200, preco: 199, roles: null, essencial: false,

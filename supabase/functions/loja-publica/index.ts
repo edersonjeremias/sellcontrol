@@ -104,6 +104,50 @@ async function temModulo(supabase: any, tenantId: string, slug: string) {
   return data === true
 }
 
+/**
+ * Registra a visita, sem segurar a resposta.
+ *
+ * A vitrine não pode demorar por causa de uma estatística: a gravação vai em
+ * paralelo e, se falhar, a cliente nem fica sabendo — perder uma visita na
+ * contagem é bem menos grave que a loja abrir devagar.
+ *
+ * Nada aqui identifica a pessoa: `visitante` é um número sorteado no navegador
+ * dela, e `origem` é só de que site ela veio.
+ */
+function registrarVisita(
+  supabase: any,
+  tenantId: string,
+  tipo: 'catalogo' | 'peca',
+  payload: any,
+  produtoId: string | null = null,
+  codigo: string | null = null,
+) {
+  supabase
+    .rpc('loja_registrar_evento', {
+      p_tenant_id: tenantId,
+      p_tipo: tipo,
+      p_produto_id: produtoId,
+      p_codigo: codigo,
+      p_visitante: String(payload?.visitante || '').slice(0, 64) || null,
+      p_origem: origemDaVisita(payload?.origem),
+    })
+    .then(({ error }: any) => {
+      if (error) console.error('Não foi possível registrar a visita:', error.message)
+    })
+}
+
+/** De onde a visita veio, em uma palavra que o painel sabe mostrar */
+function origemDaVisita(valor: any) {
+  const texto = String(valor || '').toLowerCase()
+  if (!texto) return 'direto'
+  if (texto.includes('instagram')) return 'instagram'
+  if (texto.includes('whatsapp') || texto.includes('wa.me')) return 'whatsapp'
+  if (texto.includes('facebook') || texto.includes('fb.')) return 'facebook'
+  if (texto.includes('google')) return 'google'
+  if (texto.includes('tiktok')) return 'tiktok'
+  return 'outro'
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -318,6 +362,12 @@ async function contarReservados(supabase: any, tenantId: string, pedidoProprio?:
 // CATÁLOGO
 // ────────────────────────────────────────────────────────────────────────────
 async function acaoCatalogo(supabase: any, tenantId: string, loja: any, payload: any) {
+  // Só a primeira página conta como visita: "Ver mais peças" é a mesma pessoa
+  // rolando a mesma visita, e contar cada lote inflaria o número
+  if (Number(payload.pagina || 1) <= 1) {
+    registrarVisita(supabase, tenantId, 'catalogo', payload)
+  }
+
   const todas = await disponiveis(supabase, tenantId, pedidoDoVisitante(payload))
 
   // As opções dos filtros saem do catálogo inteiro, não da página mostrada:
@@ -376,6 +426,8 @@ async function acaoPeca(supabase: any, tenantId: string, loja: any, payload: any
     // erro seco: o link circula no Instagram muito depois da venda.
     return json({ loja, indisponivel: true }, 200)
   }
+
+  registrarVisita(supabase, tenantId, 'peca', payload, achada.id, achada.codigo)
 
   // Na página da peça a foto ocupa a tela, então vem maior que no card — e
   // ainda assim redimensionada, não o arquivo de vários megabytes do celular

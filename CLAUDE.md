@@ -115,6 +115,42 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 26/11/2026 (5) — Painel da Loja: visita contada no servidor
+
+A loja não deixava rastro: dava para saber o que vendeu, nunca quantas pessoas
+entraram e desistiram. Página nova **Painel da Loja** (`/painel-loja`), no
+catálogo como `painel-loja` (Financeiro, R$ 49, admin e master).
+
+[20261126f](supabase/migrations/20261126f_loja_eventos.sql) cria
+`loja_eventos`, `loja_registrar_evento` e `loja_painel`. Quem grava é a Edge
+Function `loja-publica`, no servidor — **sem script de rastreio na página**:
+bloqueador de anúncio derruba script de terceiro, o número sairia menor que o
+real e não cruzaria com venda nenhuma. **Não guardamos IP nem nada pessoal**: o
+visitante é um número sorteado no navegador (`src/pages/loja/visitante.js`),
+que só serve para separar "100 visitas" de "100 pessoas".
+
+Metade do funil já existia em `loja_pedidos` e só faltava somar: sacola montada
+é pedido em `carrinho`, abandono é `expirado`, venda é `pago`. O painel mostra
+visitas → peças abertas → sacolas → checkout → pago, com a conversão de cada
+etapa, peças mais olhadas (e se venderam), origem da visita e faturamento.
+
+Três decisões que valem revisita:
+
+- A mesma pessoa conta **uma visita a cada 30 minutos** no mesmo alvo. Sem isso,
+  quem volta ao catálogo depois de ver três peças contaria quatro visitas e a
+  conversão sairia menor do que é.
+- `loja_painel` é `SECURITY DEFINER`, então **confere `users_perfil` por dentro**
+  — RLS não protege função assim, e sem a checagem bastaria o `tenant_id` de
+  outra empresa para ler o painel dela.
+- Só a **primeira página** do catálogo conta visita; "Ver mais peças" é a mesma
+  visita rolando.
+
+Dois erros meus que o SQL não acusaria sozinho, caçados na revisão antes do
+deploy: `generate_series` devolve timestamp, então o dia do gráfico precisa de
+`::date::text` (sairia "2026-11-26 00:00:00"); e `LIMIT 15` sem `ORDER BY` no
+agrupamento das mais vistas devolveria 15 peças quaisquer — a lista das "mais
+olhadas" sairia aleatória, e ninguém perceberia olhando a tela.
+
 ### 26/11/2026 (4) — relatório separa o que veio da loja do que veio da live
 
 Com a loja no ar as duas vendas caem na mesma tabela `vendas` e o relatório as

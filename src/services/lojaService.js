@@ -7,6 +7,7 @@
 // ============================================================================
 
 import { siteUrl } from '../lib/siteUrl'
+import { idVisitante, origemDaVisita } from '../pages/loja/visitante'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -48,11 +49,21 @@ async function chamar(acao, slug, payload = {}) {
 export const buscarCatalogo = (
   slug,
   { pagina = 1, filtros = {}, busca = '', ordem = 'recentes', pedidoId = null } = {}
-) => chamar('catalogo', slug, { pagina, filtros, busca, ordem, pedido_id: pedidoId })
+) => chamar('catalogo', slug, {
+  pagina, filtros, busca, ordem, pedido_id: pedidoId,
+  // Para o painel da loja saber quantas pessoas entraram e de onde vieram.
+  // Nada aqui identifica ninguém: ver src/pages/loja/visitante.js
+  visitante: idVisitante(),
+  origem: origemDaVisita(),
+})
 
 /** Página de uma peça só, a que é divulgada no Instagram */
 export const buscarPeca = (slug, codigo, pedidoId = null) =>
-  chamar('peca', slug, { codigo, pedido_id: pedidoId })
+  chamar('peca', slug, {
+    codigo, pedido_id: pedidoId,
+    visitante: idVisitante(),
+    origem: origemDaVisita(),
+  })
 
 /** Guarda a peça no carrinho. Sem pedido_id, a função abre um carrinho novo. */
 export const reservarPeca = (slug, produtoId, pedidoId) =>

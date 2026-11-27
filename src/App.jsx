@@ -77,6 +77,7 @@ import RelatorioPage                  from './pages/relatorio/RelatorioPage'
 import FilaEsperaPage                 from './pages/relatorio/FilaEsperaPage'
 import ContatosPage                   from './pages/contatos/ContatosPage'
 import DashboardFinanceiroPage        from './pages/relatorio/DashboardFinanceiroPage'
+import PainelLojaPage                 from './pages/loja/PainelLojaPage'
 import ContasPagarPage                from './pages/relatorio/ContasPagarPage'
 import CreditosPage                   from './pages/relatorio/CreditosPage'
 import ComissoesPage                  from './pages/relatorio/ComissoesPage'
@@ -128,6 +129,7 @@ export default function App() {
             <Route path="/notificacoes"          element={<RequirePage slug="notificacoes"><NotificacoesPage /></RequirePage>} />
             <Route path="/debug"                 element={<RequireAuth><DebugPage /></RequireAuth>} />
             <Route path="/dashboard-financeiro"  element={<RequirePage slug="dashboard-financeiro"><DashboardFinanceiroPage /></RequirePage>} />
+            <Route path="/painel-loja"           element={<RequirePage slug="painel-loja"><PainelLojaPage /></RequirePage>} />
             <Route path="/contas-pagar"          element={<RequirePage slug="contas-pagar"><ContasPagarPage /></RequirePage>} />
             <Route path="/creditos-clientes"     element={<RequirePage slug="creditos-clientes"><CreditosPage /></RequirePage>} />
             <Route path="/comissoes"             element={<RequirePage slug="comissoes"><ComissoesPage /></RequirePage>} />
