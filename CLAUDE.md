@@ -87,6 +87,28 @@ para qualquer código novo:
    `supabase/functions/receber-solicitacao-envio`). E segredo nenhum mora em
    `src/` — tudo em `src/` vai inteiro para o navegador.
 
+## Campo de preço — um padrão só, em todo o sistema
+
+Qualquer campo que receba dinheiro (preço, promoção, custo, frete, valor de
+cobrança, desconto) digita igual ao da tela de Vendas. Não invente outro.
+
+**Como se comporta:** quem digita só aperta números, e o valor se monta da
+direita para a esquerda, em centavos — `7` vira `0,07`, `79` vira `0,79`,
+`7990` vira `79,90`. Sem precisar digitar a vírgula e sem o cursor pular.
+
+**Como se faz:** `formatarAoDigitar` de [src/utils/moeda.js](src/utils/moeda.js)
+no `onChange`, e `parseMoney` (ou `parsearMoedaInput`) na hora de gravar.
+
+**O input nunca tem estado próprio.** O valor vem do estado do pai e volta
+por `onChange` — nada de `useState` local espelhando o campo. Foi exatamente
+isso que fez a coluna Promoção cobrar `0,79` no lugar de `79,00` de várias
+clientes: o estado local não passava pela formatação, e a tela mostrava um
+valor enquanto o banco guardava outro.
+
+**O limite é 6 dígitos**, ou seja `9999,99`. Coluna de tabela ou campo de
+formulário que mostre preço precisa caber esse valor — abaixo disso o número
+sai cortado justamente quando passa de mil, que é quando o erro custa caro.
+
 ## Banco de dados
 
 - Mudança de schema vai em `supabase/migrations/<AAAAMMDD>_<assunto>.sql`,
@@ -115,12 +137,18 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
-### 27/11/2026 (2) — Preço e Promo com a mesma largura na tela de Vendas
+### 27/11/2026 (2) — Preço e Promo cabem o maior valor, e o padrão virou regra
 
 A coluna Promo saía com o valor cortado (`29,9` no lugar de `29,90`): ela tinha
 largura fixa e a Preço, só largura mínima, então a Preço ficava com a sobra da
-tabela e a Promo não acompanhava. As duas passaram a ter a mesma largura.
-Só CSS, escopado em `.vendas-page`. Sem migration.
+tabela e a Promo não acompanhava. As duas passaram a ter a mesma largura, agora
+dimensionada pelo maior valor que o campo aceita — `formatarAoDigitar` limita a
+6 dígitos, então o pior caso é `9999,99`. Com largura menor o número sumia
+justamente ao passar de mil.
+
+O padrão de digitação de preço virou regra escrita (seção **Campo de preço**),
+para valer em todo campo de dinheiro do sistema, não só na tela de Vendas.
+Só CSS e documentação. Sem migration.
 
 ### 27/11/2026 — Gestão de Etiquetas mostra quando o romaneio ficou pronto
 
