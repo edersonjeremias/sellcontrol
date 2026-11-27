@@ -115,6 +115,12 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 27/11/2026 — Gestão de Etiquetas mostra quando o romaneio ficou pronto
+
+Coluna **Data Pronto** antes de Data Pago, lendo `romaneios.pronto_em`, que já
+era gravado na criação do romaneio e nunca aparecia na tela. Serve para ver há
+quanto tempo o pedido espera o pagamento do frete. Sem migration.
+
 ### 26/11/2026 (8) — foto achatada: `width` sozinho não mantém proporção
 
 O redimensionamento do Storage, chamado só com `width`, **encolhe a largura e

@@ -1206,7 +1206,7 @@ export default function EtiquetasPage() {
             <div className="grid-header-fixo" style={{
               top: alturaBarra,
               display: isMobile ? 'none' : 'grid',
-              gridTemplateColumns: '110px 1fr 100px 100px 120px 170px 82px',
+              gridTemplateColumns: '110px 1fr 100px 100px 100px 120px 170px 82px',
               gap: 16,
               padding: '14px 20px',
               borderTopLeftRadius: 12,
@@ -1219,6 +1219,7 @@ export default function EtiquetasPage() {
             }}>
               <div>Romaneio</div>
               <div>Cliente</div>
+              <div>Data Pronto</div>
               <div>Data Pago</div>
               <div>Data Despacho</div>
               <div>Status</div>
@@ -1241,7 +1242,7 @@ export default function EtiquetasPage() {
                   style={{
                     display: isMobile ? 'flex' : 'grid',
                     flexDirection: isMobile ? 'column' : undefined,
-                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 120px 170px 82px',
+                    gridTemplateColumns: isMobile ? undefined : '110px 1fr 100px 100px 100px 120px 170px 82px',
                     gap: isMobile ? 6 : 16,
                     padding: isMobile ? '12px 14px' : '16px 20px',
                     borderBottom: '1px solid rgba(255,255,255,0.05)',
@@ -1312,6 +1313,12 @@ export default function EtiquetasPage() {
                       )
                     })()}
                   </div>
+
+                  {(!isMobile || rom.pronto_em) && (
+                    <div style={{ color: '#9aa0a6', fontSize: isMobile ? 12 : 13 }}>
+                      {isMobile && 'Pronto em '}{formatarData(rom.pronto_em)}
+                    </div>
+                  )}
 
                   {(!isMobile || rom.frete_pago_em) && (
                     <div style={{ color: '#9aa0a6', fontSize: isMobile ? 12 : 13 }}>
