@@ -115,6 +115,21 @@ para qualquer código novo:
 
 Mais recente em cima. Página nova também entra no catálogo (Regra nº 1).
 
+### 26/11/2026 (6) — correção: o painel não rodava
+
+[20261126g](supabase/migrations/20261126g_loja_painel_dia_ambiguo.sql) recria
+`loja_painel`: no gráfico por dia havia três colunas chamadas `dia` no mesmo
+escopo (a série de datas e as duas subconsultas), e o Postgres parava em
+`column reference "dia" is ambiguous`. A série virou `g(dia)` e as
+subconsultas passaram a devolver `dia_visita` e `dia_pago`.
+
+**O SQL aceita a função na criação e só quebra na execução** — rodar a
+migration não prova que a função roda. Abra a tela antes de dar por pronto.
+
+A tela também mudou: falha agora limpa os números e mostra o aviso com "tentar
+de novo". Antes ficavam zeros na tela com o erro num canto, o que se lê como
+"não houve visita nenhuma" em vez de "não deu para carregar".
+
 ### 26/11/2026 (5) — Painel da Loja: visita contada no servidor
 
 A loja não deixava rastro: dava para saber o que vendeu, nunca quantas pessoas

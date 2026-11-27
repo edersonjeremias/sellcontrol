@@ -118,6 +118,7 @@ export default function PainelLojaPage() {
 
   const [dias, setDias] = useState(29)
   const [dados, setDados] = useState(null)
+  const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(true)
 
   const carregar = useCallback(async () => {
@@ -125,8 +126,13 @@ export default function PainelLojaPage() {
     setCarregando(true)
     try {
       setDados(await getPainelLoja(tenantId, hojeISO(dias), hojeISO()))
+      setErro('')
     } catch (err) {
       console.error('Erro ao carregar o painel da loja:', err)
+      // Zera o que estava na tela: número velho ao lado de um erro é pior que
+      // tela vazia, porque parece dado do período que acabou de ser escolhido
+      setDados(null)
+      setErro(err.message || 'Não foi possível carregar o painel')
       showToast(err.message || 'Não foi possível carregar o painel', 'error')
     } finally {
       setCarregando(false)
@@ -168,6 +174,26 @@ export default function PainelLojaPage() {
 
         {carregando ? (
           <p style={{ color: 'var(--muted)', padding: '30px 0' }}>Carregando…</p>
+        ) : erro ? (
+          <div style={{ ...card, borderColor: 'rgba(242,139,130,0.4)' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--red)', marginBottom: 6 }}>
+              Não foi possível carregar o painel
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 14px', lineHeight: 1.6 }}>
+              {erro}
+            </p>
+            <button
+              type="button"
+              onClick={carregar}
+              style={{
+                padding: '9px 16px', borderRadius: 8, border: '1px solid var(--border-light)',
+                background: 'rgba(255,255,255,0.03)', color: 'var(--blue)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              Tentar de novo
+            </button>
+          </div>
         ) : (
           <>
             {/* ── Números do topo ── */}
